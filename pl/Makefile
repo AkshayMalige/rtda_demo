@@ -1,24 +1,35 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc
-#
-# SPDX-License-Identifier: MIT
+# Makefile for building PL kernels with v++ into a build.<target> folder
 
-PLATFORM := xilinx_vck5000_gen4x8_qdma_2_202220_1
-TARGET := hw
-FREQ := 250
+PLATFORM ?= xilinx_vek280_base_202420_1
+TARGET ?= hw
+PL_FREQZ ?= 300
+VPP := v++
 
-XSA = $(strip $(patsubst %.xpfm, % , $(shell basename $(PLATFORM))))
+BUILD_DIR := build_$(TARGET)
+SRC_DIR := .
+KERNEL_LIST := mm2s_8_128 s2mm_16_128 s2mm_32_128
 
-BUILD_DIR = build.$(TARGET)
-VPP_FLAGS = -t $(TARGET) --platform $(PLATFORM)# --save-temps
-VPP_FLAGS += --kernel_frequency $(FREQ)
+VPP_FLAGS := -t $(TARGET) --platform $(PLATFORM) --kernel_frequency $(PL_FREQZ) --save-temps -g
 
-kernel_list = mm2s
-BINARY_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .xo, $(kernel_list)))
+# Auto-generate source and output paths
+KERNEL_CPP := $(addprefix $(SRC_DIR)/, $(addsuffix .cpp, $(KERNEL_LIST)))
+KERNEL_XO  := $(addprefix $(BUILD_DIR)/, $(addsuffix .xo, $(KERNEL_LIST)))
 
-all: $(BINARY_OBJS)
+.PHONY: all clean kernels
 
-$(BUILD_DIR)/mm2s.xo: src/mm2s.cpp
-	v++ $(VPP_FLAGS) -k $(subst $(BUILD_DIR)/,,$(subst .xo,,$@)) -c -g -o $@ $^
+all: kernels
+
+kernels: $(KERNEL_XO)
+	@echo "✅ All PL kernels built in $(BUILD_DIR)"
+
+# Pattern rule to compile each .cpp into .xo in the build dir
+$(BUILD_DIR)/%.xo: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	$(VPP) $(VPP_FLAGS) -k $* -c -o $@ $<
+
+# Ensure build dir exists
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
 
 clean:
-	rm -rf $(BUILD_DIR) *.log *.jou .Xil/
+	rm -rf $(BUILD_DIR) *.log *.jou .Xil/ _x/ *.compile_summary
+	@echo "🧹 Cleaned PL kernel build outputs"

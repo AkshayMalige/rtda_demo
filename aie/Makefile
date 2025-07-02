@@ -1,52 +1,63 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc
-#
-# SPDX-License-Identifier: MIT
+# AIE-only Makefile for compiling and simulating graph.cpp
 
-PLATFORM := xilinx_vck5000_gen4x8_qdma_2_202220_1
-TARGET := hw
+# ==== CONFIG ====
+PLATFORM ?= xilinx_vek280_base_202420_1
+TARGET ?= hw                          # or sw_emu, x86sim
+PL_FREQZ ?= 300
 
-XPFM = $(shell platforminfo -p $(PLATFORM) --json="file")
-XSA = $(strip $(patsubst %.xpfm, % , $(shell basename $(PLATFORM))))
+GRAPH_SRC := src/graph.cpp
+GRAPH_OUT := Work/libadf.a
+WORK_DIR := Work
+BUILD_DIR := build_$(TARGET)
 
-# OUTPUT PRODUCTS 
-BUILD_DIR = build.$(TARGET)
-WORK_DIR = work
-SRC_DIR = $(shell readlink -f src/)
-DATA_DIR = $(shell readlink -f data/)
-CONSTRAINTS_DIR = $(shell readlink -f constraints/)
+# Tools
+AIECC := aiecompiler
+AIESIM := aiesimulator
+X86SIM := x86simulator
 
-# DEPENDENCIES for make aie
-GRAPH_CPP := $(SRC_DIR)/graph.cpp
-DEPS := $(GRAPH_CPP)
-DEPS += $(SRC_DIR)/graph.h
-# Add your own dependencies
+# AIE Include paths
+AIE_INCLUDE_FLAGS := \
+	-include="$(XILINX_VITIS)/aietools/include" \
+	-include="./src/" \
+	-include="./data" \
+	-include="./"
 
-AIE_FLAGS = --platform=$(XPFM)
-AIE_FLAGS += --constraints=$(CONSTRAINTS_DIR)/constraints.aiecst
+# Compiler flags
+AIE_FLAGS := --platform $(PLATFORM) $(AIE_INCLUDE_FLAGS) --pl-freq=$(PL_FREQZ)
 
-all: $(BUILD_DIR)/libadf.a
+ifeq ($(TARGET),sw_emu)
+	AIE_FLAGS += --target=x86sim -Xpreproc='-DNDEBUG'
+else ifeq ($(TARGET),x86sim)
+	AIE_FLAGS += --target=x86sim -Xpreproc='-DNDEBUG'
+else
+	AIE_FLAGS += --target=hw
+endif
 
-$(BUILD_DIR)/libadf.a: $(DEPS)
-	@mkdir -p $(BUILD_DIR);
+# ==== RULES ====
+
+.PHONY: all graph sim clean
+
+all: graph
+
+graph: $(BUILD_DIR)/libadf.a
+
+$(BUILD_DIR)/libadf.a: $(GRAPH_SRC)
+	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR); \
-	aiecompiler -v --target=$(TARGET) \
-		--stacksize=2000 \
-		-include="$(XILINX_VITIS)/aietools/include" \
-		-include="$(SRC_DIR)"  \
-		-include="$(DATA_DIR)" \
-		$(AIE_FLAGS) \
-		$(GRAPH_CPP) \
-		-workdir=$(WORK_DIR) 2>&1 | tee aiecompiler.log
-
-clean:
-	rm -rf $(BUILD_DIR)
+	$(AIECC) $(AIE_FLAGS) ../$(GRAPH_SRC) --workdir=../$(WORK_DIR) 2>&1 | tee aiecompiler.log
+	@echo "COMPLETE: AIE graph compiled into $(BUILD_DIR)/libadf.a"
 
 sim:
-	@if [ $(TARGET) = "x86sim" ]; then\
-    	cd $(BUILD_DIR); \
-		x86simulator --pkg-dir=$(WORK_DIR) --i=.. ;\
-	fi
-	@if [ $(TARGET) = "hw" ]; then\
-		cd $(BUILD_DIR); \
-		aiesimulator --pkg-dir=$(WORK_DIR) --i=.. --profile --dump-vcd=foo ; \
-	fi
+ifeq ($(TARGET),x86sim)
+	@cd $(BUILD_DIR); \
+	$(X86SIM) --pkg-dir=../$(WORK_DIR) --i=..; \
+	echo "COMPLETE: x86sim simulation finished."
+else
+	@cd $(BUILD_DIR); \
+	$(AIESIM) --pkg-dir=../$(WORK_DIR) --i=.. --profile --dump-vcd=waveform.vcd; \
+	echo "COMPLETE: AIE simulation finished."
+endif
+
+clean:
+	rm -rf $(BUILD_DIR) $(WORK_DIR)
+	@echo "CLEANED: Removed build and work directories"

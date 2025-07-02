@@ -1,51 +1,36 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc
-#
-# SPDX-License-Identifier: MIT
+# Makefile to compile host.cpp for PetaLinux sysroot using aarch64-linux-gnu-g++
 
-FLAGS := -Wall -c -g -fmessage-length=0
-FLAGS += -std=c++17 -Wno-unknown-pragmas -Wno-unused-label
-FLAGS += -Wno-int-to-pointer-cast
+# Paths
+SYSROOT := /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
+CXX := aarch64-linux-gnu-g++
 
+# Sources and targets
+SRC := host.cpp
+OBJ := host.o
+OUT := system_host
 
-INCLUDES +=	-I$(XILINX_VITIS)/aietools/include
-INCLUDES +=	-I$(XILINX_VITIS)/include
-INCLUDES +=	-I$(XILINX_XRT)/include
+# Compiler and linker flags
+CXXFLAGS := -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
+  --sysroot=$(SYSROOT) \
+  -I$(SYSROOT)/usr/include/xrt \
+  -I$(SYSROOT)/usr/include \
+  -I./ -I./src/ -I/aietools/include -I/include
 
-LIBS := -lxrt_core -lxrt_coreutil -lgcc -lc
-LIBS += -lxilinxopencl -lpthread -lrt -ldl -lcrypt -lstdc++ -lOpenCL
-LIBS += -Wno-unused-label -Wno-narrowing -DVERBOSE
-LIBS += -L$(XILINX_XRT)/lib/
+LDFLAGS := --sysroot=$(SYSROOT) \
+  -L$(SYSROOT)/usr/lib \
+  -lstdc++ -lxrt_coreutil -lxrt_core -lpthread
 
-# =========================================================
-# BUILD PRODUCTS
-# =========================================================
-BUILD_DIR = build
-EXECUTABLE = rtda_demo.exe
-# ################ TARGET: make all ################
-all: host
+.PHONY: all clean
 
-# ################ TARGET: make host ################
-.PHONY: host
-host: $(BUILD_DIR) $(EXECUTABLE)
+all: $(OUT)
 
-$(BUILD_DIR): 
-	mkdir -p $(BUILD_DIR);
+$(OBJ): $(SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $<
 
-$(EXECUTABLE): $(BUILD_DIR)/host.o
-	g++ $^ $(LIBS) -std=c++17 -o $@
-	@echo "COMPLETE: Host application $@ created."
+$(OUT): $(OBJ)
+	$(CXX) $^ $(LDFLAGS) -o $@
+	@echo "✅ Built host executable: $(OUT)"
 
-# Create object files
-$(BUILD_DIR)/host.o: host.cpp
-	g++ $(FLAGS) $(INCLUDES) -o $@ $^
-
-# ################ TARGET: make clean ################
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -rf *~
-	rm -rf .run/
-	rm -rf *.csv
-	rm -rf *.run_summary
-	rm -rf .Xil/
-	rm -rf *.log *.jou
-	rm -rf $(EXECUTABLE)
+	rm -f $(OBJ) $(OUT)
+	@echo "🧹 Cleaned up build artifacts"
