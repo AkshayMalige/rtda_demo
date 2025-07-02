@@ -7,35 +7,32 @@ conda env create -f hls_env.yml
 conda activate hls_env
 ```
 
-# Automatic Directory Generation
+## Setting up enviornment
 
-The Python script `project.py` in this folder will help you generate an appropriate directory structure for your AIE projects with pre-populated `Makefile`.
+```bash
+source set_envs.sh
+```
 
-## Default directory structure
+
+# Directory structure
 
 The Python script will generate an structure like this one
 
 ```console
 ├── aie
-│   ├── constraints
 │   ├── data
 │   ├── Makefile
 │   └── src
 ├── host
 │   └── Makefile
 ├── hw_link
-│   └── config.cfg
+│   └── system.cfg
 ├── Makefile
 └── pl
     ├── Makefile
-    └── src
+    └── src files (.cpp)
 ```
 
-## Using the script
 
-```bash
-python3 project.py --name <project_name>
-```
 
 ---------------------------------------
-<p align="center">Copyright&copy; 2023 Advanced Micro Devices</p>
