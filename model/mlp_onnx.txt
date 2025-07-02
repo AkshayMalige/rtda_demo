@@ -1,0 +1,3053 @@
+==== Model IR Info ====
+IR version: 6
+Producer name: pytorch
+Producer version: 2.6.0
+Domain: 
+Model version: 0
+Doc string: 
+
+==== Model Inputs ====
+Name: input
+Type: tensor_type {
+  elem_type: 1
+  shape {
+    dim {
+      dim_param: "batch_size"
+    }
+    dim {
+      dim_value: 50
+    }
+    dim {
+      dim_value: 6
+    }
+  }
+}
+
+
+==== Model Outputs ====
+Name: output
+Type: tensor_type {
+  elem_type: 1
+  shape {
+    dim {
+      dim_param: "batch_size"
+    }
+    dim {
+      dim_value: 27
+    }
+  }
+}
+
+
+==== Initializers (weights/biases) ====
+Name: embed.0.bias, Shape: [128]
+Name: embed.2.bias, Shape: [128]
+Name: solvers.0.model.0.weight, Shape: [768]
+Name: solvers.0.model.0.bias, Shape: [768]
+Name: solvers.0.model.1.bias, Shape: [128]
+Name: solvers.0.model.3.re_alpha, Shape: [1]
+Name: solvers.0.model.3.norm.weight, Shape: [128]
+Name: solvers.0.model.3.norm.bias, Shape: [128]
+Name: solvers.0.model.3.linear.bias, Shape: [128]
+Name: solvers.0.model.4.re_alpha, Shape: [1]
+Name: solvers.0.model.4.norm.weight, Shape: [128]
+Name: solvers.0.model.4.norm.bias, Shape: [128]
+Name: solvers.0.model.4.linear.bias, Shape: [128]
+Name: solvers.0.model.5.re_alpha, Shape: [1]
+Name: solvers.0.model.5.norm.weight, Shape: [128]
+Name: solvers.0.model.5.norm.bias, Shape: [128]
+Name: solvers.0.model.5.linear.bias, Shape: [128]
+Name: solvers.1.model.0.weight, Shape: [768]
+Name: solvers.1.model.0.bias, Shape: [768]
+Name: solvers.1.model.1.bias, Shape: [128]
+Name: solvers.1.model.3.re_alpha, Shape: [1]
+Name: solvers.1.model.3.norm.weight, Shape: [128]
+Name: solvers.1.model.3.norm.bias, Shape: [128]
+Name: solvers.1.model.3.linear.bias, Shape: [128]
+Name: solvers.1.model.4.re_alpha, Shape: [1]
+Name: solvers.1.model.4.norm.weight, Shape: [128]
+Name: solvers.1.model.4.norm.bias, Shape: [128]
+Name: solvers.1.model.4.linear.bias, Shape: [128]
+Name: solvers.1.model.5.re_alpha, Shape: [1]
+Name: solvers.1.model.5.norm.weight, Shape: [128]
+Name: solvers.1.model.5.norm.bias, Shape: [128]
+Name: solvers.1.model.5.linear.bias, Shape: [128]
+Name: solvers.2.model.0.weight, Shape: [768]
+Name: solvers.2.model.0.bias, Shape: [768]
+Name: solvers.2.model.1.bias, Shape: [128]
+Name: solvers.2.model.3.re_alpha, Shape: [1]
+Name: solvers.2.model.3.norm.weight, Shape: [128]
+Name: solvers.2.model.3.norm.bias, Shape: [128]
+Name: solvers.2.model.3.linear.bias, Shape: [128]
+Name: solvers.2.model.4.re_alpha, Shape: [1]
+Name: solvers.2.model.4.norm.weight, Shape: [128]
+Name: solvers.2.model.4.norm.bias, Shape: [128]
+Name: solvers.2.model.4.linear.bias, Shape: [128]
+Name: solvers.2.model.5.re_alpha, Shape: [1]
+Name: solvers.2.model.5.norm.weight, Shape: [128]
+Name: solvers.2.model.5.norm.bias, Shape: [128]
+Name: solvers.2.model.5.linear.bias, Shape: [128]
+Name: output.weight, Shape: [27, 128]
+Name: output.bias, Shape: [27]
+Name: onnx::MatMul_425, Shape: [6, 128]
+Name: onnx::MatMul_426, Shape: [128, 128]
+Name: onnx::MatMul_427, Shape: [768, 128]
+Name: onnx::MatMul_428, Shape: [128, 128]
+Name: onnx::MatMul_429, Shape: [128, 128]
+Name: onnx::MatMul_430, Shape: [128, 128]
+Name: onnx::MatMul_431, Shape: [768, 128]
+Name: onnx::MatMul_432, Shape: [128, 128]
+Name: onnx::MatMul_433, Shape: [128, 128]
+Name: onnx::MatMul_434, Shape: [128, 128]
+Name: onnx::MatMul_435, Shape: [768, 128]
+Name: onnx::MatMul_436, Shape: [128, 128]
+Name: onnx::MatMul_437, Shape: [128, 128]
+Name: onnx::MatMul_438, Shape: [128, 128]
+
+==== Layers (Nodes) ====
+Layer 0:
+  Op type: MatMul
+  Name: /embed/embed.0/MatMul
+  Inputs: ['input', 'onnx::MatMul_425']
+  Outputs: ['/embed/embed.0/MatMul_output_0']
+  Attributes:
+
+Layer 1:
+  Op type: Add
+  Name: /embed/embed.0/Add
+  Inputs: ['embed.0.bias', '/embed/embed.0/MatMul_output_0']
+  Outputs: ['/embed/embed.0/Add_output_0']
+  Attributes:
+
+Layer 2:
+  Op type: Sin
+  Name: /embed/embed.1/Sin
+  Inputs: ['/embed/embed.0/Add_output_0']
+  Outputs: ['/embed/embed.1/Sin_output_0']
+  Attributes:
+
+Layer 3:
+  Op type: MatMul
+  Name: /embed/embed.2/MatMul
+  Inputs: ['/embed/embed.1/Sin_output_0', 'onnx::MatMul_426']
+  Outputs: ['/embed/embed.2/MatMul_output_0']
+  Attributes:
+
+Layer 4:
+  Op type: Add
+  Name: /embed/embed.2/Add
+  Inputs: ['embed.2.bias', '/embed/embed.2/MatMul_output_0']
+  Outputs: ['/embed/embed.2/Add_output_0']
+  Attributes:
+
+Layer 5:
+  Op type: Sin
+  Name: /embed/embed.3/Sin
+  Inputs: ['/embed/embed.2/Add_output_0']
+  Outputs: ['/embed/embed.3/Sin_output_0']
+  Attributes:
+
+Layer 6:
+  Op type: Constant
+  Name: /solvers.0/Constant
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 7:
+  Op type: Constant
+  Name: /solvers.0/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_1_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 8:
+  Op type: Constant
+  Name: /solvers.0/Constant_2
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_2_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 9:
+  Op type: Slice
+  Name: /solvers.0/Slice
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_1_output_0', '/solvers.0/Constant_2_output_0', '/solvers.0/Constant_output_0']
+  Outputs: ['/solvers.0/Slice_output_0']
+  Attributes:
+
+Layer 10:
+  Op type: Concat
+  Name: /solvers.0/Concat
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Slice_output_0']
+  Outputs: ['/solvers.0/Concat_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 11:
+  Op type: Constant
+  Name: /solvers.0/Constant_3
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_3_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 12:
+  Op type: Constant
+  Name: /solvers.0/Constant_4
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_4_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\377"
+
+
+Layer 13:
+  Op type: Constant
+  Name: /solvers.0/Constant_5
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_5_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 14:
+  Op type: Slice
+  Name: /solvers.0/Slice_1
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_4_output_0', '/solvers.0/Constant_5_output_0', '/solvers.0/Constant_3_output_0']
+  Outputs: ['/solvers.0/Slice_1_output_0']
+  Attributes:
+
+Layer 15:
+  Op type: Constant
+  Name: /solvers.0/Constant_6
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_6_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 16:
+  Op type: Constant
+  Name: /solvers.0/Constant_7
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_7_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 17:
+  Op type: Constant
+  Name: /solvers.0/Constant_8
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_8_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\377"
+
+
+Layer 18:
+  Op type: Slice
+  Name: /solvers.0/Slice_2
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_7_output_0', '/solvers.0/Constant_8_output_0', '/solvers.0/Constant_6_output_0']
+  Outputs: ['/solvers.0/Slice_2_output_0']
+  Attributes:
+
+Layer 19:
+  Op type: Concat
+  Name: /solvers.0/Concat_1
+  Inputs: ['/solvers.0/Slice_1_output_0', '/solvers.0/Slice_2_output_0']
+  Outputs: ['/solvers.0/Concat_1_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 20:
+  Op type: Constant
+  Name: /solvers.0/Constant_9
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_9_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 21:
+  Op type: Constant
+  Name: /solvers.0/Constant_10
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_10_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\376\377\377\377\377\377\377\377"
+
+
+Layer 22:
+  Op type: Constant
+  Name: /solvers.0/Constant_11
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_11_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 23:
+  Op type: Slice
+  Name: /solvers.0/Slice_3
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_10_output_0', '/solvers.0/Constant_11_output_0', '/solvers.0/Constant_9_output_0']
+  Outputs: ['/solvers.0/Slice_3_output_0']
+  Attributes:
+
+Layer 24:
+  Op type: Constant
+  Name: /solvers.0/Constant_12
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_12_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 25:
+  Op type: Constant
+  Name: /solvers.0/Constant_13
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_13_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 26:
+  Op type: Constant
+  Name: /solvers.0/Constant_14
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_14_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\376\377\377\377\377\377\377\377"
+
+
+Layer 27:
+  Op type: Slice
+  Name: /solvers.0/Slice_4
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_13_output_0', '/solvers.0/Constant_14_output_0', '/solvers.0/Constant_12_output_0']
+  Outputs: ['/solvers.0/Slice_4_output_0']
+  Attributes:
+
+Layer 28:
+  Op type: Concat
+  Name: /solvers.0/Concat_2
+  Inputs: ['/solvers.0/Slice_3_output_0', '/solvers.0/Slice_4_output_0']
+  Outputs: ['/solvers.0/Concat_2_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 29:
+  Op type: Constant
+  Name: /solvers.0/Constant_15
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_15_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 30:
+  Op type: Constant
+  Name: /solvers.0/Constant_16
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_16_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\375\377\377\377\377\377\377\377"
+
+
+Layer 31:
+  Op type: Constant
+  Name: /solvers.0/Constant_17
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_17_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 32:
+  Op type: Slice
+  Name: /solvers.0/Slice_5
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_16_output_0', '/solvers.0/Constant_17_output_0', '/solvers.0/Constant_15_output_0']
+  Outputs: ['/solvers.0/Slice_5_output_0']
+  Attributes:
+
+Layer 33:
+  Op type: Constant
+  Name: /solvers.0/Constant_18
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_18_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 34:
+  Op type: Constant
+  Name: /solvers.0/Constant_19
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_19_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 35:
+  Op type: Constant
+  Name: /solvers.0/Constant_20
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_20_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\375\377\377\377\377\377\377\377"
+
+
+Layer 36:
+  Op type: Slice
+  Name: /solvers.0/Slice_6
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_19_output_0', '/solvers.0/Constant_20_output_0', '/solvers.0/Constant_18_output_0']
+  Outputs: ['/solvers.0/Slice_6_output_0']
+  Attributes:
+
+Layer 37:
+  Op type: Concat
+  Name: /solvers.0/Concat_3
+  Inputs: ['/solvers.0/Slice_5_output_0', '/solvers.0/Slice_6_output_0']
+  Outputs: ['/solvers.0/Concat_3_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 38:
+  Op type: Constant
+  Name: /solvers.0/Constant_21
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_21_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 39:
+  Op type: Constant
+  Name: /solvers.0/Constant_22
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_22_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\374\377\377\377\377\377\377\377"
+
+
+Layer 40:
+  Op type: Constant
+  Name: /solvers.0/Constant_23
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_23_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 41:
+  Op type: Slice
+  Name: /solvers.0/Slice_7
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_22_output_0', '/solvers.0/Constant_23_output_0', '/solvers.0/Constant_21_output_0']
+  Outputs: ['/solvers.0/Slice_7_output_0']
+  Attributes:
+
+Layer 42:
+  Op type: Constant
+  Name: /solvers.0/Constant_24
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_24_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 43:
+  Op type: Constant
+  Name: /solvers.0/Constant_25
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_25_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 44:
+  Op type: Constant
+  Name: /solvers.0/Constant_26
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_26_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\374\377\377\377\377\377\377\377"
+
+
+Layer 45:
+  Op type: Slice
+  Name: /solvers.0/Slice_8
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_25_output_0', '/solvers.0/Constant_26_output_0', '/solvers.0/Constant_24_output_0']
+  Outputs: ['/solvers.0/Slice_8_output_0']
+  Attributes:
+
+Layer 46:
+  Op type: Concat
+  Name: /solvers.0/Concat_4
+  Inputs: ['/solvers.0/Slice_7_output_0', '/solvers.0/Slice_8_output_0']
+  Outputs: ['/solvers.0/Concat_4_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 47:
+  Op type: Constant
+  Name: /solvers.0/Constant_27
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_27_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 48:
+  Op type: Constant
+  Name: /solvers.0/Constant_28
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_28_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\373\377\377\377\377\377\377\377"
+
+
+Layer 49:
+  Op type: Constant
+  Name: /solvers.0/Constant_29
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_29_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 50:
+  Op type: Slice
+  Name: /solvers.0/Slice_9
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_28_output_0', '/solvers.0/Constant_29_output_0', '/solvers.0/Constant_27_output_0']
+  Outputs: ['/solvers.0/Slice_9_output_0']
+  Attributes:
+
+Layer 51:
+  Op type: Constant
+  Name: /solvers.0/Constant_30
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_30_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 52:
+  Op type: Constant
+  Name: /solvers.0/Constant_31
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_31_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 53:
+  Op type: Constant
+  Name: /solvers.0/Constant_32
+  Inputs: []
+  Outputs: ['/solvers.0/Constant_32_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\373\377\377\377\377\377\377\377"
+
+
+Layer 54:
+  Op type: Slice
+  Name: /solvers.0/Slice_10
+  Inputs: ['/embed/embed.3/Sin_output_0', '/solvers.0/Constant_31_output_0', '/solvers.0/Constant_32_output_0', '/solvers.0/Constant_30_output_0']
+  Outputs: ['/solvers.0/Slice_10_output_0']
+  Attributes:
+
+Layer 55:
+  Op type: Concat
+  Name: /solvers.0/Concat_5
+  Inputs: ['/solvers.0/Slice_9_output_0', '/solvers.0/Slice_10_output_0']
+  Outputs: ['/solvers.0/Concat_5_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 56:
+  Op type: Concat
+  Name: /solvers.0/Concat_6
+  Inputs: ['/solvers.0/Concat_output_0', '/solvers.0/Concat_1_output_0', '/solvers.0/Concat_2_output_0', '/solvers.0/Concat_3_output_0', '/solvers.0/Concat_4_output_0', '/solvers.0/Concat_5_output_0']
+  Outputs: ['/solvers.0/Concat_6_output_0']
+  Attributes:
+    - axis: -1
+
+Layer 57:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.0/ReduceMean
+  Inputs: ['/solvers.0/Concat_6_output_0']
+  Outputs: ['/solvers.0/model/model.0/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 58:
+  Op type: Sub
+  Name: /solvers.0/model/model.0/Sub
+  Inputs: ['/solvers.0/Concat_6_output_0', '/solvers.0/model/model.0/ReduceMean_output_0']
+  Outputs: ['/solvers.0/model/model.0/Sub_output_0']
+  Attributes:
+
+Layer 59:
+  Op type: Constant
+  Name: /solvers.0/model/model.0/Constant
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.0/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 60:
+  Op type: Pow
+  Name: /solvers.0/model/model.0/Pow
+  Inputs: ['/solvers.0/model/model.0/Sub_output_0', '/solvers.0/model/model.0/Constant_output_0']
+  Outputs: ['/solvers.0/model/model.0/Pow_output_0']
+  Attributes:
+
+Layer 61:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.0/ReduceMean_1
+  Inputs: ['/solvers.0/model/model.0/Pow_output_0']
+  Outputs: ['/solvers.0/model/model.0/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 62:
+  Op type: Constant
+  Name: /solvers.0/model/model.0/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.0/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 63:
+  Op type: Add
+  Name: /solvers.0/model/model.0/Add
+  Inputs: ['/solvers.0/model/model.0/ReduceMean_1_output_0', '/solvers.0/model/model.0/Constant_1_output_0']
+  Outputs: ['/solvers.0/model/model.0/Add_output_0']
+  Attributes:
+
+Layer 64:
+  Op type: Sqrt
+  Name: /solvers.0/model/model.0/Sqrt
+  Inputs: ['/solvers.0/model/model.0/Add_output_0']
+  Outputs: ['/solvers.0/model/model.0/Sqrt_output_0']
+  Attributes:
+
+Layer 65:
+  Op type: Div
+  Name: /solvers.0/model/model.0/Div
+  Inputs: ['/solvers.0/model/model.0/Sub_output_0', '/solvers.0/model/model.0/Sqrt_output_0']
+  Outputs: ['/solvers.0/model/model.0/Div_output_0']
+  Attributes:
+
+Layer 66:
+  Op type: Mul
+  Name: /solvers.0/model/model.0/Mul
+  Inputs: ['/solvers.0/model/model.0/Div_output_0', 'solvers.0.model.0.weight']
+  Outputs: ['/solvers.0/model/model.0/Mul_output_0']
+  Attributes:
+
+Layer 67:
+  Op type: Add
+  Name: /solvers.0/model/model.0/Add_1
+  Inputs: ['/solvers.0/model/model.0/Mul_output_0', 'solvers.0.model.0.bias']
+  Outputs: ['/solvers.0/model/model.0/Add_1_output_0']
+  Attributes:
+
+Layer 68:
+  Op type: MatMul
+  Name: /solvers.0/model/model.1/MatMul
+  Inputs: ['/solvers.0/model/model.0/Add_1_output_0', 'onnx::MatMul_427']
+  Outputs: ['/solvers.0/model/model.1/MatMul_output_0']
+  Attributes:
+
+Layer 69:
+  Op type: Add
+  Name: /solvers.0/model/model.1/Add
+  Inputs: ['solvers.0.model.1.bias', '/solvers.0/model/model.1/MatMul_output_0']
+  Outputs: ['/solvers.0/model/model.1/Add_output_0']
+  Attributes:
+
+Layer 70:
+  Op type: Sin
+  Name: /solvers.0/model/model.2/Sin
+  Inputs: ['/solvers.0/model/model.1/Add_output_0']
+  Outputs: ['/solvers.0/model/model.2/Sin_output_0']
+  Attributes:
+
+Layer 71:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.3/norm/ReduceMean
+  Inputs: ['/solvers.0/model/model.2/Sin_output_0']
+  Outputs: ['/solvers.0/model/model.3/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 72:
+  Op type: Sub
+  Name: /solvers.0/model/model.3/norm/Sub
+  Inputs: ['/solvers.0/model/model.2/Sin_output_0', '/solvers.0/model/model.3/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.0/model/model.3/norm/Sub_output_0']
+  Attributes:
+
+Layer 73:
+  Op type: Constant
+  Name: /solvers.0/model/model.3/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.3/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 74:
+  Op type: Pow
+  Name: /solvers.0/model/model.3/norm/Pow
+  Inputs: ['/solvers.0/model/model.3/norm/Sub_output_0', '/solvers.0/model/model.3/norm/Constant_output_0']
+  Outputs: ['/solvers.0/model/model.3/norm/Pow_output_0']
+  Attributes:
+
+Layer 75:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.3/norm/ReduceMean_1
+  Inputs: ['/solvers.0/model/model.3/norm/Pow_output_0']
+  Outputs: ['/solvers.0/model/model.3/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 76:
+  Op type: Constant
+  Name: /solvers.0/model/model.3/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.3/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 77:
+  Op type: Add
+  Name: /solvers.0/model/model.3/norm/Add
+  Inputs: ['/solvers.0/model/model.3/norm/ReduceMean_1_output_0', '/solvers.0/model/model.3/norm/Constant_1_output_0']
+  Outputs: ['/solvers.0/model/model.3/norm/Add_output_0']
+  Attributes:
+
+Layer 78:
+  Op type: Sqrt
+  Name: /solvers.0/model/model.3/norm/Sqrt
+  Inputs: ['/solvers.0/model/model.3/norm/Add_output_0']
+  Outputs: ['/solvers.0/model/model.3/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 79:
+  Op type: Div
+  Name: /solvers.0/model/model.3/norm/Div
+  Inputs: ['/solvers.0/model/model.3/norm/Sub_output_0', '/solvers.0/model/model.3/norm/Sqrt_output_0']
+  Outputs: ['/solvers.0/model/model.3/norm/Div_output_0']
+  Attributes:
+
+Layer 80:
+  Op type: Mul
+  Name: /solvers.0/model/model.3/norm/Mul
+  Inputs: ['/solvers.0/model/model.3/norm/Div_output_0', 'solvers.0.model.3.norm.weight']
+  Outputs: ['/solvers.0/model/model.3/norm/Mul_output_0']
+  Attributes:
+
+Layer 81:
+  Op type: Add
+  Name: /solvers.0/model/model.3/norm/Add_1
+  Inputs: ['/solvers.0/model/model.3/norm/Mul_output_0', 'solvers.0.model.3.norm.bias']
+  Outputs: ['/solvers.0/model/model.3/norm/Add_1_output_0']
+  Attributes:
+
+Layer 82:
+  Op type: MatMul
+  Name: /solvers.0/model/model.3/linear/MatMul
+  Inputs: ['/solvers.0/model/model.3/norm/Add_1_output_0', 'onnx::MatMul_428']
+  Outputs: ['/solvers.0/model/model.3/linear/MatMul_output_0']
+  Attributes:
+
+Layer 83:
+  Op type: Add
+  Name: /solvers.0/model/model.3/linear/Add
+  Inputs: ['solvers.0.model.3.linear.bias', '/solvers.0/model/model.3/linear/MatMul_output_0']
+  Outputs: ['/solvers.0/model/model.3/linear/Add_output_0']
+  Attributes:
+
+Layer 84:
+  Op type: Sin
+  Name: /solvers.0/model/model.3/activ/Sin
+  Inputs: ['/solvers.0/model/model.3/linear/Add_output_0']
+  Outputs: ['/solvers.0/model/model.3/activ/Sin_output_0']
+  Attributes:
+
+Layer 85:
+  Op type: Mul
+  Name: /solvers.0/model/model.3/Mul
+  Inputs: ['solvers.0.model.3.re_alpha', '/solvers.0/model/model.3/activ/Sin_output_0']
+  Outputs: ['/solvers.0/model/model.3/Mul_output_0']
+  Attributes:
+
+Layer 86:
+  Op type: Add
+  Name: /solvers.0/model/model.3/Add
+  Inputs: ['/solvers.0/model/model.2/Sin_output_0', '/solvers.0/model/model.3/Mul_output_0']
+  Outputs: ['/solvers.0/model/model.3/Add_output_0']
+  Attributes:
+
+Layer 87:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.4/norm/ReduceMean
+  Inputs: ['/solvers.0/model/model.3/Add_output_0']
+  Outputs: ['/solvers.0/model/model.4/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 88:
+  Op type: Sub
+  Name: /solvers.0/model/model.4/norm/Sub
+  Inputs: ['/solvers.0/model/model.3/Add_output_0', '/solvers.0/model/model.4/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.0/model/model.4/norm/Sub_output_0']
+  Attributes:
+
+Layer 89:
+  Op type: Constant
+  Name: /solvers.0/model/model.4/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.4/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 90:
+  Op type: Pow
+  Name: /solvers.0/model/model.4/norm/Pow
+  Inputs: ['/solvers.0/model/model.4/norm/Sub_output_0', '/solvers.0/model/model.4/norm/Constant_output_0']
+  Outputs: ['/solvers.0/model/model.4/norm/Pow_output_0']
+  Attributes:
+
+Layer 91:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.4/norm/ReduceMean_1
+  Inputs: ['/solvers.0/model/model.4/norm/Pow_output_0']
+  Outputs: ['/solvers.0/model/model.4/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 92:
+  Op type: Constant
+  Name: /solvers.0/model/model.4/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.4/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 93:
+  Op type: Add
+  Name: /solvers.0/model/model.4/norm/Add
+  Inputs: ['/solvers.0/model/model.4/norm/ReduceMean_1_output_0', '/solvers.0/model/model.4/norm/Constant_1_output_0']
+  Outputs: ['/solvers.0/model/model.4/norm/Add_output_0']
+  Attributes:
+
+Layer 94:
+  Op type: Sqrt
+  Name: /solvers.0/model/model.4/norm/Sqrt
+  Inputs: ['/solvers.0/model/model.4/norm/Add_output_0']
+  Outputs: ['/solvers.0/model/model.4/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 95:
+  Op type: Div
+  Name: /solvers.0/model/model.4/norm/Div
+  Inputs: ['/solvers.0/model/model.4/norm/Sub_output_0', '/solvers.0/model/model.4/norm/Sqrt_output_0']
+  Outputs: ['/solvers.0/model/model.4/norm/Div_output_0']
+  Attributes:
+
+Layer 96:
+  Op type: Mul
+  Name: /solvers.0/model/model.4/norm/Mul
+  Inputs: ['/solvers.0/model/model.4/norm/Div_output_0', 'solvers.0.model.4.norm.weight']
+  Outputs: ['/solvers.0/model/model.4/norm/Mul_output_0']
+  Attributes:
+
+Layer 97:
+  Op type: Add
+  Name: /solvers.0/model/model.4/norm/Add_1
+  Inputs: ['/solvers.0/model/model.4/norm/Mul_output_0', 'solvers.0.model.4.norm.bias']
+  Outputs: ['/solvers.0/model/model.4/norm/Add_1_output_0']
+  Attributes:
+
+Layer 98:
+  Op type: MatMul
+  Name: /solvers.0/model/model.4/linear/MatMul
+  Inputs: ['/solvers.0/model/model.4/norm/Add_1_output_0', 'onnx::MatMul_429']
+  Outputs: ['/solvers.0/model/model.4/linear/MatMul_output_0']
+  Attributes:
+
+Layer 99:
+  Op type: Add
+  Name: /solvers.0/model/model.4/linear/Add
+  Inputs: ['solvers.0.model.4.linear.bias', '/solvers.0/model/model.4/linear/MatMul_output_0']
+  Outputs: ['/solvers.0/model/model.4/linear/Add_output_0']
+  Attributes:
+
+Layer 100:
+  Op type: Sin
+  Name: /solvers.0/model/model.4/activ/Sin
+  Inputs: ['/solvers.0/model/model.4/linear/Add_output_0']
+  Outputs: ['/solvers.0/model/model.4/activ/Sin_output_0']
+  Attributes:
+
+Layer 101:
+  Op type: Mul
+  Name: /solvers.0/model/model.4/Mul
+  Inputs: ['solvers.0.model.4.re_alpha', '/solvers.0/model/model.4/activ/Sin_output_0']
+  Outputs: ['/solvers.0/model/model.4/Mul_output_0']
+  Attributes:
+
+Layer 102:
+  Op type: Add
+  Name: /solvers.0/model/model.4/Add
+  Inputs: ['/solvers.0/model/model.3/Add_output_0', '/solvers.0/model/model.4/Mul_output_0']
+  Outputs: ['/solvers.0/model/model.4/Add_output_0']
+  Attributes:
+
+Layer 103:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.5/norm/ReduceMean
+  Inputs: ['/solvers.0/model/model.4/Add_output_0']
+  Outputs: ['/solvers.0/model/model.5/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 104:
+  Op type: Sub
+  Name: /solvers.0/model/model.5/norm/Sub
+  Inputs: ['/solvers.0/model/model.4/Add_output_0', '/solvers.0/model/model.5/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.0/model/model.5/norm/Sub_output_0']
+  Attributes:
+
+Layer 105:
+  Op type: Constant
+  Name: /solvers.0/model/model.5/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.5/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 106:
+  Op type: Pow
+  Name: /solvers.0/model/model.5/norm/Pow
+  Inputs: ['/solvers.0/model/model.5/norm/Sub_output_0', '/solvers.0/model/model.5/norm/Constant_output_0']
+  Outputs: ['/solvers.0/model/model.5/norm/Pow_output_0']
+  Attributes:
+
+Layer 107:
+  Op type: ReduceMean
+  Name: /solvers.0/model/model.5/norm/ReduceMean_1
+  Inputs: ['/solvers.0/model/model.5/norm/Pow_output_0']
+  Outputs: ['/solvers.0/model/model.5/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 108:
+  Op type: Constant
+  Name: /solvers.0/model/model.5/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.0/model/model.5/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 109:
+  Op type: Add
+  Name: /solvers.0/model/model.5/norm/Add
+  Inputs: ['/solvers.0/model/model.5/norm/ReduceMean_1_output_0', '/solvers.0/model/model.5/norm/Constant_1_output_0']
+  Outputs: ['/solvers.0/model/model.5/norm/Add_output_0']
+  Attributes:
+
+Layer 110:
+  Op type: Sqrt
+  Name: /solvers.0/model/model.5/norm/Sqrt
+  Inputs: ['/solvers.0/model/model.5/norm/Add_output_0']
+  Outputs: ['/solvers.0/model/model.5/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 111:
+  Op type: Div
+  Name: /solvers.0/model/model.5/norm/Div
+  Inputs: ['/solvers.0/model/model.5/norm/Sub_output_0', '/solvers.0/model/model.5/norm/Sqrt_output_0']
+  Outputs: ['/solvers.0/model/model.5/norm/Div_output_0']
+  Attributes:
+
+Layer 112:
+  Op type: Mul
+  Name: /solvers.0/model/model.5/norm/Mul
+  Inputs: ['/solvers.0/model/model.5/norm/Div_output_0', 'solvers.0.model.5.norm.weight']
+  Outputs: ['/solvers.0/model/model.5/norm/Mul_output_0']
+  Attributes:
+
+Layer 113:
+  Op type: Add
+  Name: /solvers.0/model/model.5/norm/Add_1
+  Inputs: ['/solvers.0/model/model.5/norm/Mul_output_0', 'solvers.0.model.5.norm.bias']
+  Outputs: ['/solvers.0/model/model.5/norm/Add_1_output_0']
+  Attributes:
+
+Layer 114:
+  Op type: MatMul
+  Name: /solvers.0/model/model.5/linear/MatMul
+  Inputs: ['/solvers.0/model/model.5/norm/Add_1_output_0', 'onnx::MatMul_430']
+  Outputs: ['/solvers.0/model/model.5/linear/MatMul_output_0']
+  Attributes:
+
+Layer 115:
+  Op type: Add
+  Name: /solvers.0/model/model.5/linear/Add
+  Inputs: ['solvers.0.model.5.linear.bias', '/solvers.0/model/model.5/linear/MatMul_output_0']
+  Outputs: ['/solvers.0/model/model.5/linear/Add_output_0']
+  Attributes:
+
+Layer 116:
+  Op type: Sin
+  Name: /solvers.0/model/model.5/activ/Sin
+  Inputs: ['/solvers.0/model/model.5/linear/Add_output_0']
+  Outputs: ['/solvers.0/model/model.5/activ/Sin_output_0']
+  Attributes:
+
+Layer 117:
+  Op type: Mul
+  Name: /solvers.0/model/model.5/Mul
+  Inputs: ['solvers.0.model.5.re_alpha', '/solvers.0/model/model.5/activ/Sin_output_0']
+  Outputs: ['/solvers.0/model/model.5/Mul_output_0']
+  Attributes:
+
+Layer 118:
+  Op type: Add
+  Name: /solvers.0/model/model.5/Add
+  Inputs: ['/solvers.0/model/model.4/Add_output_0', '/solvers.0/model/model.5/Mul_output_0']
+  Outputs: ['/solvers.0/model/model.5/Add_output_0']
+  Attributes:
+
+Layer 119:
+  Op type: Constant
+  Name: /solvers.1/Constant
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 120:
+  Op type: Constant
+  Name: /solvers.1/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_1_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 121:
+  Op type: Constant
+  Name: /solvers.1/Constant_2
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_2_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 122:
+  Op type: Slice
+  Name: /solvers.1/Slice
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_1_output_0', '/solvers.1/Constant_2_output_0', '/solvers.1/Constant_output_0']
+  Outputs: ['/solvers.1/Slice_output_0']
+  Attributes:
+
+Layer 123:
+  Op type: Concat
+  Name: /solvers.1/Concat
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Slice_output_0']
+  Outputs: ['/solvers.1/Concat_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 124:
+  Op type: Constant
+  Name: /solvers.1/Constant_3
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_3_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 125:
+  Op type: Constant
+  Name: /solvers.1/Constant_4
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_4_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\377"
+
+
+Layer 126:
+  Op type: Constant
+  Name: /solvers.1/Constant_5
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_5_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 127:
+  Op type: Slice
+  Name: /solvers.1/Slice_1
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_4_output_0', '/solvers.1/Constant_5_output_0', '/solvers.1/Constant_3_output_0']
+  Outputs: ['/solvers.1/Slice_1_output_0']
+  Attributes:
+
+Layer 128:
+  Op type: Constant
+  Name: /solvers.1/Constant_6
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_6_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 129:
+  Op type: Constant
+  Name: /solvers.1/Constant_7
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_7_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 130:
+  Op type: Constant
+  Name: /solvers.1/Constant_8
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_8_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\377"
+
+
+Layer 131:
+  Op type: Slice
+  Name: /solvers.1/Slice_2
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_7_output_0', '/solvers.1/Constant_8_output_0', '/solvers.1/Constant_6_output_0']
+  Outputs: ['/solvers.1/Slice_2_output_0']
+  Attributes:
+
+Layer 132:
+  Op type: Concat
+  Name: /solvers.1/Concat_1
+  Inputs: ['/solvers.1/Slice_1_output_0', '/solvers.1/Slice_2_output_0']
+  Outputs: ['/solvers.1/Concat_1_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 133:
+  Op type: Constant
+  Name: /solvers.1/Constant_9
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_9_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 134:
+  Op type: Constant
+  Name: /solvers.1/Constant_10
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_10_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\376\377\377\377\377\377\377\377"
+
+
+Layer 135:
+  Op type: Constant
+  Name: /solvers.1/Constant_11
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_11_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 136:
+  Op type: Slice
+  Name: /solvers.1/Slice_3
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_10_output_0', '/solvers.1/Constant_11_output_0', '/solvers.1/Constant_9_output_0']
+  Outputs: ['/solvers.1/Slice_3_output_0']
+  Attributes:
+
+Layer 137:
+  Op type: Constant
+  Name: /solvers.1/Constant_12
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_12_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 138:
+  Op type: Constant
+  Name: /solvers.1/Constant_13
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_13_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 139:
+  Op type: Constant
+  Name: /solvers.1/Constant_14
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_14_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\376\377\377\377\377\377\377\377"
+
+
+Layer 140:
+  Op type: Slice
+  Name: /solvers.1/Slice_4
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_13_output_0', '/solvers.1/Constant_14_output_0', '/solvers.1/Constant_12_output_0']
+  Outputs: ['/solvers.1/Slice_4_output_0']
+  Attributes:
+
+Layer 141:
+  Op type: Concat
+  Name: /solvers.1/Concat_2
+  Inputs: ['/solvers.1/Slice_3_output_0', '/solvers.1/Slice_4_output_0']
+  Outputs: ['/solvers.1/Concat_2_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 142:
+  Op type: Constant
+  Name: /solvers.1/Constant_15
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_15_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 143:
+  Op type: Constant
+  Name: /solvers.1/Constant_16
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_16_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\375\377\377\377\377\377\377\377"
+
+
+Layer 144:
+  Op type: Constant
+  Name: /solvers.1/Constant_17
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_17_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 145:
+  Op type: Slice
+  Name: /solvers.1/Slice_5
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_16_output_0', '/solvers.1/Constant_17_output_0', '/solvers.1/Constant_15_output_0']
+  Outputs: ['/solvers.1/Slice_5_output_0']
+  Attributes:
+
+Layer 146:
+  Op type: Constant
+  Name: /solvers.1/Constant_18
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_18_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 147:
+  Op type: Constant
+  Name: /solvers.1/Constant_19
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_19_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 148:
+  Op type: Constant
+  Name: /solvers.1/Constant_20
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_20_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\375\377\377\377\377\377\377\377"
+
+
+Layer 149:
+  Op type: Slice
+  Name: /solvers.1/Slice_6
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_19_output_0', '/solvers.1/Constant_20_output_0', '/solvers.1/Constant_18_output_0']
+  Outputs: ['/solvers.1/Slice_6_output_0']
+  Attributes:
+
+Layer 150:
+  Op type: Concat
+  Name: /solvers.1/Concat_3
+  Inputs: ['/solvers.1/Slice_5_output_0', '/solvers.1/Slice_6_output_0']
+  Outputs: ['/solvers.1/Concat_3_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 151:
+  Op type: Constant
+  Name: /solvers.1/Constant_21
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_21_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 152:
+  Op type: Constant
+  Name: /solvers.1/Constant_22
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_22_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\374\377\377\377\377\377\377\377"
+
+
+Layer 153:
+  Op type: Constant
+  Name: /solvers.1/Constant_23
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_23_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 154:
+  Op type: Slice
+  Name: /solvers.1/Slice_7
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_22_output_0', '/solvers.1/Constant_23_output_0', '/solvers.1/Constant_21_output_0']
+  Outputs: ['/solvers.1/Slice_7_output_0']
+  Attributes:
+
+Layer 155:
+  Op type: Constant
+  Name: /solvers.1/Constant_24
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_24_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 156:
+  Op type: Constant
+  Name: /solvers.1/Constant_25
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_25_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 157:
+  Op type: Constant
+  Name: /solvers.1/Constant_26
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_26_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\374\377\377\377\377\377\377\377"
+
+
+Layer 158:
+  Op type: Slice
+  Name: /solvers.1/Slice_8
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_25_output_0', '/solvers.1/Constant_26_output_0', '/solvers.1/Constant_24_output_0']
+  Outputs: ['/solvers.1/Slice_8_output_0']
+  Attributes:
+
+Layer 159:
+  Op type: Concat
+  Name: /solvers.1/Concat_4
+  Inputs: ['/solvers.1/Slice_7_output_0', '/solvers.1/Slice_8_output_0']
+  Outputs: ['/solvers.1/Concat_4_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 160:
+  Op type: Constant
+  Name: /solvers.1/Constant_27
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_27_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 161:
+  Op type: Constant
+  Name: /solvers.1/Constant_28
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_28_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\373\377\377\377\377\377\377\377"
+
+
+Layer 162:
+  Op type: Constant
+  Name: /solvers.1/Constant_29
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_29_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 163:
+  Op type: Slice
+  Name: /solvers.1/Slice_9
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_28_output_0', '/solvers.1/Constant_29_output_0', '/solvers.1/Constant_27_output_0']
+  Outputs: ['/solvers.1/Slice_9_output_0']
+  Attributes:
+
+Layer 164:
+  Op type: Constant
+  Name: /solvers.1/Constant_30
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_30_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 165:
+  Op type: Constant
+  Name: /solvers.1/Constant_31
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_31_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 166:
+  Op type: Constant
+  Name: /solvers.1/Constant_32
+  Inputs: []
+  Outputs: ['/solvers.1/Constant_32_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\373\377\377\377\377\377\377\377"
+
+
+Layer 167:
+  Op type: Slice
+  Name: /solvers.1/Slice_10
+  Inputs: ['/solvers.0/model/model.5/Add_output_0', '/solvers.1/Constant_31_output_0', '/solvers.1/Constant_32_output_0', '/solvers.1/Constant_30_output_0']
+  Outputs: ['/solvers.1/Slice_10_output_0']
+  Attributes:
+
+Layer 168:
+  Op type: Concat
+  Name: /solvers.1/Concat_5
+  Inputs: ['/solvers.1/Slice_9_output_0', '/solvers.1/Slice_10_output_0']
+  Outputs: ['/solvers.1/Concat_5_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 169:
+  Op type: Concat
+  Name: /solvers.1/Concat_6
+  Inputs: ['/solvers.1/Concat_output_0', '/solvers.1/Concat_1_output_0', '/solvers.1/Concat_2_output_0', '/solvers.1/Concat_3_output_0', '/solvers.1/Concat_4_output_0', '/solvers.1/Concat_5_output_0']
+  Outputs: ['/solvers.1/Concat_6_output_0']
+  Attributes:
+    - axis: -1
+
+Layer 170:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.0/ReduceMean
+  Inputs: ['/solvers.1/Concat_6_output_0']
+  Outputs: ['/solvers.1/model/model.0/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 171:
+  Op type: Sub
+  Name: /solvers.1/model/model.0/Sub
+  Inputs: ['/solvers.1/Concat_6_output_0', '/solvers.1/model/model.0/ReduceMean_output_0']
+  Outputs: ['/solvers.1/model/model.0/Sub_output_0']
+  Attributes:
+
+Layer 172:
+  Op type: Constant
+  Name: /solvers.1/model/model.0/Constant
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.0/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 173:
+  Op type: Pow
+  Name: /solvers.1/model/model.0/Pow
+  Inputs: ['/solvers.1/model/model.0/Sub_output_0', '/solvers.1/model/model.0/Constant_output_0']
+  Outputs: ['/solvers.1/model/model.0/Pow_output_0']
+  Attributes:
+
+Layer 174:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.0/ReduceMean_1
+  Inputs: ['/solvers.1/model/model.0/Pow_output_0']
+  Outputs: ['/solvers.1/model/model.0/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 175:
+  Op type: Constant
+  Name: /solvers.1/model/model.0/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.0/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 176:
+  Op type: Add
+  Name: /solvers.1/model/model.0/Add
+  Inputs: ['/solvers.1/model/model.0/ReduceMean_1_output_0', '/solvers.1/model/model.0/Constant_1_output_0']
+  Outputs: ['/solvers.1/model/model.0/Add_output_0']
+  Attributes:
+
+Layer 177:
+  Op type: Sqrt
+  Name: /solvers.1/model/model.0/Sqrt
+  Inputs: ['/solvers.1/model/model.0/Add_output_0']
+  Outputs: ['/solvers.1/model/model.0/Sqrt_output_0']
+  Attributes:
+
+Layer 178:
+  Op type: Div
+  Name: /solvers.1/model/model.0/Div
+  Inputs: ['/solvers.1/model/model.0/Sub_output_0', '/solvers.1/model/model.0/Sqrt_output_0']
+  Outputs: ['/solvers.1/model/model.0/Div_output_0']
+  Attributes:
+
+Layer 179:
+  Op type: Mul
+  Name: /solvers.1/model/model.0/Mul
+  Inputs: ['/solvers.1/model/model.0/Div_output_0', 'solvers.1.model.0.weight']
+  Outputs: ['/solvers.1/model/model.0/Mul_output_0']
+  Attributes:
+
+Layer 180:
+  Op type: Add
+  Name: /solvers.1/model/model.0/Add_1
+  Inputs: ['/solvers.1/model/model.0/Mul_output_0', 'solvers.1.model.0.bias']
+  Outputs: ['/solvers.1/model/model.0/Add_1_output_0']
+  Attributes:
+
+Layer 181:
+  Op type: MatMul
+  Name: /solvers.1/model/model.1/MatMul
+  Inputs: ['/solvers.1/model/model.0/Add_1_output_0', 'onnx::MatMul_431']
+  Outputs: ['/solvers.1/model/model.1/MatMul_output_0']
+  Attributes:
+
+Layer 182:
+  Op type: Add
+  Name: /solvers.1/model/model.1/Add
+  Inputs: ['solvers.1.model.1.bias', '/solvers.1/model/model.1/MatMul_output_0']
+  Outputs: ['/solvers.1/model/model.1/Add_output_0']
+  Attributes:
+
+Layer 183:
+  Op type: Sin
+  Name: /solvers.1/model/model.2/Sin
+  Inputs: ['/solvers.1/model/model.1/Add_output_0']
+  Outputs: ['/solvers.1/model/model.2/Sin_output_0']
+  Attributes:
+
+Layer 184:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.3/norm/ReduceMean
+  Inputs: ['/solvers.1/model/model.2/Sin_output_0']
+  Outputs: ['/solvers.1/model/model.3/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 185:
+  Op type: Sub
+  Name: /solvers.1/model/model.3/norm/Sub
+  Inputs: ['/solvers.1/model/model.2/Sin_output_0', '/solvers.1/model/model.3/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.1/model/model.3/norm/Sub_output_0']
+  Attributes:
+
+Layer 186:
+  Op type: Constant
+  Name: /solvers.1/model/model.3/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.3/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 187:
+  Op type: Pow
+  Name: /solvers.1/model/model.3/norm/Pow
+  Inputs: ['/solvers.1/model/model.3/norm/Sub_output_0', '/solvers.1/model/model.3/norm/Constant_output_0']
+  Outputs: ['/solvers.1/model/model.3/norm/Pow_output_0']
+  Attributes:
+
+Layer 188:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.3/norm/ReduceMean_1
+  Inputs: ['/solvers.1/model/model.3/norm/Pow_output_0']
+  Outputs: ['/solvers.1/model/model.3/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 189:
+  Op type: Constant
+  Name: /solvers.1/model/model.3/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.3/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 190:
+  Op type: Add
+  Name: /solvers.1/model/model.3/norm/Add
+  Inputs: ['/solvers.1/model/model.3/norm/ReduceMean_1_output_0', '/solvers.1/model/model.3/norm/Constant_1_output_0']
+  Outputs: ['/solvers.1/model/model.3/norm/Add_output_0']
+  Attributes:
+
+Layer 191:
+  Op type: Sqrt
+  Name: /solvers.1/model/model.3/norm/Sqrt
+  Inputs: ['/solvers.1/model/model.3/norm/Add_output_0']
+  Outputs: ['/solvers.1/model/model.3/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 192:
+  Op type: Div
+  Name: /solvers.1/model/model.3/norm/Div
+  Inputs: ['/solvers.1/model/model.3/norm/Sub_output_0', '/solvers.1/model/model.3/norm/Sqrt_output_0']
+  Outputs: ['/solvers.1/model/model.3/norm/Div_output_0']
+  Attributes:
+
+Layer 193:
+  Op type: Mul
+  Name: /solvers.1/model/model.3/norm/Mul
+  Inputs: ['/solvers.1/model/model.3/norm/Div_output_0', 'solvers.1.model.3.norm.weight']
+  Outputs: ['/solvers.1/model/model.3/norm/Mul_output_0']
+  Attributes:
+
+Layer 194:
+  Op type: Add
+  Name: /solvers.1/model/model.3/norm/Add_1
+  Inputs: ['/solvers.1/model/model.3/norm/Mul_output_0', 'solvers.1.model.3.norm.bias']
+  Outputs: ['/solvers.1/model/model.3/norm/Add_1_output_0']
+  Attributes:
+
+Layer 195:
+  Op type: MatMul
+  Name: /solvers.1/model/model.3/linear/MatMul
+  Inputs: ['/solvers.1/model/model.3/norm/Add_1_output_0', 'onnx::MatMul_432']
+  Outputs: ['/solvers.1/model/model.3/linear/MatMul_output_0']
+  Attributes:
+
+Layer 196:
+  Op type: Add
+  Name: /solvers.1/model/model.3/linear/Add
+  Inputs: ['solvers.1.model.3.linear.bias', '/solvers.1/model/model.3/linear/MatMul_output_0']
+  Outputs: ['/solvers.1/model/model.3/linear/Add_output_0']
+  Attributes:
+
+Layer 197:
+  Op type: Sin
+  Name: /solvers.1/model/model.3/activ/Sin
+  Inputs: ['/solvers.1/model/model.3/linear/Add_output_0']
+  Outputs: ['/solvers.1/model/model.3/activ/Sin_output_0']
+  Attributes:
+
+Layer 198:
+  Op type: Mul
+  Name: /solvers.1/model/model.3/Mul
+  Inputs: ['solvers.1.model.3.re_alpha', '/solvers.1/model/model.3/activ/Sin_output_0']
+  Outputs: ['/solvers.1/model/model.3/Mul_output_0']
+  Attributes:
+
+Layer 199:
+  Op type: Add
+  Name: /solvers.1/model/model.3/Add
+  Inputs: ['/solvers.1/model/model.2/Sin_output_0', '/solvers.1/model/model.3/Mul_output_0']
+  Outputs: ['/solvers.1/model/model.3/Add_output_0']
+  Attributes:
+
+Layer 200:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.4/norm/ReduceMean
+  Inputs: ['/solvers.1/model/model.3/Add_output_0']
+  Outputs: ['/solvers.1/model/model.4/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 201:
+  Op type: Sub
+  Name: /solvers.1/model/model.4/norm/Sub
+  Inputs: ['/solvers.1/model/model.3/Add_output_0', '/solvers.1/model/model.4/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.1/model/model.4/norm/Sub_output_0']
+  Attributes:
+
+Layer 202:
+  Op type: Constant
+  Name: /solvers.1/model/model.4/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.4/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 203:
+  Op type: Pow
+  Name: /solvers.1/model/model.4/norm/Pow
+  Inputs: ['/solvers.1/model/model.4/norm/Sub_output_0', '/solvers.1/model/model.4/norm/Constant_output_0']
+  Outputs: ['/solvers.1/model/model.4/norm/Pow_output_0']
+  Attributes:
+
+Layer 204:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.4/norm/ReduceMean_1
+  Inputs: ['/solvers.1/model/model.4/norm/Pow_output_0']
+  Outputs: ['/solvers.1/model/model.4/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 205:
+  Op type: Constant
+  Name: /solvers.1/model/model.4/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.4/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 206:
+  Op type: Add
+  Name: /solvers.1/model/model.4/norm/Add
+  Inputs: ['/solvers.1/model/model.4/norm/ReduceMean_1_output_0', '/solvers.1/model/model.4/norm/Constant_1_output_0']
+  Outputs: ['/solvers.1/model/model.4/norm/Add_output_0']
+  Attributes:
+
+Layer 207:
+  Op type: Sqrt
+  Name: /solvers.1/model/model.4/norm/Sqrt
+  Inputs: ['/solvers.1/model/model.4/norm/Add_output_0']
+  Outputs: ['/solvers.1/model/model.4/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 208:
+  Op type: Div
+  Name: /solvers.1/model/model.4/norm/Div
+  Inputs: ['/solvers.1/model/model.4/norm/Sub_output_0', '/solvers.1/model/model.4/norm/Sqrt_output_0']
+  Outputs: ['/solvers.1/model/model.4/norm/Div_output_0']
+  Attributes:
+
+Layer 209:
+  Op type: Mul
+  Name: /solvers.1/model/model.4/norm/Mul
+  Inputs: ['/solvers.1/model/model.4/norm/Div_output_0', 'solvers.1.model.4.norm.weight']
+  Outputs: ['/solvers.1/model/model.4/norm/Mul_output_0']
+  Attributes:
+
+Layer 210:
+  Op type: Add
+  Name: /solvers.1/model/model.4/norm/Add_1
+  Inputs: ['/solvers.1/model/model.4/norm/Mul_output_0', 'solvers.1.model.4.norm.bias']
+  Outputs: ['/solvers.1/model/model.4/norm/Add_1_output_0']
+  Attributes:
+
+Layer 211:
+  Op type: MatMul
+  Name: /solvers.1/model/model.4/linear/MatMul
+  Inputs: ['/solvers.1/model/model.4/norm/Add_1_output_0', 'onnx::MatMul_433']
+  Outputs: ['/solvers.1/model/model.4/linear/MatMul_output_0']
+  Attributes:
+
+Layer 212:
+  Op type: Add
+  Name: /solvers.1/model/model.4/linear/Add
+  Inputs: ['solvers.1.model.4.linear.bias', '/solvers.1/model/model.4/linear/MatMul_output_0']
+  Outputs: ['/solvers.1/model/model.4/linear/Add_output_0']
+  Attributes:
+
+Layer 213:
+  Op type: Sin
+  Name: /solvers.1/model/model.4/activ/Sin
+  Inputs: ['/solvers.1/model/model.4/linear/Add_output_0']
+  Outputs: ['/solvers.1/model/model.4/activ/Sin_output_0']
+  Attributes:
+
+Layer 214:
+  Op type: Mul
+  Name: /solvers.1/model/model.4/Mul
+  Inputs: ['solvers.1.model.4.re_alpha', '/solvers.1/model/model.4/activ/Sin_output_0']
+  Outputs: ['/solvers.1/model/model.4/Mul_output_0']
+  Attributes:
+
+Layer 215:
+  Op type: Add
+  Name: /solvers.1/model/model.4/Add
+  Inputs: ['/solvers.1/model/model.3/Add_output_0', '/solvers.1/model/model.4/Mul_output_0']
+  Outputs: ['/solvers.1/model/model.4/Add_output_0']
+  Attributes:
+
+Layer 216:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.5/norm/ReduceMean
+  Inputs: ['/solvers.1/model/model.4/Add_output_0']
+  Outputs: ['/solvers.1/model/model.5/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 217:
+  Op type: Sub
+  Name: /solvers.1/model/model.5/norm/Sub
+  Inputs: ['/solvers.1/model/model.4/Add_output_0', '/solvers.1/model/model.5/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.1/model/model.5/norm/Sub_output_0']
+  Attributes:
+
+Layer 218:
+  Op type: Constant
+  Name: /solvers.1/model/model.5/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.5/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 219:
+  Op type: Pow
+  Name: /solvers.1/model/model.5/norm/Pow
+  Inputs: ['/solvers.1/model/model.5/norm/Sub_output_0', '/solvers.1/model/model.5/norm/Constant_output_0']
+  Outputs: ['/solvers.1/model/model.5/norm/Pow_output_0']
+  Attributes:
+
+Layer 220:
+  Op type: ReduceMean
+  Name: /solvers.1/model/model.5/norm/ReduceMean_1
+  Inputs: ['/solvers.1/model/model.5/norm/Pow_output_0']
+  Outputs: ['/solvers.1/model/model.5/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 221:
+  Op type: Constant
+  Name: /solvers.1/model/model.5/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.1/model/model.5/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 222:
+  Op type: Add
+  Name: /solvers.1/model/model.5/norm/Add
+  Inputs: ['/solvers.1/model/model.5/norm/ReduceMean_1_output_0', '/solvers.1/model/model.5/norm/Constant_1_output_0']
+  Outputs: ['/solvers.1/model/model.5/norm/Add_output_0']
+  Attributes:
+
+Layer 223:
+  Op type: Sqrt
+  Name: /solvers.1/model/model.5/norm/Sqrt
+  Inputs: ['/solvers.1/model/model.5/norm/Add_output_0']
+  Outputs: ['/solvers.1/model/model.5/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 224:
+  Op type: Div
+  Name: /solvers.1/model/model.5/norm/Div
+  Inputs: ['/solvers.1/model/model.5/norm/Sub_output_0', '/solvers.1/model/model.5/norm/Sqrt_output_0']
+  Outputs: ['/solvers.1/model/model.5/norm/Div_output_0']
+  Attributes:
+
+Layer 225:
+  Op type: Mul
+  Name: /solvers.1/model/model.5/norm/Mul
+  Inputs: ['/solvers.1/model/model.5/norm/Div_output_0', 'solvers.1.model.5.norm.weight']
+  Outputs: ['/solvers.1/model/model.5/norm/Mul_output_0']
+  Attributes:
+
+Layer 226:
+  Op type: Add
+  Name: /solvers.1/model/model.5/norm/Add_1
+  Inputs: ['/solvers.1/model/model.5/norm/Mul_output_0', 'solvers.1.model.5.norm.bias']
+  Outputs: ['/solvers.1/model/model.5/norm/Add_1_output_0']
+  Attributes:
+
+Layer 227:
+  Op type: MatMul
+  Name: /solvers.1/model/model.5/linear/MatMul
+  Inputs: ['/solvers.1/model/model.5/norm/Add_1_output_0', 'onnx::MatMul_434']
+  Outputs: ['/solvers.1/model/model.5/linear/MatMul_output_0']
+  Attributes:
+
+Layer 228:
+  Op type: Add
+  Name: /solvers.1/model/model.5/linear/Add
+  Inputs: ['solvers.1.model.5.linear.bias', '/solvers.1/model/model.5/linear/MatMul_output_0']
+  Outputs: ['/solvers.1/model/model.5/linear/Add_output_0']
+  Attributes:
+
+Layer 229:
+  Op type: Sin
+  Name: /solvers.1/model/model.5/activ/Sin
+  Inputs: ['/solvers.1/model/model.5/linear/Add_output_0']
+  Outputs: ['/solvers.1/model/model.5/activ/Sin_output_0']
+  Attributes:
+
+Layer 230:
+  Op type: Mul
+  Name: /solvers.1/model/model.5/Mul
+  Inputs: ['solvers.1.model.5.re_alpha', '/solvers.1/model/model.5/activ/Sin_output_0']
+  Outputs: ['/solvers.1/model/model.5/Mul_output_0']
+  Attributes:
+
+Layer 231:
+  Op type: Add
+  Name: /solvers.1/model/model.5/Add
+  Inputs: ['/solvers.1/model/model.4/Add_output_0', '/solvers.1/model/model.5/Mul_output_0']
+  Outputs: ['/solvers.1/model/model.5/Add_output_0']
+  Attributes:
+
+Layer 232:
+  Op type: Constant
+  Name: /solvers.2/Constant
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 233:
+  Op type: Constant
+  Name: /solvers.2/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_1_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 234:
+  Op type: Constant
+  Name: /solvers.2/Constant_2
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_2_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 235:
+  Op type: Slice
+  Name: /solvers.2/Slice
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_1_output_0', '/solvers.2/Constant_2_output_0', '/solvers.2/Constant_output_0']
+  Outputs: ['/solvers.2/Slice_output_0']
+  Attributes:
+
+Layer 236:
+  Op type: Concat
+  Name: /solvers.2/Concat
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Slice_output_0']
+  Outputs: ['/solvers.2/Concat_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 237:
+  Op type: Constant
+  Name: /solvers.2/Constant_3
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_3_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 238:
+  Op type: Constant
+  Name: /solvers.2/Constant_4
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_4_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\377"
+
+
+Layer 239:
+  Op type: Constant
+  Name: /solvers.2/Constant_5
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_5_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 240:
+  Op type: Slice
+  Name: /solvers.2/Slice_1
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_4_output_0', '/solvers.2/Constant_5_output_0', '/solvers.2/Constant_3_output_0']
+  Outputs: ['/solvers.2/Slice_1_output_0']
+  Attributes:
+
+Layer 241:
+  Op type: Constant
+  Name: /solvers.2/Constant_6
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_6_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 242:
+  Op type: Constant
+  Name: /solvers.2/Constant_7
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_7_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 243:
+  Op type: Constant
+  Name: /solvers.2/Constant_8
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_8_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\377"
+
+
+Layer 244:
+  Op type: Slice
+  Name: /solvers.2/Slice_2
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_7_output_0', '/solvers.2/Constant_8_output_0', '/solvers.2/Constant_6_output_0']
+  Outputs: ['/solvers.2/Slice_2_output_0']
+  Attributes:
+
+Layer 245:
+  Op type: Concat
+  Name: /solvers.2/Concat_1
+  Inputs: ['/solvers.2/Slice_1_output_0', '/solvers.2/Slice_2_output_0']
+  Outputs: ['/solvers.2/Concat_1_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 246:
+  Op type: Constant
+  Name: /solvers.2/Constant_9
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_9_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 247:
+  Op type: Constant
+  Name: /solvers.2/Constant_10
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_10_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\376\377\377\377\377\377\377\377"
+
+
+Layer 248:
+  Op type: Constant
+  Name: /solvers.2/Constant_11
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_11_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 249:
+  Op type: Slice
+  Name: /solvers.2/Slice_3
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_10_output_0', '/solvers.2/Constant_11_output_0', '/solvers.2/Constant_9_output_0']
+  Outputs: ['/solvers.2/Slice_3_output_0']
+  Attributes:
+
+Layer 250:
+  Op type: Constant
+  Name: /solvers.2/Constant_12
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_12_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 251:
+  Op type: Constant
+  Name: /solvers.2/Constant_13
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_13_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 252:
+  Op type: Constant
+  Name: /solvers.2/Constant_14
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_14_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\376\377\377\377\377\377\377\377"
+
+
+Layer 253:
+  Op type: Slice
+  Name: /solvers.2/Slice_4
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_13_output_0', '/solvers.2/Constant_14_output_0', '/solvers.2/Constant_12_output_0']
+  Outputs: ['/solvers.2/Slice_4_output_0']
+  Attributes:
+
+Layer 254:
+  Op type: Concat
+  Name: /solvers.2/Concat_2
+  Inputs: ['/solvers.2/Slice_3_output_0', '/solvers.2/Slice_4_output_0']
+  Outputs: ['/solvers.2/Concat_2_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 255:
+  Op type: Constant
+  Name: /solvers.2/Constant_15
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_15_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 256:
+  Op type: Constant
+  Name: /solvers.2/Constant_16
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_16_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\375\377\377\377\377\377\377\377"
+
+
+Layer 257:
+  Op type: Constant
+  Name: /solvers.2/Constant_17
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_17_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 258:
+  Op type: Slice
+  Name: /solvers.2/Slice_5
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_16_output_0', '/solvers.2/Constant_17_output_0', '/solvers.2/Constant_15_output_0']
+  Outputs: ['/solvers.2/Slice_5_output_0']
+  Attributes:
+
+Layer 259:
+  Op type: Constant
+  Name: /solvers.2/Constant_18
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_18_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 260:
+  Op type: Constant
+  Name: /solvers.2/Constant_19
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_19_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 261:
+  Op type: Constant
+  Name: /solvers.2/Constant_20
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_20_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\375\377\377\377\377\377\377\377"
+
+
+Layer 262:
+  Op type: Slice
+  Name: /solvers.2/Slice_6
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_19_output_0', '/solvers.2/Constant_20_output_0', '/solvers.2/Constant_18_output_0']
+  Outputs: ['/solvers.2/Slice_6_output_0']
+  Attributes:
+
+Layer 263:
+  Op type: Concat
+  Name: /solvers.2/Concat_3
+  Inputs: ['/solvers.2/Slice_5_output_0', '/solvers.2/Slice_6_output_0']
+  Outputs: ['/solvers.2/Concat_3_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 264:
+  Op type: Constant
+  Name: /solvers.2/Constant_21
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_21_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 265:
+  Op type: Constant
+  Name: /solvers.2/Constant_22
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_22_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\374\377\377\377\377\377\377\377"
+
+
+Layer 266:
+  Op type: Constant
+  Name: /solvers.2/Constant_23
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_23_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 267:
+  Op type: Slice
+  Name: /solvers.2/Slice_7
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_22_output_0', '/solvers.2/Constant_23_output_0', '/solvers.2/Constant_21_output_0']
+  Outputs: ['/solvers.2/Slice_7_output_0']
+  Attributes:
+
+Layer 268:
+  Op type: Constant
+  Name: /solvers.2/Constant_24
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_24_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 269:
+  Op type: Constant
+  Name: /solvers.2/Constant_25
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_25_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 270:
+  Op type: Constant
+  Name: /solvers.2/Constant_26
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_26_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\374\377\377\377\377\377\377\377"
+
+
+Layer 271:
+  Op type: Slice
+  Name: /solvers.2/Slice_8
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_25_output_0', '/solvers.2/Constant_26_output_0', '/solvers.2/Constant_24_output_0']
+  Outputs: ['/solvers.2/Slice_8_output_0']
+  Attributes:
+
+Layer 272:
+  Op type: Concat
+  Name: /solvers.2/Concat_4
+  Inputs: ['/solvers.2/Slice_7_output_0', '/solvers.2/Slice_8_output_0']
+  Outputs: ['/solvers.2/Concat_4_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 273:
+  Op type: Constant
+  Name: /solvers.2/Constant_27
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_27_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 274:
+  Op type: Constant
+  Name: /solvers.2/Constant_28
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_28_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\373\377\377\377\377\377\377\377"
+
+
+Layer 275:
+  Op type: Constant
+  Name: /solvers.2/Constant_29
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_29_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\377\377\377\377\377\377\377\177"
+
+
+Layer 276:
+  Op type: Slice
+  Name: /solvers.2/Slice_9
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_28_output_0', '/solvers.2/Constant_29_output_0', '/solvers.2/Constant_27_output_0']
+  Outputs: ['/solvers.2/Slice_9_output_0']
+  Attributes:
+
+Layer 277:
+  Op type: Constant
+  Name: /solvers.2/Constant_30
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_30_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\001\000\000\000\000\000\000\000"
+
+
+Layer 278:
+  Op type: Constant
+  Name: /solvers.2/Constant_31
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_31_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\000\000\000\000\000\000\000\000"
+
+
+Layer 279:
+  Op type: Constant
+  Name: /solvers.2/Constant_32
+  Inputs: []
+  Outputs: ['/solvers.2/Constant_32_output_0']
+  Attributes:
+    - value: dims: 1
+data_type: 7
+raw_data: "\373\377\377\377\377\377\377\377"
+
+
+Layer 280:
+  Op type: Slice
+  Name: /solvers.2/Slice_10
+  Inputs: ['/solvers.1/model/model.5/Add_output_0', '/solvers.2/Constant_31_output_0', '/solvers.2/Constant_32_output_0', '/solvers.2/Constant_30_output_0']
+  Outputs: ['/solvers.2/Slice_10_output_0']
+  Attributes:
+
+Layer 281:
+  Op type: Concat
+  Name: /solvers.2/Concat_5
+  Inputs: ['/solvers.2/Slice_9_output_0', '/solvers.2/Slice_10_output_0']
+  Outputs: ['/solvers.2/Concat_5_output_0']
+  Attributes:
+    - axis: 1
+
+Layer 282:
+  Op type: Concat
+  Name: /solvers.2/Concat_6
+  Inputs: ['/solvers.2/Concat_output_0', '/solvers.2/Concat_1_output_0', '/solvers.2/Concat_2_output_0', '/solvers.2/Concat_3_output_0', '/solvers.2/Concat_4_output_0', '/solvers.2/Concat_5_output_0']
+  Outputs: ['/solvers.2/Concat_6_output_0']
+  Attributes:
+    - axis: -1
+
+Layer 283:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.0/ReduceMean
+  Inputs: ['/solvers.2/Concat_6_output_0']
+  Outputs: ['/solvers.2/model/model.0/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 284:
+  Op type: Sub
+  Name: /solvers.2/model/model.0/Sub
+  Inputs: ['/solvers.2/Concat_6_output_0', '/solvers.2/model/model.0/ReduceMean_output_0']
+  Outputs: ['/solvers.2/model/model.0/Sub_output_0']
+  Attributes:
+
+Layer 285:
+  Op type: Constant
+  Name: /solvers.2/model/model.0/Constant
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.0/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 286:
+  Op type: Pow
+  Name: /solvers.2/model/model.0/Pow
+  Inputs: ['/solvers.2/model/model.0/Sub_output_0', '/solvers.2/model/model.0/Constant_output_0']
+  Outputs: ['/solvers.2/model/model.0/Pow_output_0']
+  Attributes:
+
+Layer 287:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.0/ReduceMean_1
+  Inputs: ['/solvers.2/model/model.0/Pow_output_0']
+  Outputs: ['/solvers.2/model/model.0/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 288:
+  Op type: Constant
+  Name: /solvers.2/model/model.0/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.0/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 289:
+  Op type: Add
+  Name: /solvers.2/model/model.0/Add
+  Inputs: ['/solvers.2/model/model.0/ReduceMean_1_output_0', '/solvers.2/model/model.0/Constant_1_output_0']
+  Outputs: ['/solvers.2/model/model.0/Add_output_0']
+  Attributes:
+
+Layer 290:
+  Op type: Sqrt
+  Name: /solvers.2/model/model.0/Sqrt
+  Inputs: ['/solvers.2/model/model.0/Add_output_0']
+  Outputs: ['/solvers.2/model/model.0/Sqrt_output_0']
+  Attributes:
+
+Layer 291:
+  Op type: Div
+  Name: /solvers.2/model/model.0/Div
+  Inputs: ['/solvers.2/model/model.0/Sub_output_0', '/solvers.2/model/model.0/Sqrt_output_0']
+  Outputs: ['/solvers.2/model/model.0/Div_output_0']
+  Attributes:
+
+Layer 292:
+  Op type: Mul
+  Name: /solvers.2/model/model.0/Mul
+  Inputs: ['/solvers.2/model/model.0/Div_output_0', 'solvers.2.model.0.weight']
+  Outputs: ['/solvers.2/model/model.0/Mul_output_0']
+  Attributes:
+
+Layer 293:
+  Op type: Add
+  Name: /solvers.2/model/model.0/Add_1
+  Inputs: ['/solvers.2/model/model.0/Mul_output_0', 'solvers.2.model.0.bias']
+  Outputs: ['/solvers.2/model/model.0/Add_1_output_0']
+  Attributes:
+
+Layer 294:
+  Op type: MatMul
+  Name: /solvers.2/model/model.1/MatMul
+  Inputs: ['/solvers.2/model/model.0/Add_1_output_0', 'onnx::MatMul_435']
+  Outputs: ['/solvers.2/model/model.1/MatMul_output_0']
+  Attributes:
+
+Layer 295:
+  Op type: Add
+  Name: /solvers.2/model/model.1/Add
+  Inputs: ['solvers.2.model.1.bias', '/solvers.2/model/model.1/MatMul_output_0']
+  Outputs: ['/solvers.2/model/model.1/Add_output_0']
+  Attributes:
+
+Layer 296:
+  Op type: Sin
+  Name: /solvers.2/model/model.2/Sin
+  Inputs: ['/solvers.2/model/model.1/Add_output_0']
+  Outputs: ['/solvers.2/model/model.2/Sin_output_0']
+  Attributes:
+
+Layer 297:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.3/norm/ReduceMean
+  Inputs: ['/solvers.2/model/model.2/Sin_output_0']
+  Outputs: ['/solvers.2/model/model.3/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 298:
+  Op type: Sub
+  Name: /solvers.2/model/model.3/norm/Sub
+  Inputs: ['/solvers.2/model/model.2/Sin_output_0', '/solvers.2/model/model.3/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.2/model/model.3/norm/Sub_output_0']
+  Attributes:
+
+Layer 299:
+  Op type: Constant
+  Name: /solvers.2/model/model.3/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.3/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 300:
+  Op type: Pow
+  Name: /solvers.2/model/model.3/norm/Pow
+  Inputs: ['/solvers.2/model/model.3/norm/Sub_output_0', '/solvers.2/model/model.3/norm/Constant_output_0']
+  Outputs: ['/solvers.2/model/model.3/norm/Pow_output_0']
+  Attributes:
+
+Layer 301:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.3/norm/ReduceMean_1
+  Inputs: ['/solvers.2/model/model.3/norm/Pow_output_0']
+  Outputs: ['/solvers.2/model/model.3/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 302:
+  Op type: Constant
+  Name: /solvers.2/model/model.3/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.3/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 303:
+  Op type: Add
+  Name: /solvers.2/model/model.3/norm/Add
+  Inputs: ['/solvers.2/model/model.3/norm/ReduceMean_1_output_0', '/solvers.2/model/model.3/norm/Constant_1_output_0']
+  Outputs: ['/solvers.2/model/model.3/norm/Add_output_0']
+  Attributes:
+
+Layer 304:
+  Op type: Sqrt
+  Name: /solvers.2/model/model.3/norm/Sqrt
+  Inputs: ['/solvers.2/model/model.3/norm/Add_output_0']
+  Outputs: ['/solvers.2/model/model.3/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 305:
+  Op type: Div
+  Name: /solvers.2/model/model.3/norm/Div
+  Inputs: ['/solvers.2/model/model.3/norm/Sub_output_0', '/solvers.2/model/model.3/norm/Sqrt_output_0']
+  Outputs: ['/solvers.2/model/model.3/norm/Div_output_0']
+  Attributes:
+
+Layer 306:
+  Op type: Mul
+  Name: /solvers.2/model/model.3/norm/Mul
+  Inputs: ['/solvers.2/model/model.3/norm/Div_output_0', 'solvers.2.model.3.norm.weight']
+  Outputs: ['/solvers.2/model/model.3/norm/Mul_output_0']
+  Attributes:
+
+Layer 307:
+  Op type: Add
+  Name: /solvers.2/model/model.3/norm/Add_1
+  Inputs: ['/solvers.2/model/model.3/norm/Mul_output_0', 'solvers.2.model.3.norm.bias']
+  Outputs: ['/solvers.2/model/model.3/norm/Add_1_output_0']
+  Attributes:
+
+Layer 308:
+  Op type: MatMul
+  Name: /solvers.2/model/model.3/linear/MatMul
+  Inputs: ['/solvers.2/model/model.3/norm/Add_1_output_0', 'onnx::MatMul_436']
+  Outputs: ['/solvers.2/model/model.3/linear/MatMul_output_0']
+  Attributes:
+
+Layer 309:
+  Op type: Add
+  Name: /solvers.2/model/model.3/linear/Add
+  Inputs: ['solvers.2.model.3.linear.bias', '/solvers.2/model/model.3/linear/MatMul_output_0']
+  Outputs: ['/solvers.2/model/model.3/linear/Add_output_0']
+  Attributes:
+
+Layer 310:
+  Op type: Sin
+  Name: /solvers.2/model/model.3/activ/Sin
+  Inputs: ['/solvers.2/model/model.3/linear/Add_output_0']
+  Outputs: ['/solvers.2/model/model.3/activ/Sin_output_0']
+  Attributes:
+
+Layer 311:
+  Op type: Mul
+  Name: /solvers.2/model/model.3/Mul
+  Inputs: ['solvers.2.model.3.re_alpha', '/solvers.2/model/model.3/activ/Sin_output_0']
+  Outputs: ['/solvers.2/model/model.3/Mul_output_0']
+  Attributes:
+
+Layer 312:
+  Op type: Add
+  Name: /solvers.2/model/model.3/Add
+  Inputs: ['/solvers.2/model/model.2/Sin_output_0', '/solvers.2/model/model.3/Mul_output_0']
+  Outputs: ['/solvers.2/model/model.3/Add_output_0']
+  Attributes:
+
+Layer 313:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.4/norm/ReduceMean
+  Inputs: ['/solvers.2/model/model.3/Add_output_0']
+  Outputs: ['/solvers.2/model/model.4/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 314:
+  Op type: Sub
+  Name: /solvers.2/model/model.4/norm/Sub
+  Inputs: ['/solvers.2/model/model.3/Add_output_0', '/solvers.2/model/model.4/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.2/model/model.4/norm/Sub_output_0']
+  Attributes:
+
+Layer 315:
+  Op type: Constant
+  Name: /solvers.2/model/model.4/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.4/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 316:
+  Op type: Pow
+  Name: /solvers.2/model/model.4/norm/Pow
+  Inputs: ['/solvers.2/model/model.4/norm/Sub_output_0', '/solvers.2/model/model.4/norm/Constant_output_0']
+  Outputs: ['/solvers.2/model/model.4/norm/Pow_output_0']
+  Attributes:
+
+Layer 317:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.4/norm/ReduceMean_1
+  Inputs: ['/solvers.2/model/model.4/norm/Pow_output_0']
+  Outputs: ['/solvers.2/model/model.4/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 318:
+  Op type: Constant
+  Name: /solvers.2/model/model.4/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.4/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 319:
+  Op type: Add
+  Name: /solvers.2/model/model.4/norm/Add
+  Inputs: ['/solvers.2/model/model.4/norm/ReduceMean_1_output_0', '/solvers.2/model/model.4/norm/Constant_1_output_0']
+  Outputs: ['/solvers.2/model/model.4/norm/Add_output_0']
+  Attributes:
+
+Layer 320:
+  Op type: Sqrt
+  Name: /solvers.2/model/model.4/norm/Sqrt
+  Inputs: ['/solvers.2/model/model.4/norm/Add_output_0']
+  Outputs: ['/solvers.2/model/model.4/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 321:
+  Op type: Div
+  Name: /solvers.2/model/model.4/norm/Div
+  Inputs: ['/solvers.2/model/model.4/norm/Sub_output_0', '/solvers.2/model/model.4/norm/Sqrt_output_0']
+  Outputs: ['/solvers.2/model/model.4/norm/Div_output_0']
+  Attributes:
+
+Layer 322:
+  Op type: Mul
+  Name: /solvers.2/model/model.4/norm/Mul
+  Inputs: ['/solvers.2/model/model.4/norm/Div_output_0', 'solvers.2.model.4.norm.weight']
+  Outputs: ['/solvers.2/model/model.4/norm/Mul_output_0']
+  Attributes:
+
+Layer 323:
+  Op type: Add
+  Name: /solvers.2/model/model.4/norm/Add_1
+  Inputs: ['/solvers.2/model/model.4/norm/Mul_output_0', 'solvers.2.model.4.norm.bias']
+  Outputs: ['/solvers.2/model/model.4/norm/Add_1_output_0']
+  Attributes:
+
+Layer 324:
+  Op type: MatMul
+  Name: /solvers.2/model/model.4/linear/MatMul
+  Inputs: ['/solvers.2/model/model.4/norm/Add_1_output_0', 'onnx::MatMul_437']
+  Outputs: ['/solvers.2/model/model.4/linear/MatMul_output_0']
+  Attributes:
+
+Layer 325:
+  Op type: Add
+  Name: /solvers.2/model/model.4/linear/Add
+  Inputs: ['solvers.2.model.4.linear.bias', '/solvers.2/model/model.4/linear/MatMul_output_0']
+  Outputs: ['/solvers.2/model/model.4/linear/Add_output_0']
+  Attributes:
+
+Layer 326:
+  Op type: Sin
+  Name: /solvers.2/model/model.4/activ/Sin
+  Inputs: ['/solvers.2/model/model.4/linear/Add_output_0']
+  Outputs: ['/solvers.2/model/model.4/activ/Sin_output_0']
+  Attributes:
+
+Layer 327:
+  Op type: Mul
+  Name: /solvers.2/model/model.4/Mul
+  Inputs: ['solvers.2.model.4.re_alpha', '/solvers.2/model/model.4/activ/Sin_output_0']
+  Outputs: ['/solvers.2/model/model.4/Mul_output_0']
+  Attributes:
+
+Layer 328:
+  Op type: Add
+  Name: /solvers.2/model/model.4/Add
+  Inputs: ['/solvers.2/model/model.3/Add_output_0', '/solvers.2/model/model.4/Mul_output_0']
+  Outputs: ['/solvers.2/model/model.4/Add_output_0']
+  Attributes:
+
+Layer 329:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.5/norm/ReduceMean
+  Inputs: ['/solvers.2/model/model.4/Add_output_0']
+  Outputs: ['/solvers.2/model/model.5/norm/ReduceMean_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 330:
+  Op type: Sub
+  Name: /solvers.2/model/model.5/norm/Sub
+  Inputs: ['/solvers.2/model/model.4/Add_output_0', '/solvers.2/model/model.5/norm/ReduceMean_output_0']
+  Outputs: ['/solvers.2/model/model.5/norm/Sub_output_0']
+  Attributes:
+
+Layer 331:
+  Op type: Constant
+  Name: /solvers.2/model/model.5/norm/Constant
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.5/norm/Constant_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\000\000\000@"
+
+
+Layer 332:
+  Op type: Pow
+  Name: /solvers.2/model/model.5/norm/Pow
+  Inputs: ['/solvers.2/model/model.5/norm/Sub_output_0', '/solvers.2/model/model.5/norm/Constant_output_0']
+  Outputs: ['/solvers.2/model/model.5/norm/Pow_output_0']
+  Attributes:
+
+Layer 333:
+  Op type: ReduceMean
+  Name: /solvers.2/model/model.5/norm/ReduceMean_1
+  Inputs: ['/solvers.2/model/model.5/norm/Pow_output_0']
+  Outputs: ['/solvers.2/model/model.5/norm/ReduceMean_1_output_0']
+  Attributes:
+    - axes: [-1]
+
+Layer 334:
+  Op type: Constant
+  Name: /solvers.2/model/model.5/norm/Constant_1
+  Inputs: []
+  Outputs: ['/solvers.2/model/model.5/norm/Constant_1_output_0']
+  Attributes:
+    - value: data_type: 1
+raw_data: "\254\305\'7"
+
+
+Layer 335:
+  Op type: Add
+  Name: /solvers.2/model/model.5/norm/Add
+  Inputs: ['/solvers.2/model/model.5/norm/ReduceMean_1_output_0', '/solvers.2/model/model.5/norm/Constant_1_output_0']
+  Outputs: ['/solvers.2/model/model.5/norm/Add_output_0']
+  Attributes:
+
+Layer 336:
+  Op type: Sqrt
+  Name: /solvers.2/model/model.5/norm/Sqrt
+  Inputs: ['/solvers.2/model/model.5/norm/Add_output_0']
+  Outputs: ['/solvers.2/model/model.5/norm/Sqrt_output_0']
+  Attributes:
+
+Layer 337:
+  Op type: Div
+  Name: /solvers.2/model/model.5/norm/Div
+  Inputs: ['/solvers.2/model/model.5/norm/Sub_output_0', '/solvers.2/model/model.5/norm/Sqrt_output_0']
+  Outputs: ['/solvers.2/model/model.5/norm/Div_output_0']
+  Attributes:
+
+Layer 338:
+  Op type: Mul
+  Name: /solvers.2/model/model.5/norm/Mul
+  Inputs: ['/solvers.2/model/model.5/norm/Div_output_0', 'solvers.2.model.5.norm.weight']
+  Outputs: ['/solvers.2/model/model.5/norm/Mul_output_0']
+  Attributes:
+
+Layer 339:
+  Op type: Add
+  Name: /solvers.2/model/model.5/norm/Add_1
+  Inputs: ['/solvers.2/model/model.5/norm/Mul_output_0', 'solvers.2.model.5.norm.bias']
+  Outputs: ['/solvers.2/model/model.5/norm/Add_1_output_0']
+  Attributes:
+
+Layer 340:
+  Op type: MatMul
+  Name: /solvers.2/model/model.5/linear/MatMul
+  Inputs: ['/solvers.2/model/model.5/norm/Add_1_output_0', 'onnx::MatMul_438']
+  Outputs: ['/solvers.2/model/model.5/linear/MatMul_output_0']
+  Attributes:
+
+Layer 341:
+  Op type: Add
+  Name: /solvers.2/model/model.5/linear/Add
+  Inputs: ['solvers.2.model.5.linear.bias', '/solvers.2/model/model.5/linear/MatMul_output_0']
+  Outputs: ['/solvers.2/model/model.5/linear/Add_output_0']
+  Attributes:
+
+Layer 342:
+  Op type: Sin
+  Name: /solvers.2/model/model.5/activ/Sin
+  Inputs: ['/solvers.2/model/model.5/linear/Add_output_0']
+  Outputs: ['/solvers.2/model/model.5/activ/Sin_output_0']
+  Attributes:
+
+Layer 343:
+  Op type: Mul
+  Name: /solvers.2/model/model.5/Mul
+  Inputs: ['solvers.2.model.5.re_alpha', '/solvers.2/model/model.5/activ/Sin_output_0']
+  Outputs: ['/solvers.2/model/model.5/Mul_output_0']
+  Attributes:
+
+Layer 344:
+  Op type: Add
+  Name: /solvers.2/model/model.5/Add
+  Inputs: ['/solvers.2/model/model.4/Add_output_0', '/solvers.2/model/model.5/Mul_output_0']
+  Outputs: ['/solvers.2/model/model.5/Add_output_0']
+  Attributes:
+
+Layer 345:
+  Op type: ReduceMean
+  Name: /ReduceMean
+  Inputs: ['/solvers.2/model/model.5/Add_output_0']
+  Outputs: ['/ReduceMean_output_0']
+  Attributes:
+    - axes: [1]
+    - keepdims: 0
+
+Layer 346:
+  Op type: Gemm
+  Name: /output/Gemm
+  Inputs: ['/ReduceMean_output_0', 'output.weight', 'output.bias']
+  Outputs: ['output']
+  Attributes:
+    - alpha: 1.0
+    - beta: 1.0
+    - transB: 1
