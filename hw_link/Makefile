@@ -9,11 +9,13 @@ AIE_LIB := ../aie/build_$(TARGET)/libadf.a
 CONFIG := system.cfg
 OUTPUT := design_$(TARGET).xsa
 
+VPP_FLAGS = -I../common/
+
 XO_FILES := $(PL_XO_DIR)/mm2s_8_128.xo \
             $(PL_XO_DIR)/s2mm_32_128.xo \
             $(PL_XO_DIR)/s2mm_16_128.xo
 
-LINK_CMD := $(VPP) --link --target $(TARGET) --platform $(PLATFORM) \
+LINK_CMD := $(VPP) --link --target $(TARGET) $(VPP_FLAGS) --platform $(PLATFORM) \
             --config $(CONFIG) $(XO_FILES) $(AIE_LIB) -o $(OUTPUT)
 
 .PHONY: all clean

@@ -9,7 +9,7 @@ SPDX-License-Identifier: X11
 #include <ap_axi_sdata.h>
 
 // The following header file deines the inner size of array v
-#include "../common/system_settings_32.h"
+#include "system_settings_32.h"
 
 
 extern "C" {

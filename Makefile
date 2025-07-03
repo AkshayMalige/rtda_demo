@@ -12,7 +12,7 @@ ROOTFS    ?= $(EDGE_COMMON_SW)/rootfs.ext4
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
-TARGET    ?= hw_emu
+TARGET    ?= sw_emu
 EMU_PS    ?= QEMU
 PLATFORM  ?= xilinx_vek280_base_202420_1
 PACK_CFG  := ./pack.cfg
