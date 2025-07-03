@@ -1,5 +1,7 @@
 ############################################################################
 #  project_root/Makefile  ─  umbrella build for AIE / PL / HOST / HW_LINK
+#TARGET = sw_emu | hw_emu | hw
+#EMU_PS = X86 | QEMU
 ############################################################################
 
 ######################## ▶ User-specific paths ◀ ###########################
@@ -10,8 +12,8 @@ ROOTFS    ?= $(EDGE_COMMON_SW)/rootfs.ext4
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
-TARGET    ?= hw_emu               # sw_emu | hw_emu | hw
-EMU_PS    ?= QEMU                 # X86 or QEMU
+TARGET    ?= hw_emu
+EMU_PS    ?= QEMU
 PLATFORM  ?= xilinx_vek280_base_202420_1
 PACK_CFG  := ./pack.cfg
 ###########################################################################
@@ -20,8 +22,8 @@ PACK_CFG  := ./pack.cfg
 XO_DIR    := pl/build_$(TARGET)
 XO_FILES  := $(wildcard $(XO_DIR)/*.xo)
 AIE_LIB   := aie/build_$(TARGET)/libadf.a
-XSA       := hw_link/build_$(TARGET)/design_$(TARGET).xsa
-EXEC      := host/build_$(TARGET)/system_host
+XSA       := hw_link/design_$(TARGET).xsa
+EXEC      := host/system_host
 PKG_DIR   := package.$(TARGET)
 XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
 ###########################################################################
@@ -75,8 +77,9 @@ $(XCLBIN): $(XO_FILES) $(AIE_LIB) $(XSA) | $(PKG_DIR)
 	@echo "    XO_FILES = $(XO_FILES)"
 	@echo "    XSA      = $(XSA)"
 	@echo "    EXEC     = $(EXEC)"
+	@echo "Packaging design created in $(PKG_DIR) as $@"
 	v++ --package $(PKG_FLAGS) $(PKG_COMMON) \
-		$(XO_FILES) $(AIE_LIB) $(XSA) -o $@
+		$(AIE_LIB) $(XSA) -o $@
 	@echo "✅ Packaged design created in $(PKG_DIR)"
 
 $(PKG_DIR):
