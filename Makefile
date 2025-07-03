@@ -13,7 +13,7 @@ ROOTFS    ?= $(EDGE_COMMON_SW)/rootfs.ext4
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
-TARGET    ?= hw               # sw_emu | hw_emu | hw
+TARGET    ?= hw_emu               # sw_emu | hw_emu | hw
 EMU_PS    ?= QEMU             # X86 or QEMU
 PLATFORM  ?= xilinx_vek280_base_202420_1
 PACK_CFG  := ./pack.cfg
@@ -35,7 +35,7 @@ SUBOPTS := TARGET=$(TARGET) EMU_PS=$(EMU_PS) PLATFORM=$(PLATFORM)
 ############################################################################
 #  Top-level targets
 ############################################################################
-.PHONY: all aie pl host hw_link link package run clean help
+.PHONY: all aie pl host hw_link link package run clean clean_all help
 all: check_args aie pl host hw_link link package
 
 aie:      ; $(MAKE) -C aie      $(SUBOPTS)
@@ -116,6 +116,9 @@ endif
 
 ################################  Clean  ###################################
 clean:
+	rm -rf $(PKG_DIR) build_* *.xclbin *.xsa *.log
+
+clean_all:
 	$(MAKE) -C aie      clean
 	$(MAKE) -C pl       clean
 	$(MAKE) -C host     clean

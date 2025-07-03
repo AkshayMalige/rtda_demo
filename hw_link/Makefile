@@ -25,5 +25,5 @@ $(OUTPUT): $(XO_FILES) $(AIE_LIB) $(CONFIG)
 	@echo "✅ Linked: $@"
 
 clean:
-	rm -f *.xsa *.xclbin *.log *.jou *.json *.xml
+	rm -rf *.xsa *.xclbin *.log *.jou *.json *.xml binary_container_* *.link_summary .ipcache
 	@echo "🧹 Cleaned linking artifacts"
