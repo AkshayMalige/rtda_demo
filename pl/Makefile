@@ -10,7 +10,7 @@ SRC_DIR := .
 KERNEL_LIST := mm2s_8_128 s2mm_16_128 s2mm_32_128
 
 VPP_FLAGS := -t $(TARGET) --platform $(PLATFORM) --kernel_frequency $(PL_FREQZ) --save-temps -g
-
+VPP_FLAGS += -I../common
 # Auto-generate source and output paths
 KERNEL_CPP := $(addprefix $(SRC_DIR)/, $(addsuffix .cpp, $(KERNEL_LIST)))
 KERNEL_XO  := $(addprefix $(BUILD_DIR)/, $(addsuffix .xo, $(KERNEL_LIST)))
