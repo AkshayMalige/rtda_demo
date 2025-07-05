@@ -1,0 +1,7 @@
+#ifndef TILING_PARAMETERS_H
+#define TILING_PARAMETERS_H
+
+#define TILE_WIDTH 1
+#define TILE_HEIGHT 1
+
+#endif

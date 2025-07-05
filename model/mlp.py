@@ -102,24 +102,28 @@ class SubsetSolver(nn.Module):
 
         self.assemble = self._assemble_shift
 
-    # def _assemble_shift(self, data):
-    #     """
-    #     assemble the subset by shifting the input
-    #     """
-    #     return torch.cat([torch.roll(data, i, dims=1)
-    #                       for i in range(self.subset_size)],
-    #                      dim=-1)
-    
     def _assemble_shift(self, data):
-        B, N, F = data.shape  # batch, num_points, features
-        slices = []
-        for i in range(self.subset_size):
-            if i == 0:
-                slices.append(data)
-            else:
-                # Replace torch.roll with slice + cat
-                slices.append(torch.cat((data[:, -i:], data[:, :-i]), dim=1))
-        return torch.cat(slices, dim=-1)
+        """
+        assemble the subset by shifting the input
+        """
+        return torch.cat([torch.roll(data, i, dims=1)
+                          for i in range(self.subset_size)],
+                         dim=-1)
+    
+    # def _assemble_shift(self, data):
+    #     B, N, F = data.shape  # batch, num_points, features
+    #     slices = []
+    #     for i in range(self.subset_size):
+    #         if i == 0:
+    #             slices.append(data)
+    #         else:
+    #             # Replace torch.roll with slice + cat
+    #             slices.append(torch.cat((data[:, -i:], data[:, :-i]), dim=1))
+    #     return torch.cat(slices, dim=-1)
+    
+    # def _assemble_shift(self, data):
+    #     shifts = [torch.roll(data, shifts=i, dims=1) for i in range(self.subset_size)]
+    #     return torch.cat(shifts, dim=-1)
 
     def forward(self, data):
         subset = self.assemble(data)
