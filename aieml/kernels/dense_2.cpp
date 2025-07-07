@@ -1,5 +1,5 @@
 #include <adf.h>
-#include "kernels.h"
+#include "../kernels.h"
 #include "../include.h"
 
 static float weights[DENSE2_OUTPUT_SIZE][DENSE1_OUTPUT_SIZE];
