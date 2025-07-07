@@ -2,7 +2,7 @@
 #define __GRAPH_H__
 
 #include "adf.h"
-#include "kernel.hpp"
+#include "kernel.h"
 #include "system_settings.h"
 #include "tiling_parameters.h"
 
@@ -20,7 +20,7 @@ public:
 
     dense_graph() {
         in = input_plio::create("plio_input", plio_32_bits, "data/input_data.h");
-        out = output_plio::create("plio_output", plio_32_bits, "data/output_data.h");
+        out = output_plio::create("plio_output", plio_32_bits, "data/reference_data.h");
 
         k_dense1 = kernel::create(dense_1);
         k_dense2 = kernel::create(dense_2);
@@ -31,9 +31,9 @@ public:
         connect<>(k_relu.out[0], k_dense2.in[0]);
         connect<>(k_dense2.out[0], out.in[0]);
 
-        source(k_dense1) = "dense_1.cpp";
-        source(k_dense2) = "dense_2.cpp";
-        source(k_relu) = "leaky_relu.cpp";
+        source(k_dense1) = "kernels/dense_1.cpp";
+        source(k_dense2) = "kernels/dense_2.cpp";
+        source(k_relu) = "kernels/leaky_relu.cpp";
 
         runtime<ratio>(k_dense1) = 0.8;
         runtime<ratio>(k_dense2) = 0.8;
@@ -42,3 +42,5 @@ public:
 };
 
 #endif
+
+

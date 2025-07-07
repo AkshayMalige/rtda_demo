@@ -1,1 +1,0 @@
-// dense_2.cpp is included in kernel.cpp
