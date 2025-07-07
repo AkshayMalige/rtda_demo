@@ -1,10 +1,9 @@
-#ifndef SYSTEM_SETTINGS_H
-#define SYSTEM_SETTINGS_H
+#pragma once
 
-#define DATA_TYPE float
+// Dimension definitions for the network
+#define INPUT_SIZE   6        // Number of input features
+#define HIDDEN_SIZE 128       // Size of hidden layer
+#define OUTPUT_SIZE 128       // Number of output neurons
 
-#define INPUT_SIZE 6
-#define HIDDEN_SIZE 128
-#define OUTPUT_SIZE 128
-
-#endif
+// Activation parameter
+#define LEAKY_SLOPE 0.1f      // Leaky ReLU slope for negative inputs

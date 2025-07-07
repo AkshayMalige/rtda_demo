@@ -1,32 +1,34 @@
 #include <adf.h>
-#include "../kernels.h"
 #include "../include.h"
+#include "../kernels.h"
 
-static float weights[DENSE1_OUTPUT_SIZE][DENSE1_INPUT_SIZE];
-static float bias[DENSE1_OUTPUT_SIZE];
+using namespace adf;
 
-// You can later load real weights here if needed
-__attribute__((constructor))
-void init_dense1_weights() {
-    for (int i = 0; i < DENSE1_OUTPUT_SIZE; i++) {
-        bias[i] = 0.1f;
-        for (int j = 0; j < DENSE1_INPUT_SIZE; j++) {
-            weights[i][j] = 0.01f * (i + j); // dummy pattern
+void dense_1(input_window<float>* in, output_window<float>* out) {
+    // Read full input vector
+    float data[INPUT_SIZE];
+    for (int i = 0; i < INPUT_SIZE; i++) {
+        data[i] = window_readincr(in);
+    }
+
+    // Simple statically initialized weights & bias (for functional test)
+    // In practice, replace with your trained values.
+    static float weights[HIDDEN_SIZE][INPUT_SIZE];
+    static float bias[HIDDEN_SIZE];
+    // Initialize on first call (could be moved to constructor)
+    for (int o = 0; o < HIDDEN_SIZE; o++) {
+        bias[o] = 0.1f;
+        for (int i = 0; i < INPUT_SIZE; i++) {
+            weights[o][i] = 0.01f * (o + i);
         }
     }
-}
 
-void dense_layer_1(input_window<float>* in, output_window<float>* out) {
-    float input[DENSE1_INPUT_SIZE];
-    window_readin(in, input, DENSE1_INPUT_SIZE);
-
-    float output[DENSE1_OUTPUT_SIZE] = {0};
-
-    for (int i = 0; i < DENSE1_OUTPUT_SIZE; i++) {
-        float acc = bias[i];
-        for (int j = 0; j < DENSE1_INPUT_SIZE; j++) {
-            acc += input[j] * weights[i][j];
+    // Compute output = W * data + b
+    for (int o = 0; o < HIDDEN_SIZE; o++) {
+        float acc = bias[o];
+        for (int i = 0; i < INPUT_SIZE; i++) {
+            acc += data[i] * weights[o][i];
         }
-        window_writein(out, acc);
+        window_writeincr(out, acc);
     }
 }

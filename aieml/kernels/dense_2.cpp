@@ -1,31 +1,25 @@
 #include <adf.h>
-#include "../kernels.h"
-#include "../include.h"
+#include "include.h"
+#include "kernels.h"
 
-static float weights[DENSE2_OUTPUT_SIZE][DENSE1_OUTPUT_SIZE];
-static float bias[DENSE2_OUTPUT_SIZE];
+using namespace adf;
 
-__attribute__((constructor))
-void init_dense2_weights() {
-    for (int i = 0; i < DENSE2_OUTPUT_SIZE; i++) {
-        bias[i] = 0.2f;
-        for (int j = 0; j < DENSE1_OUTPUT_SIZE; j++) {
-            weights[i][j] = 0.005f * (i - j); // dummy pattern
-        }
+void dense_2(input_window<float>* in_data,
+             input_window<float>* in_weights,
+             output_window<float>* out) {
+    // Load hidden-layer activations
+    float data[HIDDEN_SIZE];
+    for (int i = 0; i < HIDDEN_SIZE; i++) {
+        data[i] = window_readincr(in_data);
     }
-}
 
-void dense_layer_2(input_window<float>* in, output_window<float>* out) {
-    float input[DENSE1_OUTPUT_SIZE];
-    window_readin(in, input, DENSE1_OUTPUT_SIZE);
-
-    float output[DENSE2_OUTPUT_SIZE] = {0};
-
-    for (int i = 0; i < DENSE2_OUTPUT_SIZE; i++) {
-        float acc = bias[i];
-        for (int j = 0; j < DENSE1_OUTPUT_SIZE; j++) {
-            acc += input[j] * weights[i][j];
+    // Stream weights row-by-row and compute each output
+    for (int o = 0; o < OUTPUT_SIZE; o++) {
+        float acc = 0.0f;
+        for (int i = 0; i < HIDDEN_SIZE; i++) {
+            float w = window_readincr(in_weights);
+            acc += data[i] * w;
         }
-        window_writein(out, acc);
+        window_writeincr(out, acc);
     }
 }

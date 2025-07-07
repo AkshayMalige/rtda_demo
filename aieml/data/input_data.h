@@ -1,6 +1,14 @@
 #ifndef INPUT_DATA_H
 #define INPUT_DATA_H
 
-float input_data[6] = {1.0, 0.5, -0.5, 0.0, 2.0, -1.0};
+// size = 6
+static float input_data[] = {
+  0.00000000f,
+  1.00000000f,
+  2.00000000f,
+  3.00000000f,
+  4.00000000f,
+  5.00000000f,
+};
 
 #endif
