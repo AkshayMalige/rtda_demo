@@ -1,6 +1,6 @@
 #include "graph.h"
 
-dense_graph g;
+NeuralNetworkGraph g;
 
 int main() {
     g.init();

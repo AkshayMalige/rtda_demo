@@ -1,38 +1,50 @@
+// graph.h
 #pragma once
-
 #include <adf.h>
+#include "include.h"
 #include "kernels.h"
 #include "system_settings.h"
+#include "tiling_parameters.h"
 
 using namespace adf;
 
-class dense_graph : public graph {
+class NeuralNetworkGraph : public graph {
 public:
-    kernel      k_dense1, k_relu, k_dense2;
-    input_plio  in, wgt;
-    output_plio out;
+  // PLIO ports
+  input_plio in_data;      // input feature vector
+  input_plio wgt1_data;    // weights for dense1, part 1
+  input_plio wgt2_data;    // weights for dense1, part 2
+  output_plio out_data;    // final output
 
-    dense_graph() {
-        in  = input_plio::create("plio_input",   plio_32_bits, "data/input_data.h");
-        wgt = input_plio::create("plio_weights", plio_32_bits, "data/weight_data.h");
-        out = output_plio::create("plio_output",  plio_32_bits, "data/reference_data.h");
+  // kernels
+  kernel k_dense1, k_relu, k_dense2;
 
-        k_dense1 = kernel::create(dense_1);
-        k_relu   = kernel::create(leaky_relu);
-        k_dense2 = kernel::create(dense_2);
+  NeuralNetworkGraph() {
+    // create PLIOs (names must match your platform description)
+    in_data     = input_plio::create("PLIO_01_IN",   plio_32_bits, "data/input.txt");
+    wgt1_data   = input_plio::create("PLIO_02_WGT1", plio_32_bits, "data/wgt1.txt");
+    wgt2_data   = input_plio::create("PLIO_03_WGT2", plio_32_bits, "data/wgt2.txt");
+    out_data    = output_plio::create("PLIO_04_OUT",  plio_32_bits, "data/output.txt");
 
-        connect<window<INPUT_SIZE * sizeof(float)>>(in.out[0], k_dense1.in[0]);
-        connect<window<HIDDEN_SIZE * sizeof(float)>>(k_dense1.out[0], k_relu.in[0]);
-        connect<window<HIDDEN_SIZE * sizeof(float)>>(k_relu.out[0], k_dense2.in[0]);
-        connect<window<HIDDEN_SIZE * sizeof(float)>>(wgt.out[0], k_dense2.in[1]);
-        connect<window<OUTPUT_SIZE * sizeof(float)>>(k_dense2.out[0], out.in[0]);
+    // instantiate kernels
+    k_dense1 = kernel::create(dense1,      "dense1");
+    k_relu   = kernel::create(leaky_relu,  "leaky_relu");
+    k_dense2 = kernel::create(dense2,      "dense2");
 
-        source(k_dense1) = "kernels/dense_1.cpp";
-        source(k_relu)   = "kernels/leaky_relu.cpp";
-        source(k_dense2) = "kernels/dense_2.cpp";
-
-        runtime<ratio>(k_dense1) = 0.8;
-        runtime<ratio>(k_relu)   = 0.2;
-        runtime<ratio>(k_dense2) = 0.8;
-    }
+    // connect streams
+    
+    connect< window< DENSE1_INPUT_SIZE > >(in_data.out[0],    k_dense1.in[0]);  // feed input vector
+    
+    connect< window< DENSE1_INPUT_SIZE/2 > >(wgt1_data.out[0], k_dense1.in[1]); // feed first half of weight matrix
+    
+    connect< window< DENSE1_INPUT_SIZE/2 > >(wgt2_data.out[0], k_dense1.in[2]); // feed second half of weight matrix
+    
+    connect< window< DENSE1_OUTPUT_SIZE > >(k_dense1.out[0],   k_relu.in[0]);   // output of dense1 → activation
+    
+    connect< window< DENSE1_OUTPUT_SIZE > >(k_relu.out[0],     k_dense2.in[0]); // activation → dense2
+    
+    connect< window< DENSE2_INPUT_SIZE*DENSE2_OUTPUT_SIZE > >(wgt1_data.out[0], k_dense2.in[1]);    // weights for dense2 (single PLIO) → dense2
+    
+    connect< window< DENSE2_OUTPUT_SIZE > >(k_dense2.out[0],    out_data.in[0]);    // final result out
+  }
 };

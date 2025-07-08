@@ -8,9 +8,13 @@
 using namespace adf;
 
 // Dense layer 1: input_window -> output_window
-void dense_1(input_window<float>* in,
-             output_window<float>* out);
 
+void dense1(
+    input_window<float>  *in_win,
+    input_window<float>  *w1_win,
+    input_window<float>  *w2_win,
+    output_window<float> *out_win
+)
 // Leaky ReLU: input_window -> output_window
 void leaky_relu(input_window<float>* in,
                 output_window<float>* out);
