@@ -1,50 +1,66 @@
+#pragma once
 #include <adf.h>
-#include "graph.h"
+#include "include.h"    // contains dimension definitions like INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE
+#include "kernels.h"    // kernel function declarations
 
 using namespace adf;
 
-dense_graph::dense_graph() {
-  // --- 1) PLIO ports --------------------------------------------------
-  //   input features, weights for dense1, weights for dense2, final output
-  in   = input_plio::create("plio_input",    plio_32_bits, "data/input_data.h");
-  w1   = input_plio::create("plio_weights1", plio_32_bits, "data/weights1.h");
-  w2   = input_plio::create("plio_weights2", plio_32_bits, "data/weights2.h");
-  out  = output_plio::create("plio_output",  plio_32_bits, "data/output_data.h");
+class NeuralNetworkGraph : public graph {
+public:
+    // PLIO port declarations for input, weights, and output
+    input_plio in;
+    input_plio weights1a;   // first half of weights for dense1
+    input_plio weights1b;   // second half of weights for dense1
+    input_plio weights2;    // weights for dense2
+    output_plio out;
 
-  // --- 2) Windows -----------------------------------------------------
-  //   window sizes in floats; must match what the kernels consume/produce
-  //   e.g. INPUT_SIZE floats into dense1, HIDDEN_SIZE out of dense1/into relu,
-  //        HIDDEN_SIZE floats into dense2, OUTPUT_SIZE floats out
-  static window<float> w_in       (INPUT_SIZE);
-  static window<float> w_w1       (INPUT_SIZE * HIDDEN_SIZE / INPUT_SIZE); // = HIDDEN_SIZE
-  static window<float> w_mid      (HIDDEN_SIZE);
-  static window<float> w_w2       (HIDDEN_SIZE * OUTPUT_SIZE / HIDDEN_SIZE); // = OUTPUT_SIZE
-  static window<float> w_out      (OUTPUT_SIZE);
+    // Kernel declarations
+    kernel k_dense1;
+    kernel k_relu;
+    kernel k_dense2;
 
-  // --- 3) Connect PLIOs → kernels → PLIOs -----------------------------
-  connect(in.out[0],       w_in);
-  connect(w1.out[0],       w_w1);
-  connect(w_in,            k_dense1.in[0]);
-  connect(w_w1,            k_dense1.in[1]);
+    NeuralNetworkGraph() {
+        // Instantiate kernels (binding to their functions)
+        k_dense1 = kernel::create(dense1);
+        k_relu   = kernel::create(leaky_relu);
+        k_dense2 = kernel::create(dense2);
 
-  connect(k_dense1.out[0], w_mid);
-  connect(w_mid,           k_relu.in[0]);
+        // Create PLIOs, pointing to data files (for simulation or testbench feeding)
+        in        = input_plio::create("plio_input",    plio_32_bits, "data/input_data.h");
+        weights1a = input_plio::create("plio_weights1a", plio_32_bits, "data/weights1a.h");
+        weights1b = input_plio::create("plio_weights1b", plio_32_bits, "data/weights1b.h");
+        weights2  = input_plio::create("plio_weights2",  plio_32_bits, "data/weights2.h");
+        out       = output_plio::create("plio_output",   plio_32_bits, "data/output_data.h");
 
-  connect(k_relu.out[0],   w_mid);    // reuse w_mid
-  connect(w2.out[0],       w_w2);
-  connect(w_mid,           k_dense2.in[0]);
-  connect(w_w2,            k_dense2.in[1]);
+        // Define and connect windows between PLIOs and kernels.
+        // Window sizes are in number of float samples to match kernel consumption/production per graph run.
+        // Dense1 expects: INPUT_SIZE floats (features) per inference, and for each of HIDDEN_SIZE outputs it reads INPUT_SIZE/2 floats from each weight stream.
+        // Dense2 expects: HIDDEN_SIZE floats (activations) per output, for OUTPUT_SIZE outputs (so HIDDEN_SIZE*OUTPUT_SIZE weight floats in total).
+        // LeakyReLU expects: HIDDEN_SIZE floats in, HIDDEN_SIZE out.
+        //
+        // Input feature stream -> Dense1 input
+        connect< window<INPUT_SIZE> >   (in.out[0],        k_dense1.in[0]);
+        // First half of Dense1 weights -> Dense1
+        connect< window<(INPUT_SIZE/2) * HIDDEN_SIZE> >  (weights1a.out[0], k_dense1.in[1]);
+        // Second half of Dense1 weights -> Dense1
+        connect< window< (INPUT_SIZE - INPUT_SIZE/2) * HIDDEN_SIZE > >  (weights1b.out[0], k_dense1.in[2]);
+        // Dense1 output (hidden layer pre-activation) -> LeakyReLU input
+        connect< window<HIDDEN_SIZE> >  (k_dense1.out[0],  k_relu.in[0]);
+        // LeakyReLU output (hidden layer post-activation) -> (reusing same window memory for in-place) -> Dense2 input
+        connect< window<HIDDEN_SIZE> >  (k_relu.out[0],    k_dense2.in[0]);
+        // Dense2 weight stream -> Dense2
+        connect< window< HIDDEN_SIZE * OUTPUT_SIZE > >   (weights2.out[0],  k_dense2.in[1]);
+        // Dense2 output -> output PLIO stream
+        connect< window<OUTPUT_SIZE> > (k_dense2.out[0],  out.in[0]);
 
-  connect(k_dense2.out[0], w_out);
-  connect(w_out,           out.in[0]);
+        // Associate kernel source files
+        source(k_dense1) = "kernels/dense_1.cpp";
+        source(k_relu)   = "kernels/leaky_relu.cpp";
+        source(k_dense2) = "kernels/dense_2.cpp";
 
-  // --- 4) Specify sources & runtime targets --------------------------
-  source(k_dense1) = "kernels/dense_1.cpp";
-  source(k_relu)   = "kernels/leaky_relu.cpp";
-  source(k_dense2) = "kernels/dense_2.cpp";
-
-  // Assume each kernel uses ~80% of its cycle budget; tweak as needed:
-  runtime<ratio>(k_dense1) = 0.8;
-  runtime<ratio>(k_relu)   = 0.8;
-  runtime<ratio>(k_dense2) = 0.8;
-}
+        // Set kernel run-time ratio hints for performance (assuming ~80% utilization of target II)
+        runtime<ratio>(k_dense1) = 0.8;
+        runtime<ratio>(k_relu)   = 0.8;
+        runtime<ratio>(k_dense2) = 0.8;
+    }
+};
