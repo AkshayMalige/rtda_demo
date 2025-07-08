@@ -1,3 +1,3 @@
 #pragma once
 
-#include "system_settings.h"
+#include "tiling_parameters.h"

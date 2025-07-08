@@ -1,6 +1,10 @@
 #pragma once
 
 #include <adf.h>
+#include "aie_api/aie.hpp"
+#include "include.h"
+#include "system_settings.h"
+
 using namespace adf;
 
 // Dense layer 1: input_window -> output_window

@@ -1,21 +1,20 @@
 #include <adf.h>
-#include "../include.h"
 #include "../kernels.h"
 
 using namespace adf;
 
 void dense_1(input_window<float>* in, output_window<float>* out) {
-    // Read full input vector
-    float data[INPUT_SIZE];
-    for (int i = 0; i < INPUT_SIZE; i++) {
-        data[i] = window_readincr(in);
+
+    aie::vector<float, VEC_WIDTH_D1> data[INPUT_SIZE / VEC_WIDTH_D1];
+    for (int i = 0; i < INPUT_SIZE / VEC_WIDTH_D1; i++) {
+        // data[i] = aie::load_v<VEC_WIDTH_D1>(in);
+        data[i] = window_readincr_v<VEC_WIDTH_D1>(in);
+
     }
 
-    // Simple statically initialized weights & bias (for functional test)
-    // In practice, replace with your trained values.
     static float weights[HIDDEN_SIZE][INPUT_SIZE];
     static float bias[HIDDEN_SIZE];
-    // Initialize on first call (could be moved to constructor)
+
     for (int o = 0; o < HIDDEN_SIZE; o++) {
         bias[o] = 0.1f;
         for (int i = 0; i < INPUT_SIZE; i++) {
@@ -23,12 +22,15 @@ void dense_1(input_window<float>* in, output_window<float>* out) {
         }
     }
 
-    // Compute output = W * data + b
     for (int o = 0; o < HIDDEN_SIZE; o++) {
-        float acc = bias[o];
-        for (int i = 0; i < INPUT_SIZE; i++) {
-            acc += data[i] * weights[o][i];
+        aie::accum<acc32, VEC_WIDTH_D1> acc = aie::zeros<acc32, VEC_WIDTH_D1>();
+
+        for (int i = 0; i < INPUT_SIZE / VEC_WIDTH_D1; i++) {
+            aie::vector<float, VEC_WIDTH_D1> w = aie::load_v<VEC_WIDTH_D1>(&weights[o][i * VEC_WIDTH_D1]);
+            acc = aie::mac(acc, data[i], w);
         }
-        window_writeincr(out, acc);
+
+        float out_val = bias[o] + aie::reduce_add(acc);
+        window_writeincr(out, out_val);
     }
 }
