@@ -37,12 +37,12 @@ public:
     k_dense2 = kernel::create(dense2);
 
     /* ─────────────── Create PLIOs ─────────────── */
-    pl_in   = input_plio ::create("plio_input",      plio_32_bits, "aieml/data/input_data.txt");
-    pl_w1a  = input_plio ::create("plio_weights1a",  plio_32_bits, "aieml/data/weights_dense1a.txt");
-    pl_w1b  = input_plio ::create("plio_weights1b",  plio_32_bits, "aieml/data/weights_dense1b.txt");
-    pl_w2a  = input_plio ::create("plio_weights2a",  plio_32_bits, "aieml/data/weights_dense2a.txt");
-    pl_w2b  = input_plio ::create("plio_weights2b",  plio_32_bits, "aieml/data/weights_dense2b.txt");
-    pl_out  = output_plio::create("plio_output",     plio_32_bits, "aieml/data/output_data.txt");
+    pl_in   = input_plio ::create("plio_input",      plio_32_bits, "data/input_data.txt");
+    pl_w1a  = input_plio ::create("plio_weights1a",  plio_32_bits, "data/weights_dense1a.txt");
+    pl_w1b  = input_plio ::create("plio_weights1b",  plio_32_bits, "data/weights_dense1b.txt");
+    pl_w2a  = input_plio ::create("plio_weights2a",  plio_32_bits, "data/weights_dense2a.txt");
+    pl_w2b  = input_plio ::create("plio_weights2b",  plio_32_bits, "data/weights_dense2b.txt");
+    pl_out  = output_plio::create("plio_output",     plio_32_bits, "data/output_data.txt");
 
     /* ─────────────── Window-size constants ─────────────── */
     constexpr int D1_IN_WINDOW  = INPUT_SIZE * HIDDEN_SIZE / VEC_WIDTH;           // 192  floats
@@ -62,7 +62,7 @@ public:
     /* ─────────────── Connect dataflow ─────────────── */
 
     // Input vector for dense1
-    connect< window<D1_IN_WINDOW> >(pl_in.out[0],      k_dense1.in[0]);
+    connect< window<INPUT_SIZE> >(pl_in.out[0],      k_dense1.in[0]);
 
     // Weight matrix for dense1 (even/odd split)
     connect< window<D1_W_WINDOW> >(pl_w1a.out[0],      k_dense1.in[1]);
@@ -71,12 +71,10 @@ public:
     // Dense1 → Leaky ReLU
     connect< window<HIDDEN_SIZE> >(k_dense1.out[0],    k_act.in[0]);
 
-    // Leaky ReLU → Dense2 (activation vector replicated 8× in input file),     // Weight matrix for dense2 (even/odd split)
+    // // Leaky ReLU → Dense2 (activation vector replicated 8× in input file),     // Weight matrix for dense2 (even/odd split)
     connect< window<D2_IN_WINDOW> >(k_act.out[0],      k_dense2.in[0]);
     connect< window<D2_W_WINDOW> >(pl_w2a.out[0],      k_dense2.in[1]);
     connect< window<D2_W_WINDOW> >(pl_w2b.out[0],      k_dense2.in[2]);
-
-    // Dense2 → output
     connect< window<OUTPUT_SIZE> >(k_dense2.out[0],    pl_out.in[0]);
 
     // connect< window<OUTPUT_SIZE> >(k_act.out[0],    pl_out.in[0]);
@@ -86,8 +84,9 @@ public:
     source(k_act)    = "kernels/leaky_relu.cpp";
     source(k_dense2) = "kernels/dense2.cpp";
 
+
     runtime<ratio>(k_dense1) = 0.8;
-    runtime<ratio>(k_act)    = 0.2;
+    runtime<ratio>(k_act)    = 0.8;
     runtime<ratio>(k_dense2) = 0.8;
   }
 };
