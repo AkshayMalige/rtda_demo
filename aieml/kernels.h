@@ -14,10 +14,10 @@ void dense1( input_window<float>*  __restrict in,
     input_window<float>*  __restrict w1b,
     output_window<float>* __restrict out );
 
-void dense2( input_window<float>*  __restrict in,   // 128 × float
-        input_window<float>*  __restrict w2a,  // even weights
-        input_window<float>*  __restrict w2b,  // odd  weights
-        output_window<float>* __restrict out ); // 128 × float
+void dense2( input_window<float>*  __restrict in_act,
+    input_window<float>* __restrict w_even,
+    input_window<float>* __restrict w_odd,
+    output_window<float>* __restrict out_act );
 
 void leaky_relu(input_window<float>*  __restrict in,
     output_window<float>* __restrict out);

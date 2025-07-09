@@ -1,7 +1,7 @@
 // leaky_relu.cpp
 #include <adf.h>
 #include <aie_api/aie.hpp>
-#include "../include.h"               // HIDDEN_SIZE (=128), VEC_WIDTH_D1 (=4),
+#include "../include.h"               // HIDDEN_SIZE (=128), VEC_WIDTH (=4),
                                       // LEAKY_SLOPE (e.g. 0.1f)
 
 using namespace adf;
@@ -10,8 +10,8 @@ using namespace aie;
 void leaky_relu(input_window<float>*  __restrict in,
                 output_window<float>* __restrict out)
 {
-  constexpr int VEC = VEC_WIDTH_D1;                 // 4 lanes per SIMD vector
-  constexpr int NUM_VECTORS = HIDDEN_SIZE / VEC;    // 128 / 4 = 32 vectors
+  constexpr int VEC = VEC_WIDTH;                 // 4 lanes per SIMD vector
+  constexpr int NUM_VECTORS = HIDDEN_SIZE / VEC;    // 128 / 16 = 8 vectors
 
   const vector<float,VEC> v_zero  = broadcast<float,VEC>(0.0f);
   const vector<float,VEC> v_slope = broadcast<float,VEC>(LEAKY_SLOPE);
