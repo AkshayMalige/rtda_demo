@@ -37,12 +37,12 @@ public:
     k_dense2 = kernel::create(dense2);
 
     /* ─────────────── Create PLIOs ─────────────── */
-    pl_in   = input_plio ::create("plio_input",      plio_32_bits, "data/input_data.txt");
-    pl_w1a  = input_plio ::create("plio_weights1a",  plio_32_bits, "data/weights1a.txt");
-    pl_w1b  = input_plio ::create("plio_weights1b",  plio_32_bits, "data/weights1b.txt");
-    pl_w2a  = input_plio ::create("plio_weights2a",  plio_32_bits, "data/weights2a.txt");
-    pl_w2b  = input_plio ::create("plio_weights2b",  plio_32_bits, "data/weights2b.txt");
-    pl_out  = output_plio::create("plio_output",     plio_32_bits, "data/output_data.txt");
+    pl_in   = input_plio ::create("plio_input",      plio_32_bits, "aieml/data/input_data.txt");
+    pl_w1a  = input_plio ::create("plio_weights1a",  plio_32_bits, "aieml/data/weights_dense1a.txt");
+    pl_w1b  = input_plio ::create("plio_weights1b",  plio_32_bits, "aieml/data/weights_dense1b.txt");
+    pl_w2a  = input_plio ::create("plio_weights2a",  plio_32_bits, "aieml/data/weights_dense2a.txt");
+    pl_w2b  = input_plio ::create("plio_weights2b",  plio_32_bits, "aieml/data/weights_dense2b.txt");
+    pl_out  = output_plio::create("plio_output",     plio_32_bits, "aieml/data/output_data.txt");
 
     /* ─────────────── Window-size constants ─────────────── */
     constexpr int D1_IN_WINDOW  = INPUT_SIZE * HIDDEN_SIZE / VEC_WIDTH;           // 192  floats
