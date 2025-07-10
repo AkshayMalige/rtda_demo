@@ -16,8 +16,8 @@
 using namespace adf;
 using namespace aie;
 
-// constexpr int VEC_WIDTH  = 4;    // 8-lane FP32 SIMD
-// constexpr int FUSE_WIDTH = 4;    // 4 vectors in flight  → 32 neurons
+// constexpr int VEC_WIDTH  = 4;    // 4-lane FP32 SIMD
+// constexpr int FUSE_WIDTH = 4;    // 4 vectors in flight  → 16 neurons
 
 /* Sanity checks */
 static_assert(INPUT_SIZE2  == 128 && HIDDEN_SIZE == 128,
