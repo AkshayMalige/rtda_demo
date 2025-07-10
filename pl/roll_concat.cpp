@@ -31,3 +31,31 @@ void roll_concat(hls::stream<data_t> &in, hls::stream<data_t> &out) {
         }
     }
 }
+
+/*
+x = [x0, x1, x2, ..., x127]     # Input vector from LeakyReLU
+
+     ┌────────────┐
+     │  Slice(0)  │ → [x0, x1, ..., x127]
+     └────────────┘
+           ↓
+     ┌────────────┐
+     │  Slice(1)  │ → [x1, x2, ..., x0]
+     └────────────┘
+           ↓
+     ┌────────────┐
+     │  Slice(2)  │ → [x2, x3, ..., x1]
+     └────────────┘
+           ⋮
+     ┌────────────┐
+     │  Slice(5)  │ → [x5, x6, ..., x4]
+     └────────────┘
+
+ →→→ All outputs are passed to →→→  ┌──────────────┐
+                                    │   Concat     │
+                                    └──────────────┘
+                                        ↓
+                         Final vector: [x0..x127, x1..x0, x2..x1, ..., x5..x4]
+                                        Size = 128 × 6 = 768
+
+*/
