@@ -72,7 +72,7 @@ public:
     connect< window<HIDDEN_SIZE> >(k_dense1.out[0],    k_act.in[0]);
 
     // // Leaky ReLU → Dense2 (activation vector replicated 8× in input file),     // Weight matrix for dense2 (even/odd split)
-    connect< window<D2_IN_WINDOW> >(k_act.out[0],      k_dense2.in[0]);
+    connect< window<HIDDEN_SIZE> >(k_act.out[0],      k_dense2.in[0]);
     connect< window<D2_W_WINDOW> >(pl_w2a.out[0],      k_dense2.in[1]);
     connect< window<D2_W_WINDOW> >(pl_w2b.out[0],      k_dense2.in[2]);
     connect< window<OUTPUT_SIZE> >(k_dense2.out[0],    pl_out.in[0]);
