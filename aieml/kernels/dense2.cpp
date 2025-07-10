@@ -83,31 +83,23 @@ void dense2( /* 128 activations (read once)            */
 
 
 /*
-#include <adf.h>
-#include <aie_api/aie.hpp>
-#include "../kernels.h"
-
-using namespace aie;
-
-void dense2(
-    input_window<float>  *in_win,
-    input_window<float>  *w_win,
-    output_window<float> *out_win
-) {
-  for (int o = 0; o < OUTPUT_SIZE; ++o) {
-    static float act_buf[HIDDEN_SIZE];
-    for (int i = 0; i < HIDDEN_SIZE; ++i)
-      act_buf[i] = window_readincr(in_win);
-
-    vector<float, VEC_WIDTH_D2> acc_vec = aie::zeros<float, VEC_WIDTH_D2>();
-    for (int i = 0; i < HIDDEN_SIZE; i += VEC_WIDTH_D2) {
-      auto a = aie::load_v<VEC_WIDTH_D2>(act_buf + i);
-      auto w = window_readincr_v<VEC_WIDTH_D2>(w_win);
-      acc_vec = aie::mac(acc_vec, a, w);
+void dense_2(input_window<float>* in_data,
+             input_window<float>* in_weights,
+             output_window<float>* out) {
+    // Load hidden-layer activations
+    float data[HIDDEN_SIZE];
+    for (int i = 0; i < HIDDEN_SIZE; i++) {
+        data[i] = window_readincr(in_data);
     }
 
-    float sum = aie::reduce_add(acc_vec);
-    window_writeincr(out_win, sum);
-  }
+    // Stream weights row-by-row and compute each output
+    for (int o = 0; o < OUTPUT_SIZE; o++) {
+        float acc = 0.0f;
+        for (int i = 0; i < HIDDEN_SIZE; i++) {
+            float w = window_readincr(in_weights);
+            acc += data[i] * w;
+        }
+        window_writeincr(out, acc);
+    }
 }
 /*
