@@ -27,21 +27,21 @@ public:
 
   /* Kernels */
   kernel k_dense1;
-  kernel k_act;
-  kernel k_dense2;
+  // kernel k_act;
+  // kernel k_dense2;
 
   NeuralNetworkGraph() {
     /* ─────────────── Create kernels ─────────────── */
     k_dense1 = kernel::create(dense1);
-    k_act    = kernel::create(leaky_relu);
-    k_dense2 = kernel::create(dense2);
+    // k_act    = kernel::create(leaky_relu);
+    // k_dense2 = kernel::create(dense2);
 
     /* ─────────────── Create PLIOs ─────────────── */
     pl_in   = input_plio ::create("plio_input",      plio_32_bits, "data/input_data.txt");
     pl_w1a  = input_plio ::create("plio_weights1a",  plio_32_bits, "data/weights_dense1a.txt");
     pl_w1b  = input_plio ::create("plio_weights1b",  plio_32_bits, "data/weights_dense1b.txt");
-    pl_w2a  = input_plio ::create("plio_weights2a",  plio_32_bits, "data/weights_dense2a.txt");
-    pl_w2b  = input_plio ::create("plio_weights2b",  plio_32_bits, "data/weights_dense2b.txt");
+    // pl_w2a  = input_plio ::create("plio_weights2a",  plio_32_bits, "data/weights_dense2a.txt");
+    // pl_w2b  = input_plio ::create("plio_weights2b",  plio_32_bits, "data/weights_dense2b.txt");
     pl_out  = output_plio::create("plio_output",     plio_32_bits, "data/output_data.txt");
 
     /* ─────────────── Window-size constants ─────────────── */
@@ -69,24 +69,24 @@ public:
     connect< window<D1_W_WINDOW> >(pl_w1b.out[0],      k_dense1.in[2]);
 
     // Dense1 → Leaky ReLU
-    connect< window<HIDDEN_SIZE> >(k_dense1.out[0],    k_act.in[0]);
+    // connect< window<HIDDEN_SIZE> >(k_dense1.out[0],    k_act.in[0]);
 
     // // Leaky ReLU → Dense2 (activation vector replicated 8× in input file),     // Weight matrix for dense2 (even/odd split)
-    connect< window<HIDDEN_SIZE> >(k_act.out[0],      k_dense2.in[0]);
-    connect< window<D2_W_WINDOW> >(pl_w2a.out[0],      k_dense2.in[1]);
-    connect< window<D2_W_WINDOW> >(pl_w2b.out[0],      k_dense2.in[2]);
-    connect< window<OUTPUT_SIZE> >(k_dense2.out[0],    pl_out.in[0]);
+    // connect< window<HIDDEN_SIZE> >(k_act.out[0],      k_dense2.in[0]);
+    // connect< window<D2_W_WINDOW> >(pl_w2a.out[0],      k_dense2.in[1]);
+    // connect< window<D2_W_WINDOW> >(pl_w2b.out[0],      k_dense2.in[2]);
+    // connect< window<OUTPUT_SIZE> >(k_dense2.out[0],    pl_out.in[0]);
 
-    // connect< window<OUTPUT_SIZE> >(k_act.out[0],    pl_out.in[0]);
+    connect< window<OUTPUT_SIZE> >(k_dense1.out[0],    pl_out.in[0]);
 
     /* ─────────────── Kernel sources & run-time hints ─────────────── */
     source(k_dense1) = "kernels/dense1.cpp";
-    source(k_act)    = "kernels/leaky_relu.cpp";
-    source(k_dense2) = "kernels/dense2.cpp";
+    // source(k_act)    = "kernels/leaky_relu.cpp";
+    // source(k_dense2) = "kernels/dense2.cpp";
 
 
     runtime<ratio>(k_dense1) = 0.8;
-    runtime<ratio>(k_act)    = 0.8;
-    runtime<ratio>(k_dense2) = 0.8;
+    // runtime<ratio>(k_act)    = 0.8;
+    // runtime<ratio>(k_dense2) = 0.8;
   }
 };

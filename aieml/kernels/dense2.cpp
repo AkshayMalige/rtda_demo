@@ -102,4 +102,4 @@ void dense_2(input_window<float>* in_data,
         window_writeincr(out, acc);
     }
 }
-/*
+*/

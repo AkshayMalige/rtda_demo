@@ -35,8 +35,8 @@ void dense1( input_window<float>*  __restrict in,
 
     /* 2.  Stream INPUT_SIZE scalars once and reuse them FUSE_WIDTH times */
     loopy2: for (int i = 0; i < INPUT_PAIRS; ++i)
-    // chess_prepare_for_pipelining
-    // chess_loop_range(INPUT_PAIRS, INPUT_PAIRS)
+    chess_prepare_for_pipelining
+    chess_loop_range(INPUT_PAIRS, INPUT_PAIRS)
     {
       float x0 = window_readincr(in);
       float x1 = window_readincr(in);
