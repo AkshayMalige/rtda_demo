@@ -14,6 +14,9 @@ void dense1( input_window<float>*  __restrict in,
     input_window<float>*  __restrict w1b,
     output_window<float>* __restrict out );
 
+// void dense1(input_window<float>* in, output_window<float>* out);
+
+
 void dense2( input_window<float>*  __restrict in_act,
     input_window<float>* __restrict w_even,
     input_window<float>* __restrict w_odd,

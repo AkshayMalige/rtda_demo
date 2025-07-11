@@ -62,7 +62,7 @@ public:
     /* ─────────────── Connect dataflow ─────────────── */
 
     // Input vector for dense1
-    connect< window<INPUT_SIZE> >(pl_in.out[0],      k_dense1.in[0]);
+    connect< window<D1_IN_WINDOW> >(pl_in.out[0],      k_dense1.in[0]);
 
     // Weight matrix for dense1 (even/odd split)
     connect< window<D1_W_WINDOW> >(pl_w1a.out[0],      k_dense1.in[1]);

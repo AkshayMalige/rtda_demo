@@ -61,27 +61,26 @@ void dense1( input_window<float>*  __restrict in,
 
 
 /*
-void dense_1(input_window<float>* in, output_window<float>* out) {
-    float data[INPUT_SIZE];
-    for (int i = 0; i < INPUT_SIZE; i++) {
-        data[i] = window_readincr(in);
-    }
-    static float weights[HIDDEN_SIZE][INPUT_SIZE];
-    static float bias[HIDDEN_SIZE];
+// void dense1(input_window<float>* in, output_window<float>* out) {
+//     float data[INPUT_SIZE];
+//     for (int i = 0; i < INPUT_SIZE; i++) {
+//         data[i] = window_readincr(in);
+//     }
+//     static float weights[HIDDEN_SIZE][INPUT_SIZE];
+//     static float bias[HIDDEN_SIZE];
 
-    for (int o = 0; o < HIDDEN_SIZE; o++) {
-        bias[o] = 0.1f;
-        for (int i = 0; i < INPUT_SIZE; i++) {
-            weights[o][i] = 0.01f * (o + i);
-        }
-    }
+//     for (int o = 0; o < HIDDEN_SIZE; o++) {
+//         bias[o] = 0.1f;
+//         for (int i = 0; i < INPUT_SIZE; i++) {
+//             weights[o][i] = 0.01f * (o + i);
+//         }
+//     }
 
-    for (int o = 0; o < HIDDEN_SIZE; o++) {
-        float acc = bias[o];
-        for (int i = 0; i < INPUT_SIZE; i++) {
-            acc += data[i] * weights[o][i];
-        }
-        window_writeincr(out, acc);
-    }
-}
-*/
+//     for (int o = 0; o < HIDDEN_SIZE; o++) {
+//         float acc = bias[o];
+//         for (int i = 0; i < INPUT_SIZE; i++) {
+//             acc += data[i] * weights[o][i];
+//         }
+//         window_writeincr(out, acc);
+//     }
+// }*/
