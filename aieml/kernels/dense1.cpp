@@ -60,7 +60,7 @@ void dense1( input_window<float>*  __restrict in,
 }
 
 
-/*
+
 // void dense1(input_window<float>* in, output_window<float>* out) {
 //     float data[INPUT_SIZE];
 //     for (int i = 0; i < INPUT_SIZE; i++) {
@@ -83,4 +83,4 @@ void dense1( input_window<float>*  __restrict in,
 //         }
 //         window_writeincr(out, acc);
 //     }
-// }*/
+// }

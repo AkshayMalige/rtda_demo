@@ -9,10 +9,10 @@ using namespace adf;
 
 // Dense layer 1: input_window -> output_window
 
-void dense1( input_window<float>*  __restrict in,
-    input_window<float>*  __restrict w1a,
-    input_window<float>*  __restrict w1b,
-    output_window<float>* __restrict out );
+// void dense1( input_window<float>*  __restrict in,
+//     input_window<float>*  __restrict w1a,
+//     input_window<float>*  __restrict w1b,
+//     output_window<float>* __restrict out );
 
 // void dense1(input_window<float>* in, output_window<float>* out);
 
