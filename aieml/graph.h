@@ -84,14 +84,14 @@ public:
 
         // Dense Layer 1 placement:
 
-        kernel* dense1_kernels = dense1.getKernels();
-        location<kernel>(dense1_kernels[0]) = tile(20, 0);
+        // kernel* dense1_kernels = dense1.getKernels();
+        // location<kernel>(dense1_kernels[0]) = tile(20, 0);
 
         // Dense Layer 2 cascade placement:
-        int base_row = 25;
-        kernel* dense2_kernels = dense2.getKernels();
-        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-            location<kernel>(dense2_kernels[i]) = tile(base_row + i, 0);
-        }
+        // int base_row = 25;
+        // kernel* dense2_kernels = dense2.getKernels();
+        // for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
+        //     location<kernel>(dense2_kernels[i]) = tile(base_row + i, 0);
+        // }
     }
 };
