@@ -7,7 +7,7 @@
 PLATFORM     ?= /tools/Xilinx/Vitis/2024.1/base_platforms/xilinx_vek280_es1_base_202410_1/xilinx_vek280_es1_base_202410_1.xpfm
 
 # Target for compilation and simulation. Options: x86sim, hw
-TARGET       ?= x86sim
+TARGET       ?= hw
 
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300
@@ -94,6 +94,6 @@ endif
 # --- Clean Target ---
 clean:
 	@echo "--- Cleaning Workspace ---"
-	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary
+	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary aiesimulator_output x86simulator_output pl_sample* *.a
 	@echo "CLEANED: Build and work directories removed."
 
