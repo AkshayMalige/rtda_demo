@@ -1,10 +1,11 @@
 #pragma once
 #include <adf.h>
 #include "include.h"
-// #include "matrix_vector_mul_graph.hpp"
+// #if defined(__AIE__) || defined(__AIESIM__)
 #include "matrix_vector_mul_graph.hpp"
-#include "aie_api/aie_adf.hpp"
+// #endif
 
+#include "aie_api/aie_adf.hpp"
 
 
 using namespace adf;

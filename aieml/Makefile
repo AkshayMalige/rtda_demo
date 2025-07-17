@@ -1,95 +1,99 @@
-# ==============================================
-#   Makefile: AIE Graph + Host Compilation
-# ==============================================
+# ===================================================================
+# Makefile for Vitis AIE Graph Compilation & Simulation
+# ===================================================================
 
 # ==== CONFIG ====
-PLATFORM    ?= xilinx_vek280_base_202420_1
-TARGET      ?= hw                # Options: hw or x86sim
-PL_FREQZ    ?= 300
+# Target platform for hardware compilation.
+PLATFORM     ?= /tools/Xilinx/Vitis/2024.1/base_platforms/xilinx_vek280_es1_base_202410_1/xilinx_vek280_es1_base_202410_1.xpfm
 
-GRAPH_SRC   := graph.cpp
-HOST_SRC    := host.cpp
+# Target for compilation and simulation. Options: x86sim, hw
+TARGET       ?= x86sim
 
-BUILD_DIR   := build_$(TARGET)
-WORK_DIR    := Work
+# Frequency for the Programmable Logic (PL) interfaces.
+PL_FREQZ     ?= 300
 
-LIB_ADF     := $(BUILD_DIR)/libadf.a
-HOST_EXE    := $(BUILD_DIR)/host.exe
+# Path to your Vitis installation.
+VITIS_PATH   ?= /tools/Xilinx/Vitis/2024.1
 
-# Tools
-AIECC       := aiecompiler
-AIESIM      := aiesimulator
-X86SIM      := x86simulator
-CXX         := g++
+# ##########################################################################
+# ##########################################################################
+#
+#   >>> IMPORTANT: YOU MUST EDIT THIS LINE <<<
+#   Set this variable to the correct path for the Vitis_Libraries on your system.
+#   Example: DSPLIB_PATH  ?= /home/user/vitis/Vitis_Libraries/dsp
+#
+# ##########################################################################
+DSPLIB_PATH  ?= /home/synthara/VersalPrjs/Vitis_Libraries/dsp
 
-VITIS_PATH  ?= /tools/Xilinx/Vitis/2024.2
-DSPLIB_PATH ?= /home/synthara/VersalPrjs/Vitis_Libraries/dsp
 
-# AIE Includes
+# ==== PROJECT FILES & DIRECTORIES ====
+GRAPH_SRC     := graph.cpp
+WORK_DIR      := Work
+GRAPH_LIB     := $(WORK_DIR)/libadf.a
+
+
+# ==== TOOLS ====
+AIECC        := aiecompiler
+AIESIM       := aiesimulator
+X86SIM       := x86simulator
+
+
+# ==== COMPILER FLAGS ====
+# Include paths for the AIE compiler.
 AIE_INCLUDE_FLAGS := \
-	--include="$(DSPLIB_PATH)/L2/include/aie" \
-	--include="$(DSPLIB_PATH)/L1/include/aie" \
+	--include="./" \
 	--include="$(DSPLIB_PATH)/L1/src/aie" \
-	--include="./kernels" \
-	--include="./data"
+	--include="$(DSPLIB_PATH)/L1/include/aie" \
+	--include="$(DSPLIB_PATH)/L2/include/aie"
 
-# AIE Compiler Flags
-AIE_FLAGS := --platform=$(PLATFORM) $(AIE_INCLUDE_FLAGS) --pl-freq=$(PL_FREQZ)
-ifeq ($(TARGET),x86sim)
-	AIE_FLAGS += --target=x86sim
-else
-	AIE_FLAGS += --target=hw
-endif
+# Full AIE compiler command flags, assembled from variables above.
+AIE_FLAGS := \
+	--v \
+	--platform=$(PLATFORM) \
+	--target=$(TARGET) \
+	--pl-freq=$(PL_FREQZ) \
+	$(AIE_INCLUDE_FLAGS)
 
-AIE_FLAGS += -D__AIESIM__
-
-# Host Includes (for matrix_vector_mul_graph.hpp visibility)
-HOST_INCLUDE_FLAGS := \
-	-I$(WORK_DIR) \
-	-I$(VITIS_PATH)/aietools/include/aie \
-	-I$(DSPLIB_PATH)/L2/include/aie \
-	-I$(DSPLIB_PATH)/L1/include/aie \
-	-I$(DSPLIB_PATH)/L1/src/aie \
-	-I/opt/xilinx/xrt/include
 
 # ==== RULES ====
 
-.PHONY: all graph host sim clean
+.PHONY: all graph sim clean
 
-all: graph host
+# --- Default Target ---
+all: graph
 
-# -------- AIE Graph Compilation --------
-graph: $(LIB_ADF)
+# --- AIE Graph Compilation ---
+graph: $(GRAPH_LIB)
 
-$(LIB_ADF): $(GRAPH_SRC)
-	@mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR); \
-	$(AIECC) $(AIE_FLAGS) ../$(GRAPH_SRC) --workdir=../$(WORK_DIR) 2>&1 | tee aiecompiler.log
-	@echo "COMPLETE: AIE Graph compiled → $(LIB_ADF)"
+$(GRAPH_LIB): $(GRAPH_SRC) graph.h include.h
+	@mkdir -p $(WORK_DIR)
+	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
+	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
+	@if [ ! -d "$(DSPLIB_PATH)" ]; then \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+		echo "!!! ERROR: Directory not found: '$(DSPLIB_PATH)'"; \
+		echo "!!! Please set the DSPLIB_PATH variable in your Makefile correctly."; \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+		exit 1; \
+	fi
+	$(AIECC) $(AIE_FLAGS) $(GRAPH_SRC) --workdir=$(WORK_DIR) 2>&1 | tee $(WORK_DIR)/aiecompiler.log
+	@echo "COMPLETE: AIE graph compiled."
 
-# -------- Host Application Compilation --------
-host: $(HOST_EXE)
-
-$(HOST_EXE): $(HOST_SRC) $(LIB_ADF)
-	@mkdir -p $(BUILD_DIR)
-	$(CXX) -std=c++17 $(HOST_SRC) -o $(HOST_EXE) \
-		$(HOST_INCLUDE_FLAGS) \
-		-L$(VITIS_PATH)/aietools/lib/lnx64.o -lxaiengine \
-		-Wl,-rpath-link,$(VITIS_PATH)/aietools/lib/lnx64.o
-	@echo "COMPLETE: Host application built → $(HOST_EXE)"
-
-# -------- Simulation --------
-sim:
+# --- Simulation ---
+sim: graph
 ifeq ($(TARGET),x86sim)
-	cd $(BUILD_DIR); $(X86SIM) --pkg-dir=../$(WORK_DIR) --i=..; \
-	echo "COMPLETE: x86sim simulation finished."
+	@echo "--- Starting x86 Simulation ---"
+	$(X86SIM) --pkg-dir=$(WORK_DIR)
+	@echo "COMPLETE: x86sim simulation finished."
 else
-	cd $(BUILD_DIR); $(AIESIM) --pkg-dir=../$(WORK_DIR) --i=.. --profile --dump-vcd=waveform.vcd; \
-	echo "COMPLETE: AIE hardware simulation finished."
+	@echo "--- Starting Hardware Simulation (aiesimulator) ---"
+	$(AIESIM) --pkg-dir=$(WORK_DIR) --profile
+	@echo "COMPLETE: Hardware simulation finished."
 endif
 
-# -------- Clean --------
+# --- Clean Target ---
 clean:
-	rm -rf $(BUILD_DIR) $(WORK_DIR) .Xil
-	rm -f *.log *.a *.csv *.db
-	@echo "CLEANED: Build + Work directories removed."
+	@echo "--- Cleaning Workspace ---"
+	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary
+	@echo "CLEANED: Build and work directories removed."
+

@@ -1,63 +1,91 @@
-# AIE-only Makefile for compiling and simulating graph.cpp
+# ===================================================================
+# Makefile for Vitis AIE Graph Compilation & Simulation
+# Style adapted from user-provided example.
+# ===================================================================
 
 # ==== CONFIG ====
-PLATFORM ?= xilinx_vek280_base_202420_1
-TARGET ?= hw                          # or sw_emu, x86sim
-PL_FREQZ ?= 300
+# Target platform for hardware compilation.
+PLATFORM     ?= /tools/Xilinx/Vitis/2024.1/base_platforms/xilinx_vek280_es1_base_202410_1/xilinx_vek280_es1_base_202410_1.xpfm
 
-GRAPH_SRC := src/graph.cpp
-GRAPH_OUT := Work/libadf.a
-WORK_DIR := Work
-BUILD_DIR := build_$(TARGET)
+# Target for compilation and simulation. Options: x86sim, hw
+TARGET       ?= x86sim
 
-# Tools
-AIECC := aiecompiler
-AIESIM := aiesimulator
-X86SIM := x86simulator
+# Frequency for the Programmable Logic (PL) interfaces.
+PL_FREQZ     ?= 300
 
-# AIE Include paths
+# Path to your Vitis installation.
+VITIS_PATH   ?= /tools/Xilinx/Vitis/2024.1
+
+# Path to the Vitis DSP Library.
+DSPLIB_PATH  ?= /path/to/your/Vitis_Libraries/dsp
+
+
+# ==== PROJECT FILES & DIRECTORIES ====
+GRAPH_SRC     := graph.cpp
+WORK_DIR      := Work
+GRAPH_LIB     := $(WORK_DIR)/libadf.a
+
+
+# ==== TOOLS ====
+AIECC        := aiecompiler
+AIESIM       := aiesimulator
+X86SIM       := x86simulator
+
+
+# ==== COMPILER FLAGS ====
+# Include paths for the AIE compiler.
 AIE_INCLUDE_FLAGS := \
-	-include="$(XILINX_VITIS)/aietools/include" \
-	-include="./src/" \
-	-include="./data" \
-	-include="./"
+	--include="./" \
+	--include="$(DSPLIB_PATH)/L2/include/aie" \
+	--include="$(DSPLIB_PATH)/L1/include/aie" \
+	--include="$(DSPLIB_PATH)/L1/src/aie"
 
-# Compiler flags
-AIE_FLAGS := --platform $(PLATFORM) $(AIE_INCLUDE_FLAGS) --pl-freq=$(PL_FREQZ)
+# Full AIE compiler command flags, assembled from variables above.
+AIE_FLAGS := \
+	--v \
+	--platform=$(PLATFORM) \
+	--target=$(TARGET) \
+	--pl-freq=$(PL_FREQZ) \
+	$(AIE_INCLUDE_FLAGS)
 
-ifeq ($(TARGET),sw_emu)
-	AIE_FLAGS += --target=x86sim -Xpreproc='-DNDEBUG'
-else ifeq ($(TARGET),x86sim)
-	AIE_FLAGS += --target=x86sim -Xpreproc='-DNDEBUG'
-else
-	AIE_FLAGS += --target=hw
-endif
 
 # ==== RULES ====
 
 .PHONY: all graph sim clean
 
+# --- Default Target ---
+# Builds the graph based on the TARGET variable.
 all: graph
 
-graph: $(BUILD_DIR)/libadf.a
+# --- AIE Graph Compilation ---
+# This rule creates the work directory and compiles the graph.
+# The output library (libadf.a) is placed in the WORK_DIR.
+graph: $(GRAPH_LIB)
 
-$(BUILD_DIR)/libadf.a: $(GRAPH_SRC)
-	@mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR); \
-	$(AIECC) $(AIE_FLAGS) ../$(GRAPH_SRC) --workdir=../$(WORK_DIR) 2>&1 | tee aiecompiler.log
-	@echo "COMPLETE: AIE graph compiled into $(BUILD_DIR)/libadf.a"
+$(GRAPH_LIB): $(GRAPH_SRC) graph.h include.h
+	@mkdir -p $(WORK_DIR)
+	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
+	$(AIECC) $(AIE_FLAGS) $(GRAPH_SRC) --workdir=$(WORK_DIR) 2>&1 | tee $(WORK_DIR)/aiecompiler.log
+	@echo "COMPLETE: AIE graph compiled."
 
-sim:
+# --- Simulation ---
+# This rule depends on the graph being built and then runs the
+# appropriate simulator based on the TARGET variable.
+sim: graph
 ifeq ($(TARGET),x86sim)
-	@cd $(BUILD_DIR); \
-	$(X86SIM) --pkg-dir=../$(WORK_DIR) --i=..; \
-	echo "COMPLETE: x86sim simulation finished."
+	@echo "--- Starting x86 Simulation ---"
+	$(X86SIM) --pkg-dir=$(WORK_DIR)
+	@echo "COMPLETE: x86sim simulation finished."
 else
-	@cd $(BUILD_DIR); \
-	$(AIESIM) --pkg-dir=../$(WORK_DIR) --i=.. --profile --dump-vcd=waveform.vcd; \
-	echo "COMPLETE: AIE simulation finished."
+	@echo "--- Starting Hardware Simulation (aiesimulator) ---"
+	$(AIESIM) --pkg-dir=$(WORK_DIR) --profile
+	@echo "COMPLETE: Hardware simulation finished."
 endif
 
+# --- Clean Target ---
+# Removes all generated files and directories.
 clean:
-	rm -rf $(BUILD_DIR) $(WORK_DIR)
-	@echo "CLEANED: Removed build and work directories"
+	@echo "--- Cleaning Workspace ---"
+	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary
+	@echo "CLEANED: Build and work directories removed."
+
