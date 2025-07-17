@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <adf/adf_api/XRTConfig.h>
+// #include <adf/adf_api/XRTConfig.h>
 #include "graph.h" // Includes the graph definition
 
 // Helper function to load float data from a text file

@@ -1,79 +1,95 @@
-#
-# Copyright 2024 Synthara AG
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+# ==============================================
+#   Makefile: AIE Graph + Host Compilation
+# ==============================================
 
-# User-configurable paths
-VITIS_PATH ?= /tools/Xilinx/Vitis/2024.2
+# ==== CONFIG ====
+PLATFORM    ?= xilinx_vek280_base_202420_1
+TARGET      ?= hw                # Options: hw or x86sim
+PL_FREQZ    ?= 300
+
+GRAPH_SRC   := graph.cpp
+HOST_SRC    := host.cpp
+
+BUILD_DIR   := build_$(TARGET)
+WORK_DIR    := Work
+
+LIB_ADF     := $(BUILD_DIR)/libadf.a
+HOST_EXE    := $(BUILD_DIR)/host.exe
+
+# Tools
+AIECC       := aiecompiler
+AIESIM      := aiesimulator
+X86SIM      := x86simulator
+CXX         := g++
+
+VITIS_PATH  ?= /tools/Xilinx/Vitis/2024.2
 DSPLIB_PATH ?= /home/synthara/VersalPrjs/Vitis_Libraries/dsp
-PLATFORM_PATH ?= $(VITIS_PATH)/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
 
-# AI Engine compiler options
-AIE_COMPILER_OPTIONS = -v --pl-freq=300 --workdir=./Work
-
-# Consolidated include flags for L1/L2 libraries
-AIE_INCLUDE_FLAG = \
+# AIE Includes
+AIE_INCLUDE_FLAGS := \
 	--include="$(DSPLIB_PATH)/L2/include/aie" \
 	--include="$(DSPLIB_PATH)/L1/include/aie" \
 	--include="$(DSPLIB_PATH)/L1/src/aie" \
-	--include="./kernels"	\
+	--include="./kernels" \
 	--include="./data"
 
-# Define source files
-AIE_GRAPH_SRC = graph.cpp
-AIE_GRAPH_HEADER = graph.h
-HOST_SRC = host.cpp
+# AIE Compiler Flags
+AIE_FLAGS := --platform=$(PLATFORM) $(AIE_INCLUDE_FLAGS) --pl-freq=$(PL_FREQZ)
+ifeq ($(TARGET),x86sim)
+	AIE_FLAGS += --target=x86sim
+else
+	AIE_FLAGS += --target=hw
+endif
 
-# Define output directories
-AIE_BUILD_DIR = aie_build
-HOST_BUILD_DIR = host_build
-EMULATION_EXE = $(HOST_BUILD_DIR)/host.exe
-LIB_ADF = $(AIE_BUILD_DIR)/libadf.a
+AIE_FLAGS += -D__AIESIM__
 
-.PHONY: all clean aie aiesim
+# Host Includes (for matrix_vector_mul_graph.hpp visibility)
+HOST_INCLUDE_FLAGS := \
+	-I$(WORK_DIR) \
+	-I$(VITIS_PATH)/aietools/include/aie \
+	-I$(DSPLIB_PATH)/L2/include/aie \
+	-I$(DSPLIB_PATH)/L1/include/aie \
+	-I$(DSPLIB_PATH)/L1/src/aie \
+	-I/opt/xilinx/xrt/include
 
-# Default target
-all: $(EMULATION_EXE)
+# ==== RULES ====
 
-# Rule to build the AI Engine graph
-aie: $(LIB_ADF)
+.PHONY: all graph host sim clean
 
-$(LIB_ADF): $(AIE_GRAPH_SRC) $(AIE_GRAPH_HEADER)
-	@mkdir -p $(AIE_BUILD_DIR)
-	aiecompiler $(AIE_COMPILER_OPTIONS) \
-		$(AIE_INCLUDE_FLAG) \
-		--platform=$(PLATFORM_PATH) \
-		$(AIE_GRAPH_SRC)
+all: graph host
 
-# Rule to build the host application for simulation
-$(EMULATION_EXE): $(HOST_SRC) $(LIB_ADF)
-	@mkdir -p $(HOST_BUILD_DIR)
-	g++ -std=c++17 $(HOST_SRC) -o $(EMULATION_EXE) \
-		--include=$(AIE_BUILD_DIR) \
-		--include=$(DSPLIB_PATH)/L2/include \
-		--include=$(VITIS_PATH)/aietools/include \
-		--include=./src \
-		-L$(AIE_BUILD_DIR) -ladf_api_xrt \
+# -------- AIE Graph Compilation --------
+graph: $(LIB_ADF)
+
+$(LIB_ADF): $(GRAPH_SRC)
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR); \
+	$(AIECC) $(AIE_FLAGS) ../$(GRAPH_SRC) --workdir=../$(WORK_DIR) 2>&1 | tee aiecompiler.log
+	@echo "COMPLETE: AIE Graph compiled → $(LIB_ADF)"
+
+# -------- Host Application Compilation --------
+host: $(HOST_EXE)
+
+$(HOST_EXE): $(HOST_SRC) $(LIB_ADF)
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) -std=c++17 $(HOST_SRC) -o $(HOST_EXE) \
+		$(HOST_INCLUDE_FLAGS) \
 		-L$(VITIS_PATH)/aietools/lib/lnx64.o -lxaiengine \
-		-L$(DSPLIB_PATH) \
 		-Wl,-rpath-link,$(VITIS_PATH)/aietools/lib/lnx64.o
+	@echo "COMPLETE: Host application built → $(HOST_EXE)"
 
-# Rule to run the AI Engine simulator
-aiesim: $(EMULATION_EXE)
-	./$(EMULATION_EXE)
+# -------- Simulation --------
+sim:
+ifeq ($(TARGET),x86sim)
+	cd $(BUILD_DIR); $(X86SIM) --pkg-dir=../$(WORK_DIR) --i=..; \
+	echo "COMPLETE: x86sim simulation finished."
+else
+	cd $(BUILD_DIR); $(AIESIM) --pkg-dir=../$(WORK_DIR) --i=.. --profile --dump-vcd=waveform.vcd; \
+	echo "COMPLETE: AIE hardware simulation finished."
+endif
 
-# Clean rule
+# -------- Clean --------
 clean:
-	rm -rf $(AIE_BUILD_DIR) $(HOST_BUILD_DIR) aiesimulator_output *.log .Xil Work outfold
-	rm -f data/output_dense1.txt data/output_dense2.txt *.csv *.db *.a
+	rm -rf $(BUILD_DIR) $(WORK_DIR) .Xil
+	rm -f *.log *.a *.csv *.db
+	@echo "CLEANED: Build + Work directories removed."

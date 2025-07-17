@@ -1,8 +1,11 @@
 #pragma once
-
 #include <adf.h>
 #include "include.h"
+// #include "matrix_vector_mul_graph.hpp"
 #include "matrix_vector_mul_graph.hpp"
+#include "aie_api/aie_adf.hpp"
+
+
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -95,3 +98,4 @@ public:
         // }
     }
 };
+
