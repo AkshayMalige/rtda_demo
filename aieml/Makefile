@@ -87,7 +87,7 @@ ifeq ($(TARGET),x86sim)
 	@echo "COMPLETE: x86sim simulation finished."
 else
 	@echo "--- Starting Hardware Simulation (aiesimulator) ---"
-	$(AIESIM) --pkg-dir=$(WORK_DIR) --profile
+	$(AIESIM) --pkg-dir=$(WORK_DIR) --profile --dump-vcd=foo --output-time-stamp=no
 	@echo "COMPLETE: Hardware simulation finished."
 endif
 

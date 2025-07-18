@@ -41,8 +41,10 @@ sim:
 	@echo "--- Running Simulation for TARGET=$(TARGET) ---"
 ifneq ($(filter $(TARGET),hw hw_emu),)
 	$(VITIS_HLS) $(HLS_SCRIPT) cosim
+	@echo "COMPLETE: c-simulation finished."
 else
 	$(VITIS_HLS) $(HLS_SCRIPT) csim
+	@echo "COMPLETE: hw emulation finished."
 endif
 
 # --- Clean Rule ---
