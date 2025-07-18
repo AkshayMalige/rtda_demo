@@ -7,11 +7,10 @@ VPP := v++
 
 BUILD_DIR := build_$(TARGET)
 SRC_DIR := .
-KERNEL_LIST := mm2s_8_128 s2mm_16_128 s2mm_32_128
+KERNEL_LIST := leaky_relu_pl
 
 VPP_FLAGS := -t $(TARGET) --platform $(PLATFORM) --kernel_frequency $(PL_FREQZ) --save-temps -g
-COMMON_DIR := $(abspath ../common)
-VPP_FLAGS += -I$(COMMON_DIR)
+
 # Auto-generate source and output paths
 KERNEL_CPP := $(addprefix $(SRC_DIR)/, $(addsuffix .cpp, $(KERNEL_LIST)))
 KERNEL_XO  := $(addprefix $(BUILD_DIR)/, $(addsuffix .xo, $(KERNEL_LIST)))
