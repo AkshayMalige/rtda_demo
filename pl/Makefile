@@ -16,7 +16,7 @@ IP_DIR := ip
 LOG_FILE := vitis_hls.log
 
 # Simulation target (sw_emu or hw_emu or hw)
-TARGET ?= hw
+TARGET ?= hw_emu
 
 
 # ===================================================================
