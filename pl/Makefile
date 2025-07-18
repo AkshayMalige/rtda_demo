@@ -1,35 +1,33 @@
-# Makefile for building PL kernels with v++ into a build.<target> folder
+# Makefile for driving the Vitis HLS project for simulation and packaging.
 
-PLATFORM ?= xilinx_vek280_base_202420_1
-TARGET ?= hw
-PL_FREQZ ?= 300
-VPP := v++
+# --- Configuration ---
+HLS_COMMAND := vitis_hls
+HLS_SCRIPT  := project.tcl
+PROJECT_DIR := leaky_relu_hls
+OUTPUT_XO   := ${PROJECT_DIR}.xo
 
-BUILD_DIR := build_$(TARGET)
-SRC_DIR := .
-KERNEL_LIST := leaky_relu_pl
+.PHONY: all csim cosim package clean
 
-VPP_FLAGS := -t $(TARGET) --platform $(PLATFORM) --kernel_frequency $(PL_FREQZ) --save-temps -g
+# Default target runs the full verification and packaging flow
+all: csim cosim package
 
-# Auto-generate source and output paths
-KERNEL_CPP := $(addprefix $(SRC_DIR)/, $(addsuffix .cpp, $(KERNEL_LIST)))
-KERNEL_XO  := $(addprefix $(BUILD_DIR)/, $(addsuffix .xo, $(KERNEL_LIST)))
+# Target to run C-level simulation (Software Emulation)
+csim:
+	@echo "▶️  Running C-Simulation..."
+	$(HLS_COMMAND) -f $(HLS_SCRIPT) csim
 
-.PHONY: all clean kernels
+# Target to run C/RTL co-simulation (Hardware Emulation)
+cosim:
+	@echo "▶️  Running C/RTL Co-simulation..."
+	$(HLS_COMMAND) -f $(HLS_SCRIPT) cosim
 
-all: kernels
+# Target to synthesize and generate the final IP and .xo files
+package:
+	@echo "📦 Synthesizing and Packaging IP/.xo..."
+	$(HLS_COMMAND) -f $(HLS_SCRIPT) package
+	@echo "✅ Output available at ./${OUTPUT_XO}"
 
-kernels: $(KERNEL_XO)
-	@echo "✅ All PL kernels built in $(BUILD_DIR)"
-
-# Pattern rule to compile each .cpp into .xo in the build dir
-$(BUILD_DIR)/%.xo: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
-	$(VPP) $(VPP_FLAGS) -k $* -c -o $@ $<
-
-# Ensure build dir exists
-$(BUILD_DIR):
-	@mkdir -p $(BUILD_DIR)
-
+# Target to clean up all generated files and directories
 clean:
-	rm -rf $(BUILD_DIR) *.log *.jou .Xil/ _x/ *.compile_summary
-	@echo "🧹 Cleaned PL kernel build outputs"
+	@echo "🧹 Cleaning up generated files..."
+	rm -rf $(PROJECT_DIR) vitis_hls.log ip_catalog/ ${OUTPUT_XO} leakyrelu_output.txt

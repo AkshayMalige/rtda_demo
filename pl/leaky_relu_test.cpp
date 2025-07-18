@@ -10,18 +10,20 @@
 typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 0> axis_t;
 
-// Declare DUT
-extern void leaky_relu_pl(hls::stream<axis_t>& in_stream,
-                          hls::stream<axis_t>& out_stream);
+// Declare DUT with C linkage to match the definition
+extern "C" {
+void leaky_relu_pl(hls::stream<axis_t>& in_stream,
+                   hls::stream<axis_t>& out_stream);
+}
 
 int main() {
     hls::stream<axis_t> in_stream;
     hls::stream<axis_t> out_stream;
 
     // Read input data from file
-    std::ifstream fin("../aieml/data/dense1_output.txt");
+    std::ifstream fin("dense1_output.txt");
     if (!fin.is_open()) {
-        std::cerr << "ERROR: Cannot open input_data.txt" << std::endl;
+        std::cerr << "ERROR: Cannot open dense1_output.txt" << std::endl;
         return 1;
     }
 
@@ -30,8 +32,8 @@ int main() {
         fin >> val;
         axis_t temp;
         temp.data = val;
-        temp.keep = -1; // Optional: Set to all-1s
-        temp.last = 0;
+        temp.keep = -1; 
+        temp.last = (i == SIZE - 1); // Set last for the final element
         in_stream.write(temp);
     }
     fin.close();
@@ -46,6 +48,7 @@ int main() {
         return 1;
     }
 
+    int error_count = 0;
     for (int i = 0; i < SIZE; ++i) {
         axis_t temp = out_stream.read();
         fout << temp.data << std::endl;
