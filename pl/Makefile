@@ -1,33 +1,53 @@
-# Makefile for driving the Vitis HLS project for simulation and packaging.
+# Makefile for Vitis HLS project management
 
-# --- Configuration ---
-HLS_COMMAND := vitis_hls
-HLS_SCRIPT  := project.tcl
-PROJECT_DIR := leaky_relu_hls
-OUTPUT_XO   := ${PROJECT_DIR}.xo
+# ===================================================================
+# Configuration
+# ===================================================================
+# Tool executable
+VITIS_HLS := vitis_hls
 
-.PHONY: all csim cosim package clean
+# Tcl script for the project
+HLS_SCRIPT := project.tcl
 
-# Default target runs the full verification and packaging flow
-all: csim cosim package
+# Project-specific names
+KERNEL_NAME := leaky_relu
+PROJECT_DIR := $(KERNEL_NAME)_hls
+IP_DIR := ip
+LOG_FILE := vitis_hls.log
 
-# Target to run C-level simulation (Software Emulation)
-csim:
-	@echo "▶️  Running C-Simulation..."
-	$(HLS_COMMAND) -f $(HLS_SCRIPT) csim
+# Simulation target (sw_emu or hw_emu or hw)
+TARGET ?= hw
 
-# Target to run C/RTL co-simulation (Hardware Emulation)
-cosim:
-	@echo "▶️  Running C/RTL Co-simulation..."
-	$(HLS_COMMAND) -f $(HLS_SCRIPT) cosim
 
-# Target to synthesize and generate the final IP and .xo files
-package:
-	@echo "📦 Synthesizing and Packaging IP/.xo..."
-	$(HLS_COMMAND) -f $(HLS_SCRIPT) package
-	@echo "✅ Output available at ./${OUTPUT_XO}"
+# ===================================================================
+# Rules
+# ===================================================================
+# Default target
+.PHONY: all
+all: kernels
 
-# Target to clean up all generated files and directories
+# --- Build Rule ---
+# Creates the kernel XO and IP catalog by running synthesis once.
+.PHONY: kernels
+kernels:
+	@echo "--- Building Kernels: Synthesizing and Exporting XO and IP ---"
+	mkdir -p $(IP_DIR)
+	$(VITIS_HLS) $(HLS_SCRIPT) kernels
+
+# --- Simulation Rule ---
+# Runs C-simulation for sw_emu or C/RTL Co-simulation for hw.
+.PHONY: sim
+sim:
+	@echo "--- Running Simulation for TARGET=$(TARGET) ---"
+ifneq ($(filter $(TARGET),hw hw_emu),)
+	$(VITIS_HLS) $(HLS_SCRIPT) cosim
+else
+	$(VITIS_HLS) $(HLS_SCRIPT) csim
+endif
+
+# --- Clean Rule ---
+# Removes all generated directories and log files.
+.PHONY: clean
 clean:
-	@echo "🧹 Cleaning up generated files..."
-	rm -rf $(PROJECT_DIR) vitis_hls.log ip_catalog/ ${OUTPUT_XO} leakyrelu_output.txt
+	@echo "--- Cleaning all generated files ---"
+	rm -rf $(PROJECT_DIR) $(IP_DIR) $(LOG_FILE) *.log *.jou

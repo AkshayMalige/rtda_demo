@@ -38,6 +38,8 @@ create_clock -period 3.33 -name default
 
 # --- Step 5: Execute Command ---
 # This structure ensures synthesis is run as a prerequisite for export.
+# --- Step 5: Execute Command ---
+# This structure ensures synthesis is run as a prerequisite for export.
 switch $command {
     "csim" {
         puts "### Running C Simulation... ###"
@@ -61,6 +63,13 @@ switch $command {
         puts "### Running Synthesis and Exporting XO... ###"
         csynth_design
         export_design -format xo -output ./ip/${project_name}.xo
+    }
+    "kernels" {
+        puts "### Running Synthesis... ###"
+        csynth_design
+        puts "### Exporting XO and IP Catalog... ###"
+        export_design -format xo -output ./ip/${project_name}.xo
+        export_design -format ip_catalog -output ./ip/${project_name}_ip
     }
     default {
         puts "ERROR: Unknown command '$command'."
