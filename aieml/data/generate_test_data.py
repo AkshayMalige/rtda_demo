@@ -37,6 +37,7 @@ def main():
     p.add_argument('--input-dim', type=int, default=6)
     p.add_argument('--hidden-dim', type=int, default=128)
     p.add_argument('--output-dim', type=int, default=128)
+    p.add_argument('--cascade-len', type=int, default=2, help='Cascade length for dense2 layer')
     p.add_argument('--dtype', choices=list(DTYPE_MAP.keys()), default='float32')
     p.add_argument('--seed', type=int, default=42)
     args = p.parse_args()
@@ -59,30 +60,37 @@ def main():
     W1 = rand_weights((args.input_dim, args.hidden_dim))
     W2 = rand_weights((args.hidden_dim, args.output_dim))
 
-    # Save weights split into odd/even
+    # Save weights split into odd/even for dense1 (unchanged)
     split_and_save(W1.flatten(), 'weights_dense1a.txt', 'weights_dense1b.txt', args.dtype)
-    split_and_save(W2.flatten(), 'weights_dense2a.txt', 'weights_dense2b.txt', args.dtype)
 
-    # Also save single flattened weight files
+    # Save single flattened weight files (full matrices)
     np.savetxt('weights_dense1.txt', W1.flatten().astype(dtype_np), fmt=FMT_MAP[args.dtype])
     np.savetxt('weights_dense2.txt', W2.flatten().astype(dtype_np), fmt=FMT_MAP[args.dtype])
 
-    # === Reload from files to validate round-trip and generate reference output ===
-    odd1  = np.loadtxt('weights_dense1a.txt', dtype=dtype_np)
-    even1 = np.loadtxt('weights_dense1b.txt', dtype=dtype_np)
-    odd2  = np.loadtxt('weights_dense2a.txt', dtype=dtype_np)
-    even2 = np.loadtxt('weights_dense2b.txt', dtype=dtype_np)
+    # Split dense2 weights by rows, based on cascade length
+    cascade_len = args.cascade_len
+    rows_per_part = args.output_dim // cascade_len
+    W2_matrix = W2.reshape(args.hidden_dim, args.output_dim).T  # Shape: (output_dim, hidden_dim)
 
-    W1_recon = interleave_to_matrix(odd1, even1, W1.shape, dtype_np).astype(np.float32)
-    W2_recon = interleave_to_matrix(odd2, even2, W2.shape, dtype_np).astype(np.float32)
+    for i in range(cascade_len):
+        start_row = i * rows_per_part
+        end_row = (i + 1) * rows_per_part
+        part = W2_matrix[start_row:end_row, :].flatten()  # Row-wise flattening
+        filename = f'weights_dense2_part{i}.txt'
+        np.savetxt(filename, part.astype(dtype_np), fmt=FMT_MAP[args.dtype])
 
     # Forward pass
+    odd1  = np.loadtxt('weights_dense1a.txt', dtype=dtype_np)
+    even1 = np.loadtxt('weights_dense1b.txt', dtype=dtype_np)
+    W1_recon = interleave_to_matrix(odd1, even1, W1.shape, dtype_np).astype(np.float32)
+
     dense1_out = input_vec @ W1_recon
     np.savetxt('dense1_output.txt', dense1_out, fmt='%.6f')
 
     act = leaky_relu(dense1_out, alpha=-0.1)
     np.savetxt('leakyrelu_output.txt', act, fmt='%.6f')
 
+    W2_recon = W2
     output = act @ W2_recon
     np.savetxt('output_data.txt', output, fmt='%.6f')
 
@@ -90,10 +98,10 @@ def main():
     for f in [
         'input_data.txt',
         'weights_dense1a.txt','weights_dense1b.txt',
-        'weights_dense2a.txt','weights_dense2b.txt',
         'weights_dense1.txt','weights_dense2.txt',
         'dense1_output.txt','leakyrelu_output.txt',
-        'output_data.txt']:
+        'output_data.txt'
+    ] + [f'weights_dense2_part{i}.txt' for i in range(cascade_len)]:
         print('  ', f)
 
 if __name__ == '__main__':
