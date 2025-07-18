@@ -94,6 +94,6 @@ endif
 # --- Clean Target ---
 clean:
 	@echo "--- Cleaning Workspace ---"
-	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary aiesimulator_output x86simulator_output pl_sample* *.a
+	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary aiesimulator_output build_hw build_x86sim x86simulator_output pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT *.json *.vcd
 	@echo "CLEANED: Build and work directories removed."
 
