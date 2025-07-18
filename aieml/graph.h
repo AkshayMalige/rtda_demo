@@ -61,7 +61,7 @@ public:
     NeuralNetworkGraph() {
         pl_in_dense1  = input_plio::create("plio_input_dense1", plio_32_bits, "data/input_data.txt");
         pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits, "data/weights_dense1.txt");
-        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, "data/leakyrelu_output.txt");
+        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, "data/dense1_output.txt");
 
         connect<>(pl_w_dense1.out[0], dense1.inA[0]);
         connect<>(pl_in_dense1.out[0], dense1.inB[0]);
@@ -81,7 +81,7 @@ public:
             connect<>(pl_w_dense2[i].out[0], dense2.inA[i]);
         }
 
-        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits, "data/output_data2.txt");
+        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits, "data/dense2_output.txt");
         connect<>(dense2.out[0], pl_out_dense2.in[0]);
 
         // Example Location Constraints:
