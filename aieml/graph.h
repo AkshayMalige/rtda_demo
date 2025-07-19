@@ -47,25 +47,25 @@ using dense128x128 = matrix_vector_mul_graph<
 
 class NeuralNetworkGraph : public graph {
 public:
-    input_plio  pl_in_dense1;
-    input_plio  pl_w_dense1;
-    output_plio pl_out_dense1;
+    // input_plio  pl_in_dense1;
+    // input_plio  pl_w_dense1;
+    // output_plio pl_out_dense1;
 
     input_plio  pl_in_dense2[TP_CASC_LEN_LAYER2];
     input_plio  pl_w_dense2[TP_CASC_LEN_LAYER2];
     output_plio pl_out_dense2;
 
-    dense8x128   dense1;
+    // dense8x128   dense1;
     dense128x128 dense2;
 
     NeuralNetworkGraph() {
-        pl_in_dense1  = input_plio::create("plio_input_dense1", plio_32_bits, "data/input_data.txt");
-        pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits, "data/weights_dense1.txt");
-        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, "data/dense1_output_aie.txt");
+        // pl_in_dense1  = input_plio::create("plio_input_dense1", plio_32_bits, "data/input_data.txt");
+        // pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits, "data/weights_dense1.txt");
+        // pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, "data/dense1_output_aie.txt");
 
-        connect<>(pl_w_dense1.out[0], dense1.inA[0]);
-        connect<>(pl_in_dense1.out[0], dense1.inB[0]);
-        connect<>(dense1.out[0], pl_out_dense1.in[0]);
+        // connect<>(pl_w_dense1.out[0], dense1.inA[0]);
+        // connect<>(pl_in_dense1.out[0], dense1.inB[0]);
+        // connect<>(dense1.out[0], pl_out_dense1.in[0]);
 
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             std::string in_file = "data/leakyrelu_output_part" + std::to_string(i) + ".txt";
