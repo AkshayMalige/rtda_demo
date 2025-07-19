@@ -51,6 +51,9 @@ public:
     input_plio  pl_w_dense1;
     output_plio pl_out_dense1;
 
+    input_plio relu_in_plio;
+    output_plio relu_out_plio[TP_CASC_LEN_LAYER2];
+
     input_plio  pl_in_dense2[TP_CASC_LEN_LAYER2];
     input_plio  pl_w_dense2[TP_CASC_LEN_LAYER2];
     output_plio pl_out_dense2;

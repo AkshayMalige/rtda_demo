@@ -53,7 +53,7 @@ def main():
 
     # Compute Dense1 Output (DO NOT transpose for computation)
     dense1_output = np.dot(W1, x)
-    np.savetxt('dense1_output_reference.txt', dense1_output, fmt=FMT_MAP[dtype])
+    np.savetxt('dense1_output_ref.txt', dense1_output, fmt=FMT_MAP[dtype])
 
     # Save Dense1 Weights (Transpose ONLY for saving to AIE)
     W1_to_save = W1.T
@@ -61,7 +61,7 @@ def main():
 
     # --- LeakyReLU ---
     leakyrelu_output = leaky_relu(dense1_output)
-    np.savetxt('leakyrelu_output.txt', leakyrelu_output, fmt=FMT_MAP[dtype])
+    np.savetxt('leakyrelu_output_ref.txt', leakyrelu_output, fmt=FMT_MAP[dtype])
 
     # --- Dense2 ---
     W2 = np.random.uniform(-1.0, 1.0, (output_size, hidden_size)).astype(DTYPE_MAP[dtype])
@@ -84,7 +84,7 @@ def main():
 
     # Compute Dense2 Output (Reference)
     dense2_output = np.dot(W2, leakyrelu_output)
-    np.savetxt('output_data_reference.txt', dense2_output, fmt=FMT_MAP[dtype])
+    np.savetxt('output_data_ref.txt', dense2_output, fmt=FMT_MAP[dtype])
 
     print("\nSaved all reference and AIE input files successfully.\n")
 
