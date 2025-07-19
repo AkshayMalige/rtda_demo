@@ -44,55 +44,49 @@ def main():
 
     np.random.seed(42)
 
-    # Generate dense1 weights and input
+    # --- Input Vector ---
     x = np.random.uniform(-1.0, 1.0, input_size).astype(DTYPE_MAP[dtype])
+    np.savetxt('input_data.txt', x, fmt=FMT_MAP[dtype])
+
+    # --- Dense1 ---
     W1 = np.random.uniform(-1.0, 1.0, (hidden_size, input_size)).astype(DTYPE_MAP[dtype])
 
-    # Dense1 computation
+    # Compute Dense1 Output (DO NOT transpose for computation)
     dense1_output = np.dot(W1, x)
+    np.savetxt('dense1_output_reference.txt', dense1_output, fmt=FMT_MAP[dtype])
 
-    # LeakyReLU activation
+    # Save Dense1 Weights (Transpose ONLY for saving to AIE)
+    W1_to_save = W1.T
+    np.savetxt('weights_dense1.txt', W1_to_save.flatten(), fmt=FMT_MAP[dtype])
+
+    # --- LeakyReLU ---
     leakyrelu_output = leaky_relu(dense1_output)
-
-    # Save dense1 input, weights, and leakyrelu output
-    np.savetxt('input_data.txt', x, fmt=FMT_MAP[dtype])
-    np.savetxt('dense1_output.txt', dense1_output.flatten(), fmt=FMT_MAP[dtype])
-    np.savetxt('weights_dense1.txt', W1.flatten(), fmt=FMT_MAP[dtype])
     np.savetxt('leakyrelu_output.txt', leakyrelu_output, fmt=FMT_MAP[dtype])
 
-    print(f"Saved input_data.txt ({x.shape})")
-    print(f"Saved weights_dense1.txt ({W1.shape})")
-    print(f"Saved leakyrelu_output.txt ({leakyrelu_output.shape})")
-
-    # Generate dense2 weights
+    # --- Dense2 ---
     W2 = np.random.uniform(-1.0, 1.0, (output_size, hidden_size)).astype(DTYPE_MAP[dtype])
 
-    # Transpose for column-major (assuming TP_DIM_A_LEADING=1)
-    W2 = W2.T  # Shape: (hidden_size, output_size)
+    # Transpose for column-major storage (AIE)
+    W2_to_save = W2.T
 
-    # Split dense2 weights for cascade
-    W2_parts = split_dense2_weights(W2, cascade_len)
+    W2_parts = split_dense2_weights(W2_to_save, cascade_len)
 
     for i, W_part in enumerate(W2_parts):
-        filename = f"weights_dense2_part{i}.txt"
+        filename = f'weights_dense2_part{i}.txt'
         np.savetxt(filename, W_part.flatten(), fmt=FMT_MAP[dtype])
-        print(f"Saved {filename} with shape {W_part.shape}")
 
-    # Split leakyrelu_output as input to cascade kernels
+    # Split LeakyReLU Output as Dense2 Input for Cascade
     assert hidden_size % cascade_len == 0, "Hidden size must be divisible by cascade_len."
     split_size = hidden_size // cascade_len
-
     for i in range(cascade_len):
-        start_idx = i * split_size
-        end_idx = (i + 1) * split_size
-        x_part = leakyrelu_output[start_idx:end_idx]
-        filename = f"leakyrelu_output_part{i}.txt"
-        np.savetxt(filename, x_part, fmt=FMT_MAP[dtype])
-        print(f"Saved {filename} with shape {x_part.shape}")
+        part = leakyrelu_output[i * split_size : (i + 1) * split_size]
+        np.savetxt(f'leakyrelu_output_part{i}.txt', part, fmt=FMT_MAP[dtype])
 
-    dense2_output = np.dot(W2.T, leakyrelu_output)
+    # Compute Dense2 Output (Reference)
+    dense2_output = np.dot(W2, leakyrelu_output)
     np.savetxt('output_data_reference.txt', dense2_output, fmt=FMT_MAP[dtype])
-    print(f"Saved output_data_reference.txt ({dense2_output.shape}) — use this to compare with AIE-ML sim output")
+
+    print("\nSaved all reference and AIE input files successfully.\n")
 
 if __name__ == "__main__":
     main()
