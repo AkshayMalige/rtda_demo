@@ -56,6 +56,7 @@ def main():
 
     # Save dense1 input, weights, and leakyrelu output
     np.savetxt('input_data.txt', x, fmt=FMT_MAP[dtype])
+    np.savetxt('dense1_output.txt', dense1_output.flatten(), fmt=FMT_MAP[dtype])
     np.savetxt('weights_dense1.txt', W1.flatten(), fmt=FMT_MAP[dtype])
     np.savetxt('leakyrelu_output.txt', leakyrelu_output, fmt=FMT_MAP[dtype])
 
