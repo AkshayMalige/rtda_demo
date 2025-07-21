@@ -1,55 +1,57 @@
-# Makefile for Vitis HLS project management
+# Makefile for Vitis HLS project management (multi-kernel)
 
 # ===================================================================
 # Configuration
 # ===================================================================
-# Tool executable
 VITIS_HLS := vitis_hls
 
-# Tcl script for the project
-HLS_SCRIPT := project.tcl
+# List of kernels (add more as needed)
+KERNELS := leaky_relu leaky_splitter
 
-# Project-specific names
-KERNEL_NAME := leaky_relu
-PROJECT_DIR := $(KERNEL_NAME)_hls
 IP_DIR := ip
 LOG_FILE := vitis_hls.log
-
-# Simulation target (sw_emu or hw_emu or hw)
 TARGET ?= sw_emu
 
 
 # ===================================================================
 # Rules
 # ===================================================================
-# Default target
 .PHONY: all
 all: kernels
 
 # --- Build Rule ---
-# Creates the kernel XO and IP catalog by running synthesis once.
 .PHONY: kernels
 kernels:
-	@echo "--- Building Kernels: Synthesizing and Exporting XO and IP ---"
+	@echo "--- Building All Kernels ---"
 	mkdir -p $(IP_DIR)
-	$(VITIS_HLS) $(HLS_SCRIPT) kernels
+	for KERNEL in $(KERNELS); do \
+		echo "--- Building $$KERNEL ---"; \
+		$(VITIS_HLS) "$${KERNEL}_project.tcl" kernels; \
+	done
 
 # --- Simulation Rule ---
-# Runs C-simulation for sw_emu or C/RTL Co-simulation for hw.
 .PHONY: sim
 sim:
 	@echo "--- Running Simulation for TARGET=$(TARGET) ---"
 ifneq ($(filter $(TARGET),hw hw_emu),)
-	$(VITIS_HLS) $(HLS_SCRIPT) cosim
-	@echo "COMPLETE: c-simulation finished."
-else
-	$(VITIS_HLS) $(HLS_SCRIPT) csim
+	for KERNEL in $(KERNELS); do \
+		echo "--- Running hw/hw_emu co-simulation for $$KERNEL ---"; \
+		$(VITIS_HLS) "$${KERNEL}_project.tcl" cosim; \
+	done
 	@echo "COMPLETE: hw emulation finished."
+else
+	for KERNEL in $(KERNELS); do \
+		echo "--- Running C-simulation for $$KERNEL ---"; \
+		$(VITIS_HLS) "$${KERNEL}_project.tcl" csim; \
+	done
+	@echo "COMPLETE: c-simulation finished."
 endif
 
 # --- Clean Rule ---
-# Removes all generated directories and log files.
 .PHONY: clean
 clean:
 	@echo "--- Cleaning all generated files ---"
-	rm -rf $(PROJECT_DIR) $(IP_DIR) $(LOG_FILE) *.log *.jou
+	for KERNEL in $(KERNELS); do \
+		rm -rf "$${KERNEL}_hls"; \
+	done
+	rm -rf $(IP_DIR) $(LOG_FILE) *.log *.jou

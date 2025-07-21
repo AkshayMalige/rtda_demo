@@ -10,7 +10,7 @@ typedef hls::axis<data_t, 0, 0, 0> axis_t;
 
 extern "C" {
 
-void splitter_kernel(hls::stream<axis_t>& in_stream,
+void leaky_splitter_pl(hls::stream<axis_t>& in_stream,
                      hls::stream<axis_t> out_stream[CASCADE_LENGTH]) {
 
 #pragma HLS interface axis port=in_stream
