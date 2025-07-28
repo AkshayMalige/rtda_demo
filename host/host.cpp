@@ -24,11 +24,16 @@ int main(int argc, char** argv) {
 
         std::cout << "Initializing graph instance..." << std::endl;
         xrt::graph cghdl = xrt::graph(device, xclbin_uuid, "graph_instance");
+        
+        std::cout << "Initializing PL kernels..." << std::endl;
+        // xrt::kernel leaky_relu = xrt::kernel(device, xclbin_uuid, "leaky_relu_pl");
+        // auto pl_run = leaky_relu.run();
 
         std::cout << "Starting AIEML graph..." << std::endl;
         cghdl.run();  // Starts the graph (returns void)
 
         std::cout << "Graph running... press Ctrl+C to terminate." << std::endl;
+
 
         // // Keep the process alive to avoid exiting
         // while (true) {

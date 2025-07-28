@@ -10,7 +10,7 @@ KERNELS := leaky_relu leaky_splitter
 
 IP_DIR := ip
 LOG_FILE := vitis_hls.log
-TARGET ?= sw_emu
+TARGET ?= hw_emu
 
 
 # ===================================================================
