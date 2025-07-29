@@ -19,6 +19,7 @@ void leaky_relu_pl(hls::stream<axis_t>& in_stream,
 int main() {
     hls::stream<axis_t> in_stream;
     hls::stream<axis_t> out_stream;
+    data_t out_mem[SIZE];
 
     // Read input data from file
     std::ifstream fin("dense1_output_ref.txt");
@@ -39,7 +40,8 @@ int main() {
     fin.close();
 
     // Call DUT
-    leaky_relu_pl(in_stream, out_stream);
+    // leaky_relu_pl(in_stream, out_stream);
+    leaky_relu_pl(in_stream, out_mem);
 
     // Write output data to file
     std::ofstream fout("leakyrelu_output_pl.txt");
@@ -50,8 +52,9 @@ int main() {
 
     int error_count = 0;
     for (int i = 0; i < SIZE; ++i) {
-        axis_t temp = out_stream.read();
-        fout << temp.data << std::endl;
+        // axis_t temp = out_stream.read();
+        // fout << temp.data << std::endl;
+        fout << out_mem[i] << std::endl;
     }
     fout.close();
 
