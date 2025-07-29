@@ -12,14 +12,14 @@ typedef hls::axis<data_t, 0, 0, 0> axis_t;
 
 // Declare DUT with C linkage to match the definition
 extern "C" {
-void leaky_relu_pl(hls::stream<axis_t>& in_stream,
-                   hls::stream<axis_t>& out_stream);
+    void leaky_relu_pl(hls::stream<axis_t>& in_stream,
+        float*              out_mem);
 }
 
 int main() {
     hls::stream<axis_t> in_stream;
     hls::stream<axis_t> out_stream;
-    data_t out_mem[SIZE];
+    float out_mem[SIZE];
 
     // Read input data from file
     std::ifstream fin("dense1_output_ref.txt");

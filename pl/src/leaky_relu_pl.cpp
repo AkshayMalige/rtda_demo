@@ -34,7 +34,7 @@ typedef hls::axis<data_t, 0, 0, 0> axis_t;
 extern "C" {
 
     void leaky_relu_pl(hls::stream<axis_t>& in_stream,
-                       data_t*              out_mem)  // ← DDR destination
+                       float*              out_mem)  // ← DDR destination
     {
     #pragma HLS INTERFACE axis        port=in_stream depth=128
     #pragma HLS INTERFACE m_axi       port=out_mem offset=slave bundle=gmem

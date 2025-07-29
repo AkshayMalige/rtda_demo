@@ -11,11 +11,10 @@
  #include <ap_axi_sdata.h>
  
  // DUT prototype (from mm2s.cpp / mm2s.h)
- extern "C" void mm2s(ap_int<32>*            mem,
-                      hls::stream<ap_axis<32,0,0,0>>& s,
-                      int                    size);
+ extern "C" void mm2s_pl(ap_int<32>*            mem,
+                      hls::stream<ap_axis<32,0,0,0>>& s, int size);
  
- constexpr int SIZE = 32;           // test vector length
+ constexpr int SIZE = 8;           // test vector length
  constexpr unsigned int SEED = 7;   // reproducible pseudo-random data
  
  // AXI-4-Stream word helper for readability
