@@ -7,7 +7,7 @@
 #include "experimental/xrt_bo.h"
 
 // Define sizes for all data buffers
-#define INPUT_DATA_SIZE 128
+#define INPUT_DATA_SIZE 8
 #define OUTPUT_DATA_SIZE 128
 #define WEIGHTS_DATA_SIZE (128 * 8) 
 
@@ -30,22 +30,27 @@ std::vector<float> read_file_to_vector(const std::string& filename, int size) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 4) {
-        std::cout << "Usage: " << argv[0] << " <aie.xclbin> <input.txt> <weights.txt>" << std::endl;
+    // The host application now only requires the xclbin file as an argument.
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0] << " <aie.xclbin>" << std::endl;
         return 1;
     }
 
     std::string xclbinFilename = argv[1];
-    std::string inputTxtFilename = argv[2];
-    std::string weightsTxtFilename = argv[3];
+
+    // --- Hardcoded file paths ---
+    std::string inputTxtFilename = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/input_data.txt";
+    std::string weightsTxtFilename = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense1.txt";
 
     try {
         xrt::device device(0);
         xrt::xclbin xclbin(xclbinFilename);
         auto xclbin_uuid = device.load_xclbin(xclbin);
 
-        // --- 1. Read input files ---
+        // --- 1. Read input files from hardcoded paths ---
+        std::cout << "Reading data from: " << inputTxtFilename << std::endl;
         auto input_data = read_file_to_vector(inputTxtFilename, INPUT_DATA_SIZE);
+        std::cout << "Reading weights from: " << weightsTxtFilename << std::endl;
         auto weights_data = read_file_to_vector(weightsTxtFilename, WEIGHTS_DATA_SIZE);
 
         // --- 2. Allocate all buffers on device (inputs and output) ---
