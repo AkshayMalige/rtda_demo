@@ -57,8 +57,8 @@ public:
     NeuralNetworkGraph() {
         pl_in_dense1  = input_plio::create("plio_input_dense1", plio_32_bits, "data/input_data.txt");
         pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits, "data/weights_dense1.txt");
-        // pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, "data/dense1_output_aie.txt");
-        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits);
+        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, "data/dense1_output_aie.txt");
+        // pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits);
 
         connect<>(pl_w_dense1.out[0], dense1.inA[0]);
         connect<>(pl_in_dense1.out[0], dense1.inB[0]);
