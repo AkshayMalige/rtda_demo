@@ -6,8 +6,8 @@
 VITIS_HLS := vitis_hls
 
 # List of kernels (add more as needed)
-KERNELS := leaky_relu leaky_splitter mm2s
-# KERNELS := mm2s
+# KERNELS := mm2s leaky_relu leaky_splitter s2mm
+KERNELS := s2mm
 
 
 IP_DIR := ip

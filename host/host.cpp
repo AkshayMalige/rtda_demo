@@ -6,10 +6,15 @@
 #include "experimental/xrt_device.h"
 #include "experimental/xrt_bo.h"
 
-// Define sizes for all data buffers
-#define INPUT_DATA_SIZE 8
-#define OUTPUT_DATA_SIZE 128
-#define WEIGHTS_DATA_SIZE (128 * 8) 
+// --- Define sizes for all data buffers based on the graph architecture ---
+
+// dense8x128 layer
+#define DENSE1_INPUT_SIZE   8
+#define DENSE1_WEIGHTS_SIZE (128 * 8)
+
+// dense128x128 layer (split into 2 cascades)
+#define DENSE2_WEIGHTS_SIZE_PART (128 * 128 / 2)
+#define FINAL_OUTPUT_SIZE   128
 
 // Helper function to read a file into a vector
 std::vector<float> read_file_to_vector(const std::string& filename, int size) {
@@ -23,14 +28,14 @@ std::vector<float> read_file_to_vector(const std::string& filename, int size) {
     while (file >> val) {
         data.push_back(val);
     }
+    file.close();
     if (data.size() != size) {
-        throw std::runtime_error("ERROR: File " + filename + " does not contain the expected number of elements.");
+        throw std::runtime_error("ERROR: File " + filename + " does not contain the expected " + std::to_string(size) + " elements.");
     }
     return data;
 }
 
 int main(int argc, char** argv) {
-    // The host application now only requires the xclbin file as an argument.
     if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " <aie.xclbin>" << std::endl;
         return 1;
@@ -38,70 +43,102 @@ int main(int argc, char** argv) {
 
     std::string xclbinFilename = argv[1];
 
-    // --- Hardcoded file paths ---
-    std::string inputTxtFilename = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/input_data.txt";
-    std::string weightsTxtFilename = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense1.txt";
+    // --- Hardcoded file paths for all inputs ---
+    std::string inputDataFile     = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/input_data.txt";
+    std::string weights1File      = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense1.txt";
+    std::string weights2_part0File = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense2_part0.txt";
+    std::string weights2_part1File = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense2_part1.txt";
 
     try {
         xrt::device device(0);
         xrt::xclbin xclbin(xclbinFilename);
         auto xclbin_uuid = device.load_xclbin(xclbin);
 
-        // --- 1. Read input files from hardcoded paths ---
-        std::cout << "Reading data from: " << inputTxtFilename << std::endl;
-        auto input_data = read_file_to_vector(inputTxtFilename, INPUT_DATA_SIZE);
-        std::cout << "Reading weights from: " << weightsTxtFilename << std::endl;
-        auto weights_data = read_file_to_vector(weightsTxtFilename, WEIGHTS_DATA_SIZE);
+        // --- 1. Read all input files from hardcoded paths ---
+        auto input_data = read_file_to_vector(inputDataFile, DENSE1_INPUT_SIZE);
+        auto weights1_data = read_file_to_vector(weights1File, DENSE1_WEIGHTS_SIZE);
+        auto weights2_part0_data = read_file_to_vector(weights2_part0File, DENSE2_WEIGHTS_SIZE_PART);
+        auto weights2_part1_data = read_file_to_vector(weights2_part1File, DENSE2_WEIGHTS_SIZE_PART);
 
-        // --- 2. Allocate all buffers on device (inputs and output) ---
-        xrt::bo input_buffer = xrt::bo(device, input_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
-        xrt::bo weights_buffer = xrt::bo(device, weights_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
-        xrt::bo output_buffer = xrt::bo(device, OUTPUT_DATA_SIZE * sizeof(float), xrt::bo::flags::normal, 0);
+        // --- 2. Allocate all device buffers (inputs and output) ---
+        xrt::bo input_buf = xrt::bo(device, input_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
+        xrt::bo weights1_buf = xrt::bo(device, weights1_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
+        xrt::bo weights2_part0_buf = xrt::bo(device, weights2_part0_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
+        xrt::bo weights2_part1_buf = xrt::bo(device, weights2_part1_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
+        xrt::bo output_buf = xrt::bo(device, FINAL_OUTPUT_SIZE * sizeof(float), xrt::bo::flags::normal, 0);
 
         // Write input data to device buffers
-        input_buffer.write(input_data.data());
-        weights_buffer.write(weights_data.data());
-        input_buffer.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-        weights_buffer.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+        input_buf.write(input_data.data());
+        weights1_buf.write(weights1_data.data());
+        weights2_part0_buf.write(weights2_part0_data.data());
+        weights2_part1_buf.write(weights2_part1_data.data());
+        input_buf.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+        weights1_buf.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+        weights2_part0_buf.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+        weights2_part1_buf.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
-        // --- 3. Get Handles to all components ---
-        xrt::kernel mm2s_data_krnl = xrt::kernel(device, xclbin_uuid, "mm2s_data_inst");
-        xrt::kernel mm2s_weights_krnl = xrt::kernel(device, xclbin_uuid, "mm2s_weights_inst");
-        xrt::kernel relu_krnl = xrt::kernel(device, xclbin_uuid, "leaky_relu_pl");
-        xrt::graph aie_graph = xrt::graph(device, xclbin_uuid, "g");
+        // --- 3. Get Handles to all components using instance names from linker.cfg ---
+        xrt::kernel mm2s_data = xrt::kernel(device, xclbin_uuid, "mm2s_data");
+        xrt::kernel mm2s_weights1 = xrt::kernel(device, xclbin_uuid, "mm2s_weights1");
+        xrt::kernel mm2s_weights2_0 = xrt::kernel(device, xclbin_uuid, "mm2s_weights2_0");
+        xrt::kernel mm2s_weights2_1 = xrt::kernel(device, xclbin_uuid, "mm2s_weights2_1");
+        xrt::kernel relu = xrt::kernel(device, xclbin_uuid, "relu");
+        xrt::kernel splitter = xrt::kernel(device, xclbin_uuid, "splitter");
+        xrt::kernel s2mm = xrt::kernel(device, xclbin_uuid, "s2mm_out");
+        xrt::graph aie_graph = xrt::graph(device, xclbin_uuid, "graph_inst");
 
-        // --- 4. Start consumers ---
-        auto relu_run = xrt::run(relu_krnl);
-        // Set the output buffer (arg 1) and size (arg 2) for the leaky_relu kernel
-        relu_run.set_arg(1, output_buffer);
-        relu_run.set_arg(2, OUTPUT_DATA_SIZE);
+        // --- 4. Start all CONSUMER kernels FIRST ---
+        // These kernels wait for data: s2mm, relu, splitter.
+        auto s2mm_run = xrt::run(s2mm);
+        s2mm_run.set_arg(1, output_buf); // Assumes s2mm has mem pointer at arg 1
+        s2mm_run.set_arg(2, FINAL_OUTPUT_SIZE);
+        s2mm_run.start();
+
+        auto relu_run = xrt::run(relu);
         relu_run.start();
 
-        aie_graph.run(1);
+        auto splitter_run = xrt::run(splitter);
+        splitter_run.start();
 
-        // --- 5. Start producers ---
-        auto mm2s_weights_run = xrt::run(mm2s_weights_krnl);
-        mm2s_weights_run.set_arg(0, weights_buffer);
-        mm2s_weights_run.set_arg(2, WEIGHTS_DATA_SIZE);
-        mm2s_weights_run.start();
+        // --- 5. Start the AIE graph ---
+        aie_graph.run(1); // Run the graph for one full iteration
 
-        auto mm2s_data_run = xrt::run(mm2s_data_krnl);
-        mm2s_data_run.set_arg(0, input_buffer);
-        mm2s_data_run.set_arg(2, INPUT_DATA_SIZE);
+        // --- 6. Start all PRODUCER kernels LAST ---
+        // These kernels generate data: all mm2s instances.
+        auto mm2s_weights1_run = xrt::run(mm2s_weights1);
+        mm2s_weights1_run.set_arg(0, weights1_buf);
+        mm2s_weights1_run.set_arg(2, DENSE1_WEIGHTS_SIZE);
+        mm2s_weights1_run.start();
+
+        auto mm2s_weights2_0_run = xrt::run(mm2s_weights2_0);
+        mm2s_weights2_0_run.set_arg(0, weights2_part0_buf);
+        mm2s_weights2_0_run.set_arg(2, DENSE2_WEIGHTS_SIZE_PART);
+        mm2s_weights2_0_run.start();
+
+        auto mm2s_weights2_1_run = xrt::run(mm2s_weights2_1);
+        mm2s_weights2_1_run.set_arg(0, weights2_part1_buf);
+        mm2s_weights2_1_run.set_arg(2, DENSE2_WEIGHTS_SIZE_PART);
+        mm2s_weights2_1_run.start();
+        
+        // Start the main data kernel last to kick off the whole process
+        auto mm2s_data_run = xrt::run(mm2s_data);
+        mm2s_data_run.set_arg(0, input_buf);
+        mm2s_data_run.set_arg(2, DENSE1_INPUT_SIZE);
         mm2s_data_run.start();
 
-        // --- 6. Wait for all kernels to complete ---
+        // --- 7. Wait for the entire pipeline to complete ---
+        // We only need to wait for the final kernel in the chain (s2mm)
+        // and the input kernels to finish sending their data.
         std::cout << "Waiting for kernels to complete..." << std::endl;
         mm2s_data_run.wait();
-        mm2s_weights_run.wait();
-        relu_run.wait(); // Wait for the relu kernel to finish writing
+        s2mm_run.wait();
         std::cout << "Execution finished." << std::endl;
 
-        // --- 7. Read back and verify results ---
+        // --- 8. Read back and verify results ---
         std::cout << "Reading output data from device..." << std::endl;
-        std::vector<float> host_output_data(OUTPUT_DATA_SIZE);
-        output_buffer.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-        output_buffer.read(host_output_data.data());
+        std::vector<float> host_output_data(FINAL_OUTPUT_SIZE);
+        output_buf.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+        output_buf.read(host_output_data.data());
 
         // Print first few values for verification
         std::cout << "Verification: First 5 output values:" << std::endl;
