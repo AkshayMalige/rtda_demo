@@ -21,7 +21,7 @@ int main() {
     hls::stream<axis_t> out_stream[CASCADE_LENGTH];
 
     // Read input data from file
-    std::ifstream fin("leakyrelu_output_ref.txt");
+    std::ifstream fin("/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/leakyrelu_output_ref.txt");
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open dense1_output_ref.txt" << std::endl;
         return 1;
@@ -43,8 +43,8 @@ int main() {
 
     // Open output files
     std::ofstream fout[CASCADE_LENGTH];
-    fout[0].open("leakyrelu_output_pl_part0.txt");
-    fout[1].open("leakyrelu_output_pl_part1.txt");
+    fout[0].open("/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/leakyrelu_output_pl_part0.txt");
+    fout[1].open("/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/leakyrelu_output_pl_part1.txt");
 
     for (int i = 0; i < CASCADE_LENGTH; ++i) {
         if (!fout[i].is_open()) {

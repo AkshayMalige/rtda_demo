@@ -4,11 +4,13 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 
+typedef float data_t;
+typedef hls::axis<data_t, 0, 0, 0> axis_t;
 
 extern "C" {
 
-void mm2s_pl(ap_int<32>* mem, hls::stream<ap_axis<32, 0, 0, 0>  > &s, int size) {
-#pragma HLS INTERFACE m_axi port=mem offset=slave bundle=gmem
+void mm2s_pl(float* mem, hls::stream<axis_t> &s, int size) {
+#pragma HLS INTERFACE m_axi port=mem offset=slave bundle=gmem depth = 8
 
 #pragma HLS interface axis port=s
 
@@ -18,9 +20,14 @@ void mm2s_pl(ap_int<32>* mem, hls::stream<ap_axis<32, 0, 0, 0>  > &s, int size) 
 
 	for(int i = 0; i < size; i++) {
 #pragma HLS PIPELINE II=1
-		ap_axis<32, 0, 0, 0> x;
-		x.data = mem[i];
-		s.write(x);
+		// ap_axis<32, 0, 0, 0> x;
+		// x.data = mem[i];
+		// s.write(x);
+
+        axis_t val;
+        val.data = mem[i];
+        s.write(val);
+
 	}
 
 }
