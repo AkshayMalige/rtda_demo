@@ -10,7 +10,7 @@ typedef hls::axis<data_t, 0, 0, 0> axis_t;
 extern "C" {
 
 void mm2s_pl(float* mem, hls::stream<axis_t> &s, int size) {
-#pragma HLS INTERFACE m_axi port=mem offset=slave bundle=gmem depth = 8
+#pragma HLS INTERFACE m_axi port=mem offset=slave bundle=gmem
 
 #pragma HLS interface axis port=s
 

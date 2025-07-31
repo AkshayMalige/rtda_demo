@@ -86,6 +86,3 @@ public:
         connect<>(dense2.out[0], pl_out_dense2.in[0]);
     }
 };
-
-
-

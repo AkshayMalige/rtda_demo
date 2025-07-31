@@ -32,5 +32,5 @@ $(OUT): $(OBJ)
 	@echo "✅ Built host executable: $(OUT)"
 
 clean:
-	rm -f $(OBJ) $(OUT)
+	rm -f $(OBJ) $(OUT) *.log
 	@echo "🧹 Cleaned up build artifacts"
