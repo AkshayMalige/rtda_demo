@@ -44,10 +44,10 @@ int main(int argc, char** argv) {
     std::string xclbinFilename = argv[1];
 
     // --- Hardcoded file paths for all inputs ---
-    std::string inputDataFile     = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/input_data.txt";
-    std::string weights1File      = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense1.txt";
-    std::string weights2_part0File = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense2_part0.txt";
-    std::string weights2_part1File = "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/weights_dense2_part1.txt";
+    std::string inputDataFile     = "./data/input_data.txt";
+    std::string weights1File      = "./data/weights_dense1.txt";
+    std::string weights2_part0File = "./data/weights_dense2_part0.txt";
+    std::string weights2_part1File = "./data/weights_dense2_part1.txt";
 
     try {
         xrt::device device(0);
@@ -104,7 +104,8 @@ int main(int argc, char** argv) {
         aie_graph.run(1); // Run the graph for one full iteration
 
         // --- 6. Start all PRODUCER kernels LAST ---
-        // These kernels generate data: all mm2s instances.
+        // These kernels generate data: all mm2s instances.  void mm2s_pl(float* mem, hls::stream<axis_t> &s, int size) {
+
         auto mm2s_weights1_run = xrt::run(mm2s_weights1);
         mm2s_weights1_run.set_arg(0, weights1_buf);
         mm2s_weights1_run.set_arg(2, DENSE1_WEIGHTS_SIZE);
@@ -142,7 +143,7 @@ int main(int argc, char** argv) {
 
         // Print first few values for verification
         std::cout << "Verification: First 5 output values:" << std::endl;
-        for (int i = 0; i < 5; ++i) {
+        for (int i = 0; i < FINAL_OUTPUT_SIZE; ++i) {
             std::cout << host_output_data[i] << std::endl;
         }
 
