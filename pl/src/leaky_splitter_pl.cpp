@@ -15,7 +15,8 @@ void leaky_splitter_pl(hls::stream<axis_t>& in_stream,
 
 #pragma HLS interface axis port=in_stream
 #pragma HLS interface axis port=out_stream
-#pragma HLS interface ap_ctrl_none port=return
+// #pragma HLS interface ap_ctrl_none port=return
+#pragma HLS INTERFACE s_axilite port=return bundle=control
 
     const int SPLIT_SIZE = SIZE / CASCADE_LENGTH;
 

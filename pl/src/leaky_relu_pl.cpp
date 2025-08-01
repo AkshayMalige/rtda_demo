@@ -15,7 +15,8 @@ extern "C" {
 
     #pragma HLS interface axis port=in_stream bundle=gmem depth =128
     #pragma HLS interface axis port=out_stream bundle=gmem depth =128
-    #pragma HLS interface ap_ctrl_none port=return
+    // #pragma HLS interface ap_ctrl_none port=return
+    #pragma HLS INTERFACE s_axilite port=return bundle=control
 
         for (int i = 0; i < SIZE; i++) {
     #pragma HLS pipeline II=1

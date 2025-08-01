@@ -7,7 +7,8 @@ CXX := aarch64-linux-gnu-g++
 # Sources and targets
 SRC := host.cpp
 OBJ := host.o
-OUT := system_host
+# OUT := system_host
+OUT := host.exe
 
 # Compiler and linker flags
 CXXFLAGS := -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
@@ -34,3 +35,21 @@ $(OUT): $(OBJ)
 clean:
 	rm -f $(OBJ) $(OUT) *.log
 	@echo "🧹 Cleaned up build artifacts"
+
+
+
+GCC_FLAGS := -Wall -c \
+	     -std=c++17 -Wno-int-to-pointer-cast --sysroot=${SDKTARGETSYSROOT} 
+
+GCC_INCLUDES += -I$(SDKTARGETSYSROOT)/usr/include/xrt -I$(SDKTARGETSYSROOT)/usr/include
+
+GCC_LIB := -lxrt_coreutil
+
+GCC_LIB += -L${XILINX_XRT}/lib --sysroot=${SDKTARGETSYSROOT}
+LDCLFLAGS := $(GCC_LIB)
+
+host: guard-CXX guard-SDKTARGETSYSROOT 
+	cd ./sw 
+	$(CXX) $(GCC_FLAGS) $(GCC_INCLUDES) -o host.o host.cpp
+	$(CXX) *.o $(GCC_LIB) -std=c++17 -o ${EXECUTABLE}
+	@echo "COMPLETE: Host application created."

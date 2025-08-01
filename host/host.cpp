@@ -37,7 +37,7 @@ std::vector<float> read_file_to_vector(const std::string& filename, int size) {
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        std::cout << "Usage: " << argv[0] << " <aie.xclbin>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <a.xclbin>" << std::endl;
         return 1;
     }
 
@@ -78,14 +78,14 @@ int main(int argc, char** argv) {
         weights2_part1_buf.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
         // --- 3. Get Handles to all components using instance names from linker.cfg ---
-        xrt::kernel mm2s_data = xrt::kernel(device, xclbin_uuid, "mm2s_data");
-        xrt::kernel mm2s_weights1 = xrt::kernel(device, xclbin_uuid, "mm2s_weights1");
-        xrt::kernel mm2s_weights2_0 = xrt::kernel(device, xclbin_uuid, "mm2s_weights2_0");
-        xrt::kernel mm2s_weights2_1 = xrt::kernel(device, xclbin_uuid, "mm2s_weights2_1");
-        xrt::kernel relu = xrt::kernel(device, xclbin_uuid, "relu");
-        xrt::kernel splitter = xrt::kernel(device, xclbin_uuid, "splitter");
-        xrt::kernel s2mm = xrt::kernel(device, xclbin_uuid, "s2mm_out");
-        xrt::graph aie_graph = xrt::graph(device, xclbin_uuid, "graph_inst");
+        xrt::kernel mm2s_data = xrt::kernel(device, xclbin_uuid, "mm2s_pl:{mm2s_din}");
+        xrt::kernel mm2s_weights1 = xrt::kernel(device, xclbin_uuid, "mm2s_pl:{mm2s_weights1}");
+        xrt::kernel mm2s_weights2_0 = xrt::kernel(device, xclbin_uuid, "mm2s_pl:{mm2s_weights2_0}");
+        xrt::kernel mm2s_weights2_1 = xrt::kernel(device, xclbin_uuid, "mm2s_pl:{mm2s_weights2_1}");
+        xrt::kernel relu = xrt::kernel(device, xclbin_uuid, "leaky_relu_pl:{relu}");
+        xrt::kernel splitter = xrt::kernel(device, xclbin_uuid, "leaky_splitter_pl:{splitter}");
+        xrt::kernel s2mm = xrt::kernel(device, xclbin_uuid, "s2mm_pl:{s2mm_out}");
+        xrt::graph aie_graph = xrt::graph(device, xclbin_uuid, "g");
 
         // --- 4. Start all CONSUMER kernels FIRST ---
         // These kernels wait for data: s2mm, relu, splitter.
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         splitter_run.start();
 
         // --- 5. Start the AIE graph ---
-        aie_graph.run(1); // Run the graph for one full iteration
+        aie_graph.run(); // Run the graph for one full iteration
 
         // --- 6. Start all PRODUCER kernels LAST ---
         // These kernels generate data: all mm2s instances.  void mm2s_pl(float* mem, hls::stream<axis_t> &s, int size) {
