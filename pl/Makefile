@@ -3,15 +3,15 @@
 # ===================================================================
 # Configuration
 # ===================================================================
-VITIS_HLS := vitis_hls
+VITIS_HLS ?= vitis_hls
 
 # List of kernels (add more as needed)
-KERNELS := mm2s leaky_relu leaky_splitter s2mm
+KERNELS ?= mm2s leaky_relu leaky_splitter s2mm
 # KERNELS := mm2s
 
 
-IP_DIR := ip
-LOG_FILE := vitis_hls.log
+IP_DIR   ?= ip
+LOG_FILE ?= vitis_hls.log
 TARGET ?= hw_emu
 
 
@@ -56,4 +56,4 @@ clean:
 	for KERNEL in $(KERNELS); do \
 		rm -rf "$${KERNEL}_hls"; \
 	done
-	rm -rf $(IP_DIR) $(LOG_FILE) *.log *.jou
+	        rm -rf $(IP_DIR) $(LOG_FILE) *.log *.jou
