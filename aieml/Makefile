@@ -9,8 +9,8 @@ PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202
 # Target for compilation and simulation. Options: x86sim, hw
 TARGET       ?= hw
 
-# Frequency for the Programmable Logic (PL) interfaces.
-PL_FREQZ     ?= 300
+# Frequency for the Programmable Logic (PL) interfaces in MHz.
+PL_FREQ_MHZ  ?= 300
 
 # Path to your Vitis installation.
 VITIS_PATH   ?= /tools/Xilinx/Vitis/2024.1
@@ -51,7 +51,7 @@ AIE_FLAGS := \
 	--v \
 	--platform=$(PLATFORM) \
 	--target=$(TARGET) \
-	--pl-freq=$(PL_FREQZ) \
+--pl-freq=$(PL_FREQ_MHZ) \
 	$(AIE_INCLUDE_FLAGS)
 
 
@@ -94,6 +94,9 @@ endif
 # --- Clean Target ---
 clean:
 	@echo "--- Cleaning Workspace ---"
-	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary aiesimulator_output build_hw build_x86sim x86simulator_output pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT *.json *.vcd
+	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary \
+	       aiesimulator_output build_hw build_x86sim x86simulator_output \
+	       pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT \
+	       *.json *.vcd
 	@echo "CLEANED: Build and work directories removed."
 

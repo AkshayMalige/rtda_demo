@@ -1,25 +1,24 @@
 # Makefile to compile host.cpp for PetaLinux sysroot using aarch64-linux-gnu-g++
 
-# Paths
-SYSROOT := /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
-CXX := aarch64-linux-gnu-g++
+# Toolchain and paths
+SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
+CXX     := aarch64-linux-gnu-g++
 
 # Sources and targets
 SRC := host.cpp
-OBJ := host.o
-# OUT := system_host
-OUT := host.exe
+OBJ := $(SRC:.cpp=.o)
+OUT ?= system_host
 
 # Compiler and linker flags
-CXXFLAGS := -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
-  --sysroot=$(SYSROOT) \
-  -I$(SYSROOT)/usr/include/xrt \
-  -I$(SYSROOT)/usr/include \
-  -I./ -I./src/ -I/aietools/include -I/include
+CXXFLAGS ?= -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
+	--sysroot=$(SYSROOT) \
+	-I$(SYSROOT)/usr/include/xrt \
+	-I$(SYSROOT)/usr/include \
+	-I./ -I./src/ -I/aietools/include -I/include
 
-LDFLAGS := --sysroot=$(SYSROOT) \
-  -L$(SYSROOT)/usr/lib \
-  -lstdc++ -lxrt_coreutil -lxrt_core -lpthread
+LDFLAGS ?= --sysroot=$(SYSROOT) \
+	-L$(SYSROOT)/usr/lib \
+	-lstdc++ -lxrt_coreutil -lxrt_core -lpthread
 
 .PHONY: all clean
 
@@ -36,20 +35,3 @@ clean:
 	rm -f $(OBJ) $(OUT) *.log
 	@echo "🧹 Cleaned up build artifacts"
 
-
-
-GCC_FLAGS := -Wall -c \
-	     -std=c++17 -Wno-int-to-pointer-cast --sysroot=${SDKTARGETSYSROOT} 
-
-GCC_INCLUDES += -I$(SDKTARGETSYSROOT)/usr/include/xrt -I$(SDKTARGETSYSROOT)/usr/include
-
-GCC_LIB := -lxrt_coreutil
-
-GCC_LIB += -L${XILINX_XRT}/lib --sysroot=${SDKTARGETSYSROOT}
-LDCLFLAGS := $(GCC_LIB)
-
-host: guard-CXX guard-SDKTARGETSYSROOT 
-	cd ./sw 
-	$(CXX) $(GCC_FLAGS) $(GCC_INCLUDES) -o host.o host.cpp
-	$(CXX) *.o $(GCC_LIB) -std=c++17 -o ${EXECUTABLE}
-	@echo "COMPLETE: Host application created."
