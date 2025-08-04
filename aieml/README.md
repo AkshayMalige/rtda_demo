@@ -63,4 +63,3 @@ creates:
 `graph.h` connects each PLIO port to these files so that simulation reads the
 pre-generated values at runtime. For environment setup and detailed data
 creation instructions, see the [top-level README](../README.md).
-
