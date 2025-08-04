@@ -44,7 +44,8 @@ link:     ; @echo "📦 Link complete: $(XSA)"
 
 ########################  v++ --package flags ##############################
 PKG_COMMON = --platform $(PLATFORM) --package.out_dir $(PKG_DIR) \
-             --package.defer_aie_run --package.sd_file $(EXEC)
+             --package.defer_aie_run --package.sd_file $(EXEC) \
+             --package.sd_dir aieml/data
 
 ifeq ($(TARGET),sw_emu)
   ifeq ($(EMU_PS),X86)
