@@ -2,6 +2,18 @@
 
 This project demonstrates a custom low-latency neural network pipeline implemented on the AMD Versal™ VEK280 platform using the AI Engine-ML (AIE-ML) and Vitis tools. The core model consists of two dense layers with a leaky ReLU activation in between, targeting power-efficient acceleration of small MLP inference tasks. It supports runtime configurability of dimensions and data types (`int8`, `int16`, `float16`, `float32`), with automated test data generation and full simulation support.
 
+The design partitions work across three components of the Versal architecture:
+
+- **AI Engine-ML** – executes dense layers and activation kernels.
+- **Programmable Logic (PL)** – supplies data-mover and helper kernels such as DMA engines and activation units.
+- **Host application** – runs on the processing system and orchestrates data movement and graph execution through XRT.
+
+Each component has its own build instructions in the following READMEs:
+
+- [AI Engine-ML](aieml/README.md)
+- [Programmable Logic](pl/README.md)
+- [Host Application](host/README.md)
+
 ---
 
 ## 📦 Python Environment Setup
@@ -21,6 +33,31 @@ source set_envs.sh
 
 ---
 
+## 🔁 Workflow
+
+1. **Data generation**
+   ```bash
+   python aieml/data/generate_test_data.py --input-dim 6 --hidden-dim 128 --output-dim 128 --dtype float32 --seed 123
+   ```
+2. **Graph compilation**
+   ```bash
+   make -C aieml graph
+   ```
+3. **Kernel build (PL)**
+   ```bash
+   make -C pl kernels
+   ```
+4. **Host build**
+   ```bash
+   make -C host
+   ```
+5. **System linking and packaging**
+   ```bash
+   make package
+   ```
+
+---
+
 ## 🧪 Generate Dummy Test Data & Weights
 
 This command will generate:
@@ -31,7 +68,7 @@ This command will generate:
 - `reference_output_data.txt` for validation
 
 ```bash
-python generate_test_data.py --input-dim 6 --hidden-dim 128 --output-dim 128 --dtype float32 --seed 123
+python aieml/data/generate_test_data.py --input-dim 6 --hidden-dim 128 --output-dim 128 --dtype float32 --seed 123
 ```
 
 > ⚙️ All data is dumped into the `./aieml/data/` directory and formatted for `plio` input streams.
@@ -44,14 +81,10 @@ Move into the AIE source directory and compile the graph:
 
 ```bash
 cd aieml
-v++ --compile --mode aie --target hw ./main.cpp --part=xcve2802-vsvh1760-2MP-e-S -I./data -I./kernels
+make graph
 ```
 
-This will compile the AI Engine graph and produce:
-
-```
-libadf.a
-```
+This generates `Work/libadf.a` for linking with the rest of the system.
 
 ---
 
@@ -60,10 +93,11 @@ libadf.a
 Run cycle-approximate simulation with profiling and memory tracking enabled:
 
 ```bash
-aiesimulator --profile --pkg-dir=Work --dump-vcd=foo --enable-memory-check
+cd aieml
+make sim
 ```
 
-You can then open the results in Vitis Analyzer:
+Simulation results can be inspected in Vitis Analyzer:
 
 ```bash
 vitis_analyzer Work/aiesimulator_output/default.aierun_summary
@@ -75,22 +109,27 @@ vitis_analyzer Work/aiesimulator_output/default.aierun_summary
 
 ## 📁 Directory Structure Overview
 
-Your project will be organized as follows:
+Your project is organized as follows:
 
 ```bash
 ├── aieml/
-│   ├── data/                 # Generated input, weights, and golden output
-│   ├── kernels/              # AIE kernel implementations (dense1, dense2, leaky_relu)
-│   ├── main.cpp              # Graph definition and PLIO connections
+│   ├── data/                 # Generated input, weights, and reference output
+│   ├── kernels/              # AIE kernel implementations
 │   ├── Makefile
-├── host/                     # (Optional) Host application sources
-│   └── Makefile
-├── hw_link/                  # System configuration for linking
-│   └── system.cfg
+│   └── README.md
+├── pl/                       # Programmable logic (HLS) kernels
+│   ├── Makefile
+│   └── README.md
+├── host/                     # Host application sources
+│   ├── Makefile
+│   └── README.md
+├── common/                   # Shared headers and configuration
+├── model/                    # Python models and utilities
 ├── hls_env.yml               # Conda environment definition
-├── generate_test_data.py     # Dummy data generator
+├── pack.cfg                  # Packaging configuration
 ├── set_envs.sh               # Vitis and XRT environment setup
-└── Makefile
+├── system_project.yaml       # System project description
+└── Makefile                  # Top-level build orchestrator
 ```
 
 ---
