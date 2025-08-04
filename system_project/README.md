@@ -32,9 +32,9 @@ The build produces a packaged `.xclbin` under `package.hw_emu/` ready for emulat
         |                                 |
         | Streams via mm2s/s2mm           |
         v                                 v
-                      +------------------+
-                      |  AIE-ML Graph    |
-                      +------------------+
+      +-------------------------------------+
+      |            AIE-ML Graph             |
+      +-------------------------------------+
 ```
 
 The host program coordinates execution, the PL kernels move data between memory and the AI Engine array, and the hardware link output packages everything into a runnable design.
