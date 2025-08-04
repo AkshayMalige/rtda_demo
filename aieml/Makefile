@@ -7,7 +7,7 @@
 PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
 
 # Target for compilation and simulation. Options: x86sim, hw
-TARGET       ?= hw
+TARGET       = hw
 
 # Frequency for the Programmable Logic (PL) interfaces in MHz.
 PL_FREQ_MHZ  ?= 300
