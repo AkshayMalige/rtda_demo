@@ -20,7 +20,6 @@ AIE_LIB   := aieml/libadf.a
 HOST_EXE  := host/system_host
 LINK_OUT  := $(BUILD_DIR)/design_$(TARGET).xsa
 XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
-POST_BOOT := $(PKG_DIR)/post_boot.sh
 
 SUBOPTS   := TARGET=$(TARGET) PLATFORM=$(PLATFORM)
 
@@ -54,23 +53,12 @@ link: $(LINK_OUT)
 $(XCLBIN): $(LINK_OUT) $(HOST_EXE) $(AIE_LIB)
 > mkdir -p $(PKG_DIR)
 > v++ -p -t $(TARGET) --platform $(PLATFORM) --config $(PACK_CFG) \
->     --package.out_dir $(PKG_DIR) --package.sd_file $(HOST_EXE) \
 >     $(LINK_OUT) $(AIE_LIB) -o $@
 
 package: $(XCLBIN)
 
-run: $(POST_BOOT)
-> cd $(PKG_DIR); ./launch_hw_emu.sh -run-app post_boot.sh
-
-$(POST_BOOT): package
-> cat <<'EOT' > $@
-> #!/bin/bash
->
-> export XILINX_XRT=/usr
->
-> ./system_host system_$(TARGET).xclbin
-> EOT
-> chmod +x $@
+run: $(PKG_DIR)
+> cd $(PKG_DIR); ./launch_hw_emu.sh
 
 # ------------------------------------------------------------------------------
 
