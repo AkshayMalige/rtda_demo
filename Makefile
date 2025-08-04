@@ -16,10 +16,11 @@ BUILD_DIR := build
 
 KERNELS   := mm2s leaky_relu leaky_splitter s2mm
 XO_FILES  := $(addsuffix _hls.xo,$(addprefix pl/ip/,$(KERNELS)))
-AIE_LIB   := aieml/Work/libadf.a
+AIE_LIB   := aieml/libadf.a
 HOST_EXE  := host/system_host
 LINK_OUT  := $(BUILD_DIR)/design_$(TARGET).xsa
 XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
+POST_BOOT := $(PKG_DIR)/post_boot.sh
 
 SUBOPTS   := TARGET=$(TARGET) PLATFORM=$(PLATFORM)
 
@@ -58,16 +59,25 @@ $(XCLBIN): $(LINK_OUT) $(HOST_EXE) $(AIE_LIB)
 
 package: $(XCLBIN)
 
-run: package
+run: $(POST_BOOT)
 > cd $(PKG_DIR); ./launch_hw_emu.sh -run-app post_boot.sh
+
+$(POST_BOOT): package
+> cat <<'EOT' > $@
+> #!/bin/bash
+>
+> export XILINX_XRT=/usr
+>
+> ./system_host system_$(TARGET).xclbin
+> EOT
+> chmod +x $@
 
 # ------------------------------------------------------------------------------
 
 clean:
-> rm -rf $(BUILD_DIR) $(PKG_DIR) $(XCLBIN) $(LINK_OUT)
+> rm -rf $(BUILD_DIR) $(PKG_DIR) $(XCLBIN) $(LINK_OUT) *.log
 
 clean_all: clean
 > $(MAKE) -C pl clean $(SUBOPTS) || true
 > $(MAKE) -C aieml clean $(SUBOPTS) || true
 > $(MAKE) -C host clean $(SUBOPTS) || true
-
