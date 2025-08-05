@@ -14,7 +14,7 @@ ROOTFS         ?= $(EDGE_COMMON_SW)/rootfs.ext4
 ##################### Build-time variables / defaults ######################
 TARGET    ?= hw_emu
 EMU_PS    ?= QEMU
-PLATFORM  ?= xilinx_vek280_base_202420_1
+PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
 PACK_CFG  := ./pack.cfg
 LINK_CFG  := ./common/linker.cfg
 DATA_DIR  ?= data
@@ -26,7 +26,7 @@ POST_BOOT := post_boot.sh
 XO_DIR    := pl/ip
 AIE_DIR   := aieml
 
-AIE_LIB   := $(AIE_DIR)/Work/libadf.a
+AIE_LIB   := $(AIE_DIR)/libadf.a
 PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
 
 XSA       := design_$(TARGET).xsa
