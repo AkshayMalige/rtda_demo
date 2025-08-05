@@ -12,7 +12,7 @@ KERNELS ?= mm2s leaky_relu leaky_splitter s2mm
 
 IP_DIR   ?= ip
 LOG_FILE ?= vitis_hls.log
-TARGET ?= hw_emu
+TARGET ?= sw_emu
 
 
 # ===================================================================
