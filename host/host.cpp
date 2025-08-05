@@ -5,6 +5,7 @@
 #include "experimental/xrt_graph.h"
 #include "experimental/xrt_device.h"
 #include "experimental/xrt_bo.h"
+#include "data_paths.h"
 
 // --- Define sizes for all data buffers based on the graph architecture ---
 
@@ -43,11 +44,12 @@ int main(int argc, char** argv) {
 
     std::string xclbinFilename = argv[1];
 
-    // --- Hardcoded file paths for all inputs ---
-    std::string inputDataFile     = "./data/input_data.txt";
-    std::string weights1File      = "./data/weights_dense1.txt";
-    std::string weights2_part0File = "./data/weights_dense2_part0.txt";
-    std::string weights2_part1File = "./data/weights_dense2_part1.txt";
+    // --- Build file paths from a single configurable base directory ---
+    std::string base_path = DATA_DIR;
+    std::string inputDataFile      = base_path + "/" + INPUT_DATA_FILE;
+    std::string weights1File       = base_path + "/" + WEIGHTS_DENSE1_FILE;
+    std::string weights2_part0File = base_path + "/" + WEIGHTS_DENSE2_PREFIX + "0.txt";
+    std::string weights2_part1File = base_path + "/" + WEIGHTS_DENSE2_PREFIX + "1.txt";
 
     try {
         xrt::device device(0);

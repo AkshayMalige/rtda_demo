@@ -8,7 +8,8 @@
  #include <random>
  #include <ap_int.h>
  #include <hls_stream.h>
- #include <ap_axi_sdata.h>
+#include <ap_axi_sdata.h>
+#include "../../common/data_paths.h"
 #include <fstream>
 
 typedef float data_t;
@@ -36,7 +37,7 @@ typedef hls::axis<data_t, 0, 0, 0> axis_t;
     //  std::uniform_int_distribution<int32_t> dist(0, 0x7FFFFFFF);
  
 
-    std::ifstream fin("/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/input_data.txt");
+    std::ifstream fin(std::string(DATA_DIR) + "/" + INPUT_DATA_FILE);
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open input_data.txt" << std::endl;
         return 1;
