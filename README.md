@@ -1,11 +1,11 @@
-# 🧠 AI Engine-ML Neural Network Pipeline: Dense1 → LeakyReLU → Dense2
+# 🧠 AI Engine-ML Neural Network Pipeline: Dense1 → LeakyReLU → Dense2 → LeakyReLU
 
-This project demonstrates a custom low-latency neural network pipeline implemented on the AMD Versal™ VEK280 platform using the AI Engine-ML (AIE-ML) and Vitis tools. The core model consists of two dense layers with a leaky ReLU activation in between, targeting power-efficient acceleration of small MLP inference tasks. It supports runtime configurability of dimensions and data types (`int8`, `int16`, `float16`, `float32`), with automated test data generation and full simulation support.
+This project demonstrates a custom low-latency neural network pipeline implemented on the AMD Versal™ VEK280 platform using the AI Engine-ML (AIE-ML) and Vitis tools. The core model consists of two dense layers with leaky ReLU activations after each layer, targeting power-efficient acceleration of small MLP inference tasks. It supports runtime configurability of dimensions and data types (`int8`, `int16`, `float16`, `float32`), with automated test data generation and full simulation support.
 
 The design partitions work across three components of the Versal architecture:
 
-- **AI Engine-ML** – executes dense layers and activation kernels.
-- **Programmable Logic (PL)** – supplies data-mover and helper kernels such as DMA engines and activation units.
+- **AI Engine-ML** – executes dense layers.
+- **Programmable Logic (PL)** – supplies data-mover kernels and two leaky ReLU units.
 - **Host application** – runs on the processing system and orchestrates data movement and graph execution through XRT.
 
 Each component has its own build instructions in the following READMEs:
@@ -113,9 +113,11 @@ Your project is organized as follows:
 
 ```bash
 ├── aieml/
-│   ├── kernels/              # AIE kernel implementations
 │   ├── Makefile
-│   └── README.md
+│   ├── README.md
+│   ├── graph.cpp
+│   ├── graph.h
+│   └── include.h
 ├── data/                     # Generated input, weights, and reference output
 ├── pl/                       # Programmable logic (HLS) kernels
 │   ├── Makefile

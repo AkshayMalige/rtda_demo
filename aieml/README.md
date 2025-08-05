@@ -1,20 +1,18 @@
-# AI Engine-ML Graph: `dense1 → leaky_relu → dense2`
+# AI Engine-ML Graph: `dense1 → dense2`
 
 This directory contains the AI Engine-ML (AIE-ML) graph used by the project. The graph
-implements a minimal multilayer perceptron with one hidden layer using the sequence:
+implements a minimal multilayer perceptron where activations are handled in the programmable logic:
 
 1. **`dense1`** – matrix-vector multiply producing the hidden activations.
-2. **`leaky_relu`** – element-wise activation with a small negative slope.
-3. **`dense2`** – second matrix-vector multiply generating the final output.
+2. **`dense2`** – second matrix-vector multiply generating the final output.
 
 ## Directory Layout
 
 ```
-├── kernels/           # AIE kernels for dense1, leaky_relu, and dense2
-├── graph.cpp          # Instantiates `NeuralNetworkGraph` and runs it for simulation
-├── graph.h            # Graph definition and PLIO connections
-├── include.h          # Common dimension definitions and compile-time constants
-└── kernels.h          # Kernel prototypes
+├── graph.cpp    # Instantiates `NeuralNetworkGraph` and runs it for simulation
+├── graph.h      # Graph definition and PLIO connections
+├── include.h    # Common dimension definitions and compile-time constants
+└── Makefile
 ```
 
 ## Build
@@ -32,7 +30,7 @@ To invoke the compiler directly without the wrapper:
 ```bash
 cd aieml
 v++ --compile --mode aie --target hw ./graph.cpp \
-    --platform=${PLATFORM} -I./data -I./kernels
+    --platform=${PLATFORM} -I./data
 ```
 
 Both commands produce `Work/libadf.a` inside this directory.
