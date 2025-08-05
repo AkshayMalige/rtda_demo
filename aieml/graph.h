@@ -1,6 +1,7 @@
 #pragma once
 #include <adf.h>
 #include "include.h"
+#include "data_paths.h"
 // #if defined(__AIE__) || defined(__AIESIM__)
 #include "matrix_vector_mul_graph.hpp"
 // #endif
@@ -59,9 +60,13 @@ public:
     output_plio pl_out_dense2;
 
     NeuralNetworkGraph() {
-        pl_in_dense1  = input_plio::create("plio_input_dense1", plio_32_bits, "data/input_data.txt");
-        pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits, "data/weights_dense1.txt");
-        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, "data/dense1_output_aie.txt");
+        std::string base_path = DATA_DIR;
+        pl_in_dense1  = input_plio::create("plio_input_dense1", plio_32_bits,
+                                          (base_path + "/" + INPUT_DATA_FILE).c_str());
+        pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits,
+                                          (base_path + "/" + WEIGHTS_DENSE1_FILE).c_str());
+        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits,
+                                          (base_path + "/dense1_output_aie.txt").c_str());
         // pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits);
 
         connect<>(pl_w_dense1.out[0], dense1.inA[0]);
@@ -69,8 +74,8 @@ public:
         connect<>(dense1.out[0], pl_out_dense1.in[0]);
 
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-            std::string in_file = "data/leakyrelu_output_part" + std::to_string(i) + ".txt";
-            std::string w_file  = "data/weights_dense2_part" + std::to_string(i) + ".txt";
+            std::string in_file = base_path + "/" + LEAKY_RELU_OUTPUT_PREFIX + std::to_string(i) + ".txt";
+            std::string w_file  = base_path + "/" + WEIGHTS_DENSE2_PREFIX + std::to_string(i) + ".txt";
 
             std::string in_name = "plio_input_dense2_" + std::to_string(i);
             std::string w_name  = "plio_weights_dense2_" + std::to_string(i);
@@ -82,7 +87,8 @@ public:
             connect<>(pl_w_dense2[i].out[0], dense2.inA[i]);
         }
 
-        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits, "data/dense2_output_aie.txt");
+        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits,
+                                          (base_path + "/dense2_output_aie.txt").c_str());
         connect<>(dense2.out[0], pl_out_dense2.in[0]);
     }
 };
