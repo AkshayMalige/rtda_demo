@@ -13,7 +13,7 @@ ROOTFS         ?= $(EDGE_COMMON_SW)/rootfs.ext4
 
 ##################### Build-time variables / defaults ######################
 TARGET    ?= hw_emu #sw_emu | hw_emu | hw
-EMU_PS    ?= QEMU   #x86sim | QEMU
+EMU_PS    ?= x86sim   #x86sim | QEMU
 PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
 PACK_CFG  := ./pack.cfg
 LINK_CFG  := ./common/linker.cfg
@@ -36,7 +36,7 @@ XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
 ###########################################################################
 
 # Map top-level TARGET to AIE compiler target
-ifeq ($(EMU_PS),X86)
+ifeq ($(EMU_PS),x86sim)
   AIE_TGT := x86sim
 else
   AIE_TGT := hw
@@ -121,7 +121,7 @@ $(PKG_DIR):
 run: package
 ifeq ($(TARGET),sw_emu)
   ifeq ($(EMU_PS),x86sim)
-	@echo "▶ Running SW-emulation on x86 …"
+	@echo "▶ Running SW-emulation on x86sim …"
 	XCL_EMULATION_MODE=sw_emu $(EXEC)
   else
 	@echo "▶ Running SW-emulation on QEMU …"
