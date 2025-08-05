@@ -1,7 +1,7 @@
 ############################################################################
 #  project_root/Makefile  ─  umbrella build for AIE / PL / HOST / HW_LINK
 # TARGET = sw_emu | hw_emu | hw
-# EMU_PS = X86 | QEMU
+# EMU_PS = x86sim | QEMU
 ############################################################################
 
 ######################## ▶ User-specific paths ◀ ###########################
@@ -13,11 +13,13 @@ ROOTFS         ?= $(EDGE_COMMON_SW)/rootfs.ext4
 
 ##################### Build-time variables / defaults ######################
 TARGET    ?= hw_emu
+# sw_emu | hw_emu | hw
 EMU_PS    ?= QEMU
+# x86sim | QEMU
 PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
 PACK_CFG  := ./pack.cfg
 LINK_CFG  := ./common/linker.cfg
-DATA_DIR  ?= data
+DATA_DIR  ?= ./data
 HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm
 POST_BOOT := post_boot.sh
 ###########################################################################
@@ -36,7 +38,7 @@ XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
 ###########################################################################
 
 # Map EMU_PS to AIE compiler target
-ifeq ($(EMU_PS),X86)
+ifeq ($(EMU_PS),x86sim)
   AIE_TGT := x86sim
 else
   AIE_TGT := hw
@@ -47,7 +49,7 @@ SUBOPTS := TARGET=$(TARGET) EMU_PS=$(EMU_PS) PLATFORM=$(PLATFORM) DATA_DIR=$(DAT
 ############################################################################
 #  Top-level targets
 ############################################################################
-.PHONY: all aieml pl host link package run clean clean_all help print_vars check_args
+.PHONY: all aieml pl host link package run clean clean_all help print_vars check_args $(POST_BOOT)
 all: check_args package
 
 aieml: $(AIE_LIB)
@@ -67,7 +69,7 @@ PKG_COMMON = --platform $(PLATFORM) --package.out_dir $(PKG_DIR) \
      --package.sd_file $(POST_BOOT) --package.sd_dir $(DATA_DIR)
 
 ifeq ($(TARGET),sw_emu)
-  ifeq ($(EMU_PS),X86)
+  ifeq ($(EMU_PS),x86sim)
     PKG_FLAGS = -t sw_emu
   else
     PKG_FLAGS = -t sw_emu \
@@ -98,13 +100,25 @@ $(XSA): $(AIE_LIB) $(PL_XOS)
 	@echo "    AIE_LIB  = $(AIE_LIB)"
 	@echo "    LINK_CFG = $(LINK_CFG)"
 	v++ --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
-	$(PL_XOS) $(AIE_LIB) -o $@
+		$(PL_XOS) $(AIE_LIB) -o $@
 	@echo "✅ Linked design: $@"
+
+########################### post_boot.sh ###################################
+# Always (re)generate the launcher script at project root before packaging.
+# Marked as .PHONY so it reflects the current TARGET value each time.
+$(POST_BOOT):
+	@echo "📝 Generating $@ for TARGET=$(TARGET)"
+	@{ \
+	  echo '#!/bin/bash'; \
+	  echo 'export XILINX_XRT=/usr'; \
+	  echo './system_host system_$(TARGET).xclbin'; \
+	} > $@
+	@chmod +x $@
 
 ##############################  Package  ###################################
 package: $(XCLBIN)
 
-$(XCLBIN): link host | $(PKG_DIR)
+$(XCLBIN): link host $(POST_BOOT) | $(PKG_DIR)
 	@echo "📦 Packaging with:"
 	@echo "    AIE_LIB  = $(AIE_LIB)"
 	@echo "    XSA      = $(XSA)"
@@ -120,16 +134,16 @@ $(PKG_DIR):
 ##############################  Run helper  ################################
 run: package
 ifeq ($(TARGET),sw_emu)
-  ifeq ($(EMU_PS),X86)
-	@echo "▶ Running SW-emulation on x86 …"
-	XCL_EMULATION_MODE=sw_emu $(EXEC)
+  ifeq ($(EMU_PS),x86sim)
+	@echo "▶ Running SW-emulation on x86sim …"
+	XCL_EMULATION_MODE=sw_emu $(POST_BOOT)
   else
 	@echo "▶ Running SW-emulation on QEMU …"
-	$(PKG_DIR)/launch_sw_emu.sh -run-app $(EXEC)
+	$(PKG_DIR)/launch_sw_emu.sh -run-app $(POST_BOOT)
   endif
 else ifeq ($(TARGET),hw_emu)
 	@echo "▶ Running HW-emulation on QEMU …"
-	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC)
+	$(PKG_DIR)/launch_hw_emu.sh -run-app $(POST_BOOT)
 else
 	@echo "▶ Copy '$(PKG_DIR)' to SD-card and boot the VEK280."
 endif
@@ -154,7 +168,7 @@ print_vars:
 ############################  Argument check  ##############################
 check_args:
 ifeq ($(TARGET),$(filter $(TARGET),hw_emu hw))
-  ifeq ($(EMU_PS),X86)
+  ifeq ($(EMU_PS),x86sim)
     $(error ❌ For hw_emu and hw, EMU_PS must be QEMU)
   endif
 endif
@@ -162,7 +176,7 @@ endif
 
 ################################  Clean  ###################################
 clean:
-	rm -rf $(PKG_DIR) build_* *.xclbin *.xsa *.log
+	rm -rf $(PKG_DIR) build_* *.xclbin *.xsa *.log *.link_summary _x .Xil _ide $(POST_BOOT)
 
 clean_all:
 	$(MAKE) -C $(AIE_DIR) clean TARGET=$(AIE_TGT) || true
@@ -176,5 +190,5 @@ help:
 	@echo "  make all TARGET=sw_emu EMU_PS=QEMU"
 	@echo "  make link TARGET=hw_emu"
 	@echo "  make package TARGET=hw"
-	@echo "  make run TARGET=sw_emu EMU_PS=X86"
+	@echo "  make run TARGET=sw_emu EMU_PS=x86sim"
 ############################################################################

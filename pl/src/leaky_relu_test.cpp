@@ -19,7 +19,8 @@ int main() {
     hls::stream<axis_t> in_stream;
     hls::stream<axis_t> out_stream;
 
-    std::ifstream fin(std::string(DATA_DIR) + "/dense1_output_ref.txt");
+    // std::ifstream fin(std::string(DATA_DIR) + "/dense1_output_ref.txt");
+    std::ifstream fin(std::string(DATA_DIR) + "/dense1_output_aie.txt");
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open dense1_output.txt" << std::endl;
         return 1;
