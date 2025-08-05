@@ -11,10 +11,10 @@ OUT ?= system_host
 
 # Compiler and linker flags
 CXXFLAGS ?= -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
-	--sysroot=$(SYSROOT) \
-	-I$(SYSROOT)/usr/include/xrt \
-	-I$(SYSROOT)/usr/include \
-	-I./ -I./src/ -I/aietools/include -I/include
+        --sysroot=$(SYSROOT) \
+        -I$(SYSROOT)/usr/include/xrt \
+        -I$(SYSROOT)/usr/include \
+        -I./ -I./src/ -I../common -I/aietools/include -I/include
 
 LDFLAGS ?= --sysroot=$(SYSROOT) \
 	-L$(SYSROOT)/usr/lib \

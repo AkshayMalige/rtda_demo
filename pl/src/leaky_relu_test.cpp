@@ -1,5 +1,6 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
+#include "../../common/data_paths.h"
 #include <ap_int.h>
 #include <fstream>
 #include <iostream>
@@ -24,7 +25,7 @@ int main() {
     data_t out_mem[SIZE];
 
     // Read input data from file
-    std::ifstream fin("/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/dense1_output_ref.txt");
+    std::ifstream fin(std::string(DATA_DIR) + "/dense1_output_ref.txt");
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open dense1_output.txt" << std::endl;
         return 1;
@@ -46,7 +47,7 @@ int main() {
     // leaky_relu_pl(in_stream, out_mem);
 
     // Write output data to file
-    std::ofstream fout("/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/leakyrelu_output_pl.txt");
+    std::ofstream fout(std::string(DATA_DIR) + "/leakyrelu_output_pl.txt");
     if (!fout.is_open()) {
         std::cerr << "ERROR: Cannot open leakyrelu_output.txt" << std::endl;
         return 1;
