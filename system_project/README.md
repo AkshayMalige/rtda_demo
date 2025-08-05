@@ -5,8 +5,8 @@ The `system_project.yaml` file describes how the host application, AI Engine-ML 
 ## Components
 
 - **host_app** – Linux application running on the PS that manages buffer allocation, device control, and execution of the accelerated graph.
-- **aie_graph** – AI Engine-ML graph implementing the dense1 → leaky_relu → dense2 pipeline.
-- **pl_kernels** – Precompiled data-mover kernels (`mm2s_8_128.xo`, `s2mm_16_128.xo`, `s2mm_32_128.xo`) that stream data between DDR and the AIE array.
+- **aie_graph** – AI Engine-ML graph implementing dense1 and dense2; leaky ReLU stages run in the programmable logic.
+- **pl_kernels** – Precompiled data-mover and activation kernels (`mm2s_8_128.xo`, `s2mm_16_128.xo`, `s2mm_32_128.xo`, `leaky_relu.xo`, `leaky_splitter.xo`) that stream data between DDR and the AIE array.
 - **hw_link_output** – The hardware linkage output (`design_hw_emu.xsa`) that ties the PS, PL, and AIE-ML domains into a single platform image.
 
 ## Building the System

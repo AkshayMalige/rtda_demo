@@ -2,21 +2,17 @@
 #include <adf.h>
 #include "include.h"
 #include "data_paths.h"
-// #if defined(__AIE__) || defined(__AIESIM__)
 #include "matrix_vector_mul_graph.hpp"
-// #endif
-
 #include "aie_api/aie_adf.hpp"
-
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
-static constexpr unsigned int TP_SHIFT         = 0;
-static constexpr unsigned int TP_RND           = rnd_floor;
-static constexpr unsigned int TP_NUM_FRAMES    = 1;
-static constexpr unsigned int TP_SAT           = 0;
-static constexpr unsigned int TP_SSR           = 1;
+static constexpr unsigned int TP_SHIFT = 0;
+static constexpr unsigned int TP_RND = rnd_floor;
+static constexpr unsigned int TP_NUM_FRAMES = 1;
+static constexpr unsigned int TP_SAT = 0;
+static constexpr unsigned int TP_SSR = 1;
 static constexpr unsigned int TP_DIM_A_LEADING = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
 
@@ -30,8 +26,7 @@ using dense8x128 = matrix_vector_mul_graph<
     1,
     TP_SAT,
     TP_SSR,
-    TP_DIM_A_LEADING
->;
+    TP_DIM_A_LEADING>;
 
 using dense128x128 = matrix_vector_mul_graph<
     float, float,
@@ -43,9 +38,8 @@ using dense128x128 = matrix_vector_mul_graph<
     TP_CASC_LEN_LAYER2,
     TP_SAT,
     TP_SSR,
-    TP_DIM_A_LEADING
->;
-
+    TP_DIM_A_LEADING>;
+// Graph connects dense1 and dense2; leaky ReLU is handled in PL
 class NeuralNetworkGraph : public graph {
 public:
     input_plio  pl_in_dense1;
@@ -67,7 +61,6 @@ public:
                                           (base_path + "/" + WEIGHTS_DENSE1_FILE).c_str());
         pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits,
                                           (base_path + "/dense1_output_aie.txt").c_str());
-        // pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits);
 
         connect<>(pl_w_dense1.out[0], dense1.inA[0]);
         connect<>(pl_in_dense1.out[0], dense1.inB[0]);
