@@ -1,0 +1,88 @@
+/*
+ * ZynqMP K26 Starter Kit device tree
+ *
+ * Copyright (c) 2021, Xilinx Inc
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * K26 Staterkit has a I2C EEPROM's on address 0x51, which can be accessed by
+ * using blockdev
+ * ex:
+ *     -blockdev node-name=i2c1.eeprom-51,filename=eeprom1.bin,driver=file
+ */
+
+#include "board-zynqmp-k26-som.dts"
+
+&i2c1 {
+	eeprom_cc: eeprom@51 {
+		compatible = "at,24c08";
+		reg = <0x51>;
+		size = <0x2000>;
+		blockdev-node-name = "i2c1.eeprom-51";
+	};
+	slg7xl45106: gpio@11 { /* u19 - reset logic */
+		compatible = "i2c-dev-dummy";
+		reg = <0x11>;
+	};
+	i2c-mux@74 { /* u18 */
+		compatible = "nxp,pca9546";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x74>;
+		usbhub_i2c0: i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			usb0_usb5744: usb5744@0 { /* u43 - usb-hub */
+				compatible = "i2c-dev-dummy";
+				reg = <0x2d>;
+			};
+		};
+		usbhub_i2c1: i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+			usb1_usb5744: usb5744@1 { /* u84 - usb-hub */
+				compatible = "i2c-dev-dummy";
+				reg = <0x2d>;
+			};
+		};
+	};
+};
+
+&mdio0 {
+	/delete-node/ phy@7;
+	phy4:	phy@4 {
+		compatible = "dp83867";
+		device_type = "ethernet-phy";
+	};
+	phy8:	phy@8 {
+		compatible = "dp83867";
+		device_type = "ethernet-phy";
+	};
+};
+
+&gem1 {
+	mdio = <&mdio0>;
+};

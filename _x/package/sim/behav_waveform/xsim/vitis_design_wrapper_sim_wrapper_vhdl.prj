@@ -1,0 +1,13 @@
+# compile vhdl design source files
+vhdl xil_defaultlib  \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_axi_intc_parent_0/sim/vitis_design_axi_intc_parent_0.vhd" \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_psr_100mhz_0/sim/vitis_design_psr_100mhz_0.vhd" \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_psr_150mhz_0/sim/vitis_design_psr_150mhz_0.vhd" \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_psr_300mhz_0/sim/vitis_design_psr_300mhz_0.vhd" \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_psr_75mhz_0/sim/vitis_design_psr_75mhz_0.vhd" \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_psr_200mhz_0/sim/vitis_design_psr_200mhz_0.vhd" \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_psr_400mhz_0/sim/vitis_design_psr_400mhz_0.vhd" \
+"../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_psr_600mhz_0/sim/vitis_design_psr_600mhz_0.vhd" \
+
+# Do not sort compile order
+nosort

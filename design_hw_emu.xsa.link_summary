@@ -1,0 +1,969 @@
+<ENTRY>
+{
+ "thisFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/design_hw_emu.xsa.link_summary",
+ "connectId": "",
+ "serverToken": "",
+ "timestamp": "0"
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_CmdStep",
+ "dateTimestamp": "Mon Aug  4 21:41:13 2025",
+ "timestampMillis": "1754358073552",
+ "buildStep": {
+  "cmdId": "5b33b9e8-7d13-4350-8598-e547389496a1",
+  "name": "v++",
+  "logFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/link.steps.log",
+  "commandLine": "/tools/Xilinx/Vitis/2024.2/bin/unwrapped/lnx64.o/v++  --vivado.prop \"run.__KERNEL__.{STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS}={-directive sdx_optimization_effort_high}\" --advanced.misc \"report=type report_timing_summary name impl_report_timing_summary_route_design_summary steps {route_design} runs {impl_1} options {-max_paths 10}\" --advanced.misc \"report=type report_timing_summary name impl_report_timing_summary_post_route_phys_opt_design_summary steps {post_route_phys_opt_design} runs {impl_1} options {-max_paths 10}\" --link -t hw_emu --platform /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --config ./common/linker.cfg pl/ip/mm2s_hls.xo pl/ip/leaky_relu_hls.xo pl/ip/leaky_splitter_hls.xo pl/ip/s2mm_hls.xo aieml/libadf.a -o design_hw_emu.xsa ",
+  "args": [
+   "--link",
+   "-t",
+   "hw_emu",
+   "--platform",
+   "/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm",
+   "--config",
+   "./common/linker.cfg",
+   "pl/ip/mm2s_hls.xo",
+   "pl/ip/leaky_relu_hls.xo",
+   "pl/ip/leaky_splitter_hls.xo",
+   "pl/ip/s2mm_hls.xo",
+   "aieml/libadf.a",
+   "-o",
+   "design_hw_emu.xsa"
+  ],
+  "iniFiles": [
+   {
+    "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/common/linker.cfg",
+    "content": "[connectivity]\n# Define the number of compute units (CU) for each kernel.\n# This instantiates 4 CUs of mm2s_pl, and 1 for each of the other kernels.\n\nnk=mm2s_pl:4:mm2s_din,mm2s_weights1,mm2s_weights2_0,mm2s_weights2_1\n\nnk=leaky_relu_pl:2:relu,relu2\nnk=leaky_splitter_pl:1:splitter\nnk=s2mm_pl:1:s2mm_out\n\n# --- Stream Connections ---\n\n# Layer 1: Data and weights streamed from memory into the AIE graph for dense8x128\nstream_connect=mm2s_din.s:ai_engine_0.plio_input_dense1\nstream_connect=mm2s_weights1.s:ai_engine_0.plio_weights_dense1\n\n# Feedback loop: AIE output -\u003e leaky_relu -\u003e splitter -\u003e AIE input for the next layer\nstream_connect=ai_engine_0.plio_output_dense1:relu.in_stream\nstream_connect=relu.out_stream:splitter.in_stream\nstream_connect=splitter.out_stream_0:ai_engine_0.plio_input_dense2_0\nstream_connect=splitter.out_stream_1:ai_engine_0.plio_input_dense2_1\n\n# Layer 2: Weights streamed from memory into the AIE graph dense128x128\nstream_connect=mm2s_weights2_0.s:ai_engine_0.plio_weights_dense2_0\nstream_connect=mm2s_weights2_1.s:ai_engine_0.plio_weights_dense2_1\n\n# Final output from the AIE graph passes through a second LeakyReLU before being written to memory\nstream_connect=ai_engine_0.plio_output_dense2:relu2.in_stream\nstream_connect=relu2.out_stream:s2mm_out.s\n\n\n"
+   }
+  ],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:13 2025",
+ "timestampMillis": "1754358073552",
+ "status": {
+  "cmdId": "5b33b9e8-7d13-4350-8598-e547389496a1",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_FlowMetaData",
+ "dateTimestamp": "Mon Aug  4 21:41:14 2025",
+ "timestampMillis": "1754358074922",
+ "buildSummary": {
+  "hardwarePlatform": "xilinx_vek280_base_202420_1.xpfm",
+  "hardwareDsa": "hw.xsa",
+  "platformDirectory": "/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1",
+  "runtime": "OpenCL",
+  "systemConfig": "Linux",
+  "flow": "BF_LINK",
+  "target": "TT_HW_EMU",
+  "binaryContainer": {
+   "base": {
+    "type": "BT_UKNOWN",
+    "name": "design_hw_emu",
+    "file": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin",
+    "reports": [],
+    "uuid": ""
+   },
+   "kernels": []
+  },
+  "kernels": [
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "mm2s_pl",
+     "file": "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/mm2s_hls.xo",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/mm2s_pl/mm2s_pl/cpu_sources/mm2s_pl.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [
+     "mm2s_din",
+     "mm2s_weights1",
+     "mm2s_weights2_0",
+     "mm2s_weights2_1"
+    ],
+    "type": "HLS",
+    "frequency": 0,
+    "freqUnits": ""
+   },
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "leaky_relu_pl",
+     "file": "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_relu_hls.xo",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/leaky_relu_pl/leaky_relu_pl/cpu_sources/leaky_relu_pl.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [
+     "relu",
+     "relu2"
+    ],
+    "type": "HLS",
+    "frequency": 0,
+    "freqUnits": ""
+   },
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "leaky_splitter_pl",
+     "file": "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_splitter_hls.xo",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/leaky_splitter_pl/leaky_splitter_pl/cpu_sources/leaky_splitter_pl.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [
+     "splitter"
+    ],
+    "type": "HLS",
+    "frequency": 0,
+    "freqUnits": ""
+   },
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "s2mm_pl",
+     "file": "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/s2mm_hls.xo",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/s2mm_pl/s2mm_pl/cpu_sources/s2mm_pl.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [
+     "s2mm_out"
+    ],
+    "type": "HLS",
+    "frequency": 0,
+    "freqUnits": ""
+   }
+  ],
+  "toolVersion": "Vitis V++ Compiler Release 2024.2. SW Build 5239630 on 2024-11-10-11:19:46",
+  "aieInputs": {
+   "base": {
+    "type": "AI_LIBSDF",
+    "name": "libadf",
+    "file": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/libadf.a",
+    "reports": [
+     {
+      "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie.partial.aiecompile_summary",
+      "name": "",
+      "fileType": "TEXT",
+      "reportType": "TASK_LOG_SUMMARY",
+      "cmdId": ""
+     },
+     {
+      "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie_control_config.json",
+      "name": "",
+      "fileType": "JSON",
+      "reportType": "AIE_CONTROL_CONFIG",
+      "cmdId": ""
+     },
+     {
+      "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie.router.soln.json",
+      "name": "",
+      "fileType": "JSON",
+      "reportType": "AIE_ROUTER_SOLUTION",
+      "cmdId": ""
+     },
+     {
+      "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie.mapped.json",
+      "name": "",
+      "fileType": "JSON",
+      "reportType": "AIE_GRAPH_MAPPED",
+      "cmdId": ""
+     },
+     {
+      "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie.compiler.report.json",
+      "name": "",
+      "fileType": "JSON",
+      "reportType": "AIE_COMPILER_REPORT",
+      "cmdId": ""
+     }
+    ],
+    "uuid": ""
+   },
+   "sources": [],
+   "type": "AI_UKNOWN"
+  }
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:41:14 2025",
+ "timestampMillis": "1754358074947",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie_control_config.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_CONTROL_CONFIG",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:41:15 2025",
+ "timestampMillis": "1754358075103",
+ "buildStep": {
+  "cmdId": "a314e6a3-f2f2-4d29-936e-5f3aa188d11e",
+  "name": "system_link",
+  "logFile": "",
+  "commandLine": "system_link --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/mm2s_hls.xo --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_relu_hls.xo --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_splitter_hls.xo --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/s2mm_hls.xo /home/synthara/VersalPrjs/LDRD/rtda_demo/.Xil/v++-984149-synthara-Super-Server/a0/hw.o --config /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/syslinkConfig.ini --xpfm /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --target emu --output_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int --temp_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link",
+  "args": [
+   "--xo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/mm2s_hls.xo",
+   "--xo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_relu_hls.xo",
+   "--xo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_splitter_hls.xo",
+   "--xo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/s2mm_hls.xo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/.Xil/v++-984149-synthara-Super-Server/a0/hw.o",
+   "--config",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/syslinkConfig.ini",
+   "--xpfm",
+   "/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm",
+   "--target",
+   "emu",
+   "--output_dir",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int",
+   "--temp_dir",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link"
+  ],
+  "iniFiles": [
+   {
+    "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/syslinkConfig.ini",
+    "content": "nk=mm2s_pl:4:mm2s_din,mm2s_weights1,mm2s_weights2_0,mm2s_weights2_1\nnk=leaky_relu_pl:2:relu,relu2\nnk=leaky_splitter_pl:1:splitter\nnk=s2mm_pl:1:s2mm_out\nsc=mm2s_din.s:ai_engine_0.plio_input_dense1\nsc=mm2s_weights1.s:ai_engine_0.plio_weights_dense1\nsc=ai_engine_0.plio_output_dense1:relu.in_stream\nsc=relu.out_stream:splitter.in_stream\nsc=splitter.out_stream_0:ai_engine_0.plio_input_dense2_0\nsc=splitter.out_stream_1:ai_engine_0.plio_input_dense2_1\nsc=mm2s_weights2_0.s:ai_engine_0.plio_weights_dense2_0\nsc=mm2s_weights2_1.s:ai_engine_0.plio_weights_dense2_1\nsc=ai_engine_0.plio_output_dense2:relu2.in_stream\nsc=relu2.out_stream:s2mm_out.s\n\n"
+   }
+  ],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:15 2025",
+ "timestampMillis": "1754358075104",
+ "status": {
+  "cmdId": "a314e6a3-f2f2-4d29-936e-5f3aa188d11e",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:22 2025",
+ "timestampMillis": "1754358082190",
+ "status": {
+  "cmdId": "a314e6a3-f2f2-4d29-936e-5f3aa188d11e",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:41:22 2025",
+ "timestampMillis": "1754358082192",
+ "buildStep": {
+  "cmdId": "4e95f2ca-497a-45f6-96ba-c6ace72a9ea4",
+  "name": "cf2sw",
+  "logFile": "",
+  "commandLine": "cf2sw -sdsl /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/sdsl.dat -rtd /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/cf2sw.rtd -nofilter /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/cf2sw_full.rtd -xclbin /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.xml -o /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.1.xml",
+  "args": [
+   "-sdsl",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/sdsl.dat",
+   "-rtd",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/cf2sw.rtd",
+   "-nofilter",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/cf2sw_full.rtd",
+   "-xclbin",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.xml",
+   "-o",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.1.xml"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:22 2025",
+ "timestampMillis": "1754358082193",
+ "status": {
+  "cmdId": "4e95f2ca-497a-45f6-96ba-c6ace72a9ea4",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:23 2025",
+ "timestampMillis": "1754358083752",
+ "status": {
+  "cmdId": "4e95f2ca-497a-45f6-96ba-c6ace72a9ea4",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:41:23 2025",
+ "timestampMillis": "1754358083753",
+ "buildStep": {
+  "cmdId": "14f50ea3-25e6-47ca-bb60-876d0298225f",
+  "name": "rtd2_system_diagram",
+  "logFile": "",
+  "commandLine": "rtd2SystemDiagram",
+  "args": [],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:23 2025",
+ "timestampMillis": "1754358083753",
+ "status": {
+  "cmdId": "14f50ea3-25e6-47ca-bb60-876d0298225f",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:41:23 2025",
+ "timestampMillis": "1754358083898",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/systemDiagramModel.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "SYSTEM_DIAGRAM",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:23 2025",
+ "timestampMillis": "1754358083899",
+ "status": {
+  "cmdId": "14f50ea3-25e6-47ca-bb60-876d0298225f",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:41:23 2025",
+ "timestampMillis": "1754358083900",
+ "buildStep": {
+  "cmdId": "eb23c150-d872-4bdf-9a70-cfa059e3d787",
+  "name": "vpl",
+  "logFile": "",
+  "commandLine": "vpl -t hw_emu -f /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --remote_ip_cache /home/synthara/VersalPrjs/LDRD/rtda_demo/.ipcache --output_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int --log_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/link --report_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link --config /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/vplConfig.ini -k /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link --emulation_mode debug_waveform --no-info --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_s2mm_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_mm2s_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_relu_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_splitter_pl_1_0 --messageDb /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/vpl.pb /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/dr.bd.tcl",
+  "args": [
+   "-t",
+   "hw_emu",
+   "-f",
+   "/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm",
+   "--remote_ip_cache",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/.ipcache",
+   "--output_dir",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int",
+   "--log_dir",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/link",
+   "--report_dir",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link",
+   "--config",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/vplConfig.ini",
+   "-k",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/kernel_info.dat",
+   "--webtalk_flag",
+   "Vitis",
+   "--temp_dir",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link",
+   "--emulation_mode",
+   "debug_waveform",
+   "--no-info",
+   "--iprepo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_s2mm_pl_1_0",
+   "--iprepo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_mm2s_pl_1_0",
+   "--iprepo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_relu_pl_1_0",
+   "--iprepo",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_splitter_pl_1_0",
+   "--messageDb",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/vpl.pb",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/dr.bd.tcl"
+  ],
+  "iniFiles": [
+   {
+    "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/vplConfig.ini",
+    "content": "[advanced]\nmisc=report=type report_timing_summary name impl_report_timing_summary_route_design_summary steps {route_design} runs {impl_1} options {-max_paths 10}\nmisc=report=type report_timing_summary name impl_report_timing_summary_post_route_phys_opt_design_summary steps {post_route_phys_opt_design} runs {impl_1} options {-max_paths 10}\nparam=compiler.enablePerformanceTrace=1\nparam=compiler.vppCurrentWorkingDir=/home/synthara/VersalPrjs/LDRD/rtda_demo\nmisc=BinaryName=design_hw_emu\n\n[connectivity]\nnk=mm2s_pl:4:mm2s_din,mm2s_weights1,mm2s_weights2_0,mm2s_weights2_1\nnk=leaky_relu_pl:2:relu,relu2\nnk=leaky_splitter_pl:1:splitter\nnk=s2mm_pl:1:s2mm_out\n\n[vivado]\nprop=run.__KERNEL__.{STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS}={-directive sdx_optimization_effort_high}\n\n"
+   }
+  ],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:23 2025",
+ "timestampMillis": "1754358083900",
+ "status": {
+  "cmdId": "eb23c150-d872-4bdf-9a70-cfa059e3d787",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_CmdStep",
+ "dateTimestamp": "Mon Aug  4 21:41:25 2025",
+ "timestampMillis": "1754358085060",
+ "buildStep": {
+  "cmdId": "96450207-9a32-4352-944c-c68e15f94c98",
+  "name": "vpl",
+  "logFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/link.steps.log",
+  "commandLine": "/tools/Xilinx/Vitis/2024.2/bin/unwrapped/lnx64.o/vpl -t hw_emu -f /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --remote_ip_cache /home/synthara/VersalPrjs/LDRD/rtda_demo/.ipcache --output_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int --log_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/link --report_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link --config /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/vplConfig.ini -k /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link --emulation_mode debug_waveform --no-info --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_s2mm_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_mm2s_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_relu_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_splitter_pl_1_0 --messageDb /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/vpl.pb /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/dr.bd.tcl ",
+  "args": [],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:25 2025",
+ "timestampMillis": "1754358085060",
+ "status": {
+  "cmdId": "96450207-9a32-4352-944c-c68e15f94c98",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_VivadoProject",
+ "dateTimestamp": "Mon Aug  4 21:41:26 2025",
+ "timestampMillis": "1754358086299",
+ "vivadoProject": {
+  "openDir": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl",
+  "openScript": "openprj.tcl",
+  "relativeProject": "prj/prj.xpr"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:41:26 2025",
+ "timestampMillis": "1754358086299",
+ "buildStep": {
+  "cmdId": "253d078e-9ee4-4863-ae54-88498428922d",
+  "name": "vivado",
+  "logFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/vivado.log",
+  "commandLine": "vivado -log vivado.log -applog -m64 -messageDb vivado.pb -mode batch -source vpl.tcl -notrace",
+  "args": [
+   "-log",
+   "vivado.log",
+   "-applog",
+   " -m64",
+   "-messageDb",
+   "vivado.pb",
+   "-mode",
+   "batch",
+   "-source",
+   "vpl.tcl",
+   "-notrace"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:41:26 2025",
+ "timestampMillis": "1754358086300",
+ "status": {
+  "cmdId": "253d078e-9ee4-4863-ae54-88498428922d",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:42:00 2025",
+ "timestampMillis": "1754358120225",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/debug_ip_layout.rtd",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "DEBUG_IP_LAYOUT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:44:38 2025",
+ "timestampMillis": "1754358278315",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/automation_summary_pre_synthesis.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "VITIS_DESIGN_FLOW",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386380",
+ "status": {
+  "cmdId": "253d078e-9ee4-4863-ae54-88498428922d",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386623",
+ "status": {
+  "cmdId": "96450207-9a32-4352-944c-c68e15f94c98",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386636",
+ "status": {
+  "cmdId": "eb23c150-d872-4bdf-9a70-cfa059e3d787",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386638",
+ "buildStep": {
+  "cmdId": "ebdb0416-4aa0-4e29-927d-58f26b308d09",
+  "name": "rtdgen",
+  "logFile": "",
+  "commandLine": "rtdgen",
+  "args": [],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386638",
+ "status": {
+  "cmdId": "ebdb0416-4aa0-4e29-927d-58f26b308d09",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386640",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_xml.rtd",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "XCLBIN_INFO",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386641",
+ "buildStep": {
+  "cmdId": "2ef90c66-f647-4879-b965-25974ef62e5e",
+  "name": "cf2sw",
+  "logFile": "",
+  "commandLine": "cf2sw -a /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/address_map.xml -sdsl /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/sdsl.dat -xclbin /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.xml -rtd /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.rtd -o /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xml",
+  "args": [
+   "-a",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/address_map.xml",
+   "-sdsl",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/sdsl.dat",
+   "-xclbin",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.xml",
+   "-rtd",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.rtd",
+   "-o",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xml"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:26 2025",
+ "timestampMillis": "1754358386641",
+ "status": {
+  "cmdId": "2ef90c66-f647-4879-b965-25974ef62e5e",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:28 2025",
+ "timestampMillis": "1754358388114",
+ "status": {
+  "cmdId": "2ef90c66-f647-4879-b965-25974ef62e5e",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389653",
+ "buildStep": {
+  "cmdId": "c58a5bd1-ee61-44f0-bedc-17f3db6ef8bc",
+  "name": "rtdgen",
+  "logFile": "",
+  "commandLine": "writeSystemDiagram",
+  "args": [
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.rtd",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/systemDiagramModelSlrBaseAddress.json"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389653",
+ "status": {
+  "cmdId": "c58a5bd1-ee61-44f0-bedc-17f3db6ef8bc",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389657",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/systemDiagramModelSlrBaseAddress.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "SYSTEM_DIAGRAM_PLUS",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389658",
+ "status": {
+  "cmdId": "c58a5bd1-ee61-44f0-bedc-17f3db6ef8bc",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389658",
+ "buildStep": {
+  "cmdId": "28cc31a3-cf11-4629-8711-61377919a432",
+  "name": "rtdgen",
+  "logFile": "",
+  "commandLine": "writeAutomationSummary",
+  "args": [
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/automation_summary.txt"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389658",
+ "status": {
+  "cmdId": "28cc31a3-cf11-4629-8711-61377919a432",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389660",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/automation_summary.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "VITIS_DESIGN_FLOW",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389660",
+ "status": {
+  "cmdId": "28cc31a3-cf11-4629-8711-61377919a432",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389661",
+ "status": {
+  "cmdId": "ebdb0416-4aa0-4e29-927d-58f26b308d09",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389668",
+ "buildStep": {
+  "cmdId": "8c851e50-21ee-4a68-b6d0-a307de0e5bf7",
+  "name": "xclbinutil",
+  "logFile": "",
+  "commandLine": "xclbinutil --add-section PDI:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/../int/vpl_gen_fixed_presynth.pdi --add-section DEBUG_IP_LAYOUT:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/debug_ip_layout.rtd --add-section BITSTREAM:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/behav.xse --force --target hw_emu --key-value SYS:dfx_enable:false --add-section :JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.rtd --add-section CLOCK_FREQ_TOPOLOGY:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_xml.rtd --add-section BUILD_METADATA:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_build.rtd --add-section EMBEDDED_METADATA:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xml --add-section SYSTEM_METADATA:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/systemDiagramModelSlrBaseAddress.json --add-section AIE_METADATA:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie_control_config.json --key-value SYS:PlatformVBNV:xilinx.com_xd_xilinx_vek280_base_202420_1_202420_1 --output /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin",
+  "args": [
+   "--add-section",
+   "PDI:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/../int/vpl_gen_fixed_presynth.pdi",
+   "--add-section",
+   "DEBUG_IP_LAYOUT:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/debug_ip_layout.rtd",
+   "--add-section",
+   "BITSTREAM:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/behav.xse",
+   "--force",
+   "--target",
+   "hw_emu",
+   "--key-value",
+   "SYS:dfx_enable:false",
+   "--add-section",
+   ":JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.rtd",
+   "--add-section",
+   "CLOCK_FREQ_TOPOLOGY:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_xml.rtd",
+   "--add-section",
+   "BUILD_METADATA:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_build.rtd",
+   "--add-section",
+   "EMBEDDED_METADATA:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xml",
+   "--add-section",
+   "SYSTEM_METADATA:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/systemDiagramModelSlrBaseAddress.json",
+   "--add-section",
+   "AIE_METADATA:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie_control_config.json",
+   "--key-value",
+   "SYS:PlatformVBNV:xilinx.com_xd_xilinx_vek280_base_202420_1_202420_1",
+   "--output",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389668",
+ "status": {
+  "cmdId": "8c851e50-21ee-4a68-b6d0-a307de0e5bf7",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389787",
+ "status": {
+  "cmdId": "8c851e50-21ee-4a68-b6d0-a307de0e5bf7",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389788",
+ "buildStep": {
+  "cmdId": "be726af5-cead-4ded-9c1a-404e4eeeb701",
+  "name": "xclbinutilinfo",
+  "logFile": "",
+  "commandLine": "xclbinutil --quiet --force --info /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin.info --input /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin",
+  "args": [
+   "--quiet",
+   "--force",
+   "--info",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin.info",
+   "--input",
+   "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:29 2025",
+ "timestampMillis": "1754358389788",
+ "status": {
+  "cmdId": "be726af5-cead-4ded-9c1a-404e4eeeb701",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:30 2025",
+ "timestampMillis": "1754358390053",
+ "status": {
+  "cmdId": "be726af5-cead-4ded-9c1a-404e4eeeb701",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:46:32 2025",
+ "timestampMillis": "1754358392614",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/optraceViewer.html",
+  "name": "",
+  "fileType": "HTML",
+  "reportType": "OPERATION_TRACE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:46:32 2025",
+ "timestampMillis": "1754358392615",
+ "status": {
+  "cmdId": "5b33b9e8-7d13-4350-8598-e547389496a1",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:46:32 2025",
+ "timestampMillis": "1754358392673",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link/v++_link_design_hw_emu_guidance.html",
+  "name": "",
+  "fileType": "HTML",
+  "reportType": "GLOBAL_RULECHECK_GUIDANCE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:46:32 2025",
+ "timestampMillis": "1754358392674",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/v++_link_design_hw_emu_guidance.pb3",
+  "name": "",
+  "fileType": "BINARY_PROTOBUF",
+  "reportType": "GLOBAL_RULECHECK_GUIDANCE",
+  "cmdId": ""
+ }
+}
+</ENTRY>

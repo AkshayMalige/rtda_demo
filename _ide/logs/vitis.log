@@ -1,0 +1,368 @@
+12:03:43 INFO  : updated workspace path: 
+12:03:43 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:03:44 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara12774757517454886795
+12:03:44 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara4630517587452656886 -r /tmp/rigel_lopper_synthara12774757517454886795/.repo.yaml && deactivate
+12:03:44 INFO  : Embedded Template List generated successfully
+12:05:26 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:05:26 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/worksp
+10:49:57 INFO  : updated workspace path: 
+10:49:57 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:49:58 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara12216683681345048272
+10:49:58 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara14704479875940436365 -r /tmp/rigel_lopper_synthara12216683681345048272/.repo.yaml && deactivate
+10:49:58 INFO  : Embedded Template List generated successfully
+10:50:20 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:50:21 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara10041382784079294844
+10:50:21 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara7469276628893038029 -r /tmp/rigel_lopper_synthara10041382784079294844/.repo.yaml && deactivate
+10:50:21 INFO  : Embedded Template List generated successfully
+10:50:49 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/aieml
+10:50:49 INFO  : Marking the target connection as default Local
+10:50:49 INFO  : Marking the target connection as default Linux Agent
+10:50:49 INFO  : Marking the target connection as default XRTServer
+10:50:49 INFO  : Marking the target connection as default LinuxEmulation
+10:50:49 INFO  : Marking the target connection as default QEMU
+10:51:30 INFO  : updated workspace path: 
+10:51:30 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:51:31 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara10611518983688150320
+10:51:31 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara12721485384459584329 -r /tmp/rigel_lopper_synthara10611518983688150320/.repo.yaml && deactivate
+10:51:31 INFO  : Embedded Template List generated successfully
+10:51:53 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:51:53 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+10:51:53 INFO  : Marking the target connection as default Local
+10:51:53 INFO  : Marking the target connection as default Linux Agent
+10:51:53 INFO  : Marking the target connection as default XRTServer
+10:51:53 INFO  : Marking the target connection as default LinuxEmulation
+10:51:53 INFO  : Marking the target connection as default QEMU
+11:43:19 INFO  : updated workspace path: 
+11:43:19 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:43:20 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara3719015757905162905
+11:43:20 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara6129266995547058042 -r /tmp/rigel_lopper_synthara3719015757905162905/.repo.yaml && deactivate
+11:43:20 INFO  : Embedded Template List generated successfully
+11:43:35 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:43:35 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+11:50:44 INFO  : updated workspace path: 
+11:50:44 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:50:45 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara5510195193500077505
+11:50:45 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara1876804717998685255 -r /tmp/rigel_lopper_synthara5510195193500077505/.repo.yaml && deactivate
+11:50:45 INFO  : Embedded Template List generated successfully
+11:50:49 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:50:49 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+11:53:50 INFO  : updated workspace path: 
+11:53:50 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:53:51 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara6090843794257334174
+11:53:51 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara1513603356543423847 -r /tmp/rigel_lopper_synthara6090843794257334174/.repo.yaml && deactivate
+11:53:51 INFO  : Embedded Template List generated successfully
+11:54:04 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:54:04 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+11:54:04 INFO  : Marking the target connection as default Local
+11:54:04 INFO  : Marking the target connection as default Linux Agent
+11:54:04 INFO  : Marking the target connection as default XRTServer
+11:54:04 INFO  : Marking the target connection as default LinuxEmulation
+11:54:04 INFO  : Marking the target connection as default QEMU
+12:09:38 INFO  : updated workspace path: 
+12:09:38 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:09:39 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara2404458001388406111
+12:09:39 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara272812810633383825 -r /tmp/rigel_lopper_synthara2404458001388406111/.repo.yaml && deactivate
+12:09:39 INFO  : Embedded Template List generated successfully
+12:09:53 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:09:53 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+12:09:53 INFO  : Marking the target connection as default Local
+12:09:53 INFO  : Marking the target connection as default Linux Agent
+12:09:53 INFO  : Marking the target connection as default XRTServer
+12:09:53 INFO  : Marking the target connection as default LinuxEmulation
+12:09:53 INFO  : Marking the target connection as default QEMU
+12:14:58 INFO  : updated workspace path: 
+12:14:58 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:14:59 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara754618003462041459
+12:14:59 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara14960239295707740972 -r /tmp/rigel_lopper_synthara754618003462041459/.repo.yaml && deactivate
+12:14:59 INFO  : Embedded Template List generated successfully
+12:15:11 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:15:11 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+12:18:07 INFO  : updated workspace path: 
+12:18:07 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:18:08 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara7754460917279886942
+12:18:08 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara3605918343841974649 -r /tmp/rigel_lopper_synthara7754460917279886942/.repo.yaml && deactivate
+12:18:09 INFO  : Embedded Template List generated successfully
+12:18:12 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:18:12 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+12:42:21 INFO  : updated workspace path: 
+12:42:21 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:42:22 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara18047341396950047452
+12:42:22 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara5591134843446308249 -r /tmp/rigel_lopper_synthara18047341396950047452/.repo.yaml && deactivate
+12:42:22 INFO  : Embedded Template List generated successfully
+12:42:58 INFO  : Terminating Vitis C++ Server
+12:43:25 INFO  : updated workspace path: 
+12:43:25 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:43:26 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara16904356375371213225
+12:43:26 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara10075797272869377244 -r /tmp/rigel_lopper_synthara16904356375371213225/.repo.yaml && deactivate
+12:43:26 INFO  : Embedded Template List generated successfully
+12:43:39 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:43:39 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+14:21:24 INFO  : updated workspace path: 
+14:21:25 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+14:21:25 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara12684734295600096173
+14:21:25 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara10500086339827507643 -r /tmp/rigel_lopper_synthara12684734295600096173/.repo.yaml && deactivate
+14:21:26 INFO  : Embedded Template List generated successfully
+14:22:22 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+14:22:22 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+14:22:22 INFO  : Marking the target connection as default Local
+14:22:22 INFO  : Marking the target connection as default Linux Agent
+14:22:22 INFO  : Marking the target connection as default XRTServer
+14:22:22 INFO  : Marking the target connection as default LinuxEmulation
+14:22:22 INFO  : Marking the target connection as default QEMU
+15:09:38 INFO  : updated workspace path: 
+15:09:38 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:09:39 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara12796428661059049419
+15:09:39 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara15637507456764713739 -r /tmp/rigel_lopper_synthara12796428661059049419/.repo.yaml && deactivate
+15:09:40 INFO  : Embedded Template List generated successfully
+15:09:57 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:09:58 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara3830617382469698998
+15:09:58 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara18128823790618236854 -r /tmp/rigel_lopper_synthara3830617382469698998/.repo.yaml && deactivate
+15:09:59 INFO  : Embedded Template List generated successfully
+15:10:06 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:10:06 INFO  : updated workspace path: 
+15:10:07 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara14549207885983313942
+15:10:07 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara10301421916697871499 -r /tmp/rigel_lopper_synthara14549207885983313942/.repo.yaml && deactivate
+15:10:07 INFO  : Embedded Template List generated successfully
+15:10:07 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:10:08 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara12340629293672567730
+15:10:08 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara11821584631523375068 -r /tmp/rigel_lopper_synthara12340629293672567730/.repo.yaml && deactivate
+15:10:08 INFO  : Embedded Template List generated successfully
+15:10:21 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:10:21 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+15:27:30 INFO  : updated workspace path: 
+15:27:30 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:27:31 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara2446077337676559456
+15:27:31 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara5090016763519243163 -r /tmp/rigel_lopper_synthara2446077337676559456/.repo.yaml && deactivate
+15:27:31 INFO  : Embedded Template List generated successfully
+15:27:45 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:27:45 INFO  : Marking the target connection as default Local
+15:27:45 INFO  : Marking the target connection as default Linux Agent
+15:27:45 INFO  : Marking the target connection as default XRTServer
+15:27:45 INFO  : Marking the target connection as default LinuxEmulation
+15:27:45 INFO  : Marking the target connection as default QEMU
+15:27:45 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+15:32:53 INFO  : updated workspace path: 
+15:32:54 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:32:54 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara17285282594726888052
+15:32:54 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara3724224461750546649 -r /tmp/rigel_lopper_synthara17285282594726888052/.repo.yaml && deactivate
+15:32:55 INFO  : Embedded Template List generated successfully
+15:34:21 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:34:21 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+15:41:23 INFO  : updated workspace path: 
+15:41:23 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:41:24 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara8077926378603566329
+15:41:24 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara9593480137332971346 -r /tmp/rigel_lopper_synthara8077926378603566329/.repo.yaml && deactivate
+15:41:24 INFO  : Embedded Template List generated successfully
+15:41:50 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:41:50 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/ws2
+15:41:50 INFO  : Marking the target connection as default Local
+15:41:50 INFO  : Marking the target connection as default Linux Agent
+15:41:50 INFO  : Marking the target connection as default XRTServer
+15:41:50 INFO  : Marking the target connection as default LinuxEmulation
+15:41:50 INFO  : Marking the target connection as default QEMU
+15:51:44 INFO  : updated workspace path: 
+15:51:44 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:51:45 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara15501374528045160158
+15:51:45 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara6066301556674643895 -r /tmp/rigel_lopper_synthara15501374528045160158/.repo.yaml && deactivate
+15:51:45 INFO  : Embedded Template List generated successfully
+15:52:16 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:52:16 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+15:52:44 INFO  : updated workspace path: 
+15:52:44 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:52:45 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara6494671868989601356
+15:52:45 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara15188041844498908299 -r /tmp/rigel_lopper_synthara6494671868989601356/.repo.yaml && deactivate
+15:52:45 INFO  : Embedded Template List generated successfully
+15:52:53 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:52:53 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+08:56:55 INFO  : updated workspace path: 
+08:56:55 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+08:56:56 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara10932531852490120548
+08:56:56 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara2236435222603638709 -r /tmp/rigel_lopper_synthara10932531852490120548/.repo.yaml && deactivate
+08:56:57 INFO  : Embedded Template List generated successfully
+08:57:14 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+08:57:14 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+16:25:12 INFO  : updated workspace path: 
+16:25:12 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+16:25:13 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara17705237109844870915
+16:25:13 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara15295795937739557804 -r /tmp/rigel_lopper_synthara17705237109844870915/.repo.yaml && deactivate
+16:25:13 INFO  : Embedded Template List generated successfully
+16:26:20 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+16:26:20 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/wp
+16:26:20 INFO  : Marking the target connection as default Local
+16:26:20 INFO  : Marking the target connection as default Linux Agent
+16:26:21 INFO  : Marking the target connection as default XRTServer
+16:26:21 INFO  : Marking the target connection as default LinuxEmulation
+16:26:21 INFO  : Marking the target connection as default QEMU
+10:41:14 INFO  : updated workspace path: 
+10:41:14 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:41:15 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara17819719239961377814
+10:41:15 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara5169280495527669474 -r /tmp/rigel_lopper_synthara17819719239961377814/.repo.yaml && deactivate
+10:41:15 INFO  : Embedded Template List generated successfully
+10:41:52 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:41:52 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+10:41:52 INFO  : Marking the target connection as default Local
+10:41:52 INFO  : Marking the target connection as default Linux Agent
+10:41:52 INFO  : Marking the target connection as default XRTServer
+10:41:52 INFO  : Marking the target connection as default LinuxEmulation
+10:41:52 INFO  : Marking the target connection as default QEMU
+11:32:58 INFO  : updated workspace path: 
+11:32:58 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:32:59 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara2461916170475514342
+11:32:59 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara2421876710723612175 -r /tmp/rigel_lopper_synthara2461916170475514342/.repo.yaml && deactivate
+11:32:59 INFO  : Embedded Template List generated successfully
+11:33:30 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:37:58 INFO  : updated workspace path: 
+11:37:58 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:37:59 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara5032200302599220533
+11:37:59 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara12353302732060827388 -r /tmp/rigel_lopper_synthara5032200302599220533/.repo.yaml && deactivate
+11:37:59 INFO  : Embedded Template List generated successfully
+11:38:29 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:38:29 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+11:38:29 INFO  : Marking the target connection as default Local
+11:38:29 INFO  : Marking the target connection as default Linux Agent
+11:38:29 INFO  : Marking the target connection as default XRTServer
+11:38:29 INFO  : Marking the target connection as default LinuxEmulation
+11:38:29 INFO  : Marking the target connection as default QEMU
+11:39:04 INFO  : updated workspace path: 
+11:39:04 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:39:05 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara11075559672087204415
+11:39:05 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara2824382945949579822 -r /tmp/rigel_lopper_synthara11075559672087204415/.repo.yaml && deactivate
+11:39:05 INFO  : Embedded Template List generated successfully
+11:39:38 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:39:39 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+13:35:27 INFO  : updated workspace path: 
+13:35:27 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+13:35:28 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara491648846708697244
+13:35:28 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara12382552455394241019 -r /tmp/rigel_lopper_synthara491648846708697244/.repo.yaml && deactivate
+13:35:28 INFO  : Embedded Template List generated successfully
+08:24:19 INFO  : connection terminated
+08:24:25 INFO  : connection terminated
+08:24:25 INFO  : scheduling shutdown timer for 2 seconds ...
+08:24:49 INFO  : connection terminated
+08:24:49 INFO  : scheduling shutdown timer for 2 seconds ...
+08:24:49 INFO  : connection terminated
+08:24:49 INFO  : scheduling shutdown timer for 2 seconds ...
+08:24:49 INFO  : connection terminated
+08:24:49 INFO  : scheduling shutdown timer for 2 seconds ...
+08:24:49 INFO  : connection terminated
+08:24:49 INFO  : scheduling shutdown timer for 2 seconds ...
+08:24:51 INFO  : Terminating Vitis C++ Server
+08:24:51 INFO  : Vitis C++ Server terminated
+08:24:51 INFO  : connection terminated
+08:24:51 INFO  : scheduling shutdown timer for 2 seconds ...
+12:38:25 INFO  : updated workspace path: 
+12:38:25 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:38:26 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara16497584495602829545
+12:38:26 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara7196792792134254044 -r /tmp/rigel_lopper_synthara16497584495602829545/.repo.yaml && deactivate
+12:38:26 INFO  : Embedded Template List generated successfully
+12:38:39 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+12:38:39 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+10:28:11 INFO  : updated workspace path: 
+10:28:11 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:28:13 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara10808668601195995323
+10:28:13 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara18123815860969936201 -r /tmp/rigel_lopper_synthara10808668601195995323/.repo.yaml && deactivate
+10:28:13 INFO  : Embedded Template List generated successfully
+10:28:44 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+10:28:45 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+10:28:45 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara4169884292541175231
+10:28:45 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara12148526131485949072 -r /tmp/rigel_lopper_synthara4169884292541175231/.repo.yaml && deactivate
+10:28:46 INFO  : Embedded Template List generated successfully
+11:31:39 INFO  : updated workspace path: 
+11:31:39 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:31:40 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara12158787942467684790
+11:31:40 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara16599184407820572554 -r /tmp/rigel_lopper_synthara12158787942467684790/.repo.yaml && deactivate
+11:31:40 INFO  : Embedded Template List generated successfully
+11:34:47 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:34:47 INFO  : Marking the target connection as default Local
+11:34:47 INFO  : Marking the target connection as default Linux Agent
+11:34:47 INFO  : Marking the target connection as default XRTServer
+11:34:47 INFO  : Marking the target connection as default LinuxEmulation
+11:34:47 INFO  : Marking the target connection as default QEMU
+11:34:47 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+11:35:26 INFO  : updated workspace path: 
+11:35:27 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:35:28 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara14539054569071012849
+11:35:28 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara12592961984791121122 -r /tmp/rigel_lopper_synthara14539054569071012849/.repo.yaml && deactivate
+11:35:28 INFO  : Embedded Template List generated successfully
+11:35:41 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+07:53:27 INFO  : updated workspace path: 
+07:53:27 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+07:53:28 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara2742237212331181339
+07:53:28 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara1216579320722401641 -r /tmp/rigel_lopper_synthara2742237212331181339/.repo.yaml && deactivate
+07:53:28 INFO  : Embedded Template List generated successfully
+07:53:34 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+07:53:35 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara3208183142827357274
+07:53:35 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara10261355198554941167 -r /tmp/rigel_lopper_synthara3208183142827357274/.repo.yaml && deactivate
+07:53:35 INFO  : Embedded Template List generated successfully
+07:53:35 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+07:54:47 INFO  : updated workspace path: 
+07:54:47 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+07:54:48 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara8755843952907466586
+07:54:48 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara201337619365951875 -r /tmp/rigel_lopper_synthara8755843952907466586/.repo.yaml && deactivate
+07:54:48 INFO  : Embedded Template List generated successfully
+07:55:01 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+07:55:02 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara15369618925082708853
+07:55:02 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara5243542556016943364 -r /tmp/rigel_lopper_synthara15369618925082708853/.repo.yaml && deactivate
+07:55:03 INFO  : Embedded Template List generated successfully
+07:55:03 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+15:31:06 INFO  : updated workspace path: 
+15:31:06 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:31:07 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara15625551012929169048
+15:31:07 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara7891985726840533575 -r /tmp/rigel_lopper_synthara15625551012929169048/.repo.yaml && deactivate
+15:31:08 INFO  : Embedded Template List generated successfully
+15:31:36 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+15:31:37 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+15:31:37 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara16966472558453573503
+15:31:37 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara810971086970726808 -r /tmp/rigel_lopper_synthara16966472558453573503/.repo.yaml && deactivate
+15:31:38 INFO  : Embedded Template List generated successfully
+09:50:27 INFO  : updated workspace path: 
+09:50:27 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+09:50:28 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara1575674498402307589
+09:50:28 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara13782347952014122694 -r /tmp/rigel_lopper_synthara1575674498402307589/.repo.yaml && deactivate
+09:50:28 INFO  : Embedded Template List generated successfully
+09:50:41 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+09:50:41 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+11:19:01 INFO  : updated workspace path: 
+11:19:01 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:19:02 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara635794345024004411
+11:19:02 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara18221997120200874259 -r /tmp/rigel_lopper_synthara635794345024004411/.repo.yaml && deactivate
+11:19:02 INFO  : Embedded Template List generated successfully
+11:19:36 INFO  : XSDB server has started successfully from frontend.
+11:19:36 INFO  : It has taken  2secs.
+11:19:37 INFO  : Connection to XSDB Server established.
+11:19:37 INFO  : It has taken  1secs.
+11:19:41 INFO  : Done
+11:20:30 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+11:20:30 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/wp2
+16:39:11 INFO  : updated workspace path: 
+16:39:11 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+16:39:12 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara2365946594676872561
+16:39:12 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara10110566702689922999 -r /tmp/rigel_lopper_synthara2365946594676872561/.repo.yaml && deactivate
+16:39:12 INFO  : Embedded Template List generated successfully
+16:39:28 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+16:39:29 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+16:39:29 INFO  : Marking the target connection as default Local
+16:39:29 INFO  : Marking the target connection as default Linux Agent
+16:39:29 INFO  : Marking the target connection as default XRTServer
+16:39:29 INFO  : Marking the target connection as default LinuxEmulation
+16:39:29 INFO  : Marking the target connection as default QEMU
+17:00:09 INFO  : updated workspace path: 
+17:00:09 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+17:00:10 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara997037462499057133
+17:00:10 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara12085016910677703228 -r /tmp/rigel_lopper_synthara997037462499057133/.repo.yaml && deactivate
+17:00:10 INFO  : Embedded Template List generated successfully
+17:00:15 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+17:00:16 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara7129086107572154960
+17:00:16 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara15791667393643433561 -r /tmp/rigel_lopper_synthara7129086107572154960/.repo.yaml && deactivate
+17:00:16 INFO  : Embedded Template List generated successfully
+17:00:16 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop
+19:08:35 INFO  : updated workspace path: 
+19:08:36 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+19:08:37 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara13102242253811326002
+19:08:37 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara13035792745436235803 -r /tmp/rigel_lopper_synthara13102242253811326002/.repo.yaml && deactivate
+19:08:37 INFO  : Embedded Template List generated successfully
+19:08:49 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//repo.py -st  /tools/Xilinx/Vitis/2024.2/data/embeddedsw && deactivate
+19:08:50 INFO  : Successfully created repository data at /tmp/rigel_lopper_synthara12489179307701350907
+19:08:50 INFO  : bash, -c, source /tools/Xilinx/Vitis/2024.2/tps/lnx64/lopper-1.1.0/env/bin/activate && python /tools/Xilinx/Vitis/2024.2/data/embeddedsw/scripts/pyesw//get_template_data.py -d /tmp/rigel_lopper_synthara3377431579897985664 -r /tmp/rigel_lopper_synthara12489179307701350907/.repo.yaml && deactivate
+19:08:51 INFO  : Embedded Template List generated successfully
+19:08:51 INFO  : created .gitignore file for the project /home/synthara/VersalPrjs/LDRD/rtda_demo/workshop

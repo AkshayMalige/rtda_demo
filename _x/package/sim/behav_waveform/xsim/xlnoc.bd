@@ -1,0 +1,83 @@
+{
+  "design": {
+    "design_info": {
+      "boundary_crc": "0x5EC450A67DE2177B",
+      "design_src": "IPI",
+      "device": "xcve2802-vsvh1760-2MP-e-S",
+      "gen_directory": "../../../../prj.gen/sim_1/bd/xlnoc",
+      "name": "xlnoc",
+      "rev_ctrl_bd_flag": "RevCtrlBdOff",
+      "synth_flow_mode": "None",
+      "tool_version": "2024.2",
+      "validated": "true"
+    },
+    "design_tree": {
+      "snoc_sysc_inst": ""
+    },
+    "ports": {
+      "noc_clk": {
+        "type": "clk",
+        "direction": "I",
+        "parameters": {
+          "CLK_DOMAIN": {
+            "value": "xlnoc_noc_clk",
+            "value_src": "default"
+          },
+          "FREQ_HZ": {
+            "value": "100000000",
+            "value_src": "default"
+          },
+          "FREQ_TOLERANCE_HZ": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "PHASE": {
+            "value": "0.0",
+            "value_src": "default"
+          }
+        }
+      },
+      "noc_rst_n": {
+        "type": "rst",
+        "direction": "I",
+        "parameters": {
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "POLARITY": {
+            "value": "ACTIVE_LOW",
+            "value_src": "default"
+          }
+        }
+      }
+    },
+    "components": {
+      "snoc_sysc_inst": {
+        "vlnv": "xilinx.com:ip:snoc:1.0",
+        "ip_revision": "1",
+        "xci_name": "xlnoc_snoc_sysc_inst_0",
+        "xci_path": "ip/xlnoc_snoc_sysc_inst_0/xlnoc_snoc_sysc_inst_0.xci",
+        "inst_hier_path": "snoc_sysc_inst"
+      }
+    },
+    "nets": {
+      "noc_clk_1": {
+        "ports": [
+          "noc_clk",
+          "snoc_sysc_inst/noc_clk"
+        ]
+      },
+      "noc_rst_n_1": {
+        "ports": [
+          "noc_rst_n",
+          "snoc_sysc_inst/noc_rst_n"
+        ]
+      }
+    }
+  }
+}

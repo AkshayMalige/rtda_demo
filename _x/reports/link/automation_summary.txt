@@ -1,0 +1,265 @@
+====================================================================
+Version:    xcd v2024.2 (64-bit)
+Copyright:  Copyright 1986-2024 Xilinx, Inc. All Rights Reserved.
+Created:    Mon Aug  4 21:46:29 2025
+====================================================================
+
+1. Kernel and compute unit information
+======================================
+
+Compute Unit: ai_engine_0
+Kernel: ai_engine
+Clock Pins: aclk7, aclk6, aclk5, aclk4, aclk3, aclk2, aclk1, aclk0
+Reset Pin: aresetn0
+
+Compute Unit: mm2s_din
+Kernel: mm2s_pl
+Base Address: 0xa4010000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+Compute Unit: mm2s_weights1
+Kernel: mm2s_pl
+Base Address: 0xa4020000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+Compute Unit: mm2s_weights2_0
+Kernel: mm2s_pl
+Base Address: 0xa4030000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+Compute Unit: mm2s_weights2_1
+Kernel: mm2s_pl
+Base Address: 0xa4040000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+Compute Unit: relu
+Kernel: leaky_relu_pl
+Base Address: 0xa4050000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+Compute Unit: relu2
+Kernel: leaky_relu_pl
+Base Address: 0xa4060000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+Compute Unit: splitter
+Kernel: leaky_splitter_pl
+Base Address: 0xa4080000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+Compute Unit: s2mm_out
+Kernel: s2mm_pl
+Base Address: 0xa4070000
+Clock Pin: ap_clk
+Reset Pin: ap_rst_n
+
+2. Interface Connections
+========================
+
+Compute Unit to Compute Unit
+----------------------------
+Source Pin: splitter/out_stream_1
+Destination Pin: ai_engine_0/S04_AXIS
+
+Source Pin: relu2/out_stream
+Destination Pin: s2mm_out/s
+
+Source Pin: relu/out_stream
+Destination Pin: splitter/in_stream
+
+Source Pin: mm2s_weights2_1/s
+Destination Pin: ai_engine_0/S05_AXIS
+
+Source Pin: mm2s_weights2_0/s
+Destination Pin: ai_engine_0/S03_AXIS
+
+Source Pin: mm2s_weights1/s
+Destination Pin: ai_engine_0/S01_AXIS
+
+Source Pin: mm2s_din/s
+Destination Pin: ai_engine_0/S00_AXIS
+
+Source Pin: ai_engine_0/M00_AXIS
+Destination Pin: relu/in_stream
+
+Source Pin: ai_engine_0/M01_AXIS
+Destination Pin: relu2/in_stream
+
+IP to Compute Unit
+------------------
+Source Pin: icn_ctrl_1/M02_AXI
+Destination Pin: mm2s_din/s_axi_control
+
+Source Pin: icn_ctrl_1/M03_AXI
+Destination Pin: mm2s_weights1/s_axi_control
+
+Source Pin: icn_ctrl_1/M04_AXI
+Destination Pin: mm2s_weights2_0/s_axi_control
+
+Source Pin: icn_ctrl_2/M01_AXI
+Destination Pin: mm2s_weights2_1/s_axi_control
+
+Source Pin: icn_ctrl_2/M02_AXI
+Destination Pin: relu/s_axi_control
+
+Source Pin: icn_ctrl_2/M03_AXI
+Destination Pin: relu2/s_axi_control
+
+Source Pin: icn_ctrl_2/M05_AXI
+Destination Pin: s2mm_out/s_axi_control
+
+Source Pin: icn_ctrl_2/M04_AXI
+Destination Pin: splitter/s_axi_control
+
+Source Pin: ConfigNoc/M00_AXI
+Destination Pin: ai_engine_0/S00_AXI
+
+Compute Unit to IP
+------------------
+Source Pin: mm2s_din/m_axi_gmem
+Destination Pin: aggr_noc/S00_AXI
+
+Source Pin: mm2s_weights1/m_axi_gmem
+Destination Pin: aggr_noc/S01_AXI
+
+Source Pin: mm2s_weights2_0/m_axi_gmem
+Destination Pin: aggr_noc/S02_AXI
+
+Source Pin: mm2s_weights2_1/m_axi_gmem
+Destination Pin: aggr_noc/S03_AXI
+
+Source Pin: s2mm_out/m_axi_gmem
+Destination Pin: aggr_noc/S04_AXI
+
+3. Clock Connections
+====================
+
+Compute Unit: mm2s_din
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: mm2s_din/ap_clk
+
+Compute Unit: mm2s_weights1
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: mm2s_weights1/ap_clk
+
+Compute Unit: mm2s_weights2_0
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: mm2s_weights2_0/ap_clk
+
+Compute Unit: mm2s_weights2_1
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: mm2s_weights2_1/ap_clk
+
+Compute Unit: relu
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: relu/ap_clk
+
+Compute Unit: relu2
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: relu2/ap_clk
+
+Compute Unit: s2mm_out
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: s2mm_out/ap_clk
+
+Compute Unit: splitter
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: splitter/ap_clk
+
+Compute Unit: ai_engine_0
+Clock ID: 2
+Platform Clock Frequency: 300.00 MHz
+Requested Kernel Clock Frequency: 300.00 MHz
+Source Pin: clk_wizard_0/clk_out3
+Destination Pin: ai_engine_0/aclk0
+
+Clock Instance: clk_wizard_0
+Source Pin: CIPS_0/pl0_ref_clk
+Destination Pin: clk_wizard_0/clk_in1
+
+4. Reset Connections
+====================
+
+Compute Unit: mm2s_din
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: mm2s_din/ap_rst_n
+Associated Clock Pin: mm2s_din/ap_clk
+
+Compute Unit: mm2s_weights1
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: mm2s_weights1/ap_rst_n
+Associated Clock Pin: mm2s_weights1/ap_clk
+
+Compute Unit: mm2s_weights2_0
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: mm2s_weights2_0/ap_rst_n
+Associated Clock Pin: mm2s_weights2_0/ap_clk
+
+Compute Unit: mm2s_weights2_1
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: mm2s_weights2_1/ap_rst_n
+Associated Clock Pin: mm2s_weights2_1/ap_clk
+
+Compute Unit: relu
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: relu/ap_rst_n
+Associated Clock Pin: relu/ap_clk
+
+Compute Unit: relu2
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: relu2/ap_rst_n
+Associated Clock Pin: relu2/ap_clk
+
+Compute Unit: s2mm_out
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: s2mm_out/ap_rst_n
+Associated Clock Pin: s2mm_out/ap_clk
+
+Compute Unit: splitter
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: splitter/ap_rst_n
+Associated Clock Pin: splitter/ap_clk
+
+Compute Unit: ai_engine_0
+Source Pin: psr_300mhz/peripheral_aresetn
+Destination Pin: ai_engine_0/aresetn0
+Associated Clock Pin: ai_engine_0/aclk0
+
+5. Clock Summary
+================
+
+AIE
++-------------+-----------+----------+---------------+------------+---------------+------------+
+| Instance    | Kernel    | PLIO     | Annotated Arg | Clock Port | Compile (MHz) | Link (MHz) |
++-------------+-----------+----------+---------------+------------+---------------+------------+
+| ai_engine_0 | ai_engine | M00_AXIS |               | aclk0      | N/A           | 300.00     |
+| ai_engine_0 | ai_engine | M01_AXIS |               | aclk0      | N/A           | 300.00     |
+| ai_engine_0 | ai_engine | S00_AXIS |               | aclk0      | N/A           | 300.00     |
+| ai_engine_0 | ai_engine | S01_AXIS |               | aclk0      | N/A           | 300.00     |
+| ai_engine_0 | ai_engine | S02_AXIS |               | aclk0      | N/A           | 300.00     |
+| ai_engine_0 | ai_engine | S03_AXIS |               | aclk0      | N/A           | 300.00     |
+| ai_engine_0 | ai_engine | S04_AXIS |               | aclk0      | N/A           | 300.00     |
+| ai_engine_0 | ai_engine | S05_AXIS |               | aclk0      | N/A           | 300.00     |
++-------------+-----------+----------+---------------+------------+---------------+------------+
+
+PL
++-----------------+-------------------+------------+---------------+------------+
+| Instance        | Kernel            | Clock Port | Compile (MHz) | Link (MHz) |
++-----------------+-------------------+------------+---------------+------------+
+| mm2s_din        | mm2s_pl           | ap_clk     | 300.30        | 300.00     |
+| mm2s_weights1   | mm2s_pl           | ap_clk     | 300.30        | 300.00     |
+| mm2s_weights2_0 | mm2s_pl           | ap_clk     | 300.30        | 300.00     |
+| mm2s_weights2_1 | mm2s_pl           | ap_clk     | 300.30        | 300.00     |
+| relu            | leaky_relu_pl     | ap_clk     | 300.30        | 300.00     |
+| relu2           | leaky_relu_pl     | ap_clk     | 300.30        | 300.00     |
+| splitter        | leaky_splitter_pl | ap_clk     | 300.30        | 300.00     |
+| s2mm_out        | s2mm_pl           | ap_clk     | 300.30        | 300.00     |
++-----------------+-------------------+------------+---------------+------------+
+

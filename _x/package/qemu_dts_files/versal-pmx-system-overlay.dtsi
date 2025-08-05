@@ -1,0 +1,192 @@
+/*
+ * Versal PMX System Overlay. This contains the overlay suitable
+ * for the system parts (ARM instance) of the multi-arch PSX/PMX
+ * setup.
+ *
+ * Copyright (c) 2021, Xilinx Inc
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "versal.dtsh"
+
+#define MM_PMX_SHA1			0xF1800000
+#define MM_PMX_SHA1_SIZE		0x10000
+#define MM_PMX_WWDT			0xf03f0000
+#define MM_PMX_WWDT_SIZE		0x10000
+#define MM_XMPU_PMC_CFU			0xf1340000
+#define MM_XMPU_PMC_CFU_SIZE	0x10000
+
+&pmc_dma0_src {
+	byte-align = <1>;
+};
+
+&pmc_dma0_dst {
+	byte-align = <1>;
+};
+
+&pmc_dma1_src {
+	byte-align = <1>;
+};
+
+&pmc_dma1_dst {
+	byte-align = <1>;
+};
+
+&pmc_stream_switch {
+	stream-connected-sha1 = <&pmc_sha3_1>;
+};
+
+&amba_pmc_sec {
+	pmc_sha3_1: pmc_sha1@MM_PMX_SHA1 {
+		doc-status = "complete";
+		compatible = "zynqmp,csu-sha3";
+		reg = <0x0 MM_PMX_SHA1 0x0 MM_PMX_SHA1_SIZE 0x0>;
+	};
+};
+
+&amba_pmc_sys {
+	pmc_clk_rst: pmc_clk_rst@MM_PMC_CRP {
+		compatible = "xlnx,pmx_crp";
+	};
+
+	pmc_analog@MM_PMC_PMC_ANALOG {
+		compatible = "xlnx,pmx_anlg";
+		interrupts-extended = <&pmc_gic_proxy
+					0 GLITCH_DET_IRQ_IRQ_0 0>;
+	};
+};
+
+&pmc_rsa {
+	ram-nr-words = <256>;
+};
+
+&amba_pmc_iou {
+	pmx_wwdt: wwdt@MM_PMX_WWDT {
+		compatible = "xlnx,versal-wwdt";
+		reg = <0x0 MM_PMX_WWDT 0x0 MM_PMX_WWDT_SIZE 0x0>;
+		pclk = <100000000>;
+	};
+	sdhci1: mmc@MM_PMC_SD1 {
+		compatible = "xlnx,versalnet-emmc";
+		reg = <0x0 (MM_PMC_SD1 + 0x200) 0x0 0x100 0x0
+			0x0 MM_PMC_SD1 0x0 0x100 0x0>;
+	};
+};
+
+&amba_pmc_pl {
+	/delete-node/ cfu@MM_PMC_CFU_APB;
+
+	/*
+	 * For the XMPU to protect peripherals, they must be inside of a memory
+	 * region at the address of the peripheral.
+	 * The peripheral itself is then placed inside of the dummy region.
+	 */
+	dummy_cfu_mem: dummy_cfu_mem@MM_PMC_CFU_APB {
+		compatible = "qemu:memory-region";
+		cfu: cfu@0x0 {
+			doc-status = "partial";
+			doc-comments = "Stub";
+			doc-limitations = "No way to extract CFRAME data.";
+			compatible = "xlnx,versal-cfu";
+			/*
+			 * For XMPU to work, register and stream addresses must be relative
+			 * to the CFU dummy memory region base.
+			 */
+			reg = <0x0 (MM_PMC_CFU_APB - MM_PMC_CFU_APB) 0x0 MM_PMC_CFU_APB_SIZE 0x0
+				   0x0 (MM_PMC_CFU_STREAM - MM_PMC_CFU_APB) 0x0 MM_PMC_CFU_STREAM_SIZE 0x0
+				   0x0 (MM_PMC_CFU_STREAM_2 - MM_PMC_CFU_APB) 0x0 MM_PMC_CFU_STREAM_2_SIZE 0x0
+				   >;
+			chardev = "pmc-cfu";
+			dma = <&amba_pmc>;
+		};
+	};
+};
+
+&amba_pmc {
+	xmpu_pmc_cfu: xmpu_pmc_cfu@MM_XMPU_PMC_CFU {
+		compatible = "xlnx,versal-xmpu";
+		reg-extended = <
+			&amba_pmc 0x0 MM_XMPU_PMC_CFU 0x0 MM_XMPU_PMC_CFU_SIZE 0x0
+			&amba_pmc_pl 0x0 MM_PMC_CFU_APB 0x0 (MM_PMC_CFU_APB_SIZE + MM_PMC_CFU_STREAM_SIZE) 0x2
+			&amba_pmc_pl 0x0 MM_PMC_CFU_STREAM_2 0x0 MM_PMC_CFU_STREAM_2_SIZE 0x2
+		>;
+		protected-mr = <&dummy_cfu_mem>;
+		mr-0 = <&amba_pmc_pl>;
+		protected-base = <MM_PMC_CFU_APB>;
+	};
+
+	pmx_err_mng: pmx_err_mng@MM_PMC_PMC_GLOBAL {
+		compatible = "xlnx,pmx-err-mng";
+		reg = <0x0 (MM_PMC_PMC_GLOBAL + 0x20000) 0x0 0x10000 0x1>;
+	};
+};
+
+
+&pmc_global {
+       compatible = "xlnx,pmx_global";
+};
+
+&pmc_gic_proxy {
+       max-ints = <256>;
+};
+
+#ifdef MM_PSM_GLOBAL_REG
+&psm_gic_proxy {
+       max-ints = <256>;
+};
+#endif
+
+#if defined(MM_LPD_SYSMON_SAT) && defined(MM_FPD_FPD_SYSMON_SAT0)
+&amba_pmc_sys {
+	lpd_sysmon_sat: lpd_ams_sat@0 {
+		compatible = "xlnx,ams-sat";
+		reg = <0x0 MM_LPD_SYSMON_SAT 0x0 MM_LPD_SYSMON_SAT_SIZE 0x1>;
+	};
+	fpd_sysmon_sat0: fpd_ams_sat@0 {
+		compatible = "xlnx,ams-sat";
+		reg = <0x0 MM_FPD_FPD_SYSMON_SAT0 0x0 MM_FPD_FPD_SYSMON_SAT0_SIZE 0x1>;
+	};
+	fpd_sysmon_sat1: fpd_ams_sat@1 {
+		compatible = "xlnx,ams-sat";
+		reg = <0x0 MM_FPD_FPD_SYSMON_SAT1 0x0 MM_FPD_FPD_SYSMON_SAT1_SIZE 0x1>;
+	};
+	fpd_sysmon_sat2: fpd_ams_sat@2 {
+		compatible = "xlnx,ams-sat";
+		reg = <0x0 MM_FPD_FPD_SYSMON_SAT2 0x0 MM_FPD_FPD_SYSMON_SAT2_SIZE 0x1>;
+	};
+	fpd_sysmon_sat3: fpd_ams_sat@3 {
+		compatible = "xlnx,ams-sat";
+		reg = <0x0 MM_FPD_FPD_SYSMON_SAT3 0x0 MM_FPD_FPD_SYSMON_SAT3_SIZE 0x1>;
+	};
+};
+
+&pmc_sysmon {
+	ams-sats = <&pmc_ams_sat0 &pmc_ams_sat1
+		    &lpd_sysmon_sat
+		    &fpd_sysmon_sat0 &fpd_sysmon_sat1
+		    &fpd_sysmon_sat2 &fpd_sysmon_sat3>;
+};
+
+#endif

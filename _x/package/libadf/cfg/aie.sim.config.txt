@@ -1,0 +1,4 @@
+DIRECTORY=data/aie_ml/devices
+JSON_DEVICE=VC2802.json
+AIE_SHIM_SOL=./aie.shim.solution.aiesol
+USED_TILES=./aie.xpe

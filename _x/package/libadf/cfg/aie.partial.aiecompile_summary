@@ -1,0 +1,780 @@
+<ENTRY>
+{
+ "thisFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/graph.aiecompile_summary",
+ "connectId": "",
+ "serverToken": "",
+ "timestamp": "0"
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_CmdStep",
+ "dateTimestamp": "Mon Aug  4 21:36:31 2025",
+ "timestampMillis": "1754357791682",
+ "buildStep": {
+  "cmdId": "3406897c-38f2-4ff7-8f97-fb667637f953",
+  "name": "aiecompiler",
+  "logFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/AIECompiler.log",
+  "commandLine": "/tools/Xilinx/Vitis/2024.2/aietools/bin/unwrapped/lnx64.o/aiecompiler --v --platform=/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --target=hw --pl-freq=300 --include=./ --include=../common --include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/src/aie --include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/include/aie --include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie graph.cpp --workdir=Work ",
+  "args": [
+   "/tools/Xilinx/Vitis/2024.2/aietools/bin/unwrapped/lnx64.o/aiecompiler",
+   "--v",
+   "--platform=/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm",
+   "--target=hw",
+   "--pl-freq=300",
+   "--include=./",
+   "--include=../common",
+   "--include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/src/aie",
+   "--include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/include/aie",
+   "--include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie",
+   "graph.cpp",
+   "--workdir=Work"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:36:31 2025",
+ "timestampMillis": "1754357791683",
+ "status": {
+  "cmdId": "3406897c-38f2-4ff7-8f97-fb667637f953",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_FlowMetaData",
+ "dateTimestamp": "Mon Aug  4 21:36:31 2025",
+ "timestampMillis": "1754357791683",
+ "buildSummary": {
+  "hardwarePlatform": "",
+  "hardwareDsa": "",
+  "platformDirectory": "",
+  "runtime": "",
+  "systemConfig": "",
+  "flow": "BF_UNKNOWN",
+  "target": "TT_UNKNOWN",
+  "kernels": [],
+  "toolVersion": "Vitis AI Engine Compiler Release 2024.2. SW Build 5239620 on 2024-11-08-20:02:40"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:36:31 2025",
+ "timestampMillis": "1754357791683",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work",
+  "name": "",
+  "fileType": "DIR",
+  "reportType": "AIE_COMPILER_WORKDIR",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:36:31 2025",
+ "timestampMillis": "1754357791683",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/guidance.html",
+  "name": "",
+  "fileType": "HTML",
+  "reportType": "GLOBAL_RULECHECK_GUIDANCE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:36:31 2025",
+ "timestampMillis": "1754357791684",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/guidance.pb3",
+  "name": "",
+  "fileType": "BINARY_PROTOBUF",
+  "reportType": "GLOBAL_RULECHECK_GUIDANCE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_CmdStep",
+ "dateTimestamp": "Mon Aug  4 21:36:35 2025",
+ "timestampMillis": "1754357795548",
+ "buildStep": {
+  "cmdId": "c8789fdf-f667-4d43-98e9-0f24f3a8ceb6",
+  "name": "aieir_be",
+  "logFile": "",
+  "commandLine": "/tools/Xilinx/Vitis/2024.2/aietools/bin/unwrapped/lnx64.o/aieir_be --time-passes=0 --multi-layer-enable-constant-padding=false --disable-om-fifo-insertion=false --fast-nonlinearfloats=false --high-performance=false --multi-layer-opt=0 --debug-halt-aie=false --single-mm2s-channel=false --use-clang=true --stacksize=1024 --large-program-memory=false --use-peano-linker=false --disable-dma-cmd-alignment=false --enable-ecc-scrubbing=true --float-accuracy=fast --output-archive=libadf.a --print-timer-multi-layer-ctrl=0 --disable-multirate=false --increase-code-block-pm-size=256 --multi-layer-mask-poll-no-yield=false --include=./ --include=../common --include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/src/aie --include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/include/aie --include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie --verify-switchconfig=true --disable-multirate-analysis=false --fastmath=false --multi-layer-ctrl-pkt-lcp-broadcast=false --cpp-std=-std=c++17 --enable-mapper-hints-constraints=false --max-main-elf-heap-size=128 --multi-layer-ipu-txn-bin-sim=false --use-pm-reloading-lock-sync=false --multi-layer-auto-phase=true --event-trace-advanced-mapping=0 --gen-graph-cleanup=false --use-canonical-net-names=false --use-phy-shim=true --enable-dma-fifo=false --gen-elf-ctrl-pkts=false --trace-aiesim-option=0 --event-trace-windowed=false --num-trace-streams=16 --adf-api-log-level=2 --aie-heat-map=false --enable-partition=false --multi-layer-enable-tct=false --quiet=false --enable-multi-layer=false --multi-layer-pipelining=false --exec-timed=0 --pl-auto-restart=false --keep-intermediate-results=false --ext-buffer-cdo-config=true --read-mem-multi-layer=false --enable-profiling=false --multi-layer-enable-preemption=false --runtime-opt=true --disable-ordered-merge-error=false --disable-transform-merge-broadcast=true --verbose=true --genArchive=false --pl-axi-lite=false --nodot-graph=false --use-core-control-api=false --compile-for-aiesim=true --debug-runtime-opt=false --disable-transform-broadcast-split=true --pl-freq=300 --trace-plio-width=64 --aie2ipu-base-addr=1073741824 --multi-layer-end-layer=-1 --enable-light-cdo=false --broadcast-enable-core=true --multi-layer-record-txn=false --kernel-address-location=false --target=hw --swfifo-threshold=40 --workdir=Work --exit-after=complete --test-iterations=-1 --known-tripcount=false --enable-core-processor-bus=false --platform=/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --write-partitioned-file=true --schemafile=AIEGraphSchema.json --multi-layer-controller-parallel=false --multi-layer-lcp-pipelining=true --enable-peano-flow=false --partition-isolation=true --micro-controller-paging=0 --multi-layer-ctrl-pkt=false --multi-layer-start-layer=-1 --async-rtp-blocking-update=false --max-layer-ctrl-param-size=256 --multi-layer-prebuilt-archive-enable-elf-gen=false --lock-fence-mode=1 --multi-layer-force-interleaving=0 --enable-reconfig=false --compute-heapsize=true --log-level=2 --evaluate-fifo-depth=false --event-trace-port=gmio --print-timer-multi-layer-core=false --xlopt=1 --extend-trace-partition=false --graph-iterator-event=false --pre-compile-kernels=false --optimize-pktids=false --no-init=false --multi-layer-one-many-sync=false --fast-floats=true --max-main-elf-pm-size=1536 --large-kernel-program=false --gen-txn-and-ctrl-pkts-offline=false --multi-layer-ofm-single-phase=false --multi-layer-ctrl-pkt-strx-opt=0 --use-async-rtp-locks=true --multi-layer-shim-dma-bandwidth=0 --heapsize=1024 --enable-reconfig-dma-autostart=false --disable-dma-autostart=false --json=Work/temp/graph.json --aiearch aie-ml --frontend-warning=2 --frontend-critical-warning=0 --frontend-summary-name=Work/graph.aiecompile_summary --frontend-files-to-report=Guidance:Work/reports/guidance.html --sdf-graph=graph.cpp ",
+  "args": [
+   "/tools/Xilinx/Vitis/2024.2/aietools/bin/unwrapped/lnx64.o/aieir_be",
+   "--time-passes=0",
+   "--multi-layer-enable-constant-padding=false",
+   "--disable-om-fifo-insertion=false",
+   "--fast-nonlinearfloats=false",
+   "--high-performance=false",
+   "--multi-layer-opt=0",
+   "--debug-halt-aie=false",
+   "--single-mm2s-channel=false",
+   "--use-clang=true",
+   "--stacksize=1024",
+   "--large-program-memory=false",
+   "--use-peano-linker=false",
+   "--disable-dma-cmd-alignment=false",
+   "--enable-ecc-scrubbing=true",
+   "--float-accuracy=fast",
+   "--output-archive=libadf.a",
+   "--print-timer-multi-layer-ctrl=0",
+   "--disable-multirate=false",
+   "--increase-code-block-pm-size=256",
+   "--multi-layer-mask-poll-no-yield=false",
+   "--include=./",
+   "--include=../common",
+   "--include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/src/aie",
+   "--include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/include/aie",
+   "--include=/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie",
+   "--verify-switchconfig=true",
+   "--disable-multirate-analysis=false",
+   "--fastmath=false",
+   "--multi-layer-ctrl-pkt-lcp-broadcast=false",
+   "--cpp-std=-std=c++17",
+   "--enable-mapper-hints-constraints=false",
+   "--max-main-elf-heap-size=128",
+   "--multi-layer-ipu-txn-bin-sim=false",
+   "--use-pm-reloading-lock-sync=false",
+   "--multi-layer-auto-phase=true",
+   "--event-trace-advanced-mapping=0",
+   "--gen-graph-cleanup=false",
+   "--use-canonical-net-names=false",
+   "--use-phy-shim=true",
+   "--enable-dma-fifo=false",
+   "--gen-elf-ctrl-pkts=false",
+   "--trace-aiesim-option=0",
+   "--event-trace-windowed=false",
+   "--num-trace-streams=16",
+   "--adf-api-log-level=2",
+   "--aie-heat-map=false",
+   "--enable-partition=false",
+   "--multi-layer-enable-tct=false",
+   "--quiet=false",
+   "--enable-multi-layer=false",
+   "--multi-layer-pipelining=false",
+   "--exec-timed=0",
+   "--pl-auto-restart=false",
+   "--keep-intermediate-results=false",
+   "--ext-buffer-cdo-config=true",
+   "--read-mem-multi-layer=false",
+   "--enable-profiling=false",
+   "--multi-layer-enable-preemption=false",
+   "--runtime-opt=true",
+   "--disable-ordered-merge-error=false",
+   "--disable-transform-merge-broadcast=true",
+   "--verbose=true",
+   "--genArchive=false",
+   "--pl-axi-lite=false",
+   "--nodot-graph=false",
+   "--use-core-control-api=false",
+   "--compile-for-aiesim=true",
+   "--debug-runtime-opt=false",
+   "--disable-transform-broadcast-split=true",
+   "--pl-freq=300",
+   "--trace-plio-width=64",
+   "--aie2ipu-base-addr=1073741824",
+   "--multi-layer-end-layer=-1",
+   "--enable-light-cdo=false",
+   "--broadcast-enable-core=true",
+   "--multi-layer-record-txn=false",
+   "--kernel-address-location=false",
+   "--target=hw",
+   "--swfifo-threshold=40",
+   "--workdir=Work",
+   "--exit-after=complete",
+   "--test-iterations=-1",
+   "--known-tripcount=false",
+   "--enable-core-processor-bus=false",
+   "--platform=/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm",
+   "--write-partitioned-file=true",
+   "--schemafile=AIEGraphSchema.json",
+   "--multi-layer-controller-parallel=false",
+   "--multi-layer-lcp-pipelining=true",
+   "--enable-peano-flow=false",
+   "--partition-isolation=true",
+   "--micro-controller-paging=0",
+   "--multi-layer-ctrl-pkt=false",
+   "--multi-layer-start-layer=-1",
+   "--async-rtp-blocking-update=false",
+   "--max-layer-ctrl-param-size=256",
+   "--multi-layer-prebuilt-archive-enable-elf-gen=false",
+   "--lock-fence-mode=1",
+   "--multi-layer-force-interleaving=0",
+   "--enable-reconfig=false",
+   "--compute-heapsize=true",
+   "--log-level=2",
+   "--evaluate-fifo-depth=false",
+   "--event-trace-port=gmio",
+   "--print-timer-multi-layer-core=false",
+   "--xlopt=1",
+   "--extend-trace-partition=false",
+   "--graph-iterator-event=false",
+   "--pre-compile-kernels=false",
+   "--optimize-pktids=false",
+   "--no-init=false",
+   "--multi-layer-one-many-sync=false",
+   "--fast-floats=true",
+   "--max-main-elf-pm-size=1536",
+   "--large-kernel-program=false",
+   "--gen-txn-and-ctrl-pkts-offline=false",
+   "--multi-layer-ofm-single-phase=false",
+   "--multi-layer-ctrl-pkt-strx-opt=0",
+   "--use-async-rtp-locks=true",
+   "--multi-layer-shim-dma-bandwidth=0",
+   "--heapsize=1024",
+   "--enable-reconfig-dma-autostart=false",
+   "--disable-dma-autostart=false",
+   "--json=Work/temp/graph.json",
+   "--aiearch",
+   "aie-ml",
+   "--frontend-warning=2",
+   "--frontend-critical-warning=0",
+   "--frontend-summary-name=Work/graph.aiecompile_summary",
+   "--frontend-files-to-report=Guidance:Work/reports/guidance.html",
+   "--sdf-graph=graph.cpp"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Mon Aug  4 21:36:35 2025",
+ "timestampMillis": "1754357795549",
+ "status": {
+  "cmdId": "c8789fdf-f667-4d43-98e9-0f24f3a8ceb6",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:36:47 2025",
+ "timestampMillis": "1754357807867",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work",
+  "name": "",
+  "fileType": "DIR",
+  "reportType": "AIE_COMPILER_WORKDIR",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:36:47 2025",
+ "timestampMillis": "1754357807973",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/debug_config.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_DEBUG_CONFIG",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_FlowMetaData",
+ "dateTimestamp": "Mon Aug  4 21:36:47 2025",
+ "timestampMillis": "1754357807974",
+ "buildSummary": {
+  "hardwarePlatform": "xcve2802-vsvh1760-2MP-e-S",
+  "hardwareDsa": "VC2802",
+  "platformDirectory": "",
+  "runtime": "",
+  "systemConfig": "",
+  "flow": "BF_COMPILE",
+  "target": "TT_HW",
+  "kernels": [
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "",
+     "file": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/graph.json",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/graph.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [],
+    "type": "AIE",
+    "frequency": 1250,
+    "freqUnits": ""
+   }
+  ],
+  "toolVersion": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:36:47 2025",
+ "timestampMillis": "1754357807979",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/graph.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_GRAPH",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:01 2025",
+ "timestampMillis": "1754357821852",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/graph.png",
+  "name": "",
+  "fileType": "PNG",
+  "reportType": "AIE_LOGICAL_VIEW",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:01 2025",
+ "timestampMillis": "1754357821884",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/graph_partition.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_GRAPH_PARTITION",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:02 2025",
+ "timestampMillis": "1754357822828",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/graph_aie_constraints_for_placer.aiecst",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_CONSTRAINTS_PLACER",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823374",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/graph_aie_mapped.aiecst",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_CONSTRAINTS_MAPPED",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823375",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/graph_mapped.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_GRAPH_MAPPED",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823376",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/graph_mapping_analysis_report.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_MAPPING_ANALYSIS",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823377",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/sync_buffer_address.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_SYNC_BUFFER_ADDRESS",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823378",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/Interposer_analysis_report.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_INTERPOSER_ANALYSIS",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823378",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/lock_allocation_report.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_LOCK_ALLOCATION",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823378",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/Lock_report.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_DMA_LOCK",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823379",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/Stream_report.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_STREAM",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823379",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/DMA_report.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_DMA_ANALYSIS",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:03 2025",
+ "timestampMillis": "1754357823379",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/dma_lock_report.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_DMA_LOCK",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824272",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/DMA_FIFO_info_report.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_DMA_FIFO",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824477",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/router_soln.png",
+  "name": "",
+  "fileType": "PNG",
+  "reportType": "AIE_ROUTER_SOLUTION",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824508",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/router_soln.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_ROUTER_SOLUTION",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824645",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/graph_mapped_post.png",
+  "name": "",
+  "fileType": "PNG",
+  "reportType": "AIE_MAPPING_ANALYSIS",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824650",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/graph.xpe",
+  "name": "",
+  "fileType": "XML",
+  "reportType": "AIE_POWER",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824652",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/17_0/scripts/17_0.prx",
+  "name": "",
+  "fileType": "XML",
+  "reportType": "AIE_CORE_PROJECT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824652",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/17_0/src/17_0.cc",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_CORE_PROJECT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824653",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/18_0/scripts/18_0.prx",
+  "name": "",
+  "fileType": "XML",
+  "reportType": "AIE_CORE_PROJECT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824653",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/18_0/src/18_0.cc",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_CORE_PROJECT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824653",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/20_0/scripts/20_0.prx",
+  "name": "",
+  "fileType": "XML",
+  "reportType": "AIE_CORE_PROJECT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824653",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/20_0/src/20_0.cc",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_CORE_PROJECT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824654",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/17_0/17_0.log",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_CORE_COMPILE_LOG",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824654",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/18_0/18_0.log",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_CORE_COMPILE_LOG",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:04 2025",
+ "timestampMillis": "1754357824655",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/aie/20_0/20_0.log",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_CORE_COMPILE_LOG",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:33 2025",
+ "timestampMillis": "1754357853131",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/ps/c_rts/aie_control.cpp",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "AIE_CONTROL_SOURCE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:37 2025",
+ "timestampMillis": "1754357857743",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/ps/c_rts/aie_control_config.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_CONTROL_CONFIG",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:37 2025",
+ "timestampMillis": "1754357857745",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/reports/compiler_report.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_COMPILER_REPORT",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Mon Aug  4 21:37:37 2025",
+ "timestampMillis": "1754357857756",
+ "report": {
+  "path": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/Work/temp/graph_aie_constraints.aiecst",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "AIE_CONSTRAINTS",
+  "cmdId": ""
+ }
+}
+</ENTRY>

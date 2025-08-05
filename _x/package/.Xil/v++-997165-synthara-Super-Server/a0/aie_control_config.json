@@ -1,0 +1,241 @@
+{
+    "schema_version": {
+        "major": "1",
+        "minor": "0",
+        "patch": "0"
+    },
+    "aie_metadata": {
+        "driver_config": {
+            "hw_gen": 2,
+            "base_address": 2199023255552,
+            "npi_address": 4140892160,
+            "column_shift": 25,
+            "row_shift": 20,
+            "num_rows": 11,
+            "num_columns": 38,
+            "shim_row": 0,
+            "mem_tile_row_start": 1,
+            "mem_tile_num_rows": 2,
+            "aie_tile_row_start": 3,
+            "aie_tile_num_rows": 8
+        },
+        "aiecompiler_options": {
+            "broadcast_enable_core": true,
+            "graph_iterator_event": false
+        },
+        "graphs": {
+            "graph0": {
+                "id": 0,
+                "name": "g",
+                "core_columns": [
+                    17,
+                    18,
+                    20
+                ],
+                "core_rows": [
+                    0,
+                    0,
+                    0
+                ],
+                "iteration_memory_columns": [
+                    17,
+                    18,
+                    19
+                ],
+                "iteration_memory_rows": [
+                    1,
+                    0,
+                    0
+                ],
+                "iteration_memory_addresses": [
+                    4,
+                    16644,
+                    516
+                ],
+                "multirate_triggers": [
+                    false,
+                    false,
+                    false
+                ],
+                "pl_kernel_instance_names": [],
+                "pl_axi_lite_modes": []
+            }
+        },
+        "TileMapping": {
+            "AIEKernelToTileMapping": [
+                {
+                    "graph": "g.dense1",
+                    "tile": "aie",
+                    "column": 20,
+                    "row": 0,
+                    "schedule": 0,
+                    "function": "matVecMulMain.m_mat_vec_mulKernels[0]"
+                },
+                {
+                    "graph": "g.dense2",
+                    "tile": "aie",
+                    "column": 18,
+                    "row": 0,
+                    "schedule": 0,
+                    "function": "matVecMulMain.m_mat_vec_mulKernels[1]"
+                },
+                {
+                    "graph": "g.dense2",
+                    "tile": "aie",
+                    "column": 17,
+                    "row": 0,
+                    "schedule": 0,
+                    "function": "matVecMulMain.m_mat_vec_mulKernels[0]"
+                }
+            ],
+            "SharedBufferToTileMapping": []
+        },
+        "RTPs": {},
+        "GMIOs": {},
+        "ExternalBufferConfigs": [],
+        "PLIOs": {
+            "plio0": {
+                "id": 0,
+                "name": "g.pl_in_dense1",
+                "logical_name": "plio_input_dense1",
+                "shim_column": 20,
+                "slaveOrMaster": 0,
+                "stream_id": 1
+            },
+            "plio1": {
+                "id": 1,
+                "name": "g.pl_w_dense1",
+                "logical_name": "plio_weights_dense1",
+                "shim_column": 20,
+                "slaveOrMaster": 0,
+                "stream_id": 4
+            },
+            "plio2": {
+                "id": 2,
+                "name": "g.pl_out_dense1",
+                "logical_name": "plio_output_dense1",
+                "shim_column": 20,
+                "slaveOrMaster": 1,
+                "stream_id": 0
+            },
+            "plio3": {
+                "id": 3,
+                "name": "g.pl_in_dense2[0]",
+                "logical_name": "plio_input_dense2_0",
+                "shim_column": 17,
+                "slaveOrMaster": 0,
+                "stream_id": 1
+            },
+            "plio4": {
+                "id": 4,
+                "name": "g.pl_w_dense2[0]",
+                "logical_name": "plio_weights_dense2_0",
+                "shim_column": 17,
+                "slaveOrMaster": 0,
+                "stream_id": 4
+            },
+            "plio5": {
+                "id": 5,
+                "name": "g.pl_in_dense2[1]",
+                "logical_name": "plio_input_dense2_1",
+                "shim_column": 18,
+                "slaveOrMaster": 0,
+                "stream_id": 1
+            },
+            "plio6": {
+                "id": 6,
+                "name": "g.pl_w_dense2[1]",
+                "logical_name": "plio_weights_dense2_1",
+                "shim_column": 18,
+                "slaveOrMaster": 0,
+                "stream_id": 4
+            },
+            "plio7": {
+                "id": 7,
+                "name": "g.pl_out_dense2",
+                "logical_name": "plio_output_dense2",
+                "shim_column": 18,
+                "slaveOrMaster": 1,
+                "stream_id": 0
+            }
+        },
+        "EventGraphs": {
+            "graph0": {
+                "id": 0,
+                "name": "g",
+                "core_columns": [
+                    17,
+                    18,
+                    20
+                ],
+                "core_rows": [
+                    0,
+                    0,
+                    0
+                ],
+                "dma_columns": [
+                    17,
+                    17,
+                    18,
+                    18,
+                    19,
+                    19,
+                    18,
+                    20
+                ],
+                "dma_rows": [
+                    0,
+                    1,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                    1
+                ]
+            }
+        },
+        "DeviceData": {
+            "AIEBaseAddress": "0x20000000000",
+            "AIEFrequency": 1250
+        },
+        "TraceGMIOs": {},
+        "AIEConfigsForTraceAndProfile": {
+            "GMIOs": {},
+            "PLIOs": {
+                "plio0": {
+                    "logical_name": "plio_input_dense1",
+                    "data_width": 32
+                },
+                "plio1": {
+                    "logical_name": "plio_weights_dense1",
+                    "data_width": 32
+                },
+                "plio2": {
+                    "logical_name": "plio_output_dense1",
+                    "data_width": 32
+                },
+                "plio3": {
+                    "logical_name": "plio_input_dense2_0",
+                    "data_width": 32
+                },
+                "plio4": {
+                    "logical_name": "plio_weights_dense2_0",
+                    "data_width": 32
+                },
+                "plio5": {
+                    "logical_name": "plio_input_dense2_1",
+                    "data_width": 32
+                },
+                "plio6": {
+                    "logical_name": "plio_weights_dense2_1",
+                    "data_width": 32
+                },
+                "plio7": {
+                    "logical_name": "plio_output_dense2",
+                    "data_width": 32
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,1404 @@
+{
+    "schema": "MEGraphSchema-0.4",
+    "id": "root",
+    "blockTypes": {
+        "b3": {
+            "type": "plio",
+            "ports": {
+                "po0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "out",
+                    "portName": "pl_in_dense1.out[0]"
+                }
+            }
+        },
+        "b4": {
+            "type": "plio",
+            "ports": {
+                "po0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "out",
+                    "portName": "pl_w_dense1.out[0]"
+                }
+            }
+        },
+        "b5": {
+            "type": "plio",
+            "ports": {
+                "pi0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "in",
+                    "portName": "pl_out_dense1.in[0]"
+                }
+            }
+        },
+        "b6": {
+            "type": "plio",
+            "ports": {
+                "po0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "out",
+                    "portName": "pl_in_dense2[0].out[0]"
+                }
+            }
+        },
+        "b7": {
+            "type": "plio",
+            "ports": {
+                "po0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "out",
+                    "portName": "pl_w_dense2[0].out[0]"
+                }
+            }
+        },
+        "b8": {
+            "type": "plio",
+            "ports": {
+                "po0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "out",
+                    "portName": "pl_in_dense2[1].out[0]"
+                }
+            }
+        },
+        "b9": {
+            "type": "plio",
+            "ports": {
+                "po0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "out",
+                    "portName": "pl_w_dense2[1].out[0]"
+                }
+            }
+        },
+        "b10": {
+            "type": "plio",
+            "ports": {
+                "pi0": {
+                    "type": "stream",
+                    "elementType": "float",
+                    "direction": "in",
+                    "portName": "pl_out_dense2.in[0]"
+                }
+            }
+        },
+        "b0": {
+            "type": "function",
+            "function": "matVecMulMain",
+            "srcFile": "matrix_vector_mul.cpp",
+            "headers": [
+                "matrix_vector_mul.hpp",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/include/aie/matrix_vector_mul.hpp"
+            ],
+            "class": "xf::dsp::aie::blas::matrix_vector_mul::matrix_vector_mul<float, float, 128, 8, 0, 0, 0, 1, 1, 0, false, false>",
+            "ports": {
+                "pi0": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "in",
+                    "parameterIndex": 0,
+                    "bufferPort": true,
+                    "portName": "in[0]",
+                    "varName": "inWindowA",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::in, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                },
+                "pi1": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "in",
+                    "parameterIndex": 1,
+                    "bufferPort": true,
+                    "portName": "in[1]",
+                    "varName": "inWindowB",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::in, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                },
+                "po0": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "out",
+                    "parameterIndex": 2,
+                    "bufferPort": true,
+                    "portName": "out[0]",
+                    "varName": "outWindow",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::out, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                }
+            }
+        },
+        "b1": {
+            "type": "function",
+            "function": "matVecMulMain",
+            "srcFile": "matrix_vector_mul.cpp",
+            "headers": [
+                "matrix_vector_mul.hpp",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/include/aie/matrix_vector_mul.hpp"
+            ],
+            "class": "xf::dsp::aie::blas::matrix_vector_mul::matrix_vector_mul<float, float, 128, 128, 0, 0, 0, 1, 2, 1, true, false>",
+            "ports": {
+                "pi0": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "in",
+                    "parameterIndex": 0,
+                    "bufferPort": true,
+                    "portName": "in[0]",
+                    "varName": "inWindowA",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::in, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                },
+                "pi1": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "in",
+                    "parameterIndex": 1,
+                    "bufferPort": true,
+                    "portName": "in[1]",
+                    "varName": "inWindowB",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::in, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                },
+                "pi2": {
+                    "type": "cascade",
+                    "elementType": "accfloat",
+                    "direction": "in",
+                    "parameterIndex": 2,
+                    "portName": "in[2]",
+                    "varName": "inCascade",
+                    "cppDataType": "input_stream<accfloat> *"
+                },
+                "po0": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "out",
+                    "parameterIndex": 3,
+                    "bufferPort": true,
+                    "portName": "out[0]",
+                    "varName": "outWindow",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::out, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                }
+            }
+        },
+        "b2": {
+            "type": "function",
+            "function": "matVecMulMain",
+            "srcFile": "matrix_vector_mul.cpp",
+            "headers": [
+                "matrix_vector_mul.hpp",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L1/include/aie/matrix_vector_mul.hpp"
+            ],
+            "class": "xf::dsp::aie::blas::matrix_vector_mul::matrix_vector_mul<float, float, 128, 128, 0, 0, 0, 1, 2, 0, false, true>",
+            "ports": {
+                "pi0": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "in",
+                    "parameterIndex": 0,
+                    "bufferPort": true,
+                    "portName": "in[0]",
+                    "varName": "inWindowA",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::in, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                },
+                "pi1": {
+                    "type": "mem",
+                    "elementType": "float",
+                    "direction": "in",
+                    "parameterIndex": 1,
+                    "bufferPort": true,
+                    "portName": "in[1]",
+                    "varName": "inWindowB",
+                    "cppDataType": "adf::io_buffer<float, adf::direction::in, adf::io_buffer_config<>> &__restrict",
+                    "dimensions": [
+                        4294967295
+                    ]
+                },
+                "po0": {
+                    "type": "cascade",
+                    "elementType": "accfloat",
+                    "direction": "out",
+                    "parameterIndex": 2,
+                    "portName": "out[0]",
+                    "varName": "outCascade",
+                    "cppDataType": "output_stream<accfloat> *"
+                }
+            }
+        },
+        "ps_b11": {
+            "type": "function",
+            "function": "ps_main",
+            "srcFile": "graph.cpp",
+            "implType": "unknown"
+        }
+    },
+    "blockInstances": {
+        "i0": {
+            "blockType": "b0",
+            "graphIds": [
+                1,
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g.dense1",
+            "qualifiedName": "g.dense1.m_mat_vec_mulKernels[0]",
+            "runTime": 0.8,
+            "fabric": "me",
+            "instanceId": 0,
+            "loc": "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:171:39"
+        },
+        "i1": {
+            "blockType": "b1",
+            "graphIds": [
+                2,
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g.dense2",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[1]",
+            "runTime": 0.8,
+            "fabric": "me",
+            "instanceId": 1,
+            "loc": "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:135:66"
+        },
+        "i2": {
+            "blockType": "b2",
+            "graphIds": [
+                2,
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g.dense2",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[0]",
+            "runTime": 0.8,
+            "fabric": "me",
+            "instanceId": 2,
+            "loc": "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:111:59"
+        },
+        "i3": {
+            "blockType": "b3",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_in_dense1",
+            "dataWidth": 32,
+            "dataFile": "data/input_data.txt",
+            "logicalName": "plio_input_dense1",
+            "plFreq": 300.0,
+            "instanceId": 0,
+            "loc": "./graph.h:51:5"
+        },
+        "i4": {
+            "blockType": "b4",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_w_dense1",
+            "dataWidth": 32,
+            "dataFile": "data/weights_dense1.txt",
+            "logicalName": "plio_weights_dense1",
+            "plFreq": 300.0,
+            "instanceId": 1,
+            "loc": "./graph.h:52:5"
+        },
+        "i5": {
+            "blockType": "b5",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_out_dense1",
+            "dataWidth": 32,
+            "dataFile": "data/dense1_output_aie.txt",
+            "logicalName": "plio_output_dense1",
+            "plFreq": 300.0,
+            "instanceId": 2,
+            "loc": "./graph.h:53:5"
+        },
+        "i6": {
+            "blockType": "b6",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_in_dense2[0]",
+            "dataWidth": 32,
+            "dataFile": "data/leakyrelu_output_part0.txt",
+            "logicalName": "plio_input_dense2_0",
+            "plFreq": 300.0,
+            "instanceId": 3,
+            "loc": "./graph.h:58:5"
+        },
+        "i7": {
+            "blockType": "b7",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_w_dense2[0]",
+            "dataWidth": 32,
+            "dataFile": "data/weights_dense2_part0.txt",
+            "logicalName": "plio_weights_dense2_0",
+            "plFreq": 300.0,
+            "instanceId": 4,
+            "loc": "./graph.h:59:5"
+        },
+        "i8": {
+            "blockType": "b8",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_in_dense2[1]",
+            "dataWidth": 32,
+            "dataFile": "data/leakyrelu_output_part1.txt",
+            "logicalName": "plio_input_dense2_1",
+            "plFreq": 300.0,
+            "instanceId": 5,
+            "loc": "./graph.h:58:5"
+        },
+        "i9": {
+            "blockType": "b9",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_w_dense2[1]",
+            "dataWidth": 32,
+            "dataFile": "data/weights_dense2_part1.txt",
+            "logicalName": "plio_weights_dense2_1",
+            "plFreq": 300.0,
+            "instanceId": 6,
+            "loc": "./graph.h:59:5"
+        },
+        "i10": {
+            "blockType": "b10",
+            "graphIds": [
+                0
+            ],
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "qualifiedGraphName": "g",
+            "qualifiedName": "g.pl_out_dense2",
+            "dataWidth": 32,
+            "logicalName": "plio_output_dense2",
+            "plFreq": 300.0,
+            "instanceId": 7,
+            "loc": "./graph.h:60:5"
+        },
+        "ps_i11": {
+            "blockType": "ps_b11",
+            "graphIds": [
+                -1
+            ],
+            "fabric": "fpga",
+            "plAxiLite": "useDefault",
+            "plFreq": 300.0
+        }
+    },
+    "portInstances": {
+        "i0_pi0": {
+            "margin": 0,
+            "port": "pi0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[0].in[0]",
+            "qualifiedName": "g.dense1.m_mat_vec_mulKernels[0].in[0]",
+            "instanceId": 3,
+            "blockInstance": "i0",
+            "blockSize": 4096,
+            "dimensions": [
+                1024
+            ]
+        },
+        "i0_pi1": {
+            "margin": 0,
+            "port": "pi1",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[0].in[1]",
+            "qualifiedName": "g.dense1.m_mat_vec_mulKernels[0].in[1]",
+            "instanceId": 4,
+            "blockInstance": "i0",
+            "blockSize": 32,
+            "dimensions": [
+                8
+            ]
+        },
+        "i0_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[0].out[0]",
+            "qualifiedName": "g.dense1.m_mat_vec_mulKernels[0].out[0]",
+            "instanceId": 5,
+            "blockInstance": "i0",
+            "blockSize": 512,
+            "dimensions": [
+                128
+            ]
+        },
+        "i1_pi0": {
+            "margin": 0,
+            "port": "pi0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[1].in[0]",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[1].in[0]",
+            "instanceId": 11,
+            "blockInstance": "i1",
+            "blockSize": 32768,
+            "dimensions": [
+                8192
+            ]
+        },
+        "i1_pi1": {
+            "margin": 0,
+            "port": "pi1",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[1].in[1]",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[1].in[1]",
+            "instanceId": 12,
+            "blockInstance": "i1",
+            "blockSize": 256,
+            "dimensions": [
+                64
+            ]
+        },
+        "i1_pi2": {
+            "margin": 0,
+            "port": "pi2",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[1].in[2]",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[1].in[2]",
+            "instanceId": 13,
+            "blockInstance": "i1"
+        },
+        "i1_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[1].out[0]",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[1].out[0]",
+            "instanceId": 14,
+            "blockInstance": "i1",
+            "blockSize": 512,
+            "dimensions": [
+                128
+            ]
+        },
+        "i2_pi0": {
+            "margin": 0,
+            "port": "pi0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[0].in[0]",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[0].in[0]",
+            "instanceId": 15,
+            "blockInstance": "i2",
+            "blockSize": 32768,
+            "dimensions": [
+                8192
+            ]
+        },
+        "i2_pi1": {
+            "margin": 0,
+            "port": "pi1",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[0].in[1]",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[0].in[1]",
+            "instanceId": 16,
+            "blockInstance": "i2",
+            "blockSize": 256,
+            "dimensions": [
+                64
+            ]
+        },
+        "i2_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "m_mat_vec_mulKernels[0].out[0]",
+            "qualifiedName": "g.dense2.m_mat_vec_mulKernels[0].out[0]",
+            "instanceId": 17,
+            "blockInstance": "i2"
+        },
+        "i3_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_in_dense1.out[0]",
+            "qualifiedName": "g.pl_in_dense1.out[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense1.inB[0]"
+            ],
+            "blockInstance": "i3"
+        },
+        "i4_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_w_dense1.out[0]",
+            "qualifiedName": "g.pl_w_dense1.out[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense1.inA[0]"
+            ],
+            "blockInstance": "i4"
+        },
+        "i5_pi0": {
+            "margin": 0,
+            "port": "pi0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_out_dense1.in[0]",
+            "qualifiedName": "g.pl_out_dense1.in[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense1.out[0]"
+            ],
+            "blockInstance": "i5"
+        },
+        "i6_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_in_dense2[0].out[0]",
+            "qualifiedName": "g.pl_in_dense2[0].out[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense2.inB[0]"
+            ],
+            "blockInstance": "i6"
+        },
+        "i7_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_w_dense2[0].out[0]",
+            "qualifiedName": "g.pl_w_dense2[0].out[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense2.inA[0]"
+            ],
+            "blockInstance": "i7"
+        },
+        "i8_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_in_dense2[1].out[0]",
+            "qualifiedName": "g.pl_in_dense2[1].out[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense2.inB[1]"
+            ],
+            "blockInstance": "i8"
+        },
+        "i9_po0": {
+            "margin": 0,
+            "port": "po0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_w_dense2[1].out[0]",
+            "qualifiedName": "g.pl_w_dense2[1].out[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense2.inA[1]"
+            ],
+            "blockInstance": "i9"
+        },
+        "i10_pi0": {
+            "margin": 0,
+            "port": "pi0",
+            "graphName": "g",
+            "graphType": "NeuralNetworkGraph",
+            "portName": "pl_out_dense2.in[0]",
+            "qualifiedName": "g.pl_out_dense2.in[0]",
+            "qualifiedGraphPortAliasNames": [
+                "g.dense2.out[0]"
+            ],
+            "blockInstance": "i10"
+        }
+    },
+    "nets": {
+        "net0": {
+            "srcInstance": "i4",
+            "srcPort": "i4_po0",
+            "dstInstance": "i0",
+            "dstPort": "i0_pi0",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "./graph.h:72:9",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:345:17"
+            ]
+        },
+        "net1": {
+            "srcInstance": "i3",
+            "srcPort": "i3_po0",
+            "dstInstance": "i0",
+            "dstPort": "i0_pi1",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "./graph.h:73:9",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:359:17"
+            ]
+        },
+        "net2": {
+            "srcInstance": "i0",
+            "srcPort": "i0_po0",
+            "dstInstance": "i5",
+            "dstPort": "i5_pi0",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:371:13",
+                "./graph.h:74:9"
+            ]
+        },
+        "net3": {
+            "srcInstance": "i7",
+            "srcPort": "i7_po0",
+            "dstInstance": "i2",
+            "dstPort": "i2_pi0",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "./graph.h:87:13",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:345:17"
+            ]
+        },
+        "net4": {
+            "srcInstance": "i6",
+            "srcPort": "i6_po0",
+            "dstInstance": "i2",
+            "dstPort": "i2_pi1",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "./graph.h:86:13",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:359:17"
+            ]
+        },
+        "net5": {
+            "srcInstance": "i2",
+            "srcPort": "i2_po0",
+            "dstInstance": "i1",
+            "dstPort": "i1_pi2",
+            "varNames": [
+                ""
+            ],
+            "locs": [
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:341:21"
+            ]
+        },
+        "net6": {
+            "srcInstance": "i9",
+            "srcPort": "i9_po0",
+            "dstInstance": "i1",
+            "dstPort": "i1_pi0",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "./graph.h:87:13",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:345:17"
+            ]
+        },
+        "net7": {
+            "srcInstance": "i8",
+            "srcPort": "i8_po0",
+            "dstInstance": "i1",
+            "dstPort": "i1_pi1",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "./graph.h:86:13",
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:359:17"
+            ]
+        },
+        "net8": {
+            "srcInstance": "i1",
+            "srcPort": "i1_po0",
+            "dstInstance": "i10",
+            "dstPort": "i10_pi0",
+            "varNames": [
+                "",
+                ""
+            ],
+            "locs": [
+                "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp:371:13",
+                "./graph.h:91:9"
+            ]
+        }
+    },
+    "debugInfo": {
+        "i0": {
+            "varName": "m_mat_vec_mulKernels[0]"
+        },
+        "i1": {
+            "varName": "m_mat_vec_mulKernels[1]"
+        },
+        "i2": {
+            "varName": "m_mat_vec_mulKernels[0]"
+        },
+        "i3": {
+            "varName": "pl_in_dense1"
+        },
+        "i4": {
+            "varName": "pl_w_dense1"
+        },
+        "i5": {
+            "varName": "pl_out_dense1"
+        },
+        "i6": {
+            "varName": "pl_in_dense2[0]"
+        },
+        "i7": {
+            "varName": "pl_w_dense2[0]"
+        },
+        "i8": {
+            "varName": "pl_in_dense2[1]"
+        },
+        "i9": {
+            "varName": "pl_w_dense2[1]"
+        },
+        "i10": {
+            "varName": "pl_out_dense2"
+        },
+        "ps_i11": {
+            "varName": ""
+        },
+        "i0_pi0": {
+            "varName": "m_mat_vec_mulKernels[0].in[0]"
+        },
+        "i0_pi1": {
+            "varName": "m_mat_vec_mulKernels[0].in[1]"
+        },
+        "i0_po0": {
+            "varName": "m_mat_vec_mulKernels[0].out[0]"
+        },
+        "i1_pi0": {
+            "varName": "m_mat_vec_mulKernels[1].in[0]"
+        },
+        "i1_pi1": {
+            "varName": "m_mat_vec_mulKernels[1].in[1]"
+        },
+        "i1_pi2": {
+            "varName": "m_mat_vec_mulKernels[1].in[2]"
+        },
+        "i1_po0": {
+            "varName": "m_mat_vec_mulKernels[1].out[0]"
+        },
+        "i2_pi0": {
+            "varName": "m_mat_vec_mulKernels[0].in[0]"
+        },
+        "i2_pi1": {
+            "varName": "m_mat_vec_mulKernels[0].in[1]"
+        },
+        "i2_po0": {
+            "varName": "m_mat_vec_mulKernels[0].out[0]"
+        },
+        "i3_po0": {
+            "varName": "pl_in_dense1.out[0]"
+        },
+        "i4_po0": {
+            "varName": "pl_w_dense1.out[0]"
+        },
+        "i5_pi0": {
+            "varName": "pl_out_dense1.in[0]"
+        },
+        "i6_po0": {
+            "varName": "pl_in_dense2[0].out[0]"
+        },
+        "i7_po0": {
+            "varName": "pl_w_dense2[0].out[0]"
+        },
+        "i8_po0": {
+            "varName": "pl_in_dense2[1].out[0]"
+        },
+        "i9_po0": {
+            "varName": "pl_w_dense2[1].out[0]"
+        },
+        "i10_pi0": {
+            "varName": "pl_out_dense2.in[0]"
+        }
+    },
+    "graphFilesInfo": {
+        "headerFiles": [
+            "/home/synthara/VersalPrjs/Vitis_Libraries/dsp/L2/include/aie/matrix_vector_mul_graph.hpp",
+            "./graph.h"
+        ]
+    },
+    "mapping": {
+        "blockInstanceMapping": {
+            "i0": {
+                "coreInfo": {
+                    "tile": "aie",
+                    "column": 20,
+                    "row": 0,
+                    "schedule": 0
+                }
+            },
+            "i1": {
+                "coreInfo": {
+                    "tile": "aie",
+                    "column": 18,
+                    "row": 0,
+                    "schedule": 0
+                }
+            },
+            "i10": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 18,
+                    "direction": "aie2pl",
+                    "channel": 0
+                }
+            },
+            "i2": {
+                "coreInfo": {
+                    "tile": "aie",
+                    "column": 17,
+                    "row": 0,
+                    "schedule": 0
+                }
+            },
+            "i3": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 20,
+                    "direction": "pl2aie",
+                    "channel": 1
+                }
+            },
+            "i4": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 20,
+                    "direction": "pl2aie",
+                    "channel": 4
+                }
+            },
+            "i5": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 20,
+                    "direction": "aie2pl",
+                    "channel": 0
+                }
+            },
+            "i6": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 17,
+                    "direction": "pl2aie",
+                    "channel": 1
+                }
+            },
+            "i7": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 17,
+                    "direction": "pl2aie",
+                    "channel": 4
+                }
+            },
+            "i8": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 18,
+                    "direction": "pl2aie",
+                    "channel": 1
+                }
+            },
+            "i9": {
+                "plioInfo": {
+                    "tile": "shim",
+                    "column": 18,
+                    "direction": "pl2aie",
+                    "channel": 4
+                }
+            }
+        },
+        "portInstanceMapping": {
+            "i0_pi0": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf0",
+                        "tile": "aie",
+                        "column": 19,
+                        "row": 0,
+                        "offset": 49152,
+                        "size": 4096,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    },
+                    {
+                        "generatedName": "buf0d",
+                        "tile": "aie",
+                        "column": 19,
+                        "row": 0,
+                        "offset": 32768,
+                        "size": 4096,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 19,
+                    "row": 0,
+                    "direction": "s2mm",
+                    "channel": 0,
+                    "bufferDescriptor": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "i0_pi1": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf1",
+                        "tile": "aie",
+                        "column": 19,
+                        "row": 0,
+                        "offset": 16896,
+                        "size": 32,
+                        "lock": [
+                            2,
+                            3
+                        ]
+                    },
+                    {
+                        "generatedName": "buf1d",
+                        "tile": "aie",
+                        "column": 19,
+                        "row": 0,
+                        "offset": 1952,
+                        "size": 32,
+                        "lock": [
+                            2,
+                            3
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 19,
+                    "row": 0,
+                    "direction": "s2mm",
+                    "channel": 1,
+                    "bufferDescriptor": [
+                        2,
+                        3
+                    ]
+                }
+            },
+            "i0_po0": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf2",
+                        "tile": "aie",
+                        "column": 20,
+                        "row": 1,
+                        "offset": 0,
+                        "size": 512,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    },
+                    {
+                        "generatedName": "buf2d",
+                        "tile": "aie",
+                        "column": 20,
+                        "row": 1,
+                        "offset": 16384,
+                        "size": 512,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 20,
+                    "row": 1,
+                    "direction": "mm2s",
+                    "channel": 0,
+                    "bufferDescriptor": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "i10_pi0": {},
+            "i1_pi0": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf6",
+                        "tile": "aie",
+                        "column": 18,
+                        "row": 1,
+                        "offset": 0,
+                        "size": 32768,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    },
+                    {
+                        "generatedName": "buf6d",
+                        "tile": "aie",
+                        "column": 18,
+                        "row": 1,
+                        "offset": 32768,
+                        "size": 32768,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 18,
+                    "row": 1,
+                    "direction": "s2mm",
+                    "channel": 0,
+                    "bufferDescriptor": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "i1_pi1": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf8",
+                        "tile": "aie",
+                        "column": 18,
+                        "row": 0,
+                        "offset": 32768,
+                        "size": 256,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    },
+                    {
+                        "generatedName": "buf8d",
+                        "tile": "aie",
+                        "column": 18,
+                        "row": 0,
+                        "offset": 16128,
+                        "size": 256,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 18,
+                    "row": 0,
+                    "direction": "s2mm",
+                    "channel": 0,
+                    "bufferDescriptor": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "i1_pi2": {},
+            "i1_po0": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf9",
+                        "tile": "aie",
+                        "column": 18,
+                        "row": 0,
+                        "offset": 20096,
+                        "size": 512,
+                        "lock": [
+                            2,
+                            3
+                        ]
+                    },
+                    {
+                        "generatedName": "buf9d",
+                        "tile": "aie",
+                        "column": 18,
+                        "row": 0,
+                        "offset": 49152,
+                        "size": 512,
+                        "lock": [
+                            2,
+                            3
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 18,
+                    "row": 0,
+                    "direction": "mm2s",
+                    "channel": 0,
+                    "bufferDescriptor": [
+                        2,
+                        3
+                    ]
+                }
+            },
+            "i2_pi0": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf3",
+                        "tile": "aie",
+                        "column": 17,
+                        "row": 0,
+                        "offset": 0,
+                        "size": 32768,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    },
+                    {
+                        "generatedName": "buf3d",
+                        "tile": "aie",
+                        "column": 17,
+                        "row": 0,
+                        "offset": 32768,
+                        "size": 32768,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 17,
+                    "row": 0,
+                    "direction": "s2mm",
+                    "channel": 0,
+                    "bufferDescriptor": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "i2_pi1": {
+                "bufferInfo": [
+                    {
+                        "generatedName": "buf5",
+                        "tile": "aie",
+                        "column": 17,
+                        "row": 1,
+                        "offset": 32768,
+                        "size": 256,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    },
+                    {
+                        "generatedName": "buf5d",
+                        "tile": "aie",
+                        "column": 17,
+                        "row": 1,
+                        "offset": 16960,
+                        "size": 256,
+                        "lock": [
+                            0,
+                            1
+                        ]
+                    }
+                ],
+                "dmaInfo": {
+                    "tile": "aie",
+                    "column": 17,
+                    "row": 1,
+                    "direction": "s2mm",
+                    "channel": 0,
+                    "bufferDescriptor": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "i2_po0": {},
+            "i3_po0": {},
+            "i4_po0": {},
+            "i5_pi0": {},
+            "i6_po0": {},
+            "i7_po0": {},
+            "i8_po0": {},
+            "i9_po0": {}
+        },
+        "graphInstanceMapping": {
+            "g": {
+                "graphInfo": {
+                    "core_columns": [
+                        17,
+                        18,
+                        20
+                    ],
+                    "core_rows": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "iteration_memory_columns": [
+                        17,
+                        18,
+                        19
+                    ],
+                    "iteration_memory_rows": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "iteration_memory_addresses": [
+                        4,
+                        16644,
+                        516
+                    ],
+                    "multirate_triggers": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "DMAFIFO": {},
+        "systemMemory": [
+            {
+                "tile": "aie",
+                "column": 17,
+                "row": 1,
+                "offset": 0,
+                "size": 1420
+            },
+            {
+                "tile": "aie",
+                "column": 18,
+                "row": 0,
+                "offset": 16640,
+                "size": 1421
+            },
+            {
+                "tile": "aie",
+                "column": 19,
+                "row": 0,
+                "offset": 512,
+                "size": 1422
+            }
+        ]
+    },
+    "scheduling": {
+        "i0": {
+            "repetition_count": 1
+        },
+        "i1": {
+            "repetition_count": 1
+        },
+        "i2": {
+            "repetition_count": 1
+        }
+    },
+    "event_trace_graph": {
+        "trace_ports": {}
+    },
+    "aie_driver_config": {
+        "hw_gen": 2,
+        "base_address": 2199023255552,
+        "npi_address": 4140892160,
+        "column_shift": 25,
+        "row_shift": 20,
+        "num_rows": 11,
+        "num_columns": 38,
+        "shim_row": 0,
+        "mem_row_start": 1,
+        "mem_num_rows": 2,
+        "aie_tile_row_start": 3,
+        "aie_tile_num_rows": 8
+    },
+    "unreachable_plio_shim_columns": {
+        "column_nums": "0, 1, 2, 3, 4, 33, 34, 35, 36, 37"
+    },
+    "part": "xcve2802-vsvh1760-2MP-e-S",
+    "platform": "/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm"
+}

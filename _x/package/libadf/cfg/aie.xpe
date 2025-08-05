@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<POWERDATA data="AI-Engine Compiler" dataVersion="" design="graph" date="Mon Aug  4 21:37:04 2025
+">
+ <DEVICE part="xcve2802" grade="extended" package="vsvh1760" speed="-2MP" process="typical" vid="No"></DEVICE>
+  <AIE status="COMPILER_OUTPUT">
+    <AIE_MODULE name="graph" num_tiles="7" clk_freq="1250">
+      <TILE name="CR(17,0)" type="int16" int_core_load="0.48" fp_core_load="0" mem_banks="8" mem_rw_rate="0.2" stream_util="0.067" coordinates="17,1">
+        <KERNEL name="i2"  int_core_load="0.8" fp_core_load="0"></KERNEL>
+      </TILE>
+      <TILE name="CR(17,1)" type="none" int_core_load="0" fp_core_load="0" mem_banks="6" mem_rw_rate="0.2" stream_util="0.033" coordinates="17,2">
+      </TILE>
+      <TILE name="CR(18,0)" type="int16" int_core_load="0.48" fp_core_load="0" mem_banks="8" mem_rw_rate="0.2" stream_util="0.11" coordinates="18,1">
+        <KERNEL name="i1"  int_core_load="0.8" fp_core_load="0"></KERNEL>
+      </TILE>
+      <TILE name="CR(18,1)" type="none" int_core_load="0" fp_core_load="0" mem_banks="8" mem_rw_rate="0.2" stream_util="0.033" coordinates="18,2">
+      </TILE>
+      <TILE name="CR(19,0)" type="none" int_core_load="0" fp_core_load="0" mem_banks="8" mem_rw_rate="0.2" stream_util="0.067" coordinates="19,1">
+      </TILE>
+      <TILE name="CR(20,0)" type="int16" int_core_load="0.48" fp_core_load="0" mem_banks="0" mem_rw_rate="0.2" stream_util="0.042" coordinates="20,1">
+        <KERNEL name="i0"  int_core_load="0.8" fp_core_load="0"></KERNEL>
+      </TILE>
+      <TILE name="CR(20,1)" type="none" int_core_load="0" fp_core_load="0" mem_banks="4" mem_rw_rate="0.2" stream_util="0.042" coordinates="20,2">
+      </TILE>
+      <SHIM name="SHIM(17, 0)" type="AIE_PL_SHIM" stream_util="0.071" num_pl_streams="2" num_aximm_connections="0" coordinates="17,0"></SHIM>
+      <SHIM name="SHIM(18, 0)" type="AIE_PL_SHIM" stream_util="0.12" num_pl_streams="3" num_aximm_connections="0" coordinates="18,0"></SHIM>
+      <SHIM name="SHIM(19, 0)" type="AIE_PL_SHIM" stream_util="0.071" num_pl_streams="0" num_aximm_connections="0" coordinates="19,0"></SHIM>
+      <SHIM name="SHIM(20, 0)" type="AIE_PL_SHIM" stream_util="0.12" num_pl_streams="3" num_aximm_connections="0" coordinates="20,0"></SHIM>
+      <MEM name="MEM(17,0)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.068" coordinates="17,0"></MEM>
+      <MEM name="MEM(17,1)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.068" coordinates="17,1"></MEM>
+      <MEM name="MEM(18,0)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.11" coordinates="18,0"></MEM>
+      <MEM name="MEM(18,1)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.11" coordinates="18,1"></MEM>
+      <MEM name="MEM(19,0)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.068" coordinates="19,0"></MEM>
+      <MEM name="MEM(19,1)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.068" coordinates="19,1"></MEM>
+      <MEM name="MEM(20,0)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.043" coordinates="20,0"></MEM>
+      <MEM name="MEM(20,1)" type="AIE_MEM" mem_banks="0" mem_rw_rate="0.2" stream_util="0.043" coordinates="20,1"></MEM>
+    </AIE_MODULE>
+  </AIE>
+</POWERDATA>

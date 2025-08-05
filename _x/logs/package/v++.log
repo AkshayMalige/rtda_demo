@@ -1,0 +1,41 @@
+INFO: [v++ 60-1306] Additional information associated with this v++ package can be found at:
+	Reports: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/package
+	Log files: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/package
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/system_hw_emu.xclbin.package_summary, at Mon Aug  4 21:49:26 2025
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/package/v++_package_system_hw_emu_guidance.html', at Mon Aug  4 21:49:26 2025
+INFO: [v++ 60-895]   Target platform: /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/hw/hw.xsa'
+INFO: [v++ 60-2256] Packaging for hardware emulation
+INFO: [v++ 82-3881] device architecture set to versal
+WARNING: [v++ 82-10536] Platform doesn't contain boot mode
+INFO: [v++ 82-1012] deleting existing /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/boot_image.bif
+INFO: [v++ 82-1022] generating /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/boot_image.bif
+INFO: [v++ 82-3884] generating pdi for arch versal with bif /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/boot_image.bif
+INFO: [v++ 82-1023] generating boot files
+INFO: [v++ 82-3582] QEMU and NOC addressing from XSA database
+INFO: [v++ 82-3574] Executing ddr_memspec.dtsi to generate PS and PMC DTB files
+INFO: [v++ 82-3564] Deleting existing file: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/package/qemu_dts_files/ddr_memspec.dtsi
+INFO: [v++ 82-3571] Creating noc_memory_config file
+INFO: [v++ 82-3579] Launched the XSCT to generate qemu addressing.
+rlwrap: warning: your $TERM is 'xterm-256color' but rlwrap couldn't find it in the terminfo database. Expect some problems.: Inappropriate ioctl for device
+INFO: [Hsi 55-2099] Unable to extract 'pdi_files' from /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/hw_emu/hw_emu.xsa to /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/hw_emu/extracted/vitis_design_wrapper_0. XSA may not contain 'pdi_files' or the destination directory is read-only
+INFO: [Hsi 55-2053] elapsed time for repository (/tools/Xilinx/Vitis/2024.2/data/embeddedsw) loading 0 seconds
+INFO: [v++ 82-3580] QEMU Addressing files generated successfully.
+INFO: [v++ 82-3574] Executing ddr_memspec.dtsi to generate PS and PMC DTB files
+INFO: [v++ 82-3889] validating boot mode
+INFO: [v++ 82-1017] deleting existing qemu_args.txt
+INFO: [v++ 82-1016] deleting existing pmc_args.txt
+INFO: [v++ 82-3854] deleting existing cfg directory
+INFO: [v++ 82-1069] deleting existing sim directory
+INFO: [v++ 82-1014] deleting existing launch_hw_emulator.sh
+INFO: [v++ 82-1022] generating /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/launch_hw_emu.sh
+INFO: [v++ 82-1018] deleting existing sd_card directory
+INFO: [v++ 82-1011] creating sd_card directory
+INFO: [v++ 82-1083] Deleting existing sd_card.img
+INFO: [v++ 82-3528] mkfsimage command run: /tools/Xilinx/Vitis/2024.2/scripts/vitis/util/mkfsImage.sh -s /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/sd_card/ -o /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/sd_card.img -m 1 -e /home/synthara/versal_common/xilinx-versal-common-v2024.2/rootfs.ext4
+INFO: [v++ 82-10329] EXT4 sd_card image is created.
+INFO: [v++ 82-4237] resize command: $XILINX_VITIS/tps/lnx64/python-3.8.3/bin/python3 $XILINX_VITIS/bin/sd_card_resize.py -sd-card-image /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/sd_card.img 
+INFO: [v++ 60-2460] Successfully copied a temporary xclbin to the output xclbin: /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/system_hw_emu.xclbin
+INFO: [v++ 60-2343] Use the Vitis Unified IDE to visualize and navigate the reports. Run the following command. 
+    vitis -a/ --analyze /home/synthara/VersalPrjs/LDRD/rtda_demo/package.hw_emu/system_hw_emu.xclbin.package_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 35s

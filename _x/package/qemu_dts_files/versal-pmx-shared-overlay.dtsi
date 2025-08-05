@@ -1,0 +1,57 @@
+/*
+ * Versal PMX Shared Overlay.
+ * This contains the overlay that's suitable for the both QEMU
+ * instances in a multi-arch PSX/PMX setup.
+ *
+ * Copyright (c) 2021, Xilinx Inc
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "versal.dtsh"
+
+/* PMX has increased the ROM size from 128K -> 256K.  */
+#define MM_PMX_PMX_ROM			MM_PMC_PMC_ROM
+#define MM_PMX_PMX_ROM_SIZE		0x40000
+
+/*
+ * PMX has increased the PPU1 INSTR RAM size from 128K -> 384K.
+ * This re-size causes the DATA RAM to move up in the address-space.
+ */
+#define MM_PMX_PPU1_RAM_INSTR		MM_PMC_PPU1_RAM_INSTR
+#define MM_PMX_PPU1_RAM_INSTR_SIZE	MM_PMC_PPU1_RAM_INSTR_SIZE
+#define MM_PMX_PPU1_RAM_DATA		MM_PMC_PPU1_RAM_DATA
+#define MM_PMX_PPU1_RAM_DATA_SIZE	MM_PMC_PPU1_RAM_DATA_SIZE
+
+&pmc_rom {
+	reg = <0x0 MM_PMX_PMX_ROM 0x0 MM_PMX_PMX_ROM_SIZE 0x1>;
+};
+
+&pmc_ppu1_insn_ram {
+	reg = <0x0 MM_PMX_PPU1_RAM_INSTR 0x0 MM_PMX_PPU1_RAM_INSTR_SIZE 0x0>;
+};
+
+&pmc_ppu1_data_ram {
+	reg = <0x0 MM_PMX_PPU1_RAM_DATA 0x0 MM_PMX_PPU1_RAM_DATA_SIZE 0x0>;
+};

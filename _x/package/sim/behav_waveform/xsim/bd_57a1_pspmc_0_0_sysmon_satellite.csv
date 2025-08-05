@@ -1,0 +1,8 @@
+Measurement Name , ROOT_ID, POLARITY, AUX_IO_P, AUX_IO_N, Average Enable, Alarm Enable, Low Threshold, High Threshold, Satellite Name 
+VCCAUX, 0, 2 V unipolar, , ,, 1, 0.00, 2.00, PMC system ADCPS9_X0Y0
+VCC_SOC, 5, 2 V unipolar, , ,, 1, 0.00, 2.00, PMC system ADCPS9_X0Y0
+VCCAUX_PMC, 1, 2 V unipolar, , ,, 1, 0.00, 2.00, PMC user ADCPS9_X0Y0
+VCC_PMC, 2, 2 V unipolar, , ,, 1, 0.00, 2.00, PMC user ADCPS9_X0Y0
+VCC_PSFP, 3, 2 V unipolar, , ,, 1, 0.00, 2.00, PMC user ADCPS9_X0Y0
+VCC_PSLP, 4, 2 V unipolar, , ,, 1, 0.00, 2.00, PMC user ADCPS9_X0Y0
+VP_VN, 6, 1 V unipolar, , ,, 1, 0.00, 1.00, PMC user ADCPS9_X0Y0

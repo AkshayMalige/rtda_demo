@@ -1,0 +1,6 @@
+{"PSPMC_CONFIG": [{"SD0": 0,
+"SD1": 1,
+"QSPI": 0,
+"OSPI": 1
+}]
+}

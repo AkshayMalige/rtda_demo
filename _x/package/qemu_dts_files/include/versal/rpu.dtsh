@@ -1,0 +1,55 @@
+/*
+ * Versal RPU header file
+ *
+ * Copyright (c) 2021, Xilinx Inc
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef RPU_CPU_MODEL
+#define RPU_CPU_MODEL "cortex-r5f-arm-cpu"
+#endif
+
+/* Creates a base ARM-R cpu node
+ * arguments:
+ * 	n : cpu index
+ * 	c : cluster id
+ * 	i : cpu id
+ */
+#define RPU_CPU_COMMON(n, c, i)						\
+	compatible = RPU_CPU_MODEL;					\
+	device_type = "cpu";						\
+	arm,tcmtr=<0x00010001>;						\
+	arm,ctr=<0x8003c003>;						\
+	arm,clidr=<0x09200003>;						\
+	arm,ccsidr0 = <0xf01fe019>;					\
+	arm,ccsidr1 = <0xf01fe019>;					\
+	arm,mp-affinity = <glue(glue(0x,c), 0 ## i)>;			\
+	arm,id_pfr0 = <0x131>;						\
+	arm,reset-hivecs = <1>;						\
+	#interrupt-cells = <1>;						\
+	memory = < &amba_r5_ ## n >;					\
+	qemu,halt = <1>;						\
+	memattr_ns = <&rpu ## n ## _s_memattr>
+

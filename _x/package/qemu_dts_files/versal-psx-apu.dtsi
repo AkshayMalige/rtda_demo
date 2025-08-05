@@ -1,0 +1,415 @@
+/*
+ * Versal APU subsystem include file
+ *
+ * Copyright (c) 2016-2022, Xilinx Inc
+ * Copyright (C) 2023-2024, Advanced Micro Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "versal.dtsh"
+#include "versal/apu.dtsh"
+
+#ifndef NUM_APUS
+#error "NUM APUs is not set!"
+#elif NUM_APUS != 8 && NUM_APUS != 16 && NUM_APUS != 32
+#error "NUM APUs must be set to 8 or 16"
+#endif
+
+#define APU_WFI(n)	&psm_global (67 + n)
+#define APU_PWR(n)	&psm_local n
+
+#define APU_GPIOS(CRF, n)					\
+	reset-gpios = <CRF (n % 16)>;				\
+	gpios = < APU_WFI(n) >;					\
+	gpio-names = "wfi"					\
+
+#define GEN_APU_BODY(n, MR)					\
+		APU_COMMON_MR(n, NUM_APUS_PER_CLUSTER, MR);	\
+		gdb-id = STRINGIFY_EXPANDED(Cortex-A78 n);	\
+		#interrupt-cells = <1>
+
+#define GEN_APU_PRIMARY(n)					\
+		cpu ## n: apu_cpu@ ## n {			\
+			GEN_APU_BODY(n, &amba_apu);		\
+			APU_GPIOS(&crf, n);			\
+			power-gpios = < APU_PWR(n) >;		\
+		}
+
+#define GEN_APU_SECONDARY(n)					\
+		cpu ## n: apu_cpu@ ## n {			\
+			GEN_APU_BODY(n, &amba_apu);		\
+			APU_SECONDARY(n);			\
+			APU_GPIOS(&crf, n);			\
+			power-gpios = < APU_PWR(n) >;		\
+		}
+
+#define GEN_APU_SECONDARY_SOCKET(n)				\
+		cpu ## n: apu_cpu@ ## n {			\
+			GEN_APU_BODY(n, &amba_apu1);		\
+			APU_SECONDARY(n);			\
+			APU_GPIOS(&crf, n);			\
+		}
+
+/ {
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		GEN_APU_PRIMARY(0);
+		GEN_APU_SECONDARY(1);
+		GEN_APU_SECONDARY(2);
+		GEN_APU_SECONDARY(3);
+		GEN_APU_SECONDARY(4);
+		GEN_APU_SECONDARY(5);
+		GEN_APU_SECONDARY(6);
+		GEN_APU_SECONDARY(7);
+#if (NUM_APUS >= 16)
+		GEN_APU_SECONDARY(8);
+		GEN_APU_SECONDARY(9);
+		GEN_APU_SECONDARY(10);
+		GEN_APU_SECONDARY(11);
+		GEN_APU_SECONDARY(12);
+		GEN_APU_SECONDARY(13);
+		GEN_APU_SECONDARY(14);
+		GEN_APU_SECONDARY(15);
+#endif
+#if (NUM_APUS >= 32)
+		GEN_APU_SECONDARY_SOCKET(16);
+		GEN_APU_SECONDARY_SOCKET(17);
+		GEN_APU_SECONDARY_SOCKET(18);
+		GEN_APU_SECONDARY_SOCKET(19);
+		GEN_APU_SECONDARY_SOCKET(20);
+		GEN_APU_SECONDARY_SOCKET(21);
+		GEN_APU_SECONDARY_SOCKET(22);
+		GEN_APU_SECONDARY_SOCKET(23);
+		GEN_APU_SECONDARY_SOCKET(24);
+		GEN_APU_SECONDARY_SOCKET(25);
+		GEN_APU_SECONDARY_SOCKET(26);
+		GEN_APU_SECONDARY_SOCKET(27);
+		GEN_APU_SECONDARY_SOCKET(28);
+		GEN_APU_SECONDARY_SOCKET(29);
+		GEN_APU_SECONDARY_SOCKET(30);
+		GEN_APU_SECONDARY_SOCKET(31);
+#endif
+	};
+
+	amba_apu: amba_apu@0 {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		#priority-cells = <1>;
+		compatible = "simple-bus";
+		ranges ;
+
+		downstream_amba {
+			compatible = "qemu:memory-region";
+			alias = <&amba>;
+			/* Full address range with -1 priority.  */
+			reg = <0x0 0x0 0xffffffff 0xffffffff 0xffffffff >;
+		};
+
+		timer: timer {
+			compatible = "arm,armv8-timer";
+			interrupt-parent = <&gic>;
+			interrupts = <0x01000001 13 0xffffff01>,
+				     <0x01000001 14 0xffffff01>,
+				     <0x01000001 11 0xffffff01>,
+				     <0x01000001 10 0xffffff01>;
+			clock-frequency = <100000000>;
+		};
+	};
+
+	amba_apu_gic: amba_apu_gic@0 {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		#priority-cells = <1>;
+		compatible = "simple-bus";
+		ranges ;
+		container = <&amba_fpd>;
+		priority = <0xFFFFFFFF>; /* -1 */
+		gic: interrupt-controller@ACPU_GIC_DIST {
+			#address-cells = <0>;
+			#size-cells = <0>;
+			#interrupt-cells = <3>;
+
+			compatible = "arm-gicv3";
+			reg = < 0x0 ACPU_GIC_DIST 0x0 0x10000 0
+				0x0 ACPU_GIC_REDIST 0x0 0x400000 0>;
+			interrupt-controller ;
+			interrupts-extended =
+				/* IRQs.  */
+				<&cpu0 0>,
+				<&cpu1 0>,
+				<&cpu2 0>,
+				<&cpu3 0>,
+				<&cpu4 0>,
+				<&cpu5 0>,
+				<&cpu6 0>,
+				<&cpu7 0>,
+#if (NUM_APUS >= 16)
+				<&cpu8 0>,
+				<&cpu9 0>,
+				<&cpu10 0>,
+				<&cpu11 0>,
+				<&cpu12 0>,
+				<&cpu13 0>,
+				<&cpu14 0>,
+				<&cpu15 0>,
+#endif
+#if (NUM_APUS >= 32)
+				<&cpu16 0>,
+				<&cpu17 0>,
+				<&cpu18 0>,
+				<&cpu19 0>,
+				<&cpu20 0>,
+				<&cpu21 0>,
+				<&cpu22 0>,
+				<&cpu23 0>,
+				<&cpu24 0>,
+				<&cpu25 0>,
+				<&cpu26 0>,
+				<&cpu27 0>,
+				<&cpu28 0>,
+				<&cpu29 0>,
+				<&cpu30 0>,
+				<&cpu31 0>,
+#endif
+
+				/* FIQs.  */
+				<&cpu0 1>,
+				<&cpu1 1>,
+				<&cpu2 1>,
+				<&cpu3 1>,
+				<&cpu4 1>,
+				<&cpu5 1>,
+				<&cpu6 1>,
+				<&cpu7 1>,
+#if (NUM_APUS >= 16)
+				<&cpu8 1>,
+				<&cpu9 1>,
+				<&cpu10 1>,
+				<&cpu11 1>,
+				<&cpu12 1>,
+				<&cpu13 1>,
+				<&cpu14 1>,
+				<&cpu15 1>,
+#endif
+#if (NUM_APUS >= 32)
+				<&cpu16 1>,
+				<&cpu17 1>,
+				<&cpu18 1>,
+				<&cpu19 1>,
+				<&cpu20 1>,
+				<&cpu21 1>,
+				<&cpu22 1>,
+				<&cpu23 1>,
+				<&cpu24 1>,
+				<&cpu25 1>,
+				<&cpu26 1>,
+				<&cpu27 1>,
+				<&cpu28 1>,
+				<&cpu29 1>,
+				<&cpu30 1>,
+				<&cpu31 1>,
+#endif
+
+				/* Virtual IRQs.  */
+				<&cpu0 2>,
+				<&cpu1 2>,
+				<&cpu2 2>,
+				<&cpu3 2>,
+				<&cpu4 2>,
+				<&cpu5 2>,
+				<&cpu6 2>,
+				<&cpu7 2>,
+#if (NUM_APUS >= 16)
+				<&cpu8 2>,
+				<&cpu9 2>,
+				<&cpu10 2>,
+				<&cpu11 2>,
+				<&cpu12 2>,
+				<&cpu13 2>,
+				<&cpu14 2>,
+				<&cpu15 2>,
+#endif
+#if (NUM_APUS >= 32)
+				<&cpu16 2>,
+				<&cpu17 2>,
+				<&cpu18 2>,
+				<&cpu19 2>,
+				<&cpu20 2>,
+				<&cpu21 2>,
+				<&cpu22 2>,
+				<&cpu23 2>,
+				<&cpu24 2>,
+				<&cpu25 2>,
+				<&cpu26 2>,
+				<&cpu27 2>,
+				<&cpu28 2>,
+				<&cpu29 2>,
+				<&cpu30 2>,
+				<&cpu31 2>,
+#endif
+
+				/* Virtual FIQs.  */
+				<&cpu0 3>,
+				<&cpu1 3>,
+				<&cpu2 3>,
+				<&cpu3 3>,
+				<&cpu4 3>,
+				<&cpu5 3>,
+				<&cpu6 3>,
+				<&cpu7 3>,
+#if (NUM_APUS >= 16)
+				<&cpu8 3>,
+				<&cpu9 3>,
+				<&cpu10 3>,
+				<&cpu11 3>,
+				<&cpu12 3>,
+				<&cpu13 3>,
+				<&cpu14 3>,
+				<&cpu15 3>,
+#endif
+#if (NUM_APUS >= 32)
+				<&cpu16 3>,
+				<&cpu17 3>,
+				<&cpu18 3>,
+				<&cpu19 3>,
+				<&cpu20 3>,
+				<&cpu21 3>,
+				<&cpu22 3>,
+				<&cpu23 3>,
+				<&cpu24 3>,
+				<&cpu25 3>,
+				<&cpu26 3>,
+				<&cpu27 3>,
+				<&cpu28 3>,
+				<&cpu29 3>,
+				<&cpu30 3>,
+				<&cpu31 3>,
+#endif
+
+				<&gic 0x1 0x9 0x00104>,
+				<&gic 0x1 0x9 0x00204>,
+				<&gic 0x1 0x9 0x00404>,
+				<&gic 0x1 0x9 0x00804>,
+				<&gic 0x1 0x9 0x01004>,
+				<&gic 0x1 0x9 0x02004>,
+				<&gic 0x1 0x9 0x04004>,
+				<&gic 0x1 0x9 0x08004>
+#if (NUM_APUS >= 16)
+				,
+				<&gic 0x1 0x9 0x00010004>,
+				<&gic 0x1 0x9 0x00020004>,
+				<&gic 0x1 0x9 0x00040004>,
+				<&gic 0x1 0x9 0x00080004>,
+				<&gic 0x1 0x9 0x00100004>,
+				<&gic 0x1 0x9 0x00200004>,
+				<&gic 0x1 0x9 0x00400004>
+#endif
+#if (NUM_APUS >= 32)
+				,
+				<&gic 0x02000001 0x9 0x01004>,
+				<&gic 0x02000001 0x9 0x01104>,
+				<&gic 0x02000001 0x9 0x01204>,
+				<&gic 0x02000001 0x9 0x01304>,
+				<&gic 0x02000001 0x9 0x01404>,
+				<&gic 0x02000001 0x9 0x01504>,
+				<&gic 0x02000001 0x9 0x01604>,
+				<&gic 0x02000001 0x9 0x01704>,
+				<&gic 0x02000001 0x9 0x01804>,
+				<&gic 0x02000001 0x9 0x01904>,
+				<&gic 0x02000001 0x9 0x01a04>,
+				<&gic 0x02000001 0x9 0x01b04>,
+				<&gic 0x02000001 0x9 0x01c04>,
+				<&gic 0x02000001 0x9 0x01d04>,
+				<&gic 0x02000001 0x9 0x01e04>,
+				<&gic 0x02000001 0x9 0x01f04>
+#endif
+				;
+			num-cpu = <NUM_APUS>;
+			num-irq = <544>;
+			has-security-extensions = <1>;
+			redist-region-count = <NUM_APUS>;
+			has-lpi = < 1 >;
+			sysmem = <&amba>;
+		};
+
+		git_its@MM_APU_GIC_ITS0 {
+			compatible = "arm-gicv3-its";
+			reg = <0x0 MM_APU_GIC_ITS0 0x0 0x20000 0x0>;
+			parent-gicv3 = <&gic>;
+		};
+	};
+};
+
+/* Setup the CPU affinity.  */
+#define CPU_AFFINITY(n, a)			\
+&cpu ## n {					\
+		mp-affinity = <a>;		\
+}
+
+CPU_AFFINITY(0, 0x00000);
+CPU_AFFINITY(1, 0x00100);
+#if NUM_APUS == 8
+CPU_AFFINITY(2, 0x10000);
+CPU_AFFINITY(3, 0x10100);
+CPU_AFFINITY(4, 0x20000);
+CPU_AFFINITY(5, 0x20100);
+CPU_AFFINITY(6, 0x30000);
+CPU_AFFINITY(7, 0x30100);
+#else
+CPU_AFFINITY(2, 0x00200);
+CPU_AFFINITY(3, 0x00300);
+CPU_AFFINITY(4, 0x10000);
+CPU_AFFINITY(5, 0x10100);
+CPU_AFFINITY(6, 0x10200);
+CPU_AFFINITY(7, 0x10300);
+CPU_AFFINITY(8, 0x20000);
+CPU_AFFINITY(9, 0x20100);
+CPU_AFFINITY(10, 0x20200);
+CPU_AFFINITY(11, 0x20300);
+CPU_AFFINITY(12, 0x30000);
+CPU_AFFINITY(13, 0x30100);
+CPU_AFFINITY(14, 0x30200);
+CPU_AFFINITY(15, 0x30300);
+#if (NUM_APUS >= 32)
+CPU_AFFINITY(16, 0x40000);
+CPU_AFFINITY(17, 0x40100);
+CPU_AFFINITY(18, 0x40200);
+CPU_AFFINITY(19, 0x40300);
+CPU_AFFINITY(20, 0x50000);
+CPU_AFFINITY(21, 0x50100);
+CPU_AFFINITY(22, 0x50200);
+CPU_AFFINITY(23, 0x50300);
+CPU_AFFINITY(24, 0x60000);
+CPU_AFFINITY(25, 0x60100);
+CPU_AFFINITY(26, 0x60200);
+CPU_AFFINITY(27, 0x60300);
+CPU_AFFINITY(28, 0x70000);
+CPU_AFFINITY(29, 0x70100);
+CPU_AFFINITY(30, 0x70200);
+CPU_AFFINITY(31, 0x70300);
+#endif
+#endif

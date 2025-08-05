@@ -1,0 +1,11 @@
+/*
+ * Versal Cosim vitis virtual board dts
+ *
+ * Copyright (c) 2022, Xilinx Inc
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include "board-versal-ps-cosim-virt.dts"
+#include "versal-vitis.dtsi"

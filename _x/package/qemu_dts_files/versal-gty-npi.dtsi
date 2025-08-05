@@ -1,0 +1,114 @@
+#ifdef MM_NPI_GTYP_NPI_SLAVE_0
+	GEN_GTYP(0);
+#endif
+#ifdef MM_NPI_GTYP_NPI_SLAVE_1
+	GEN_GTYP(1);
+#endif
+#ifdef MM_NPI_GTYP_NPI_SLAVE_2
+	GEN_GTYP(2);
+#endif
+#ifdef MM_NPI_GTYP_NPI_SLAVE_3
+	GEN_GTYP(3);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_0
+	GEN_GTM(0);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_1
+	GEN_GTM(1);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_2
+	GEN_GTM(2);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_3
+	GEN_GTM(3);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_4
+	GEN_GTM(4);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_5
+	GEN_GTM(5);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_6
+	GEN_GTM(6);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_7
+	GEN_GTM(7);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_8
+	GEN_GTM(8);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_9
+	GEN_GTM(9);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_10
+	GEN_GTM(10);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_11
+	GEN_GTM(11);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_12
+	GEN_GTM(12);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_13
+	GEN_GTM(13);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_14
+	GEN_GTM(14);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_15
+	GEN_GTM(15);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_16
+	GEN_GTM(16);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_17
+	GEN_GTM(17);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_18
+	GEN_GTM(18);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_19
+	GEN_GTM(19);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_20
+	GEN_GTM(20);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_21
+	GEN_GTM(21);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_22
+	GEN_GTM(22);
+#endif
+#ifdef MM_NPI_GTM_NPI_SLAVE_23
+	GEN_GTM(23);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_0
+	GEN_GTY_NPI(0);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_1
+	GEN_GTY_NPI(1);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_2
+	GEN_GTY_NPI(2);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_3
+	GEN_GTY_NPI(3);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_4
+	GEN_GTY_NPI(4);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_5
+	GEN_GTY_NPI(5);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_6
+	GEN_GTY_NPI(6);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_7
+	GEN_GTY_NPI(7);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_8
+	GEN_GTY_NPI(8);
+#endif
+#ifdef MM_NPI_GTY_NPI_SLAVE_9
+	GEN_GTY_NPI(9);
+#endif

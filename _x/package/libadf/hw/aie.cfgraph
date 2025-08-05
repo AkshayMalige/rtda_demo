@@ -1,0 +1,24 @@
+<cf:model  cf:cpu="cortex_a72" cf:name="root" cf:partition="0" cf:prefix="_p0_" xd:type="design" xmlns:cf="http_//www_xilinx_com/connections" xmlns:xd="http_//www_xilinx_com/xd" >
+  <cf:block  cf:name="aieip" >
+    <cf:port  cf:direction="out" cf:name="plio_output_dense2" cf:portType="stream" >    </cf:port>
+    <cf:port  cf:direction="in" cf:name="plio_input_dense1" cf:portType="stream" >    </cf:port>
+    <cf:port  cf:direction="in" cf:name="plio_weights_dense1" cf:portType="stream" >    </cf:port>
+    <cf:port  cf:direction="out" cf:name="plio_output_dense1" cf:portType="stream" >    </cf:port>
+    <cf:port  cf:direction="in" cf:name="plio_input_dense2_0" cf:portType="stream" >    </cf:port>
+    <cf:port  cf:direction="in" cf:name="plio_weights_dense2_0" cf:portType="stream" >    </cf:port>
+    <cf:port  cf:direction="in" cf:name="plio_input_dense2_1" cf:portType="stream" >    </cf:port>
+    <cf:port  cf:direction="in" cf:name="plio_weights_dense2_1" cf:portType="stream" >    </cf:port>  
+  </cf:block>
+  <cf:comp  cf:name="ai_engine_0" xd:componentRef="ai_engine" >  
+  </cf:comp>
+  <cf:instance  cf:blockName="aieip" cf:compName="ai_engine_0" cf:name="ai_engine_0" >
+    <cf:portMap cf:blockPort="plio_output_dense2" cf:compPort="M01_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>
+    <cf:portMap cf:blockPort="plio_input_dense1" cf:compPort="S00_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>
+    <cf:portMap cf:blockPort="plio_weights_dense1" cf:compPort="S01_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>
+    <cf:portMap cf:blockPort="plio_output_dense1" cf:compPort="M00_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>
+    <cf:portMap cf:blockPort="plio_input_dense2_0" cf:compPort="S02_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>
+    <cf:portMap cf:blockPort="plio_weights_dense2_0" cf:compPort="S03_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>
+    <cf:portMap cf:blockPort="plio_input_dense2_1" cf:compPort="S04_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>
+    <cf:portMap cf:blockPort="plio_weights_dense2_1" cf:compPort="S05_AXIS" cf:paddedWidth="32" xd:isRegistered="true" >    </cf:portMap>  
+  </cf:instance>
+</cf:model>

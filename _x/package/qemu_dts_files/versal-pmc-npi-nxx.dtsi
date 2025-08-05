@@ -1,0 +1,978 @@
+#ifdef MM_NPI_NOC_NMU_0
+	GEN_NMU(0)
+#endif
+#ifdef MM_NPI_NOC_NMU_1
+	GEN_NMU(1)
+#endif
+#ifdef MM_NPI_NOC_NMU_2
+	GEN_NMU(2)
+#endif
+#ifdef MM_NPI_NOC_NMU_3
+	GEN_NMU(3)
+#endif
+#ifdef MM_NPI_NOC_NMU_4
+	GEN_NMU(4)
+#endif
+#ifdef MM_NPI_NOC_NMU_5
+	GEN_NMU(5)
+#endif
+#ifdef MM_NPI_NOC_NMU_6
+	GEN_NMU(6)
+#endif
+#ifdef MM_NPI_NOC_NMU_7
+	GEN_NMU(7)
+#endif
+#ifdef MM_NPI_NOC_NMU_8
+	GEN_NMU(8)
+#endif
+#ifdef MM_NPI_NOC_NMU_9
+	GEN_NMU(9)
+#endif
+#ifdef MM_NPI_NOC_NMU_10
+	GEN_NMU(10)
+#endif
+#ifdef MM_NPI_NOC_NMU_11
+	GEN_NMU(11)
+#endif
+#ifdef MM_NPI_NOC_NMU_12
+	GEN_NMU(12)
+#endif
+#ifdef MM_NPI_NOC_NMU_13
+	GEN_NMU(13)
+#endif
+#ifdef MM_NPI_NOC_NMU_14
+	GEN_NMU(14)
+#endif
+#ifdef MM_NPI_NOC_NMU_15
+	GEN_NMU(15)
+#endif
+#ifdef MM_NPI_NOC_NMU_16
+	GEN_NMU(16)
+#endif
+#ifdef MM_NPI_NOC_NMU_17
+	GEN_NMU(17)
+#endif
+#ifdef MM_NPI_NOC_NMU_18
+	GEN_NMU(18)
+#endif
+#ifdef MM_NPI_NOC_NMU_19
+	GEN_NMU(19)
+#endif
+#ifdef MM_NPI_NOC_NMU_20
+	GEN_NMU(20)
+#endif
+#ifdef MM_NPI_NOC_NMU_21
+	GEN_NMU(21)
+#endif
+#ifdef MM_NPI_NOC_NMU_22
+	GEN_NMU(22)
+#endif
+#ifdef MM_NPI_NOC_NMU_23
+	GEN_NMU(23)
+#endif
+#ifdef MM_NPI_NOC_NMU_24
+	GEN_NMU(24)
+#endif
+#ifdef MM_NPI_NOC_NMU_25
+	GEN_NMU(25)
+#endif
+#ifdef MM_NPI_NOC_NMU_26
+	GEN_NMU(26)
+#endif
+#ifdef MM_NPI_NOC_NMU_27
+	GEN_NMU(27)
+#endif
+#ifdef MM_NPI_NOC_NMU_28
+	GEN_NMU(28)
+#endif
+#ifdef MM_NPI_NOC_NMU_29
+	GEN_NMU(29)
+#endif
+#ifdef MM_NPI_NOC_NMU_30
+	GEN_NMU(30)
+#endif
+#ifdef MM_NPI_NOC_NMU_31
+	GEN_NMU(31)
+#endif
+#ifdef MM_NPI_NOC_NMU_32
+	GEN_NMU(32)
+#endif
+#ifdef MM_NPI_NOC_NMU_33
+	GEN_NMU(33)
+#endif
+#ifdef MM_NPI_NOC_NMU_34
+	GEN_NMU(34)
+#endif
+#ifdef MM_NPI_NOC_NMU_35
+	GEN_NMU(35)
+#endif
+#ifdef MM_NPI_NOC_NMU_36
+	GEN_NMU(36)
+#endif
+#ifdef MM_NPI_NOC_NMU_37
+	GEN_NMU(37)
+#endif
+#ifdef MM_NPI_NOC_NMU_38
+	GEN_NMU(38)
+#endif
+#ifdef MM_NPI_NOC_NMU_39
+	GEN_NMU(39)
+#endif
+#ifdef MM_NPI_NOC_NMU_40
+	GEN_NMU(40)
+#endif
+#ifdef MM_NPI_NOC_NMU_41
+	GEN_NMU(41)
+#endif
+#ifdef MM_NPI_NOC_NMU_42
+	GEN_NMU(42)
+#endif
+#ifdef MM_NPI_NOC_NMU_43
+	GEN_NMU(43)
+#endif
+#ifdef MM_NPI_NOC_NMU_44
+	GEN_NMU(44)
+#endif
+#ifdef MM_NPI_NOC_NMU_45
+	GEN_NMU(45)
+#endif
+#ifdef MM_NPI_NOC_NMU_46
+	GEN_NMU(46)
+#endif
+#ifdef MM_NPI_NOC_NMU_47
+	GEN_NMU(47)
+#endif
+#ifdef MM_NPI_NOC_NMU_48
+	GEN_NMU(48)
+#endif
+#ifdef MM_NPI_NOC_NMU_49
+	GEN_NMU(49)
+#endif
+#ifdef MM_NPI_NOC_NMU_50
+	GEN_NMU(50)
+#endif
+#ifdef MM_NPI_NOC_NMU_51
+	GEN_NMU(51)
+#endif
+#ifdef MM_NPI_NOC_NMU_52
+	GEN_NMU(52)
+#endif
+#ifdef MM_NPI_NOC_NMU_53
+	GEN_NMU(53)
+#endif
+#ifdef MM_NPI_NOC_NSU_0
+	GEN_NSU(0)
+#endif
+#ifdef MM_NPI_NOC_NSU_1
+	GEN_NSU(1)
+#endif
+#ifdef MM_NPI_NOC_NSU_2
+	GEN_NSU(2)
+#endif
+#ifdef MM_NPI_NOC_NSU_3
+	GEN_NSU(3)
+#endif
+#ifdef MM_NPI_NOC_NSU_4
+	GEN_NSU(4)
+#endif
+#ifdef MM_NPI_NOC_NSU_5
+	GEN_NSU(5)
+#endif
+#ifdef MM_NPI_NOC_NSU_6
+	GEN_NSU(6)
+#endif
+#ifdef MM_NPI_NOC_NSU_7
+	GEN_NSU(7)
+#endif
+#ifdef MM_NPI_NOC_NSU_8
+	GEN_NSU(8)
+#endif
+#ifdef MM_NPI_NOC_NSU_9
+	GEN_NSU(9)
+#endif
+#ifdef MM_NPI_NOC_NSU_10
+	GEN_NSU(10)
+#endif
+#ifdef MM_NPI_NOC_NSU_11
+	GEN_NSU(11)
+#endif
+#ifdef MM_NPI_NOC_NSU_12
+	GEN_NSU(12)
+#endif
+#ifdef MM_NPI_NOC_NSU_13
+	GEN_NSU(13)
+#endif
+#ifdef MM_NPI_NOC_NSU_14
+	GEN_NSU(14)
+#endif
+#ifdef MM_NPI_NOC_NSU_15
+	GEN_NSU(15)
+#endif
+#ifdef MM_NPI_NOC_NSU_16
+	GEN_NSU(16)
+#endif
+#ifdef MM_NPI_NOC_NSU_17
+	GEN_NSU(17)
+#endif
+#ifdef MM_NPI_NOC_NSU_18
+	GEN_NSU(18)
+#endif
+#ifdef MM_NPI_NOC_NSU_19
+	GEN_NSU(19)
+#endif
+#ifdef MM_NPI_NOC_NSU_20
+	GEN_NSU(20)
+#endif
+#ifdef MM_NPI_NOC_NSU_21
+	GEN_NSU(21)
+#endif
+#ifdef MM_NPI_NOC_NSU_22
+	GEN_NSU(22)
+#endif
+#ifdef MM_NPI_NOC_NSU_23
+	GEN_NSU(23)
+#endif
+#ifdef MM_NPI_NOC_NSU_24
+	GEN_NSU(24)
+#endif
+#ifdef MM_NPI_NOC_NSU_25
+	GEN_NSU(25)
+#endif
+#ifdef MM_NPI_NOC_NSU_26
+	GEN_NSU(26)
+#endif
+#ifdef MM_NPI_NOC_NSU_27
+	GEN_NSU(27)
+#endif
+#ifdef MM_NPI_NOC_NSU_28
+	GEN_NSU(28)
+#endif
+#ifdef MM_NPI_NOC_NSU_29
+	GEN_NSU(29)
+#endif
+#ifdef MM_NPI_NOC_NSU_30
+	GEN_NSU(30)
+#endif
+#ifdef MM_NPI_NOC_NSU_31
+	GEN_NSU(31)
+#endif
+#ifdef MM_NPI_NOC_NSU_32
+	GEN_NSU(32)
+#endif
+#ifdef MM_NPI_NOC_NSU_33
+	GEN_NSU(33)
+#endif
+#ifdef MM_NPI_NOC_NSU_34
+	GEN_NSU(34)
+#endif
+#ifdef MM_NPI_NOC_NSU_35
+	GEN_NSU(35)
+#endif
+#ifdef MM_NPI_NOC_NSU_36
+	GEN_NSU(36)
+#endif
+#ifdef MM_NPI_NOC_NSU_37
+	GEN_NSU(37)
+#endif
+#ifdef MM_NPI_NOC_NSU_38
+	GEN_NSU(38)
+#endif
+#ifdef MM_NPI_NOC_NSU_39
+	GEN_NSU(39)
+#endif
+#ifdef MM_NPI_NOC_NSU_40
+	GEN_NSU(40)
+#endif
+#ifdef MM_NPI_NOC_NSU_41
+	GEN_NSU(41)
+#endif
+#ifdef MM_NPI_NOC_NSU_42
+	GEN_NSU(42)
+#endif
+#ifdef MM_NPI_NOC_NSU_43
+	GEN_NSU(43)
+#endif
+#ifdef MM_NPI_NOC_NSU_44
+	GEN_NSU(44)
+#endif
+#ifdef MM_NPI_NOC_NSU_45
+	GEN_NSU(45)
+#endif
+#ifdef MM_NPI_NOC_NSU_46
+	GEN_NSU(46)
+#endif
+#ifdef MM_NPI_NOC_NSU_47
+	GEN_NSU(47)
+#endif
+#ifdef MM_NPI_NOC_NSU_48
+	GEN_NSU(48)
+#endif
+#ifdef MM_NPI_NOC_NSU_49
+	GEN_NSU(49)
+#endif
+#ifdef MM_NPI_NOC_NPS_0
+	GEN_NPS(0)
+#endif
+#ifdef MM_NPI_NOC_NPS_1
+	GEN_NPS(1)
+#endif
+#ifdef MM_NPI_NOC_NPS_2
+	GEN_NPS(2)
+#endif
+#ifdef MM_NPI_NOC_NPS_3
+	GEN_NPS(3)
+#endif
+#ifdef MM_NPI_NOC_NPS_4
+	GEN_NPS(4)
+#endif
+#ifdef MM_NPI_NOC_NPS_5
+	GEN_NPS(5)
+#endif
+#ifdef MM_NPI_NOC_NPS_6
+	GEN_NPS(6)
+#endif
+#ifdef MM_NPI_NOC_NPS_7
+	GEN_NPS(7)
+#endif
+#ifdef MM_NPI_NOC_NPS_8
+	GEN_NPS(8)
+#endif
+#ifdef MM_NPI_NOC_NPS_9
+	GEN_NPS(9)
+#endif
+#ifdef MM_NPI_NOC_NPS_10
+	GEN_NPS(10)
+#endif
+#ifdef MM_NPI_NOC_NPS_11
+	GEN_NPS(11)
+#endif
+#ifdef MM_NPI_NOC_NPS_12
+	GEN_NPS(12)
+#endif
+#ifdef MM_NPI_NOC_NPS_13
+	GEN_NPS(13)
+#endif
+#ifdef MM_NPI_NOC_NPS_14
+	GEN_NPS(14)
+#endif
+#ifdef MM_NPI_NOC_NPS_15
+	GEN_NPS(15)
+#endif
+#ifdef MM_NPI_NOC_NPS_16
+	GEN_NPS(16)
+#endif
+#ifdef MM_NPI_NOC_NPS_17
+	GEN_NPS(17)
+#endif
+#ifdef MM_NPI_NOC_NPS_18
+	GEN_NPS(18)
+#endif
+#ifdef MM_NPI_NOC_NPS_19
+	GEN_NPS(19)
+#endif
+#ifdef MM_NPI_NOC_NPS_20
+	GEN_NPS(20)
+#endif
+#ifdef MM_NPI_NOC_NPS_21
+	GEN_NPS(21)
+#endif
+#ifdef MM_NPI_NOC_NPS_22
+	GEN_NPS(22)
+#endif
+#ifdef MM_NPI_NOC_NPS_23
+	GEN_NPS(23)
+#endif
+#ifdef MM_NPI_NOC_NPS_24
+	GEN_NPS(24)
+#endif
+#ifdef MM_NPI_NOC_NPS_25
+	GEN_NPS(25)
+#endif
+#ifdef MM_NPI_NOC_NPS_26
+	GEN_NPS(26)
+#endif
+#ifdef MM_NPI_NOC_NPS_27
+	GEN_NPS(27)
+#endif
+#ifdef MM_NPI_NOC_NPS_28
+	GEN_NPS(28)
+#endif
+#ifdef MM_NPI_NOC_NPS_29
+	GEN_NPS(29)
+#endif
+#ifdef MM_NPI_NOC_NPS_30
+	GEN_NPS(30)
+#endif
+#ifdef MM_NPI_NOC_NPS_31
+	GEN_NPS(31)
+#endif
+#ifdef MM_NPI_NOC_NPS_32
+	GEN_NPS(32)
+#endif
+#ifdef MM_NPI_NOC_NPS_33
+	GEN_NPS(33)
+#endif
+#ifdef MM_NPI_NOC_NPS_34
+	GEN_NPS(34)
+#endif
+#ifdef MM_NPI_NOC_NPS_35
+	GEN_NPS(35)
+#endif
+#ifdef MM_NPI_NOC_NPS_36
+	GEN_NPS(36)
+#endif
+#ifdef MM_NPI_NOC_NPS_37
+	GEN_NPS(37)
+#endif
+#ifdef MM_NPI_NOC_NPS_38
+	GEN_NPS(38)
+#endif
+#ifdef MM_NPI_NOC_NPS_39
+	GEN_NPS(39)
+#endif
+#ifdef MM_NPI_NOC_NPS_40
+	GEN_NPS(40)
+#endif
+#ifdef MM_NPI_NOC_NPS_41
+	GEN_NPS(41)
+#endif
+#ifdef MM_NPI_NOC_NPS_42
+	GEN_NPS(42)
+#endif
+#ifdef MM_NPI_NOC_NPS_43
+	GEN_NPS(43)
+#endif
+#ifdef MM_NPI_NOC_NPS_44
+	GEN_NPS(44)
+#endif
+#ifdef MM_NPI_NOC_NPS_45
+	GEN_NPS(45)
+#endif
+#ifdef MM_NPI_NOC_NPS_46
+	GEN_NPS(46)
+#endif
+#ifdef MM_NPI_NOC_NPS_47
+	GEN_NPS(47)
+#endif
+#ifdef MM_NPI_NOC_NPS_48
+	GEN_NPS(48)
+#endif
+#ifdef MM_NPI_NOC_NPS_49
+	GEN_NPS(49)
+#endif
+#ifdef MM_NPI_NOC_NPS_50
+	GEN_NPS(50)
+#endif
+#ifdef MM_NPI_NOC_NPS_51
+	GEN_NPS(51)
+#endif
+#ifdef MM_NPI_NOC_NPS_52
+	GEN_NPS(52)
+#endif
+#ifdef MM_NPI_NOC_NPS_53
+	GEN_NPS(53)
+#endif
+#ifdef MM_NPI_NOC_NPS_54
+	GEN_NPS(54)
+#endif
+#ifdef MM_NPI_NOC_NPS_55
+	GEN_NPS(55)
+#endif
+#ifdef MM_NPI_NOC_NPS_56
+	GEN_NPS(56)
+#endif
+#ifdef MM_NPI_NOC_NPS_57
+	GEN_NPS(57)
+#endif
+#ifdef MM_NPI_NOC_NPS_58
+	GEN_NPS(58)
+#endif
+#ifdef MM_NPI_NOC_NPS_59
+	GEN_NPS(59)
+#endif
+#ifdef MM_NPI_NOC_NPS_60
+	GEN_NPS(60)
+#endif
+#ifdef MM_NPI_NOC_NPS_61
+	GEN_NPS(61)
+#endif
+#ifdef MM_NPI_NOC_NPS_62
+	GEN_NPS(62)
+#endif
+#ifdef MM_NPI_NOC_NPS_63
+	GEN_NPS(63)
+#endif
+#ifdef MM_NPI_NOC_NPS_64
+	GEN_NPS(64)
+#endif
+#ifdef MM_NPI_NOC_NPS_65
+	GEN_NPS(65)
+#endif
+#ifdef MM_NPI_NOC_NPS_66
+	GEN_NPS(66)
+#endif
+#ifdef MM_NPI_NOC_NPS_67
+	GEN_NPS(67)
+#endif
+#ifdef MM_NPI_NOC_NPS_68
+	GEN_NPS(68)
+#endif
+#ifdef MM_NPI_NOC_NPS_69
+	GEN_NPS(69)
+#endif
+#ifdef MM_NPI_NOC_NPS_70
+	GEN_NPS(70)
+#endif
+#ifdef MM_NPI_NOC_NPS_71
+	GEN_NPS(71)
+#endif
+#ifdef MM_NPI_NOC_NPS_72
+	GEN_NPS(72)
+#endif
+#ifdef MM_NPI_NOC_NPS_73
+	GEN_NPS(73)
+#endif
+#ifdef MM_NPI_NOC_NPS_74
+	GEN_NPS(74)
+#endif
+#ifdef MM_NPI_NOC_NPS_75
+	GEN_NPS(75)
+#endif
+#ifdef MM_NPI_NOC_NPS_76
+	GEN_NPS(76)
+#endif
+#ifdef MM_NPI_NOC_NPS_77
+	GEN_NPS(77)
+#endif
+#ifdef MM_NPI_NOC_NPS_78
+	GEN_NPS(78)
+#endif
+#ifdef MM_NPI_NOC_NPS_79
+	GEN_NPS(79)
+#endif
+#ifdef MM_NPI_NOC_NPS_80
+	GEN_NPS(80)
+#endif
+#ifdef MM_NPI_NOC_NPS_81
+	GEN_NPS(81)
+#endif
+#ifdef MM_NPI_NOC_NPS_82
+	GEN_NPS(82)
+#endif
+#ifdef MM_NPI_NOC_NPS_83
+	GEN_NPS(83)
+#endif
+#ifdef MM_NPI_NOC_NPS_84
+	GEN_NPS(84)
+#endif
+#ifdef MM_NPI_NOC_NPS_85
+	GEN_NPS(85)
+#endif
+#ifdef MM_NPI_NOC_NPS_86
+	GEN_NPS(86)
+#endif
+#ifdef MM_NPI_NOC_NPS_87
+	GEN_NPS(87)
+#endif
+#ifdef MM_NPI_NOC_NPS_88
+	GEN_NPS(88)
+#endif
+#ifdef MM_NPI_NOC_NPS_89
+	GEN_NPS(89)
+#endif
+#ifdef MM_NPI_NOC_NPS_90
+	GEN_NPS(90)
+#endif
+#ifdef MM_NPI_NOC_NPS_91
+	GEN_NPS(91)
+#endif
+#ifdef MM_NPI_NOC_NPS_92
+	GEN_NPS(92)
+#endif
+#ifdef MM_NPI_NOC_NPS_93
+	GEN_NPS(93)
+#endif
+#ifdef MM_NPI_NOC_NPS_94
+	GEN_NPS(94)
+#endif
+#ifdef MM_NPI_NOC_NPS_95
+	GEN_NPS(95)
+#endif
+#ifdef MM_NPI_NOC_NPS_96
+	GEN_NPS(96)
+#endif
+#ifdef MM_NPI_NOC_NPS_97
+	GEN_NPS(97)
+#endif
+#ifdef MM_NPI_NOC_NPS_98
+	GEN_NPS(98)
+#endif
+#ifdef MM_NPI_NOC_NPS_99
+	GEN_NPS(99)
+#endif
+#ifdef MM_NPI_NOC_NPS_100
+	GEN_NPS(100)
+#endif
+#ifdef MM_NPI_NOC_NPS_101
+	GEN_NPS(101)
+#endif
+#ifdef MM_NPI_NOC_NPS_102
+	GEN_NPS(102)
+#endif
+#ifdef MM_NPI_NOC_NPS_103
+	GEN_NPS(103)
+#endif
+#ifdef MM_NPI_NOC_NPS_104
+	GEN_NPS(104)
+#endif
+#ifdef MM_NPI_NOC_NPS_105
+	GEN_NPS(105)
+#endif
+#ifdef MM_NPI_NOC_NPS_106
+	GEN_NPS(106)
+#endif
+#ifdef MM_NPI_NOC_NPS_107
+	GEN_NPS(107)
+#endif
+#ifdef MM_NPI_NOC_NPS_108
+	GEN_NPS(108)
+#endif
+#ifdef MM_NPI_NOC_NPS_109
+	GEN_NPS(109)
+#endif
+#ifdef MM_NPI_NOC_NPS_110
+	GEN_NPS(110)
+#endif
+#ifdef MM_NPI_NOC_NPS_111
+	GEN_NPS(111)
+#endif
+#ifdef MM_NPI_NOC_NPS_112
+	GEN_NPS(112)
+#endif
+#ifdef MM_NPI_NOC_NPS_113
+	GEN_NPS(113)
+#endif
+#ifdef MM_NPI_NOC_NPS_114
+	GEN_NPS(114)
+#endif
+#ifdef MM_NPI_NOC_NPS_115
+	GEN_NPS(115)
+#endif
+#ifdef MM_NPI_NOC_NPS_116
+	GEN_NPS(116)
+#endif
+#ifdef MM_NPI_NOC_NPS_117
+	GEN_NPS(117)
+#endif
+#ifdef MM_NPI_NOC_NPS_118
+	GEN_NPS(118)
+#endif
+#ifdef MM_NPI_NOC_NPS_119
+	GEN_NPS(119)
+#endif
+#ifdef MM_NPI_NOC_NPS_120
+	GEN_NPS(120)
+#endif
+#ifdef MM_NPI_NOC_NPS_121
+	GEN_NPS(121)
+#endif
+#ifdef MM_NPI_NOC_NPS_122
+	GEN_NPS(122)
+#endif
+#ifdef MM_NPI_NOC_NPS_123
+	GEN_NPS(123)
+#endif
+#ifdef MM_NPI_NOC_NPS_124
+	GEN_NPS(124)
+#endif
+#ifdef MM_NPI_NOC_NPS_125
+	GEN_NPS(125)
+#endif
+#ifdef MM_NPI_NOC_NPS_126
+	GEN_NPS(126)
+#endif
+#ifdef MM_NPI_NOC_NPS_127
+	GEN_NPS(127)
+#endif
+#ifdef MM_NPI_NOC_NPS_128
+	GEN_NPS(128)
+#endif
+#ifdef MM_NPI_NOC_NPS_129
+	GEN_NPS(129)
+#endif
+#ifdef MM_NPI_NOC_NPS_130
+	GEN_NPS(130)
+#endif
+#ifdef MM_NPI_NOC_NPS_131
+	GEN_NPS(131)
+#endif
+#ifdef MM_NPI_NOC_NPS_132
+	GEN_NPS(132)
+#endif
+#ifdef MM_NPI_NOC_NPS_133
+	GEN_NPS(133)
+#endif
+#ifdef MM_NPI_NOC_NPS_134
+	GEN_NPS(134)
+#endif
+#ifdef MM_NPI_NOC_NPS_135
+	GEN_NPS(135)
+#endif
+#ifdef MM_NPI_NOC_NPS_136
+	GEN_NPS(136)
+#endif
+#ifdef MM_NPI_NOC_NPS_137
+	GEN_NPS(137)
+#endif
+#ifdef MM_NPI_NOC_NPS_138
+	GEN_NPS(138)
+#endif
+#ifdef MM_NPI_NOC_NPS_139
+	GEN_NPS(139)
+#endif
+#ifdef MM_NPI_NOC_NPS_140
+	GEN_NPS(140)
+#endif
+#ifdef MM_NPI_NOC_NPS_141
+	GEN_NPS(141)
+#endif
+#ifdef MM_NPI_NOC_NPS_142
+	GEN_NPS(142)
+#endif
+#ifdef MM_NPI_NOC_NPS_143
+	GEN_NPS(143)
+#endif
+#ifdef MM_NPI_NOC_NPS_144
+	GEN_NPS(144)
+#endif
+#ifdef MM_NPI_NOC_NPS_145
+	GEN_NPS(145)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_0
+	GEN_XPIO_DCI(0)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_1
+	GEN_XPIO_DCI(1)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_2
+	GEN_XPIO_DCI(2)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_3
+	GEN_XPIO_DCI(3)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_4
+	GEN_XPIO_DCI(4)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_5
+	GEN_XPIO_DCI(5)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_6
+	GEN_XPIO_DCI(6)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_7
+	GEN_XPIO_DCI(7)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_8
+	GEN_XPIO_DCI(8)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_9
+	GEN_XPIO_DCI(9)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_10
+	GEN_XPIO_DCI(10)
+#endif
+#ifdef MM_NPI_XPIO_DCI_COMPONENT_11
+	GEN_XPIO_DCI(11)
+#endif
+#ifdef MM_NPI_CMT_XPLL_0
+	GEN_CMT_XPLL(0);
+#endif
+#ifdef MM_NPI_CMT_XPLL_1
+	GEN_CMT_XPLL(1);
+#endif
+#ifdef MM_NPI_CMT_XPLL_2
+	GEN_CMT_XPLL(2);
+#endif
+#ifdef MM_NPI_CMT_XPLL_3
+	GEN_CMT_XPLL(3);
+#endif
+#ifdef MM_NPI_CMT_XPLL_4
+	GEN_CMT_XPLL(4);
+#endif
+#ifdef MM_NPI_CMT_XPLL_5
+	GEN_CMT_XPLL(5);
+#endif
+#ifdef MM_NPI_CMT_XPLL_6
+	GEN_CMT_XPLL(6);
+#endif
+#ifdef MM_NPI_CMT_XPLL_7
+	GEN_CMT_XPLL(7);
+#endif
+#ifdef MM_NPI_CMT_XPLL_8
+	GEN_CMT_XPLL(8);
+#endif
+#ifdef MM_NPI_CMT_XPLL_9
+	GEN_CMT_XPLL(9);
+#endif
+#ifdef MM_NPI_CMT_XPLL_10
+	GEN_CMT_XPLL(10);
+#endif
+#ifdef MM_NPI_CMT_XPLL_11
+	GEN_CMT_XPLL(11);
+#endif
+#ifdef MM_NPI_CMT_XPLL_12
+	GEN_CMT_XPLL(12);
+#endif
+#ifdef MM_NPI_CMT_XPLL_13
+	GEN_CMT_XPLL(13);
+#endif
+#ifdef MM_NPI_CMT_XPLL_14
+	GEN_CMT_XPLL(14);
+#endif
+#ifdef MM_NPI_CMT_XPLL_15
+	GEN_CMT_XPLL(15);
+#endif
+#ifdef MM_NPI_CMT_XPLL_16
+	GEN_CMT_XPLL(16);
+#endif
+#ifdef MM_NPI_CMT_XPLL_17
+	GEN_CMT_XPLL(17);
+#endif
+#ifdef MM_NPI_CMT_XPLL_18
+	GEN_CMT_XPLL(18);
+#endif
+#ifdef MM_NPI_CMT_XPLL_19
+	GEN_CMT_XPLL(19);
+#endif
+#ifdef MM_NPI_CMT_XPLL_20
+	GEN_CMT_XPLL(20);
+#endif
+#ifdef MM_NPI_CMT_XPLL_21
+	GEN_CMT_XPLL(21);
+#endif
+#ifdef MM_NPI_CMT_XPLL_22
+	GEN_CMT_XPLL(22);
+#endif
+#ifdef MM_NPI_CMT_XPLL_23
+	GEN_CMT_XPLL(23);
+#endif
+#ifdef MM_NPI_CMT_XPLL_24
+	GEN_CMT_XPLL(24);
+#endif
+#ifdef MM_NPI_CMT_DPLL_0
+	GEN_CMT_DPLL(0);
+#endif
+#ifdef MM_NPI_CMT_DPLL_1
+	GEN_CMT_DPLL(1);
+#endif
+#ifdef MM_NPI_CMT_DPLL_2
+	GEN_CMT_DPLL(2);
+#endif
+#ifdef MM_NPI_CMT_DPLL_3
+	GEN_CMT_DPLL(3);
+#endif
+#ifdef MM_NPI_CMT_DPLL_4
+	GEN_CMT_DPLL(4);
+#endif
+#ifdef MM_NPI_CMT_DPLL_5
+	GEN_CMT_DPLL(5);
+#endif
+#ifdef MM_NPI_CMT_DPLL_6
+	GEN_CMT_DPLL(6);
+#endif
+#ifdef MM_NPI_CMT_DPLL_7
+	GEN_CMT_DPLL(7);
+#endif
+#ifdef MM_NPI_CMT_DPLL_8
+	GEN_CMT_DPLL(8);
+#endif
+#ifdef MM_NPI_CMT_DPLL_9
+	GEN_CMT_DPLL(9);
+#endif
+#ifdef MM_NPI_CMT_DPLL_10
+	GEN_CMT_DPLL(10);
+#endif
+#ifdef MM_NPI_CMT_DPLL_11
+	GEN_CMT_DPLL(11);
+#endif
+#ifdef MM_NPI_CMT_DPLL_12
+	GEN_CMT_DPLL(12);
+#endif
+#ifdef MM_NPI_CMT_DPLL_13
+	GEN_CMT_DPLL(13);
+#endif
+#ifdef MM_NPI_CMT_DPLL_14
+	GEN_CMT_DPLL(14);
+#endif
+#ifdef MM_NPI_CMT_DPLL_15
+	GEN_CMT_DPLL(15);
+#endif
+#ifdef MM_NPI_CMT_DPLL_16
+	GEN_CMT_DPLL(16);
+#endif
+#ifdef MM_NPI_CMT_DPLL_17
+	GEN_CMT_DPLL(17);
+#endif
+#ifdef MM_NPI_CMT_DPLL_18
+	GEN_CMT_DPLL(18);
+#endif
+#ifdef MM_NPI_CMT_DPLL_19
+	GEN_CMT_DPLL(19);
+#endif
+#ifdef MM_NPI_CMT_MMCM_0
+	GEN_CMT_MMCM(0);
+#endif
+#ifdef MM_NPI_CMT_MMCM_1
+	GEN_CMT_MMCM(1);
+#endif
+#ifdef MM_NPI_CMT_MMCM_2
+	GEN_CMT_MMCM(2);
+#endif
+#ifdef MM_NPI_CMT_MMCM_3
+	GEN_CMT_MMCM(3);
+#endif
+#ifdef MM_NPI_CMT_MMCM_4
+	GEN_CMT_MMCM(4);
+#endif
+#ifdef MM_NPI_CMT_MMCM_5
+	GEN_CMT_MMCM(5);
+#endif
+#ifdef MM_NPI_CMT_MMCM_6
+	GEN_CMT_MMCM(6);
+#endif
+#ifdef MM_NPI_CMT_MMCM_7
+	GEN_CMT_MMCM(7);
+#endif
+#ifdef MM_NPI_CMT_MMCM_8
+	GEN_CMT_MMCM(8);
+#endif
+#ifdef MM_NPI_CMT_MMCM_9
+	GEN_CMT_MMCM(9);
+#endif
+#ifdef MM_NPI_CMT_MMCM_10
+	GEN_CMT_MMCM(10);
+#endif
+#ifdef MM_NPI_CMT_MMCM_11
+	GEN_CMT_MMCM(11);
+#endif
+#ifdef MM_NPI_NOC_NCRB_0
+	GEN_NOC_NCRB(0);
+#endif
+#ifdef MM_NPI_NOC_NCRB_1
+	GEN_NOC_NCRB(1);
+#endif
+#ifdef MM_NPI_NOC_NCRB_2
+	GEN_NOC_NCRB(2);
+#endif
+#ifdef MM_NPI_NOC_NCRB_3
+	GEN_NOC_NCRB(3);
+#endif
+#ifdef MM_NPI_NOC_NCRB_4
+	GEN_NOC_NCRB(4);
+#endif
+#ifdef MM_NPI_NOC_NCRB_5
+	GEN_NOC_NCRB(5);
+#endif
+#ifdef MM_NPI_NOC_NCRB_6
+	GEN_NOC_NCRB(6);
+#endif

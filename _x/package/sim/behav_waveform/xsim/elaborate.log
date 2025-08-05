@@ -1,0 +1,229 @@
+Vivado Simulator v2024.2.0
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+Running: /tools/Xilinx/Vivado/2024.2/bin/unwrapped/lnx64.o/xelab --incr --debug off --relax --mt 8 -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/noc_sc_v1_0_0 -sc_lib libnoc_sc_v1_0_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/noc_sc_v1_0_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/simmodels/xsim/2024.2/lnx64/9.3.0/ext/protobuf -sc_lib libprotobuf.so --include /tools/Xilinx/Vivado/2024.2/data/simmodels/xsim/2024.2/lnx64/9.3.0/ext/protobuf/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/sim_qdma_cpp_v1_0 -sc_lib libsim_qdma_cpp_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/sim_qdma_cpp_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/axi_tlm_ext_v1_0 -sc_lib libaxi_tlm_ext_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/axi_tlm_ext_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/remote_port_c_v4 -sc_lib libremote_port_c_v4.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/remote_port_c_v4/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm_ipc_v1_0 -sc_lib libxtlm_ipc_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm_ipc_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/sim_qdma_sc_v1_0 -sc_lib libsim_qdma_sc_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/sim_qdma_sc_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm_ap_ctrl_v1_0 -sc_lib libxtlm_ap_ctrl_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm_ap_ctrl_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm_simple_interconnect_v1_0 -sc_lib libxtlm_simple_interconnect_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm_simple_interconnect_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/common_cpp_v1_0 -sc_lib libcommon_cpp_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/common_cpp_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/debug_tcp_server_v1 -sc_lib libdebug_tcp_server_v1.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/debug_tcp_server_v1/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/common_rpc_v1 -sc_lib libcommon_rpc_v1.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/common_rpc_v1/include -sv_root /tools/Xilinx/Vivado/2024.2/data/simmodels/xsim/2024.2/lnx64/9.3.0/systemc/protected/noc_v1_0_0 -sc_lib libnoc_v1_0_0.so --include /tools/Xilinx/Vivado/2024.2/data/simmodels/xsim/2024.2/lnx64/9.3.0/systemc/protected/noc_v1_0_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm -sc_lib libxtlm.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/xtlm/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/aie_ps_v1_0 -sc_lib libaie_ps_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/aie_ps_v1_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/remote_port_sc_v4 -sc_lib libremote_port_sc_v4.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/remote_port_sc_v4/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/pl_fileio_v1_0_0 -sc_lib libpl_fileio_v1_0_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/pl_fileio_v1_0_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/aie_xtlm_v1_0_0 -sc_lib libaie_xtlm_v1_0_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/aie_xtlm_v1_0_0/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/rwd_tlmmodel_v1 -sc_lib librwd_tlmmodel_v1.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/rwd_tlmmodel_v1/include -sv_root /tools/Xilinx/Vivado/2024.2/data/xsim/ip/emu_perf_common_v1_0 -sc_lib libemu_perf_common_v1_0.so --include /tools/Xilinx/Vivado/2024.2/data/xsim/ip/emu_perf_common_v1_0/include --include ../../../../prj.gen/sim_1/bd/xlnoc/ip/xlnoc_snoc_sysc_inst_0/sysc --include ../../../../prj.gen/sim_1/bd/xlnoc/ip/xlnoc_snoc_sysc_inst_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_CIPS_0_0/sim_tlm --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_CIPS_0_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_0/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_1/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_2/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_2/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_3/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_3/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_4/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_4/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_5/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_5/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_6/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_6/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_7/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_7/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_8/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/bd_0/ip/ip_8/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_cips_noc_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_0_0/bd_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_0_0/bd_0/ip/ip_0/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_0_0/bd_0/ip/ip_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_0_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_1/bd_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_1/bd_0/ip/ip_0/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_1/bd_0/ip/ip_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_1/bd_0/ip/ip_1/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_1/bd_0/ip/ip_1/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_noc_lpddr4_1/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_ai_engine_0_0/sim_tlm --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_ai_engine_0_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_0/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_1/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_2/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_2/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_3/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_3/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_4/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_4/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_5/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/ip/ip_5/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/bd_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_aggr_noc_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_ConfigNoc_0/bd_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_ConfigNoc_0/bd_0/ip/ip_0/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_ConfigNoc_0/bd_0/ip/ip_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_ConfigNoc_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_icn_ctrl_1_0/xtlm --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_icn_ctrl_1_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_icn_ctrl_2_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_dummy_slave_0_0/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_dummy_slave_0_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_axi_intc_parent_intr_1_interrupt_concat_0/sysc --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_axi_intc_parent_intr_1_interrupt_concat_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/ip/vitis_design_irq_const_tieoff_0/sim --include ../../../../prj.ip_user_files/bd/vitis_design/sim --include /tools/Xilinx/Vivado/2024.2/tps/boost_1_72_0 -L xil_defaultlib -L axi_lite_ipif_v3_0_4 -L axi_intc_v4_1_20 -L lib_cdc_v1_0_3 -L proc_sys_reset_v5_0_16 -L xbip_utils_v3_0_14 -L axi_utils_v2_0_10 -L xbip_pipe_v3_0_10 -L xbip_dsp48_wrapper_v3_0_6 -L mult_gen_v12_0_22 -L floating_point_v7_1_19 -L uvm -L xilinx_vip -L unisims_ver -L unimacro_ver -L unisims_ver -L secureip -L xpm -sv_root . -sc_lib libdpi.so --snapshot vitis_design_wrapper_sim_wrapper_behav xil_defaultlib.vitis_design_wrapper_sim_wrapper xil_defaultlib.glbl -log elaborate.log -ignore_assertions 
+Using 8 slave threads.
+WARNING: [XSIM 43-3431] One or more environment variables have been detected which affect the operation of the C compiler. These are typically not set in standard installations and are not tested by AMD, however they may be appropriate for your system, so the flow will attempt to continue.  If errors occur, try running xelab with the "-mt off -v 1" switches to see more information from the C compiler. The following environment variables have been detected:
+Starting static elaboration
+Pass Through NonSizing Optimizer
+WARNING: [VRFC 10-5021] port 'mb_reset' is not connected on this instance [/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/prj/prj.ip_user_files/bd/vitis_design/sim/vitis_design.v:4733]
+WARNING: [VRFC 10-5021] port 'mb_reset' is not connected on this instance [/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/prj/prj.ip_user_files/bd/vitis_design/sim/vitis_design.v:4740]
+WARNING: [VRFC 10-5021] port 'mb_reset' is not connected on this instance [/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/prj/prj.ip_user_files/bd/vitis_design/sim/vitis_design.v:4746]
+WARNING: [VRFC 10-5021] port 'mb_reset' is not connected on this instance [/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/prj/prj.ip_user_files/bd/vitis_design/sim/vitis_design.v:4752]
+WARNING: [VRFC 10-5021] port 'mb_reset' is not connected on this instance [/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/prj/prj.ip_user_files/bd/vitis_design/sim/vitis_design.v:4759]
+WARNING: [VRFC 10-5021] port 'mb_reset' is not connected on this instance [/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/prj/prj.ip_user_files/bd/vitis_design/sim/vitis_design.v:4765]
+WARNING: [VRFC 10-5021] port 'mb_reset' is not connected on this instance [/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/prj/prj.ip_user_files/bd/vitis_design/sim/vitis_design.v:4771]
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+INFO: [XSIM 43-4431] System-C Modules instantiated in Design
+Compiling package std.standard
+Compiling package std.textio
+Compiling package ieee.std_logic_1164
+Compiling package floating_point_v7_1_19.floating_point_v7_1_19_viv_comp
+Compiling package ieee.numeric_std
+Compiling package xbip_utils_v3_0_14.xbip_utils_v3_0_14_pkg
+Compiling package axi_utils_v2_0_10.axi_utils_v2_0_10_pkg
+Compiling package floating_point_v7_1_19.floating_point_v7_1_19_consts
+Compiling package ieee.math_real
+Compiling package floating_point_v7_1_19.floating_point_v7_1_19_exp_table...
+Compiling package mult_gen_v12_0_22.mult_gen_v12_0_22_pkg
+Compiling package ieee.std_logic_arith
+Compiling package ieee.std_logic_signed
+Compiling package floating_point_v7_1_19.floating_point_v7_1_19_pkg
+Compiling package floating_point_v7_1_19.flt_utils
+Compiling package unisim.vcomponents
+Compiling package xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv_comp
+Compiling package ieee.std_logic_unsigned
+Compiling package axi_lite_ipif_v3_0_4.ipif_pkg
+Compiling package synopsys.attributes
+Compiling package ieee.std_logic_misc
+Compiling package ieee.vital_timing
+Compiling package ieee.vital_primitives
+Compiling package unisim.vpkg
+Compiling package xil_defaultlib.$unit_vitis_design_CIPS_0_0_stub...
+Compiling package xil_defaultlib.$unit_vitis_design_ai_engine_0_0...
+Compiling package xil_defaultlib.$unit_vitis_design_icn_ctrl_2_0_...
+Compiling package xil_defaultlib.$unit_vitis_design_icn_ctrl_1_0_...
+Compiling module xil_defaultlib.vitis_design_CIPS_0_0
+Compiling module xil_defaultlib.vitis_design_ConfigNoc_0
+Compiling module xil_defaultlib.vitis_design_axi_intc_parent_int...
+Compiling module xil_defaultlib.vitis_design_irq_const_tieoff_0
+Compiling module xil_defaultlib.mm2s_pl_control_s_axi
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_mem(MEM_STYLE...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_fifo(MEM_STYL...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_load(NUM_READ...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_reg_slice(DAT...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_burst_convert...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_reg_slice(DAT...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi_read(C_USER_V...
+Compiling module xil_defaultlib.mm2s_pl_gmem_m_axi(CONSERVATIVE=...
+Compiling module xil_defaultlib.mm2s_pl_flow_control_loop_pipe
+Compiling module xil_defaultlib.mm2s_pl_regslice_both(DataWidth=...
+Compiling module xil_defaultlib.mm2s_pl_regslice_both(DataWidth=...
+Compiling module xil_defaultlib.mm2s_pl_regslice_both(DataWidth=...
+Compiling module xil_defaultlib.mm2s_pl_hls_deadlock_idx0_monito...
+Compiling module xil_defaultlib.mm2s_pl(C_M_AXI_GMEM_USER_VALUE=...
+Compiling module xil_defaultlib.vitis_design_mm2s_din_0
+Compiling module xil_defaultlib.vitis_design_mm2s_weights1_0
+Compiling module xil_defaultlib.vitis_design_mm2s_weights2_0_0
+Compiling module xil_defaultlib.vitis_design_mm2s_weights2_1_0
+Compiling module xil_defaultlib.leaky_relu_pl_control_s_axi
+Compiling module unisims_ver.DSPFP32(ACASCREG=0,AREG=0,A_FPTY...
+Compiling architecture rtl of entity floating_point_v7_1_19.flt_mult_prim [\flt_mult_prim(c_xdevicefamily="...]
+Compiling architecture rtl of entity floating_point_v7_1_19.flt_mult [\flt_mult(c_xdevicefamily="versa...]
+Compiling module unisims_ver.x_lut1_mux2
+Compiling module unisims_ver.LUT1
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_latency...]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture rtl of entity floating_point_v7_1_19.delay [\delay(width=32,length=0)\]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture rtl of entity floating_point_v7_1_19.delay [\delay(length=0)\]
+Compiling architecture xilinx of entity floating_point_v7_1_19.floating_point_v7_1_19_viv [\floating_point_v7_1_19_viv(c_xd...]
+Compiling architecture xilinx of entity floating_point_v7_1_19.floating_point_v7_1_19 [\floating_point_v7_1_19(c_xdevic...]
+Compiling module xil_defaultlib.leaky_relu_pl_fmul_32ns_32ns_32_...
+Compiling module xil_defaultlib.leaky_relu_pl_fmul_32ns_32ns_32_...
+Compiling architecture muxcy_v of entity unisim.MUXCY [muxcy_default]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture rtl of entity floating_point_v7_1_19.delay [\delay(width=3,length=0)\]
+Compiling architecture struct of entity floating_point_v7_1_19.carry_chain [\carry_chain(c_xdevicefamily="vi...]
+Compiling architecture synth of entity floating_point_v7_1_19.compare_eq_im [\compare_eq_im(c_xdevicefamily="...]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture rtl of entity floating_point_v7_1_19.delay [\delay(width=4,length=0)\]
+Compiling architecture struct of entity floating_point_v7_1_19.carry_chain [\carry_chain(c_xdevicefamily="vi...]
+Compiling architecture synth of entity floating_point_v7_1_19.compare_ne_im [\compare_ne_im(c_xdevicefamily="...]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture rtl of entity floating_point_v7_1_19.delay [\delay(width=2,length=0)\]
+Compiling architecture struct of entity floating_point_v7_1_19.carry_chain [\carry_chain(c_xdevicefamily="vi...]
+Compiling architecture synth of entity floating_point_v7_1_19.compare_eq_im [\compare_eq_im(c_xdevicefamily="...]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture rtl of entity floating_point_v7_1_19.delay [\delay(width=11,length=0)\]
+Compiling architecture struct of entity floating_point_v7_1_19.carry_chain [\carry_chain(c_xdevicefamily="vi...]
+Compiling architecture synth of entity floating_point_v7_1_19.compare_eq [\compare_eq(c_xdevicefamily="vir...]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture rtl of entity floating_point_v7_1_19.delay [\delay(width=16,length=0)\]
+Compiling architecture struct of entity floating_point_v7_1_19.carry_chain [\carry_chain(c_xdevicefamily="vi...]
+Compiling architecture synth of entity floating_point_v7_1_19.compare_gt [\compare_gt(c_xdevicefamily="vir...]
+Compiling architecture rtl of entity floating_point_v7_1_19.fp_cmp [\fp_cmp(c_xdevicefamily="virtexu...]
+Compiling architecture synth of entity xbip_pipe_v3_0_10.xbip_pipe_v3_0_10_viv [\xbip_pipe_v3_0_10_viv(c_has_ce=...]
+Compiling architecture xilinx of entity floating_point_v7_1_19.floating_point_v7_1_19_viv [\floating_point_v7_1_19_viv(c_xd...]
+Compiling architecture xilinx of entity floating_point_v7_1_19.floating_point_v7_1_19 [\floating_point_v7_1_19(c_xdevic...]
+Compiling module xil_defaultlib.leaky_relu_pl_fcmp_32ns_32ns_1_1...
+Compiling module xil_defaultlib.leaky_relu_pl_fcmp_32ns_32ns_1_1...
+Compiling module xil_defaultlib.leaky_relu_pl_flow_control_loop_...
+Compiling module xil_defaultlib.leaky_relu_pl_regslice_both(Data...
+Compiling module xil_defaultlib.leaky_relu_pl_regslice_both(Data...
+Compiling module xil_defaultlib.leaky_relu_pl_regslice_both(Data...
+Compiling module xil_defaultlib.leaky_relu_pl_hls_deadlock_idx0_...
+Compiling module xil_defaultlib.leaky_relu_pl
+Compiling module xil_defaultlib.vitis_design_relu_0
+Compiling module xil_defaultlib.vitis_design_relu2_0
+Compiling module xil_defaultlib.s2mm_pl_control_s_axi
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_mem(MEM_STYLE...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_fifo(MEM_STYL...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_store(NUM_WRI...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_reg_slice(DAT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_burst_convert...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_reg_slice(DAT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_srl(DATA_WIDT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_fifo(DATA_WID...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_throttle(CONS...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_reg_slice(DAT...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi_write(CONSERV...
+Compiling module xil_defaultlib.s2mm_pl_gmem_m_axi(CONSERVATIVE=...
+Compiling module xil_defaultlib.s2mm_pl_flow_control_loop_pipe
+Compiling module xil_defaultlib.s2mm_pl_regslice_both(DataWidth=...
+Compiling module xil_defaultlib.s2mm_pl_regslice_both(DataWidth=...
+Compiling module xil_defaultlib.s2mm_pl_regslice_both(DataWidth=...
+Compiling module xil_defaultlib.s2mm_pl_hls_deadlock_idx0_monito...
+Compiling module xil_defaultlib.s2mm_pl(C_M_AXI_GMEM_USER_VALUE=...
+Compiling module xil_defaultlib.vitis_design_s2mm_out_0
+Compiling module xil_defaultlib.leaky_splitter_pl_control_s_axi
+Compiling module xil_defaultlib.leaky_splitter_pl_flow_control_l...
+Compiling module xil_defaultlib.leaky_splitter_pl_regslice_both(...
+Compiling module xil_defaultlib.leaky_splitter_pl_regslice_both(...
+Compiling module xil_defaultlib.leaky_splitter_pl_regslice_both(...
+Compiling module xil_defaultlib.leaky_splitter_pl_hls_deadlock_i...
+Compiling module xil_defaultlib.leaky_splitter_pl
+Compiling module xil_defaultlib.vitis_design_splitter_0
+Compiling module xil_defaultlib.VitisRegion_imp_9ASBXH
+Compiling module xil_defaultlib.vitis_design_aggr_noc_0
+Compiling module xil_defaultlib.vitis_design_ai_engine_0_0
+Compiling architecture imp of entity axi_intc_v4_1_20.intc_core [\intc_core(c_family="versal",c_n...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=3,c_aw=9,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=4,c_aw=4,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=2,c_aw=9,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=1,c_aw=9,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=1,c_aw=1,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.pselect_f [\pselect_f(c_ab=1,c_aw=1,c_bar="...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.address_decoder [\address_decoder(c_bus_awidth=9,...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.slave_attachment [\slave_attachment(c_ard_addr_ran...]
+Compiling architecture imp of entity axi_lite_ipif_v3_0_4.axi_lite_ipif [\axi_lite_ipif(c_s_axi_addr_widt...]
+Compiling architecture imp of entity axi_intc_v4_1_20.axi_intc [\axi_intc(c_family="versal",c_in...]
+Compiling architecture vitis_design_axi_intc_parent_0_arch of entity xil_defaultlib.vitis_design_axi_intc_parent_0 [vitis_design_axi_intc_parent_0_d...]
+Compiling module xil_defaultlib.vitis_design_cips_noc_0
+Compiling module unisims_ver.BUFG
+Compiling module unisims_ver.MMCME5(CLKFBOUT_MULT=216,CLKIN1_...
+Compiling module xil_defaultlib.vitis_design_clk_wizard_0_0_cloc...
+Compiling module xil_defaultlib.vitis_design_clk_wizard_0_0_clk_...
+Compiling module xil_defaultlib.vitis_design_clk_wizard_0_0
+Compiling module xil_defaultlib.vitis_design_dummy_slave_0_0
+Compiling module xil_defaultlib.vitis_design_icn_ctrl_1_0
+Compiling module xil_defaultlib.vitis_design_icn_ctrl_2_0
+Compiling module xil_defaultlib.vitis_design_noc_lpddr4_1
+Compiling module xil_defaultlib.vitis_design_noc_lpddr4_0_0
+Compiling architecture fdre_v of entity unisim.FDRE [fdre_default]
+Compiling architecture fdre_v of entity unisim.FDRE [\FDRE(init='1')\]
+Compiling architecture fdr_v of entity unisim.FDR [fdr_default]
+Compiling architecture implementation of entity lib_cdc_v1_0_3.cdc_sync [\cdc_sync(c_vector_width=2,c_mtb...]
+Compiling architecture srl16e_v of entity unisim.SRL16E [\SRL16E(init="1111111111111111")...]
+Compiling architecture srl16_v of entity unisim.SRL16 [\SRL16(init="1111111111111111")(...]
+Compiling architecture imp of entity proc_sys_reset_v5_0_16.lpf [\lpf(c_ext_rst_width=4,c_aux_rst...]
+Compiling architecture imp of entity proc_sys_reset_v5_0_16.upcnt_n [\upcnt_n(c_size=6)\]
+Compiling architecture imp of entity proc_sys_reset_v5_0_16.sequence_psr [sequence_psr_default]
+Compiling architecture imp of entity proc_sys_reset_v5_0_16.proc_sys_reset [\proc_sys_reset(c_family="versal...]
+Compiling architecture vitis_design_psr_100mhz_0_arch of entity xil_defaultlib.vitis_design_psr_100mhz_0 [vitis_design_psr_100mhz_0_defaul...]
+Compiling architecture vitis_design_psr_150mhz_0_arch of entity xil_defaultlib.vitis_design_psr_150mhz_0 [vitis_design_psr_150mhz_0_defaul...]
+Compiling architecture vitis_design_psr_200mhz_0_arch of entity xil_defaultlib.vitis_design_psr_200mhz_0 [vitis_design_psr_200mhz_0_defaul...]
+Compiling architecture vitis_design_psr_300mhz_0_arch of entity xil_defaultlib.vitis_design_psr_300mhz_0 [vitis_design_psr_300mhz_0_defaul...]
+Compiling architecture vitis_design_psr_400mhz_0_arch of entity xil_defaultlib.vitis_design_psr_400mhz_0 [vitis_design_psr_400mhz_0_defaul...]
+Compiling architecture vitis_design_psr_600mhz_0_arch of entity xil_defaultlib.vitis_design_psr_600mhz_0 [vitis_design_psr_600mhz_0_defaul...]
+Compiling architecture vitis_design_psr_75mhz_0_arch of entity xil_defaultlib.vitis_design_psr_75mhz_0 [vitis_design_psr_75mhz_0_default]
+Compiling module xil_defaultlib.vitis_design_sci
+Compiling module xil_defaultlib.vitis_design
+Compiling module xil_defaultlib.vitis_design_wrapper
+Compiling module xil_defaultlib.xlnoc_snoc_sysc_inst_0
+Compiling module xil_defaultlib.xlnoc
+Compiling module xil_defaultlib.vitis_design_wrapper_sim_wrapper
+Compiling module xil_defaultlib.glbl
+Built simulation snapshot vitis_design_wrapper_sim_wrapper_behav

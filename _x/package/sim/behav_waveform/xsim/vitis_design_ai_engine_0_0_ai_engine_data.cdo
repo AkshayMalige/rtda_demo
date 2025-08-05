@@ -1,0 +1,33 @@
+version 2.0
+marker 0x64 "AIE_DATA"
+marker 0 "MPLL INIT"
+marker 0 "Helper data. Values are to be looked up in a table from Data Sheet"
+mask_write 0xf6d10104 0xfe7fedef 0x7e578c6c
+marker 0 "UPDATE FB_DIV"
+marker 0 "PLL Basic Control"
+mask_write 0xf6d10100 0x73ff00 0x14b00
+marker 0 "BY PASS PLL"
+marker 0 "PLL Basic Control"
+mask_write 0xf6d10100 0x8 0x8
+marker 0 "ASSERT RESET"
+marker 0 "PLL Basic Control"
+mask_write 0xf6d10100 0x1 0x1
+marker 0 "CLEAR ERROR STATUS AFTER RESET"
+marker 0 "PMC Error Status Register. If any of the bits in this register is 1, it could generate any of the following events: (1) ERROR_OUT pin assertion, (2) POR, (3) IRQ to PPU1 MB, (4) SRST. Writing a 1 to any bit will clear the request. The register is only reset by the External Power-on Reset and maintains its state through a System Reset or Internal Power-on Reset."
+write 0xf1130000 0x20000
+marker 0 "DEASSERT RESET"
+marker 0 "PLL Basic Control"
+mask_write 0xf6d10100 0x1 0
+marker 0 "CHECK PLL STATUS"
+mask_poll 0xf6d1010c 0x1 0x1 0x1000
+marker 0 "REMOVE PLL BY PASS"
+marker 0 "PLL Basic Control"
+mask_write 0xf6d10100 0x8 0
+marker 0 "ME CLOCK CONTROL REGISTER"
+marker 0 "This register controls ME clock"
+mask_write 0xf6d10138 0x203ff00 0x2000100
+marker 0 "This clock is unused in ME"
+mask_write 0xf6d10140 0x203ff00 0x2000a00
+marker 0 "This clock is unused in ME"
+mask_write 0xf6d1013c 0x203ff00 0x2000a00
+marker 0x65 "AIE_DATA"

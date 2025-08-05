@@ -1,0 +1,20 @@
+/* Versal Net xcvn3716 device
+ *
+ * Copyright (c) 2023, Advanced Micro Devices, Inc.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+/*
+ * xcvn3716 versal-net device
+ * 	*GTYP
+ * 	*GTM
+ * 	*XDDR5
+ * 	*CPM5N
+ * 	*HNICX
+ */
+
+#include "board-versal-net-psx-spp-1.4.dts"
+#include "versal-gty.dtsi"
+#include "versal-cpm5-memmap.dtsh"
+#include "versal-cpm5.dtsi"

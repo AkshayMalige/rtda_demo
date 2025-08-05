@@ -1,0 +1,198 @@
+INFO: [v++ 60-1306] Additional information associated with this v++ link can be found at:
+	Reports: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link
+	Log files: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/link
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/synthara/VersalPrjs/LDRD/rtda_demo/design_hw_emu.xsa.link_summary, at Mon Aug  4 21:41:13 2025
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link/v++_link_design_hw_emu_guidance.html', at Mon Aug  4 21:41:13 2025
+INFO: [v++ 60-895]   Target platform: /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/hw_emu/hw_emu.xsa'
+INFO: [v++ 60-629] Linking for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_vek280_base_202420_1
+INFO: [v++ 60-1332] Run 'run_link' status: Not started
+INFO: [v++ 60-1443] [21:41:15] Run run_link: Step system_link: Started
+INFO: [v++ 60-1453] Command Line: system_link --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/mm2s_hls.xo --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_relu_hls.xo --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_splitter_hls.xo --xo /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/s2mm_hls.xo /home/synthara/VersalPrjs/LDRD/rtda_demo/.Xil/v++-984149-synthara-Super-Server/a0/hw.o --config /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/syslinkConfig.ini --xpfm /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --target emu --output_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int --temp_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link
+INFO: [v++ 60-1454] Run Directory: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link
+INFO: [SYSTEM_LINK 82-128] Extracting .o file /home/synthara/VersalPrjs/LDRD/rtda_demo/.Xil/v++-984149-synthara-Super-Server/a0/hw.o
+INFO: [SYSTEM_LINK 82-38] [21:41:16] merge_aieprj started: /tools/Xilinx/Vitis/2024.2/bin/merge_aieprj --in-aieprj /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/iprepo/temp/o0/system.aieprj --out-aieprj /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/system.aieprj --temp_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/aie/merge_temp
+INFO: [SYSTEM_LINK 82-37] [21:41:16] merge_aieprj finished successfully
+Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.13 . Memory (MB): peak = 487.285 ; gain = 0.000 ; free physical = 310434 ; free virtual = 370550
+INFO: [SYSTEM_LINK 82-38] [21:41:16] aieshim_validator started: /tools/Xilinx/Vitis/2024.2/bin/aieshim_validator -x /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/aie/shim_validation -g /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/aie/system.aieprj -t /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/shim_validation.tcl
+INFO: [SYSTEM_LINK 82-37] [21:41:17] aieshim_validator finished successfully
+Time (s): cpu = 00:00:00.79 ; elapsed = 00:00:00.89 . Memory (MB): peak = 487.285 ; gain = 0.000 ; free physical = 310400 ; free virtual = 370517
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/mm2s_hls.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_relu_hls.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/leaky_splitter_hls.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/synthara/VersalPrjs/LDRD/rtda_demo/pl/ip/s2mm_hls.xo
+INFO: [SYSTEM_LINK 82-53] Creating IP database /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-38] [21:41:17] build_xd_ip_db started: /tools/Xilinx/Vitis/2024.2/bin/build_xd_ip_db -ip_search 0  -sds-pf /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/hw_emu.hpfm -clkid 2 -ip /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/iprepo/xilinx_com_hls_mm2s_pl_1_0,mm2s_pl -ip /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/iprepo/xilinx_com_hls_leaky_splitter_pl_1_0,leaky_splitter_pl -ip /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/iprepo/xilinx_com_hls_leaky_relu_pl_1_0,leaky_relu_pl -ip /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/iprepo/xilinx_com_hls_s2mm_pl_1_0,s2mm_pl -o /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-37] [21:41:18] build_xd_ip_db finished successfully
+Time (s): cpu = 00:00:00.2 ; elapsed = 00:00:00.37 . Memory (MB): peak = 487.285 ; gain = 0.000 ; free physical = 310340 ; free virtual = 370495
+INFO: [SYSTEM_LINK 82-51] Create system connectivity graph
+INFO: [SYSTEM_LINK 82-101] Importing AIE connectivity graph
+INFO: [SYSTEM_LINK 82-38] [21:41:18] aie_import started: /tools/Xilinx/Vitis/2024.2/bin/aie_import  --dpa_aie_mem_offload false -r /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -i /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/aie/cfgraph.xml -o /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/aie_cfgraph.xml -c /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/aie_comp.xml -f /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/aie_fcnmap.xml
+INFO: [SYSTEM_LINK 82-37] [21:41:18] aie_import finished successfully
+Time (s): cpu = 00:00:00.8 ; elapsed = 00:00:00.88 . Memory (MB): peak = 487.285 ; gain = 0.000 ; free physical = 310316 ; free virtual = 370472
+INFO: [SYSTEM_LINK 82-102] Applying explicit connections to the system connectivity graph: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [SYSTEM_LINK 82-38] [21:41:19] cfgen started: /tools/Xilinx/Vitis/2024.2/bin/cfgen  -nk mm2s_pl:4:mm2s_din,mm2s_weights1,mm2s_weights2_0,mm2s_weights2_1 -nk leaky_relu_pl:2:relu,relu2 -nk leaky_splitter_pl:1:splitter -nk s2mm_pl:1:s2mm_out -sc mm2s_din.s:ai_engine_0.plio_input_dense1 -sc mm2s_weights1.s:ai_engine_0.plio_weights_dense1 -sc ai_engine_0.plio_output_dense1:relu.in_stream -sc relu.out_stream:splitter.in_stream -sc splitter.out_stream_0:ai_engine_0.plio_input_dense2_0 -sc splitter.out_stream_1:ai_engine_0.plio_input_dense2_1 -sc mm2s_weights2_0.s:ai_engine_0.plio_weights_dense2_0 -sc mm2s_weights2_1.s:ai_engine_0.plio_weights_dense2_1 -sc ai_engine_0.plio_output_dense2:relu2.in_stream -sc relu2.out_stream:s2mm_out.s -dpa_mem_offload false -dpa_aie_mem_offload false -dmclkid 2 -r /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -i /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/aie_cfgraph.xml -o /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [CFGEN 83-0] Kernel Specs: 
+INFO: [CFGEN 83-0]   kernel: mm2s_pl, num: 4  {mm2s_din mm2s_weights1 mm2s_weights2_0 mm2s_weights2_1}
+INFO: [CFGEN 83-0]   kernel: leaky_relu_pl, num: 2  {relu relu2}
+INFO: [CFGEN 83-0]   kernel: leaky_splitter_pl, num: 1  {splitter}
+INFO: [CFGEN 83-0]   kernel: s2mm_pl, num: 1  {s2mm_out}
+INFO: [CFGEN 83-0] Stream Specs: 
+INFO: [CFGEN 83-0]   mm2s_din.s => ai_engine_0.plio_input_dense1
+INFO: [CFGEN 83-0]   mm2s_weights1.s => ai_engine_0.plio_weights_dense1
+INFO: [CFGEN 83-0]   ai_engine_0.plio_output_dense1 => relu.in_stream
+INFO: [CFGEN 83-0]   relu.out_stream => splitter.in_stream
+INFO: [CFGEN 83-0]   splitter.out_stream_0 => ai_engine_0.plio_input_dense2_0
+INFO: [CFGEN 83-0]   splitter.out_stream_1 => ai_engine_0.plio_input_dense2_1
+INFO: [CFGEN 83-0]   mm2s_weights2_0.s => ai_engine_0.plio_weights_dense2_0
+INFO: [CFGEN 83-0]   mm2s_weights2_1.s => ai_engine_0.plio_weights_dense2_1
+INFO: [CFGEN 83-0]   ai_engine_0.plio_output_dense2 => relu2.in_stream
+INFO: [CFGEN 83-0]   relu2.out_stream => s2mm_out.s
+INFO: [CFGEN 83-2226] Inferring mapping for argument mm2s_din.mem to LPDDR
+INFO: [CFGEN 83-2226] Inferring mapping for argument mm2s_weights1.mem to LPDDR
+INFO: [CFGEN 83-2226] Inferring mapping for argument mm2s_weights2_0.mem to LPDDR
+INFO: [CFGEN 83-2226] Inferring mapping for argument mm2s_weights2_1.mem to LPDDR
+INFO: [CFGEN 83-2226] Inferring mapping for argument s2mm_out.mem to LPDDR
+INFO: [SYSTEM_LINK 82-37] [21:41:20] cfgen finished successfully
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:01 . Memory (MB): peak = 487.285 ; gain = 0.000 ; free physical = 310319 ; free virtual = 370476
+INFO: [SYSTEM_LINK 82-52] Create top-level block diagram
+INFO: [SYSTEM_LINK 82-38] [21:41:20] cf2bd started: /tools/Xilinx/Vitis/2024.2/bin/cf2bd  --linux --trace_buffer 1024 --input_file /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml --ip_db /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml --cf_name dr --working_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.xsd --temp_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link --output_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int
+INFO: [CF2BD 82-31] Launching cf2xd: cf2xd -linux -trace-buffer 1024 -i /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml -r /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o dr.xml
+INFO: [CF2BD 82-28] cf2xd finished successfully
+INFO: [CF2BD 82-31] Launching cf_xsd: cf_xsd -disable-address-gen -dn dr -dp /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/sys_link/_sysl/.xsd
+INFO: [CF2BD 82-28] cf_xsd finished successfully
+INFO: [SYSTEM_LINK 82-37] [21:41:22] cf2bd finished successfully
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:02 . Memory (MB): peak = 487.285 ; gain = 0.000 ; free physical = 310334 ; free virtual = 370492
+INFO: [v++ 60-1441] [21:41:22] Run run_link: Step system_link: Completed
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 504.336 ; gain = 0.000 ; free physical = 310416 ; free virtual = 370554
+INFO: [v++ 60-1443] [21:41:22] Run run_link: Step cf2sw: Started
+INFO: [v++ 60-1453] Command Line: cf2sw -sdsl /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/sdsl.dat -rtd /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/cf2sw.rtd -nofilter /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/cf2sw_full.rtd -xclbin /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.xml -o /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.1.xml
+INFO: [v++ 60-1454] Run Directory: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link
+INFO: [v++ 60-1441] [21:41:23] Run run_link: Step cf2sw: Completed
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:02 . Memory (MB): peak = 504.336 ; gain = 0.000 ; free physical = 310414 ; free virtual = 370552
+INFO: [v++ 60-1443] [21:41:23] Run run_link: Step rtd2_system_diagram: Started
+INFO: [v++ 60-1453] Command Line: rtd2SystemDiagram
+INFO: [v++ 60-1454] Run Directory: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link
+INFO: [v++ 60-1441] [21:41:23] Run run_link: Step rtd2_system_diagram: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.15 . Memory (MB): peak = 504.336 ; gain = 0.000 ; free physical = 310415 ; free virtual = 370553
+INFO: [v++ 60-1443] [21:41:23] Run run_link: Step vpl: Started
+INFO: [v++ 60-1453] Command Line: vpl -t hw_emu -f /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --remote_ip_cache /home/synthara/VersalPrjs/LDRD/rtda_demo/.ipcache --output_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int --log_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/link --report_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link --config /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/vplConfig.ini -k /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link --emulation_mode debug_waveform --no-info --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_s2mm_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_mm2s_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_relu_pl_1_0 --iprepo /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xo/ip_repo/xilinx_com_hls_leaky_splitter_pl_1_0 --messageDb /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/vpl.pb /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/dr.bd.tcl
+INFO: [v++ 60-1454] Run Directory: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link
+
+****** vpl v2024.2 (64-bit)
+  **** SW Build 5239630 on 2024-11-10-11:19:46
+  **** Start of session at: Mon Aug  4 21:41:25 2025
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: [VPL 60-839] Read in kernel information from file '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/kernel_info.dat'.
+INFO: [VPL 60-423]   Target device: xilinx_vek280_base_202420_1
+INFO: [VPL 60-1032] Extracting hardware platform to /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/vivado/vpl/.local/hw_platform
+[21:41:30] Run vpl: Step create_project: Started
+Creating Vivado project.
+[21:41:40] Run vpl: Step create_project: Completed
+[21:41:40] Run vpl: Step create_bd: Started
+[21:42:00] Run vpl: Step create_bd: Completed
+[21:42:00] Run vpl: Step update_bd: Started
+[21:42:01] Run vpl: Step update_bd: Completed
+[21:42:01] Run vpl: Step generate_target: Started
+[21:43:16] Run vpl: Step generate_target: RUNNING...
+[21:44:32] Run vpl: Step generate_target: RUNNING...
+[21:44:38] Run vpl: Step generate_target: Completed
+[21:44:38] Run vpl: Step config_hw_emu.gen_scripts: Started
+[21:45:04] Run vpl: Step config_hw_emu.gen_scripts: Completed
+[21:45:04] Run vpl: Step config_hw_emu.compile: Started
+[21:45:29] Run vpl: Step config_hw_emu.compile: Completed
+[21:45:29] Run vpl: Step config_hw_emu.elaborate: Started
+Check VPL, containing 2 checks, has run: 0 errors
+[21:46:25] Run vpl: Step config_hw_emu.elaborate: Completed
+[21:46:26] Run vpl: FINISHED. Run Status: config_hw_emu.elaborate Complete!
+INFO: [v++ 60-1441] [21:46:26] Run run_link: Step vpl: Completed
+Time (s): cpu = 00:00:03 ; elapsed = 00:05:03 . Memory (MB): peak = 504.336 ; gain = 0.000 ; free physical = 308786 ; free virtual = 369671
+INFO: [v++ 60-1443] [21:46:26] Run run_link: Step rtdgen: Started
+INFO: [v++ 60-1453] Command Line: rtdgen
+INFO: [v++ 60-1454] Run Directory: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link
+INFO: [v++ 60-1453] Command Line: cf2sw -a /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/address_map.xml -sdsl /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/sdsl.dat -xclbin /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/xclbin_orig.xml -rtd /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.rtd -o /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xml
+INFO: [v++ 60-1652] Cf2sw returned exit code: 0
+WARNING: [v++ 60-1455] Debuggable symbols are not generated successfully, clean up /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/consolidated.cf
+INFO: [v++ 60-1441] [21:46:29] Run run_link: Step rtdgen: Completed
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 504.336 ; gain = 0.000 ; free physical = 308913 ; free virtual = 369823
+INFO: [v++ 60-1443] [21:46:29] Run run_link: Step xclbinutil: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --add-section PDI:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/../int/vpl_gen_fixed_presynth.pdi --add-section DEBUG_IP_LAYOUT:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/debug_ip_layout.rtd --add-section BITSTREAM:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/behav.xse --force --target hw_emu --key-value SYS:dfx_enable:false --add-section :JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.rtd --add-section CLOCK_FREQ_TOPOLOGY:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_xml.rtd --add-section BUILD_METADATA:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_build.rtd --add-section EMBEDDED_METADATA:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xml --add-section SYSTEM_METADATA:RAW:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/systemDiagramModelSlrBaseAddress.json --add-section AIE_METADATA:JSON:/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie_control_config.json --key-value SYS:PlatformVBNV:xilinx.com_xd_xilinx_vek280_base_202420_1_202420_1 --output /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link
+XRT Build Version: 2.18.179 (2024.2)
+       Build Date: 2024-11-05 13:57:47
+          Hash ID: 3ade2e671e5ab463400813fc2846c57edf82bb10
+Creating a default 'in-memory' xclbin image.
+
+Section: 'PDI'(18) was successfully added.
+Size   : 435168 bytes
+Format : RAW
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link/../int/vpl_gen_fixed_presynth.pdi'
+
+Section: 'DEBUG_IP_LAYOUT'(9) was successfully added.
+Size   : 1880 bytes
+Format : JSON
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/debug_ip_layout.rtd'
+
+Section: 'BITSTREAM'(0) was successfully added.
+Size   : 25189313 bytes
+Format : RAW
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/behav.xse'
+
+Section: 'MEM_TOPOLOGY'(6) was successfully added.
+Format : JSON
+File   : 'mem_topology'
+
+Section: 'IP_LAYOUT'(8) was successfully added.
+Format : JSON
+File   : 'ip_layout'
+
+Section: 'CONNECTIVITY'(7) was successfully added.
+Format : JSON
+File   : 'connectivity'
+WARNING: Skipping CLOCK_FREQ_TOPOLOGY section for count size is zero.
+WARNING: Section 'CLOCK_FREQ_TOPOLOGY' content is empty.  No data in the given JSON file.
+
+Section: 'CLOCK_FREQ_TOPOLOGY'(11) was empty.  No action taken.
+Format : JSON
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_xml.rtd'
+
+Section: 'BUILD_METADATA'(14) was successfully added.
+Size   : 6117 bytes
+Format : JSON
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu_build.rtd'
+
+Section: 'EMBEDDED_METADATA'(2) was successfully added.
+Size   : 9833 bytes
+Format : RAW
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xml'
+
+Section: 'SYSTEM_METADATA'(22) was successfully added.
+Size   : 49793 bytes
+Format : RAW
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/systemDiagramModelSlrBaseAddress.json'
+
+Section: 'AIE_METADATA'(25) was successfully added.
+Size   : 3226 bytes
+Format : JSON
+File   : '/home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/aie_control_config.json'
+Successfully wrote (25717942 bytes) to the output file: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin
+Leaving xclbinutil.
+INFO: [v++ 60-1441] [21:46:29] Run run_link: Step xclbinutil: Completed
+Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.12 . Memory (MB): peak = 504.336 ; gain = 0.000 ; free physical = 308871 ; free virtual = 369805
+INFO: [v++ 60-1443] [21:46:29] Run run_link: Step xclbinutilinfo: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --quiet --force --info /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin.info --input /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/int/design_hw_emu.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/link/run_link
+INFO: [v++ 60-1441] [21:46:30] Run run_link: Step xclbinutilinfo: Completed
+Time (s): cpu = 00:00:00.19 ; elapsed = 00:00:00.26 . Memory (MB): peak = 504.336 ; gain = 0.000 ; free physical = 308869 ; free virtual = 369804
+INFO: [v++ 82-3844] Successfully added runtime data to ./design_hw_emu.xsa
+INFO: [v++ 60-586] Created design_hw_emu.xsa
+INFO: [v++ 60-1307] Run completed. Additional information can be found in:
+	Guidance: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/reports/link/v++_link_design_hw_emu_guidance.html
+	Steps Log File: /home/synthara/VersalPrjs/LDRD/rtda_demo/_x/logs/link/link.steps.log
+
+INFO: [v++ 60-2343] Use the Vitis Unified IDE to visualize and navigate the reports. Run the following command. 
+    vitis -a/ --analyze /home/synthara/VersalPrjs/LDRD/rtda_demo/design_hw_emu.xsa.link_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 5m 21s

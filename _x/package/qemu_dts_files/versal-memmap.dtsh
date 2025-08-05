@@ -1,0 +1,176 @@
+/*
+ * ZynqMP memory region definitions
+ *
+ * Copyright (c) 2016, Xilinx Inc
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#define MEM_REGION64(name, addrH, addrL, addr64, sizeH, sizeL, c)	\
+name: name@addr64 {							\
+	compatible = "qemu:memory-region";				\
+	container = <c>;						\
+	qemu,ram = <QEMU_RAM_PROPERTY>;					\
+	reg = <addrH addrL sizeH sizeL 0x0 >;				\
+};
+#define MEM_REGION(name, addrH, addrL, addr64, s, c)			\
+	MEM_REGION64(name, addrH, addrL, addr64, 0, s, c)
+
+/* The MEM_SPEC macro tells QEMU that memory can be created here, but does
+ * NOT create memory regions.
+ * Do not change this macro without changing the QEMU code.
+ */
+#define MEM_SPEC(name, addrH, addrL, addr64, sizeH, sizeL, c)			\
+name: name@addr64 {														\
+	compatible = "qemu:memory-region-spec";								\
+	container = <c>;													\
+	qemu,ram = <QEMU_RAM_PROPERTY>;										\
+	reg = <addrH addrL sizeH sizeL 0x0>;									\
+};
+
+/* Manual entries.  */
+
+#define ACPU_GIC_STRIDE		0x10000
+#define ACPU_GIC_DIST		MM_APU_GIC_DIST_MAIN
+#define ACPU_GIC_CPUIF		MM_APU_GIC_CPUIF
+
+#define ACPU_GIC_REDIST		MM_APU_GIC_REDIST_CTLLPI_0
+
+#define R5_GIC_DIST		MM_RPU_GIC
+#define R5_GIC			(MM_RPU_GIC + 0x1000)
+
+#define MM_PMC_QSPI_DMA		(MM_PMC_QSPI + 0x800)
+#define MM_PMC_LQSPI		MM_TOP_QSPI
+#define MM_PMC_LQSPI_SIZE	MM_TOP_QSPI_SIZE
+
+#define MM_PMC_PPU0_IOM(a)     (MM_PMC_PPU0_IOMODULE | 0x ## a)
+#define MM_PMC_PPU1_IOM(a)     (MM_PMC_PPU1_IOMODULE | 0x ## a)
+#define MM_PSM_IOM(a)          (MM_PSM_IOMODULE | 0x ## a)
+
+/* Split the PMC DMA into a SRC and a DST.  */
+#define MM_PMC_PMC_DMA0_SRC MM_PMC_PMC_DMA0
+#define MM_PMC_PMC_DMA0_DST (MM_PMC_PMC_DMA0 + 0x800)
+
+#define MM_PMC_PMC_DMA1_SRC MM_PMC_PMC_DMA1
+#define MM_PMC_PMC_DMA1_DST (MM_PMC_PMC_DMA1 + 0x800)
+
+#define MM_PMC_OSPI_DMA_SRC  (MM_PMC_OSPI + 0x1000)
+#define MM_PMC_OSPI_DMA_DST  (MM_PMC_OSPI + 0x1800)
+#define MM_PMC_OSPI_DAC      MM_TOP_QSPI
+
+#define MM_PMC_PMC_SSS (MM_PMC_PMC_GLOBAL + 0x500)
+#define MM_PRAM_ZEROIZE (MM_PMC_PMC_GLOBAL + 0x518)
+#define MM_PRAM_ZEROIZE_SIZE 4
+
+/* Split PMC_GLOBAL into areas matching separate ods */
+#define MM_PMC_PUF_CTRL        (MM_PMC_PMC_GLOBAL + 0x40000)
+#define MM_PMC_PUF_CTRL_SIZE   0x10000
+
+/* PMC Sysmon AMS Satellite subregions within MM_PMC_PMC_SYSMON */
+#define MM_PMC_AMS_SAT0        (MM_PMC_PMC_SYSMON + 0x10000)
+#define MM_PMC_AMS_SAT1        (MM_PMC_PMC_SYSMON + 0x20000)
+#define MM_PMC_AMS_SAT_SIZE    0x00010000
+
+/* PMC GIC Proxy at MM_PMC_PMC_GLOBAL + 0x30000 offset.  */
+#define MM_PMC_GIC_PROXY (MM_PMC_PMC_GLOBAL + 0x30000)
+#define MM_PMC_GIC_PROXY_SIZE 0x100
+
+#ifdef MM_PSM_GLOBAL_REG
+#define MM_PSM_GIC_PROXY (MM_PSM_GLOBAL_REG + 0x2000)
+#define MM_PSM_GIC_PROXY_SIZE 0x100
+#endif
+
+/* IPI Message buffers.  */
+#define MM_IPI_MSGBUF		(MM_IPI + 0xF0000)
+#define MM_IPI_MSGBUF_SIZE	0x1000
+
+/* DDRMC as seen from the UBs, not from PMC nor PS.  */
+#define MM_DDRMC_IOM(a)			0x0001b0 ## a
+#define MM_DDRMC_RAM_DATA		0x1c000
+#define MM_DDRMC_RAM_DATA_SIZE		0x04000
+#define MM_DDRMC_RAM_INSTR		0x20000
+#define MM_DDRMC_RAM_INSTR_SIZE		0x20000
+#define MM_DDRMC_RAM_EXCHANGE		0x08000
+#define MM_DDRMC_RAM_EXCHANGE_SIZE	0x08000
+/* Everything before RAM exchange gets mapped to main regs.  */
+#define MM_DDRMC_NPI_MAIN		0x0
+#define MM_DDRMC_NPI_MAIN_SIZE		MM_DDRMC_RAM_EXCHANGE
+
+#ifdef VERSAL_NET
+/* Placed below remote port reserved region */
+#define MM_TOP_VIRTIO_MMIO_0  0xf5e00000
+#define MM_TOP_VIRTIO_MMIO_SIZE 0x1000
+#else
+/* Based off MM_TOP_Reserved.  */
+#define MM_TOP_VIRTIO_MMIO_0  0xa0000000
+#define MM_TOP_VIRTIO_MMIO_SIZE 0x200
+#endif
+#define MM_TOP_VIRTIO_MMIO_1  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 1))
+#define MM_TOP_VIRTIO_MMIO_2  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 2))
+#define MM_TOP_VIRTIO_MMIO_3  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 3))
+#define MM_TOP_VIRTIO_MMIO_4  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 4))
+#define MM_TOP_VIRTIO_MMIO_5  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 5))
+#define MM_TOP_VIRTIO_MMIO_6  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 6))
+#define MM_TOP_VIRTIO_MMIO_7  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 7))
+#define MM_TOP_VIRTIO_MMIO_8  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 8))
+#define MM_TOP_VIRTIO_MMIO_9  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 9))
+#define MM_TOP_VIRTIO_MMIO_10  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 10))
+#define MM_TOP_VIRTIO_MMIO_11  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 11))
+#define MM_TOP_VIRTIO_MMIO_12  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 12))
+#define MM_TOP_VIRTIO_MMIO_13  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 13))
+#define MM_TOP_VIRTIO_MMIO_14  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 14))
+#define MM_TOP_VIRTIO_MMIO_15  (MM_TOP_VIRTIO_MMIO_0 + (MM_TOP_VIRTIO_MMIO_SIZE * 15))
+
+/* USB dwc3 base */
+#define MM_USB_DWC3_0 (MM_USB_XHCI + 0xC100)
+#define MM_USB_DWC3_0_SIZE 0x600
+
+/* Include auto-generated files.  */
+
+#ifdef VERSAL_NET
+ #include "include/versal-net/memmap.dtsh"
+ #include "include/versal-net/gic-memmap.dtsh"
+ #include "versal-psx-memmap-aliases.dtsh"
+#else
+ #include "versal-top-memmap.dtsh"
+ #include "versal-fpd-memmap.dtsh"
+ #include "versal-lpd-memmap.dtsh"
+ #include "versal-pmc-memmap.dtsh"
+ #include "versal-iou-memmap.dtsh"
+ #include "versal-psm-memmap.dtsh"
+ #include "versal-gic-memmap.dtsh"
+ #define MM_RPU_GIC	0xf9000000
+ #define MM_RPU_GIC_SIZE	0x3000
+#endif
+
+#ifndef VERSAL_NET
+#define MM_XRAM MM_OCM2
+#define MM_XRAM_SIZE MM_OCM2_SIZE
+#define MM_XRAM_MEM MM_OCM2_MEM
+#define MM_XRAM_MEM_SIZE MM_OCM2_MEM_SIZE
+#define MM_XRAM_XMPU MM_OCM2_XMPU
+#define MM_XRAM_XMPU_SIZE MM_OCM2_XMPU_SIZE
+#endif
+
+#include "versal-cpm-memmap.dtsh"
