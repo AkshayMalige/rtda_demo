@@ -137,6 +137,7 @@ endif
 print_vars:
 	@echo "TARGET    = $(TARGET)"
 	@echo "EMU_PS    = $(EMU_PS)"
+	@echo "AIE_TGT   = $(AIE_TGT)"
 	@echo "PLATFORM  = $(PLATFORM)"
 	@echo "LINK_CFG  = $(LINK_CFG)"
 	@echo "PACK_CFG  = $(PACK_CFG)"
