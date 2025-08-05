@@ -9,6 +9,9 @@ PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202
 # Target for compilation and simulation. Options: x86sim, hw
 TARGET       = hw
 
+# Location of input/weight files used by PLIO connections (override from top-level)
+DATA_DIR    ?= ../data
+
 # Frequency for the Programmable Logic (PL) interfaces in MHz.
 PL_FREQ_MHZ  ?= 300
 
@@ -41,18 +44,20 @@ X86SIM       := x86simulator
 # ==== COMPILER FLAGS ====
 # Include paths for the AIE compiler.
 AIE_INCLUDE_FLAGS := \
-	--include="./" \
-	--include="$(DSPLIB_PATH)/L1/src/aie" \
-	--include="$(DSPLIB_PATH)/L1/include/aie" \
-	--include="$(DSPLIB_PATH)/L2/include/aie"
+        --include="./" \
+        --include="../common" \
+        --include="$(DSPLIB_PATH)/L1/src/aie" \
+        --include="$(DSPLIB_PATH)/L1/include/aie" \
+        --include="$(DSPLIB_PATH)/L2/include/aie"
 
 # Full AIE compiler command flags, assembled from variables above.
 AIE_FLAGS := \
-	--v \
-	--platform=$(PLATFORM) \
-	--target=$(TARGET) \
---pl-freq=$(PL_FREQ_MHZ) \
-	$(AIE_INCLUDE_FLAGS)
+        --v \
+        --platform=$(PLATFORM) \
+        --target=$(TARGET) \
+        --pl-freq=$(PL_FREQ_MHZ) \
+        $(AIE_INCLUDE_FLAGS) \
+        -D DATA_DIR=\"$(DATA_DIR)\"
 
 
 # ==== RULES ====

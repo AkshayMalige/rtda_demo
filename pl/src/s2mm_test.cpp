@@ -9,6 +9,7 @@
  #include <vector>
  #include <hls_stream.h>
  #include <ap_axi_sdata.h>
+#include "../../common/data_paths.h"
  
  typedef float data_t;
  typedef hls::axis<data_t, 0, 0, 0> axis_t;
@@ -26,7 +27,7 @@
      std::vector<data_t> golden_data;
      golden_data.reserve(SIZE);
  
-     std::ifstream fin("/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml/data/output_data_ref.txt");
+    std::ifstream fin(std::string(DATA_DIR) + "/output_data_ref.txt");
      if (!fin.is_open()) {
          std::cerr << "ERROR: Cannot open input file leakyrelu_output_ref.txt" << std::endl;
          return 1;
