@@ -35,8 +35,8 @@ PKG_DIR   := package.$(TARGET)
 XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
 ###########################################################################
 
-# Map top-level TARGET to AIE compiler target
-ifeq ($(TARGET),sw_emu)
+# Map EMU_PS to AIE compiler target
+ifeq ($(EMU_PS),X86)
   AIE_TGT := x86sim
 else
   AIE_TGT := hw
@@ -137,6 +137,7 @@ endif
 print_vars:
 	@echo "TARGET    = $(TARGET)"
 	@echo "EMU_PS    = $(EMU_PS)"
+	@echo "AIE_TGT   = $(AIE_TGT)"
 	@echo "PLATFORM  = $(PLATFORM)"
 	@echo "LINK_CFG  = $(LINK_CFG)"
 	@echo "PACK_CFG  = $(PACK_CFG)"
@@ -164,7 +165,7 @@ clean:
 	rm -rf $(PKG_DIR) build_* *.xclbin *.xsa *.log
 
 clean_all:
-	$(MAKE) -C $(AIE_DIR) clean TARGET=$(TARGET) || true
+	$(MAKE) -C $(AIE_DIR) clean TARGET=$(AIE_TGT) || true
 	$(MAKE) -C pl       clean TARGET=$(TARGET) || true
 	$(MAKE) -C host     clean TARGET=$(TARGET) || true
 	$(MAKE) -C hw_link  clean TARGET=$(TARGET) || true
