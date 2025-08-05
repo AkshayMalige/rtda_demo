@@ -56,8 +56,7 @@ AIE_FLAGS := \
         --platform=$(PLATFORM) \
         --target=$(TARGET) \
         --pl-freq=$(PL_FREQ_MHZ) \
-        $(AIE_INCLUDE_FLAGS) \
-        -D DATA_DIR=\"$(DATA_DIR)\"
+        $(AIE_INCLUDE_FLAGS)
 
 
 # ==== RULES ====
