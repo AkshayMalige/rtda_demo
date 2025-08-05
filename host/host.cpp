@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
     std::string weights1File       = base_path + "/" + WEIGHTS_DENSE1_FILE;
     std::string weights2_part0File = base_path + "/" + WEIGHTS_DENSE2_PREFIX + "0.txt";
     std::string weights2_part1File = base_path + "/" + WEIGHTS_DENSE2_PREFIX + "1.txt";
+    std::string outputFile        = base_path + "/" + HOST_OUTPUT_FILE;
 
     try {
         xrt::device device(0);
@@ -84,17 +85,21 @@ int main(int argc, char** argv) {
         xrt::kernel mm2s_weights1 = xrt::kernel(device, xclbin_uuid, "mm2s_pl:{mm2s_weights1}");
         xrt::kernel mm2s_weights2_0 = xrt::kernel(device, xclbin_uuid, "mm2s_pl:{mm2s_weights2_0}");
         xrt::kernel mm2s_weights2_1 = xrt::kernel(device, xclbin_uuid, "mm2s_pl:{mm2s_weights2_1}");
-        xrt::kernel relu = xrt::kernel(device, xclbin_uuid, "leaky_relu_pl:{relu}");
+        xrt::kernel relu  = xrt::kernel(device, xclbin_uuid, "leaky_relu_pl:{relu}");
+        xrt::kernel relu2 = xrt::kernel(device, xclbin_uuid, "leaky_relu_pl:{relu2}");
         xrt::kernel splitter = xrt::kernel(device, xclbin_uuid, "leaky_splitter_pl:{splitter}");
         xrt::kernel s2mm = xrt::kernel(device, xclbin_uuid, "s2mm_pl:{s2mm_out}");
         xrt::graph aie_graph = xrt::graph(device, xclbin_uuid, "g");
 
         // --- 4. Start all CONSUMER kernels FIRST ---
-        // These kernels wait for data: s2mm, relu, splitter.
+        // These kernels wait for data: s2mm, relu2, relu, splitter.
         auto s2mm_run = xrt::run(s2mm);
         s2mm_run.set_arg(1, output_buf); // Assumes s2mm has mem pointer at arg 1
         s2mm_run.set_arg(2, FINAL_OUTPUT_SIZE);
         s2mm_run.start();
+
+        auto relu2_run = xrt::run(relu2);
+        relu2_run.start();
 
         auto relu_run = xrt::run(relu);
         relu_run.start();
@@ -143,11 +148,13 @@ int main(int argc, char** argv) {
         output_buf.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
         output_buf.read(host_output_data.data());
 
-        // Print first few values for verification
-        std::cout << "Verification: First 5 output values:" << std::endl;
+        std::cout << "Writing output data to " << outputFile << std::endl;
+        std::ofstream out(outputFile);
         for (int i = 0; i < FINAL_OUTPUT_SIZE; ++i) {
-            std::cout << host_output_data[i] << std::endl;
+            out << host_output_data[i] << std::endl;
         }
+        out.close();
+        std::cout << "Output written to file." << std::endl;
 
     } catch (const std::exception& e) {
         std::cerr << "ERROR: " << e.what() << std::endl;
