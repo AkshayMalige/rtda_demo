@@ -11,7 +11,6 @@
 typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 0> axis_t;
 
-// Declare DUT with C linkage
 extern "C" {
 void leaky_splitter_pl(hls::stream<axis_t>& in_stream,
                        hls::stream<axis_t> out_stream[CASCADE_LENGTH]);
@@ -21,7 +20,6 @@ int main() {
     hls::stream<axis_t> in_stream;
     hls::stream<axis_t> out_stream[CASCADE_LENGTH];
 
-    // Read input data from file
     std::ifstream fin(std::string(DATA_DIR) + "/leakyrelu_output_ref.txt");
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open dense1_output_ref.txt" << std::endl;
@@ -39,10 +37,8 @@ int main() {
     }
     fin.close();
 
-    // Call DUT
     leaky_splitter_pl(in_stream, out_stream);
 
-    // Open output files
     std::ofstream fout[CASCADE_LENGTH];
     fout[0].open(std::string(DATA_DIR) + "/leakyrelu_output_pl_part0.txt");
     fout[1].open(std::string(DATA_DIR) + "/leakyrelu_output_pl_part1.txt");
@@ -54,7 +50,6 @@ int main() {
         }
     }
 
-    // Write outputs
     const int SPLIT_SIZE = SIZE / CASCADE_LENGTH;
     for (int i = 0; i < CASCADE_LENGTH; ++i) {
         for (int j = 0; j < SPLIT_SIZE; ++j) {
