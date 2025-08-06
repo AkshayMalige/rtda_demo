@@ -1,6 +1,6 @@
 # System Project Overview
 
-The `system_project.yaml` file describes how the host application, AI Engine-ML graph, PL kernels, and the hardware link output are combined into a complete design for the VEK280 platform.
+The `system_project.yaml` file describes how the host application, AI Engine-ML graph, PL kernels, and the hardware link output are combined into a complete design for the VEK280 platform. The top-level build now drops the hardware link `.xsa` and the generated `post_boot.sh` launcher into this directory so that packaging can pick them up directly.
 
 ## Components
 
