@@ -60,3 +60,13 @@ creates:
 that simulation reads the pre-generated values at runtime. For environment
 setup and detailed data creation instructions, see the
 [top-level README](../README.md).
+
+
+<!-- -0.250920
+0.901429
+0.463988
+0.197317
+-0.687963
+-0.688011
+-0.883833
+0.732352 -->
