@@ -141,7 +141,6 @@ def main() -> None:
         [embed_sess.get_outputs()[0].name],
         {embed_sess.get_inputs()[0].name: embed_in},
     )[0]
->>>>>>> origin/yjh49z-codex/troubleshoot-output-mismatch-in-dense-layer
     save_txt(out_dir / "dense1_output_ref.txt", embed_out, dtype)
 
     arr = embed_out
@@ -177,4 +176,3 @@ def main() -> None:
     )
 
     print(f"Saved dumps to {out_dir}")
->>>>>>> origin/yjh49z-codex/troubleshoot-output-mismatch-in-dense-layer
