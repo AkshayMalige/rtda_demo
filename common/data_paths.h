@@ -1,6 +1,6 @@
 #pragma once
 #ifndef DATA_DIR
-#define DATA_DIR "/home/synthara/VersalPrjs/LDRD/rtda_demo/data"
+#define DATA_DIR "./data"
 #endif
 
 #define INPUT_DATA_FILE "input_data.txt"

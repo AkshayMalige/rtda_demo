@@ -127,17 +127,21 @@ def main() -> None:
     np_dtype = np.float16 if 'float16' in embed_in_type else np.float32
 
     onnx_inputs = readout.numpy().astype(np_dtype)
-    # Pad to 8 features for dense8x128
+
+    # Save padded input for AIE (dense8x128 expects 8 features)
+    padded_inputs = onnx_inputs
     if onnx_inputs.shape[-1] < 8:
-        pad_width = ((0,0),(0,0),(0,8 - onnx_inputs.shape[-1]))
-        onnx_inputs = np.pad(onnx_inputs, pad_width, mode='constant')
+        pad_width = ((0, 0), (0, 0), (0, 8 - onnx_inputs.shape[-1]))
+        padded_inputs = np.pad(onnx_inputs, pad_width, mode="constant")
+    save_txt(out_dir / "input_data.txt", padded_inputs.reshape(-1), dtype)
 
-    # Save input for AIE
-    save_txt(out_dir / "input_data.txt", onnx_inputs.reshape(-1), dtype)
-
-    # Run embed
+    # Run embed on unpadded inputs (model expects 6 features)
     embed_in = onnx_inputs
-    embed_out = embed_sess.run([embed_sess.get_outputs()[0].name], {embed_sess.get_inputs()[0].name: embed_in})[0]
+    embed_out = embed_sess.run(
+        [embed_sess.get_outputs()[0].name],
+        {embed_sess.get_inputs()[0].name: embed_in},
+    )[0]
+>>>>>>> origin/yjh49z-codex/troubleshoot-output-mismatch-in-dense-layer
     save_txt(out_dir / "dense1_output_ref.txt", embed_out, dtype)
 
     arr = embed_out
@@ -160,10 +164,17 @@ def main() -> None:
     save_txt(out_dir / "output_data_ref.txt", final_out, dtype)
 
     # Dump weights/biases
-    dump_dense_weights(embed_path, prefix="dense1", cascade_len=1, pad_to=8, out_dir=out_dir, dtype=dtype)
-    dump_dense_weights(output_path, prefix="dense2", cascade_len=args.tp_casc_len_layer2, pad_to=None, out_dir=out_dir, dtype=dtype)
+    dump_dense_weights(
+        embed_path, prefix="dense1", cascade_len=1, pad_to=8, out_dir=out_dir, dtype=dtype
+    )
+    dump_dense_weights(
+        output_path,
+        prefix="dense2",
+        cascade_len=args.tp_casc_len_layer2,
+        pad_to=None,
+        out_dir=out_dir,
+        dtype=dtype,
+    )
 
     print(f"Saved dumps to {out_dir}")
-
-if __name__ == "__main__":
-    main()
+>>>>>>> origin/yjh49z-codex/troubleshoot-output-mismatch-in-dense-layer
