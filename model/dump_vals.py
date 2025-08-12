@@ -176,3 +176,7 @@ def main() -> None:
     )
 
     print(f"Saved dumps to {out_dir}")
+
+
+if __name__ == "__main__":
+    main()
