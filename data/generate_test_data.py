@@ -50,14 +50,14 @@ def main():
 
     # --- Dense1 ---
     W1 = np.random.uniform(-1.0, 1.0, (hidden_size, input_size)).astype(DTYPE_MAP[dtype])
+    b1 = np.random.uniform(-1.0, 1.0, hidden_size).astype(DTYPE_MAP[dtype])
 
-    # Compute Dense1 Output (DO NOT transpose for computation)
-    dense1_output = np.dot(W1, x)
+    dense1_output = np.dot(W1, x) + b1
     np.savetxt('dense1_output_ref.txt', dense1_output, fmt=FMT_MAP[dtype])
 
-    # Save Dense1 Weights (Transpose ONLY for saving to AIE)
     W1_to_save = W1.T
     np.savetxt('weights_dense1.txt', W1_to_save.flatten(), fmt=FMT_MAP[dtype])
+    np.savetxt('bias_dense1.txt', b1, fmt=FMT_MAP[dtype])
 
     # --- LeakyReLU ---
     leakyrelu_output = leaky_relu(dense1_output)
@@ -65,15 +65,16 @@ def main():
 
     # --- Dense2 ---
     W2 = np.random.uniform(-1.0, 1.0, (output_size, hidden_size)).astype(DTYPE_MAP[dtype])
+    b2 = np.random.uniform(-1.0, 1.0, output_size).astype(DTYPE_MAP[dtype])
 
-    # Transpose for column-major storage (AIE)
     W2_to_save = W2.T
 
     W2_parts = split_dense2_weights(W2_to_save, cascade_len)
-
     for i, W_part in enumerate(W2_parts):
         filename = f'weights_dense2_part{i}.txt'
         np.savetxt(filename, W_part.flatten(), fmt=FMT_MAP[dtype])
+
+    np.savetxt('bias_dense2.txt', b2, fmt=FMT_MAP[dtype])
 
     # Split LeakyReLU Output as Dense2 Input for Cascade
     assert hidden_size % cascade_len == 0, "Hidden size must be divisible by cascade_len."
@@ -82,9 +83,10 @@ def main():
         part = leakyrelu_output[i * split_size : (i + 1) * split_size]
         np.savetxt(f'leakyrelu_output_part{i}.txt', part, fmt=FMT_MAP[dtype])
 
-    # Compute Dense2 Output (Reference)
-    dense2_output = np.dot(W2, leakyrelu_output)
-    np.savetxt('output_data_ref.txt', dense2_output, fmt=FMT_MAP[dtype])
+    # Compute Dense2 Output and final activation (Reference)
+    dense2_linear = np.dot(W2, leakyrelu_output) + b2
+    final_output = leaky_relu(dense2_linear)
+    np.savetxt('output_data_ref.txt', final_output, fmt=FMT_MAP[dtype])
 
     print("\nSaved all reference and AIE input files successfully.\n")
 

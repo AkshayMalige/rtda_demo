@@ -1,18 +1,13 @@
 # Data generation for model
 
-This directory contains utilities and notebooks for generating training data for the reduced-order detector model.
+This directory contains utilities for exporting values from the reduced-order detector model used by the AIE demo.
 
-## Generate Reduced-Order Model Detector Data
+## Dump model values
 
-Run the following steps to create the dataset:
+Run the provided script to extract real weights, biases and reference activations from the ONNX submodules. The files are written into the repository's `data/` directory and padded/split to match the AIE graph configuration.
 
 ```bash
-git clone https://github.com/abidihaider/RealTimeAlignment.git
-cd RealTimeAlignment
-git checkout origin/develop
-python setup.py develop
-cd RealtimeAlignment/onnx_no-residual
-cp ../../dump_vals.ipynb .
+python dump_vals.py --data-root <path_to_dataset> --submodule-dir <path_to_submodule_onnx>
 ```
 
-The `dump_vals.ipynb` notebook exports intermediate detector values required to train the reduced-order model. Execute the notebook to produce the data and save the resulting files in the `data/` directory for subsequent training steps.
+By default the script dumps inputs, layer outputs, transposed/split weights and biases for the first (`dense8x128`) and second (`dense128x128`) dense layers. Adjust options via `-h` for different locations or precisions.
