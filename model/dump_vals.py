@@ -84,6 +84,23 @@ def dump_dense_weights(model_path: Path, prefix: str, cascade_len: int, pad_to: 
     if W is None:
         raise RuntimeError(f"No dense weights found in {model_path}")
 
+    # Validate weight and bias shapes to catch unexpected model changes
+    expected_dims = {
+        "dense1": (128, 6),
+        "dense2": (128, 128),
+    }
+    if prefix in expected_dims:
+        exp_out, exp_in = expected_dims[prefix]
+        if W.shape != (exp_out, exp_in):
+            raise ValueError(
+                f"{prefix}: expected weight shape {(exp_out, exp_in)}, got {W.shape}"
+            )
+        if B is None or B.shape[0] != exp_out:
+            raise ValueError(
+                f"{prefix}: expected bias length {exp_out}, "
+                f"got {None if B is None else B.shape[0]}"
+            )
+
     W = W.T  # column-major for AIE
     if pad_to and W.shape[1] < pad_to:
         W = np.pad(W, ((0, 0), (0, pad_to - W.shape[1])), constant_values=0)
