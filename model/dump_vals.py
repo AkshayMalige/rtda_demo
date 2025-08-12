@@ -86,15 +86,22 @@ def dump_dense_weights(model_path: Path, prefix: str, cascade_len: int, pad_to: 
 
     W = W.T  # column-major for AIE
     if pad_to and W.shape[1] < pad_to:
-        W = np.pad(W, ((0,0),(0,pad_to - W.shape[1])), constant_values=0)
+        W = np.pad(W, ((0, 0), (0, pad_to - W.shape[1])), constant_values=0)
+        if B is not None and B.shape[0] < pad_to:
+            B = np.pad(B, (0, pad_to - B.shape[0]), constant_values=0)
+
     if cascade_len > 1:
         parts = split_dense_weights(W, cascade_len)
         for i, part in enumerate(parts):
             save_txt(out_dir / f"weights_{prefix}_part{i}.txt", part, dtype)
+        if B is not None:
+            b_parts = split_dense_weights(B.reshape(-1, 1), cascade_len)
+            for i, b in enumerate(b_parts):
+                save_txt(out_dir / f"bias_{prefix}_part{i}.txt", b.reshape(-1), dtype)
     else:
         save_txt(out_dir / f"weights_{prefix}.txt", W, dtype)
-    if B is not None:
-        save_txt(out_dir / f"bias_{prefix}.txt", B, dtype)
+        if B is not None:
+            save_txt(out_dir / f"bias_{prefix}.txt", B, dtype)
 
 # ----------------------------- Main ---------------------------------------
 
@@ -180,7 +187,7 @@ def main() -> None:
         output_path,
         prefix="dense2",
         cascade_len=args.tp_casc_len_layer2,
-        pad_to=None,
+        pad_to=128,
         out_dir=out_dir,
         dtype=dtype,
     )
