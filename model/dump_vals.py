@@ -32,7 +32,9 @@ def assemble_np(array: np.ndarray, subset_size: int) -> np.ndarray:
     return np.concatenate([np.roll(array, shift=i, axis=1) for i in range(subset_size)], axis=-1)
 
 def split_dense_weights(W: np.ndarray, cascade_len: int) -> list[np.ndarray]:
-    assert W.shape[0] % cascade_len == 0, "Input dimension must be divisible by cascade_len"
+    if cascade_len > 1 and W.shape[0] % cascade_len != 0:
+        pad_rows = cascade_len - (W.shape[0] % cascade_len)
+        W = np.pad(W, ((0, pad_rows), (0, 0)), constant_values=0)
     split_size = W.shape[0] // cascade_len
     return [W[i * split_size : (i + 1) * split_size, :] for i in range(cascade_len)]
 
@@ -84,15 +86,22 @@ def dump_dense_weights(model_path: Path, prefix: str, cascade_len: int, pad_to: 
 
     W = W.T  # column-major for AIE
     if pad_to and W.shape[1] < pad_to:
-        W = np.pad(W, ((0,0),(0,pad_to - W.shape[1])), constant_values=0)
+        W = np.pad(W, ((0, 0), (0, pad_to - W.shape[1])), constant_values=0)
+        if B is not None and B.shape[0] < pad_to:
+            B = np.pad(B, (0, pad_to - B.shape[0]), constant_values=0)
+
     if cascade_len > 1:
         parts = split_dense_weights(W, cascade_len)
         for i, part in enumerate(parts):
             save_txt(out_dir / f"weights_{prefix}_part{i}.txt", part, dtype)
+        if B is not None:
+            b_parts = split_dense_weights(B.reshape(-1, 1), cascade_len)
+            for i, b in enumerate(b_parts):
+                save_txt(out_dir / f"bias_{prefix}_part{i}.txt", b.reshape(-1), dtype)
     else:
         save_txt(out_dir / f"weights_{prefix}.txt", W, dtype)
-    if B is not None:
-        save_txt(out_dir / f"bias_{prefix}.txt", B, dtype)
+        if B is not None:
+            save_txt(out_dir / f"bias_{prefix}.txt", B, dtype)
 
 # ----------------------------- Main ---------------------------------------
 
@@ -152,9 +161,17 @@ def main() -> None:
     # arr is input to final dense layer
     save_txt(out_dir / "leakyrelu_output_ref.txt", arr, dtype)
     # split for cascade
-    split_size = arr.shape[-1] // args.tp_casc_len_layer2
-    for i in range(args.tp_casc_len_layer2):
-        part = arr[..., i*split_size:(i+1)*split_size]
+    casc_len = args.tp_casc_len_layer2
+    split_size = (arr.shape[-1] + casc_len - 1) // casc_len
+    total = split_size * casc_len
+    if arr.shape[-1] < total:
+        pad_width = [(0, 0)] * arr.ndim
+        pad_width[-1] = (0, total - arr.shape[-1])
+        arr_for_split = np.pad(arr, pad_width, mode="constant")
+    else:
+        arr_for_split = arr
+    for i in range(casc_len):
+        part = arr_for_split[..., i * split_size:(i + 1) * split_size]
         save_txt(out_dir / f"leakyrelu_output_part{i}.txt", part, dtype)
 
     # Run output layer for final reference
@@ -170,7 +187,7 @@ def main() -> None:
         output_path,
         prefix="dense2",
         cascade_len=args.tp_casc_len_layer2,
-        pad_to=None,
+        pad_to=128,
         out_dir=out_dir,
         dtype=dtype,
     )
