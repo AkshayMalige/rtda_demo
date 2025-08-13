@@ -3,10 +3,12 @@
 #define DATA_DIR "/home/synthara/VersalPrjs/LDRD/rtda_demo/data"
 #endif
 
-#define INPUT_DATA_FILE "input_data.txt"
-#define WEIGHTS_DENSE1_FILE "weights_dense1.txt"
-#define WEIGHTS_DENSE2_PREFIX "weights_dense2_part"
+#define INPUT_DATA_FILE "input.txt"
+#define WEIGHTS_DENSE1_FILE "dense_0_weights.txt"
+
+#define LEAKY_RELU_OUTPUT_PREFIX "leakyrelu_0_output_part"
+#define WEIGHTS_DENSE2_PREFIX "dense_1_weights_part"
+
 #define BIAS_DENSE1_FILE "bias_dense1.txt"
 #define BIAS_DENSE2_FILE "bias_dense2.txt"
-#define LEAKY_RELU_OUTPUT_PREFIX "leakyrelu_output_part"
 #define HOST_OUTPUT_FILE "host_output.txt"
