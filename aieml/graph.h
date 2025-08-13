@@ -60,7 +60,7 @@ public:
         pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits,
                                           (base_path + "/" + WEIGHTS_DENSE1_FILE).c_str());
         pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits,
-                                          (base_path + "/dense1_output_aie.txt").c_str());
+                                          (base_path + "/dense0_output_aie.txt").c_str());
 
         connect<>(pl_w_dense1.out[0], dense1.inA[0]);
         connect<>(pl_in_dense1.out[0], dense1.inB[0]);
@@ -80,7 +80,7 @@ public:
             connect<>(pl_w_dense2[i].out[0], dense2.inA[i]);
         }
 
-        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits,(base_path + "/dense2_output_aie.txt").c_str());
+        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits,(base_path + "/dense1_output_aie.txt").c_str());
         connect<>(dense2.out[0], pl_out_dense2.in[0]);
     }
 };
