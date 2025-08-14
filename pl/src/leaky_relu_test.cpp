@@ -30,7 +30,7 @@ int main() {
     }
 
     // std::ifstream fin_bias(std::string(DATA_DIR) + "/dense_0_bias.txt");
-    std::ifstream fin_bias(std::string(DATA_DIR) + "/"  + std::string(BIAS_DENSE1_FILE));
+    std::ifstream fin_bias(std::string(DATA_DIR) + "/"  + std::string(BIAS_DENSE2_FILE));
     if (!fin_bias.is_open()) {
         std::cerr << "ERROR: Cannot open BIAS_DENSE1_FILE" << std::endl;
         return 1;
