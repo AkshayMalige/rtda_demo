@@ -3,7 +3,7 @@
 #include <ap_int.h>
 
 #define SIZE 128
-#define LEAKY_SLOPE (-0.1f)
+#define LEAKY_SLOPE (0.1f)
 
 typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 0> axis_t;
