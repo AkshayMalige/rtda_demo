@@ -6,20 +6,20 @@
 VITIS_HLS ?= vitis_hls
 
 # List of kernels (add more as needed)
-KERNELS ?= mm2s leaky_relu leaky_splitter s2mm
-# KERNELS := mm2s
+# KERNELS ?= mm2s leaky_relu leaky_splitter s2mm
+KERNELS := leaky_relu
 
 
 IP_DIR   ?= ip
 LOG_FILE ?= vitis_hls.log
-TARGET ?= sw_emu
+TARGET ?= hw_emu
 
 
 # ===================================================================
 # Rules
 # ===================================================================
 .PHONY: all
-all: kernels
+all: kernels	
 
 # --- Build Rule ---
 .PHONY: kernels

@@ -21,15 +21,18 @@ int main() {
     hls::stream<axis_t> bias_stream;
     hls::stream<axis_t> out_stream;
 
-    std::ifstream fin_data(std::string(DATA_DIR) + "/dense1_output_aie.txt");
+    // std::ifstream fin_data(std::string(DATA_DIR) + "/dense1_output_aie.txt");
+    std::ifstream fin_data(std::string(DATA_DIR) + std::string(OUTPUT_DENSE1_FILE) + ".txt");
+
     if (!fin_data.is_open()) {
-        std::cerr << "ERROR: Cannot open dense1_output_aie.txt" << std::endl;
+        std::cerr << "ERROR: Cannot open OUTPUT_DENSE1_FILE" << std::endl;
         return 1;
     }
 
-    std::ifstream fin_bias(std::string(DATA_DIR) + "/dense_0_bias.txt");
+    // std::ifstream fin_bias(std::string(DATA_DIR) + "/dense_0_bias.txt");
+    std::ifstream fin_data(std::string(DATA_DIR) + std::string(BIAS_DENSE1_FILE) + ".txt");
     if (!fin_bias.is_open()) {
-        std::cerr << "ERROR: Cannot open dense_0_bias.txt" << std::endl;
+        std::cerr << "ERROR: Cannot open BIAS_DENSE1_FILE" << std::endl;
         return 1;
     }
 

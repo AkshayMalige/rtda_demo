@@ -28,7 +28,8 @@ set_top $top_function
 # Add your project's specific source files from src/
 add_files $kernel_file
 add_files -tb $tb_file
-add_files -tb ../data/dense1_output_ref.txt
+add_files -tb ../data/
+#add_files -tb ../data/dense1_output_ref.txt
 
 # Use the -flow_target vitis flag for correct XO generation
 open_solution -flow_target vitis "solution1"
