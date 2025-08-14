@@ -159,6 +159,7 @@ int main(int argc, char** argv) {
 
         std::ofstream out(outputFile);
         for (int i = 0; i < FINAL_OUTPUT_SIZE; ++i) {
+            std::cout << host_output_data[i] << std::endl;
             out << host_output_data[i] << std::endl;
         }
         out.close();
