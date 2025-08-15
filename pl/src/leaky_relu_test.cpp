@@ -22,17 +22,17 @@ int main() {
     hls::stream<axis_t> out_stream;
 
     // std::ifstream fin_data(std::string(DATA_DIR) + "/dense_0_output_aie.txt");
-    std::ifstream fin_data(std::string(DATA_DIR) + "/" + std::string(OUTPUT_DENSE2_FILE));
+    std::ifstream fin_data(std::string(DATA_DIR) + "/" + std::string(EMBED_DENSE1_OUTPUT));
 
     if (!fin_data.is_open()) {
-        std::cerr << "ERROR: Cannot open OUTPUT_DENSE2_FILE" << std::endl;
+        std::cerr << "ERROR: Cannot open EMBED_DENSE1_OUTPUT" << std::endl;
         return 1;
     }
 
     // std::ifstream fin_bias(std::string(DATA_DIR) + "/dense_0_bias.txt");
-    std::ifstream fin_bias(std::string(DATA_DIR) + "/"  + std::string(BIAS_DENSE2_FILE));
+    std::ifstream fin_bias(std::string(DATA_DIR) + "/"  + std::string(EMBED_DENSE1_BIAS));
     if (!fin_bias.is_open()) {
-        std::cerr << "ERROR: Cannot open BIAS_DENSE1_FILE" << std::endl;
+        std::cerr << "ERROR: Cannot open EMBED_DENSE1_BIAS" << std::endl;
         return 1;
     }
 

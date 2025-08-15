@@ -56,19 +56,19 @@ public:
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
         pl_in_dense1  = input_plio::create("plio_input_dense1", plio_32_bits,
-                                          (base_path + "/" + INPUT_DATA_FILE).c_str());
+                                          (base_path + "/" + EMBED_INPUT_DATA).c_str());
         pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits,
-                                          (base_path + "/" + WEIGHTS_DENSE1_FILE).c_str());
+                                          (base_path + "/" + EMBED_DENSE0_WEIGHTS).c_str());
         pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits,
-                                          (base_path + "/" + OUTPUT_DENSE1_FILE).c_str());
+                                          (base_path + "/" + EMBED_DENSE0_OUTPUT).c_str());
 
         connect<>(pl_w_dense1.out[0], dense1.inA[0]);
         connect<>(pl_in_dense1.out[0], dense1.inB[0]);
         connect<>(dense1.out[0], pl_out_dense1.in[0]);
 
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-            std::string in_file = base_path + "/" + LEAKY_RELU_OUTPUT_PREFIX + std::to_string(i) + ".txt";
-            std::string w_file  = base_path + "/" + WEIGHTS_DENSE2_PREFIX + std::to_string(i) + ".txt";
+            std::string in_file = base_path + "/" + EMBED_LEAKYRELU0_OUTPUT_PREFIX + std::to_string(i) + ".txt";
+            std::string w_file  = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(i) + ".txt";
 
             std::string in_name = "plio_input_dense2_" + std::to_string(i);
             std::string w_name  = "plio_weights_dense2_" + std::to_string(i);
@@ -80,7 +80,7 @@ public:
             connect<>(pl_w_dense2[i].out[0], dense2.inA[i]);
         }
 
-        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits,(base_path + "/" + OUTPUT_DENSE2_FILE).c_str());
+        pl_out_dense2 = output_plio::create("plio_output_dense2", plio_32_bits,(base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
         connect<>(dense2.out[0], pl_out_dense2.in[0]);
     }
 };
