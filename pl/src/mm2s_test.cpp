@@ -15,7 +15,7 @@ constexpr int SIZE = 8;
 int main() {
     data_t mem[SIZE];
 
-    std::ifstream fin(std::string(DATA_DIR) + "/" + INPUT_DATA_FILE);
+    std::ifstream fin(std::string(DATA_DIR) + "/" + EMBED_INPUT_DATA);
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open input_data.txt" << std::endl;
         return 1;

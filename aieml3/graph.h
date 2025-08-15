@@ -58,9 +58,9 @@ public:
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
         pl_in_dense1  = input_plio::create("plio_input_dense1", plio_16_bits,
-                                          (base_path + "/" + INPUT_DATA_FILE).c_str());
+                                          (base_path + "/" + EMBED_INPUT_DATA).c_str());
         pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_16_bits,
-                                          (base_path + "/" + WEIGHTS_DENSE1_FILE).c_str());
+                                          (base_path + "/" + EMBED_DENSE0_WEIGHTS).c_str());
         pl_out_dense1 = output_plio::create("plio_output_dense1", plio_16_bits,
                                           (base_path + "/dense1_output_aie.txt").c_str());
 
@@ -68,8 +68,8 @@ public:
         connect<>(pl_in_dense1.out[0], dense1.inB[0]);
         connect<>(dense1.out[0], pl_out_dense1.in[0]);
 
-        std::string in_file = base_path + "/" + LEAKY_RELU_OUTPUT_PREFIX + "0.txt";
-        std::string w_file  = base_path + "/" + WEIGHTS_DENSE2_PREFIX + "0.txt";
+        std::string in_file = base_path + "/" + EMBED_LEAKYRELU0_OUTPUT_PREFIX + "0.txt";
+        std::string w_file  = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "0.txt";
 
         pl_in_dense2 = input_plio::create("plio_input_dense2", plio_16_bits, in_file.c_str());
         pl_w_dense2  = input_plio::create("plio_weights_dense2", plio_16_bits, w_file.c_str());
