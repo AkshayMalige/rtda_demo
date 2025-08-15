@@ -7,12 +7,12 @@
 #include "experimental/xrt_bo.h"
 #include "data_paths.h"
 
-#define DENSE1_INPUT_SIZE      8
-#define DENSE1_WEIGHTS_SIZE    (128 * 8)
-#define DENSE1_BIAS_SIZE       128
-#define DENSE2_WEIGHTS_SIZE_PART (128 * 128 / 2)
-#define DENSE2_BIAS_SIZE       128
-#define FINAL_OUTPUT_SIZE      128
+#define EMBED_DENSE0_INPUT_SIZE      8
+#define EMBED_DENSE0_WEIGHTS_SIZE    (128 * 8)
+#define EMBED_DENSE0_BIAS_SIZE       128
+#define EMBED_DENSE1_WEIGHTS_PART_SIZE (128 * 128 / 2)
+#define EMBED_DENSE1_BIAS_SIZE       128
+#define EMBED_FINAL_OUTPUT_SIZE      128
 
 // Load text files containing floats into a vector
 static std::vector<float> read_file_to_vector(const std::string& filename, int size) {
@@ -43,13 +43,13 @@ int main(int argc, char** argv) {
 
     // std::string base_path = DATA_DIR;
     std::string base_path = "./data";
-    std::string inputDataFile      = base_path + "/" + INPUT_DATA_FILE;
-    std::string weights1File       = base_path + "/" + WEIGHTS_DENSE1_FILE;
-    std::string weights2_part0File = base_path + "/" + WEIGHTS_DENSE2_PREFIX + "0.txt";
-    std::string weights2_part1File = base_path + "/" + WEIGHTS_DENSE2_PREFIX + "1.txt";
-    std::string bias1File          = base_path + "/" + BIAS_DENSE1_FILE;
-    std::string bias2File          = base_path + "/" + BIAS_DENSE2_FILE;
-    std::string outputFile         = base_path + "/" + HOST_OUTPUT_FILE;
+    std::string inputDataFile      = base_path + "/" + EMBED_INPUT_DATA;
+    std::string weights1File       = base_path + "/" + EMBED_DENSE0_WEIGHTS;
+    std::string weights2_part0File = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "0.txt";
+    std::string weights2_part1File = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "1.txt";
+    std::string bias1File          = base_path + "/" + EMBED_DENSE0_BIAS;
+    std::string bias2File          = base_path + "/" + EMBED_DENSE1_BIAS;
+    std::string outputFile         = base_path + "/" + EMBED_HOST_OUTPUT;
 
     try {
         xrt::device device(0);
@@ -57,12 +57,12 @@ int main(int argc, char** argv) {
         auto xclbin_uuid = device.load_xclbin(xclbin);
 
         // Load inputs and weights
-        auto input_data          = read_file_to_vector(inputDataFile, DENSE1_INPUT_SIZE);
-        auto weights1_data       = read_file_to_vector(weights1File, DENSE1_WEIGHTS_SIZE);
-        auto weights2_part0_data = read_file_to_vector(weights2_part0File, DENSE2_WEIGHTS_SIZE_PART);
-        auto weights2_part1_data = read_file_to_vector(weights2_part1File, DENSE2_WEIGHTS_SIZE_PART);
-        auto bias1_data          = read_file_to_vector(bias1File, DENSE1_BIAS_SIZE);
-        auto bias2_data          = read_file_to_vector(bias2File, DENSE2_BIAS_SIZE);
+        auto input_data          = read_file_to_vector(inputDataFile, EMBED_DENSE0_INPUT_SIZE);
+        auto weights1_data       = read_file_to_vector(weights1File, EMBED_DENSE0_WEIGHTS_SIZE);
+        auto weights2_part0_data = read_file_to_vector(weights2_part0File, EMBED_DENSE1_WEIGHTS_PART_SIZE);
+        auto weights2_part1_data = read_file_to_vector(weights2_part1File, EMBED_DENSE1_WEIGHTS_PART_SIZE);
+        auto bias1_data          = read_file_to_vector(bias1File, EMBED_DENSE0_BIAS_SIZE);
+        auto bias2_data          = read_file_to_vector(bias2File, EMBED_DENSE1_BIAS_SIZE);
 
         // Allocate device buffers
         xrt::bo input_buf          = xrt::bo(device, input_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
         xrt::bo weights2_part1_buf = xrt::bo(device, weights2_part1_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
         xrt::bo bias1_buf          = xrt::bo(device, bias1_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
         xrt::bo bias2_buf          = xrt::bo(device, bias2_data.size() * sizeof(float), xrt::bo::flags::normal, 0);
-        xrt::bo output_buf         = xrt::bo(device, FINAL_OUTPUT_SIZE * sizeof(float), xrt::bo::flags::normal, 0);
+        xrt::bo output_buf         = xrt::bo(device, EMBED_FINAL_OUTPUT_SIZE * sizeof(float), xrt::bo::flags::normal, 0);
 
         input_buf.write(input_data.data());
         weights1_buf.write(weights1_data.data());
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
         // Start consumer kernels
         auto s2mm_run = xrt::run(s2mm);
         s2mm_run.set_arg(1, output_buf);
-        s2mm_run.set_arg(2, FINAL_OUTPUT_SIZE);
+        s2mm_run.set_arg(2, EMBED_FINAL_OUTPUT_SIZE);
         s2mm_run.start();
 
         auto relu2_run = xrt::run(relu2);
@@ -120,32 +120,32 @@ int main(int argc, char** argv) {
         // Start producer kernels
         auto mm2s_weights1_run = xrt::run(mm2s_weights1);
         mm2s_weights1_run.set_arg(0, weights1_buf);
-        mm2s_weights1_run.set_arg(2, DENSE1_WEIGHTS_SIZE);
+        mm2s_weights1_run.set_arg(2, EMBED_DENSE0_WEIGHTS_SIZE);
         mm2s_weights1_run.start();
 
         auto mm2s_weights2_0_run = xrt::run(mm2s_weights2_0);
         mm2s_weights2_0_run.set_arg(0, weights2_part0_buf);
-        mm2s_weights2_0_run.set_arg(2, DENSE2_WEIGHTS_SIZE_PART);
+        mm2s_weights2_0_run.set_arg(2, EMBED_DENSE1_WEIGHTS_PART_SIZE);
         mm2s_weights2_0_run.start();
 
         auto mm2s_weights2_1_run = xrt::run(mm2s_weights2_1);
         mm2s_weights2_1_run.set_arg(0, weights2_part1_buf);
-        mm2s_weights2_1_run.set_arg(2, DENSE2_WEIGHTS_SIZE_PART);
+        mm2s_weights2_1_run.set_arg(2, EMBED_DENSE1_WEIGHTS_PART_SIZE);
         mm2s_weights2_1_run.start();
 
         auto mm2s_bias1_run = xrt::run(mm2s_bias1);
         mm2s_bias1_run.set_arg(0, bias1_buf);
-        mm2s_bias1_run.set_arg(2, DENSE1_BIAS_SIZE);
+        mm2s_bias1_run.set_arg(2, EMBED_DENSE0_BIAS_SIZE);
         mm2s_bias1_run.start();
 
         auto mm2s_bias2_run = xrt::run(mm2s_bias2);
         mm2s_bias2_run.set_arg(0, bias2_buf);
-        mm2s_bias2_run.set_arg(2, DENSE2_BIAS_SIZE);
+        mm2s_bias2_run.set_arg(2, EMBED_DENSE1_BIAS_SIZE);
         mm2s_bias2_run.start();
 
         auto mm2s_data_run = xrt::run(mm2s_data);
         mm2s_data_run.set_arg(0, input_buf);
-        mm2s_data_run.set_arg(2, DENSE1_INPUT_SIZE);
+        mm2s_data_run.set_arg(2, EMBED_DENSE0_INPUT_SIZE);
         mm2s_data_run.start();
 
         // Wait for completion
@@ -153,12 +153,12 @@ int main(int argc, char** argv) {
         s2mm_run.wait();
 
         // Retrieve results
-        std::vector<float> host_output_data(FINAL_OUTPUT_SIZE);
+        std::vector<float> host_output_data(EMBED_FINAL_OUTPUT_SIZE);
         output_buf.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
         output_buf.read(host_output_data.data());
 
         std::ofstream out(outputFile);
-        for (int i = 0; i < FINAL_OUTPUT_SIZE; ++i) {
+        for (int i = 0; i < EMBED_FINAL_OUTPUT_SIZE; ++i) {
             std::cout << host_output_data[i] << std::endl;
             out << host_output_data[i] << std::endl;
         }
