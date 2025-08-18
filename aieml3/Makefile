@@ -1,5 +1,5 @@
 # ===================================================================
-# Makefile for Vitis AIE Graph Compilation & Simulation
+# Makefile for Vitis AIE Graph Compilation & Simulation (Single 768x128 Dense Layer)
 # ===================================================================
 
 # ==== CONFIG ====
