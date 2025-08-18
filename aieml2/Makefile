@@ -69,7 +69,7 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
-$(GRAPH_LIB): $(GRAPH_SRC) graph.h
+$(GRAPH_LIB): $(GRAPH_SRC) graph.h include.h
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"

@@ -1,6 +1,6 @@
 #include "graph.h"
 
-SingleDenseGraph g;
+NeuralNetworkGraph g;
 
 #if defined(__AIESIM__) || defined(__X86SIM__)
 int main() {
