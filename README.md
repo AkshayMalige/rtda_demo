@@ -116,8 +116,7 @@ Your project is organized as follows:
 │   ├── Makefile
 │   ├── README.md
 │   ├── graph.cpp
-│   ├── graph.h
-│   └── include.h
+│   └── graph.h
 ├── data/                     # Generated input, weights, and reference output
 ├── pl/                       # Programmable logic (HLS) kernels
 │   ├── Makefile
@@ -126,6 +125,7 @@ Your project is organized as follows:
 │   ├── Makefile
 │   └── README.md
 ├── common/                   # Shared headers and configuration
+│   └── nn_defs.h            # Neural network constants
 ├── model/                    # Python models and utilities
 ├── hls_env.yml               # Conda environment definition
 ├── pack.cfg                  # Packaging configuration
