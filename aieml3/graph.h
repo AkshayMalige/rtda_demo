@@ -32,20 +32,20 @@ using dense128x27_padded32 = matrix_vector_mul_graph<
 
 class NeuralNetworkGraph : public graph {
 public:
-    input_plio  pl_in_dense1;
-    input_plio  pl_w_dense1;
-    output_plio pl_out_dense1;
+    input_plio  layer0_in;
+    input_plio  layer0_weights;
+    output_plio layer0_out;
 
     dense128x27_padded32 dense1;
 
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
-        pl_in_dense1  = input_plio::create("plio_input_dense1",  plio_32_bits, (base_path + "/" + OUTPUT_INPUT_DATA).c_str());
-        pl_w_dense1   = input_plio::create("plio_weights_dense1", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_WEIGHTS).c_str());
-        pl_out_dense1 = output_plio::create("plio_output_dense1", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_OUTPUT).c_str());
+        layer0_in      = input_plio::create("layer0_in",  plio_32_bits, (base_path + "/" + OUTPUT_INPUT_DATA).c_str());
+        layer0_weights = input_plio::create("layer0_weights", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_WEIGHTS).c_str());
+        layer0_out     = output_plio::create("layer0_out", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_OUTPUT).c_str());
 
-        connect<>(pl_w_dense1.out[0], dense1.inA[0]);
-        connect<>(pl_in_dense1.out[0], dense1.inB[0]);
-        connect<>(dense1.out[0], pl_out_dense1.in[0]);
+        connect<>(layer0_weights.out[0], dense1.inA[0]);
+        connect<>(layer0_in.out[0], dense1.inB[0]);
+        connect<>(dense1.out[0], layer0_out.in[0]);
     }
 };
