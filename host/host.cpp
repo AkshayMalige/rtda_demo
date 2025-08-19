@@ -6,13 +6,7 @@
 #include "experimental/xrt_device.h"
 #include "experimental/xrt_bo.h"
 #include "data_paths.h"
-
-#define EMBED_DENSE0_INPUT_SIZE      8
-#define EMBED_DENSE0_WEIGHTS_SIZE    (128 * 8)
-#define EMBED_DENSE0_BIAS_SIZE       128
-#define EMBED_DENSE1_WEIGHTS_PART_SIZE (128 * 128 / 2)
-#define EMBED_DENSE1_BIAS_SIZE       128
-#define EMBED_FINAL_OUTPUT_SIZE      128
+#include "nn_defs.h"
 
 // Load text files containing floats into a vector
 static std::vector<float> read_file_to_vector(const std::string& filename, int size) {

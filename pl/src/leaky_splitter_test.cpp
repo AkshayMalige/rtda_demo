@@ -1,12 +1,10 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 #include "../../common/data_paths.h"
+#include "../../common/nn_defs.h"
 #include <ap_int.h>
 #include <fstream>
 #include <iostream>
-
-#define SIZE 128
-#define CASCADE_LENGTH 2
 
 typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 0> axis_t;
@@ -26,13 +24,13 @@ int main() {
         return 1;
     }
 
-    for (int i = 0; i < SIZE; ++i) {
+    for (int i = 0; i < HIDDEN_SIZE; ++i) {
         data_t val;
         fin >> val;
         axis_t temp;
         temp.data = val;
         temp.keep = -1;
-        temp.last = (i == SIZE - 1);
+        temp.last = (i == HIDDEN_SIZE - 1);
         in_stream.write(temp);
     }
     fin.close();
@@ -50,7 +48,7 @@ int main() {
         }
     }
 
-    const int SPLIT_SIZE = SIZE / CASCADE_LENGTH;
+    const int SPLIT_SIZE = HIDDEN_SIZE / CASCADE_LENGTH;
     for (int i = 0; i < CASCADE_LENGTH; ++i) {
         for (int j = 0; j < SPLIT_SIZE; ++j) {
             axis_t temp = out_stream[i].read();
