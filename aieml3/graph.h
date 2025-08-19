@@ -20,7 +20,7 @@ constexpr unsigned roundup(unsigned v, unsigned m) { return ((v + m - 1) / m) * 
 static constexpr unsigned VEC_FLOAT = (256 / 8) / sizeof(float); // = 8
 static constexpr unsigned OUT_REAL  = 27;                         // what you want
 static constexpr unsigned OUT_PAD   = roundup(OUT_REAL, VEC_FLOAT); // = 32
-static constexpr unsigned IN_DIM    = 128;
+static constexpr unsigned IN_DIM    = HIDDEN_SIZE;
 
 using dense128x27_padded32 = matrix_vector_mul_graph<
     float, float,
