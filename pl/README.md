@@ -10,6 +10,10 @@ This directory contains several Vitis HLS kernels used to move and process data 
 
 Each kernel has a matching `*_test.cpp` file (for example, `mm2s_test.cpp`) used for functional validation.
 
+Test benches reference file names from [`common/data_paths.h`](../common/data_paths.h)
+and honour the `DATA_DIR` environment variable, which lets you relocate the
+text files used during simulation.
+
 ## Build scripts
 The top-level [Makefile](Makefile) orchestrates all kernel builds using the accompanying TCL scripts:
 
