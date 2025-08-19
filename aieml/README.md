@@ -1,10 +1,13 @@
 # AI Engine-ML Graph: `dense1 → dense2`
 
-This directory contains the AI Engine-ML (AIE-ML) graph used by the project. The graph
-implements a minimal multilayer perceptron where activations are handled in the programmable logic:
+This directory hosts the **embedding** graph of the project. It implements the first
+two dense layers of the network while leaky ReLU activations run in the
+programmable logic. Later stages are implemented in
+[`aieml2/`](../aieml2/README.md) and [`aieml3/`](../aieml3/README.md).
 
 1. **`dense1`** – matrix-vector multiply producing the hidden activations.
-2. **`dense2`** – second matrix-vector multiply generating the final output.
+2. **`dense2`** – second matrix-vector multiply generating the final output that feeds
+   the PL leaky ReLU.
 
 ## Directory Layout
 
