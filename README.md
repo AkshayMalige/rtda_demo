@@ -4,15 +4,23 @@ This project demonstrates a custom low-latency neural network pipeline implement
 
 The design partitions work across three components of the Versal architecture:
 
-- **AI Engine-ML** – executes dense layers.
-- **Programmable Logic (PL)** – supplies data-mover kernels and two leaky ReLU units.
+- **AI Engine‑ML graphs** – execute dense layers. The project now contains three
+  variants:
+  - `aieml/` – embedding graph (`dense1 → dense2`).
+  - `aieml2/` – sub‑solver graph with four consecutive dense layers.
+  - `aieml3/` – output head projecting to 27 classes (padded to 32).
+- **Programmable Logic (PL)** – supplies data‑mover kernels and two leaky ReLU units.
 - **Host application** – runs on the processing system and orchestrates data movement and graph execution through XRT.
 
-Each component has its own build instructions in the following READMEs:
+All build instructions are split into component READMEs:
 
-- [AI Engine-ML](aieml/README.md)
+- [AI Engine‑ML graphs](aieml/README.md) (see also [`aieml2`](aieml2/README.md) and [`aieml3`](aieml3/README.md))
 - [Programmable Logic](pl/README.md)
 - [Host Application](host/README.md)
+
+Recent refactoring introduced a shared `common/data_paths.h` header and a `DATA_DIR`
+environment variable so the host, PL tests, and AIE graphs can locate generated text
+files consistently across components.
 
 ---
 
