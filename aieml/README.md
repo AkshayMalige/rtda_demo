@@ -11,7 +11,6 @@ implements a minimal multilayer perceptron where activations are handled in the 
 ```
 ├── graph.cpp    # Instantiates `NeuralNetworkGraph` and runs it for simulation
 ├── graph.h      # Graph definition and PLIO connections
-├── include.h    # Common dimension definitions and compile-time constants
 └── Makefile
 ```
 

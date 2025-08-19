@@ -1,0 +1,14 @@
+#pragma once
+
+constexpr int INPUT_SIZE = 8;
+constexpr int HIDDEN_SIZE = 128;
+constexpr int OUTPUT_SIZE = 128;
+constexpr float LEAKY_SLOPE = 0.1f;
+constexpr int CASCADE_LENGTH = 2;
+
+constexpr int EMBED_DENSE0_INPUT_SIZE = INPUT_SIZE;
+constexpr int EMBED_DENSE0_WEIGHTS_SIZE = HIDDEN_SIZE * INPUT_SIZE;
+constexpr int EMBED_DENSE0_BIAS_SIZE = HIDDEN_SIZE;
+constexpr int EMBED_DENSE1_WEIGHTS_PART_SIZE = OUTPUT_SIZE * HIDDEN_SIZE / CASCADE_LENGTH;
+constexpr int EMBED_DENSE1_BIAS_SIZE = OUTPUT_SIZE;
+constexpr int EMBED_FINAL_OUTPUT_SIZE = OUTPUT_SIZE;

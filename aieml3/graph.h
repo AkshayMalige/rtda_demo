@@ -3,6 +3,7 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
+#include "../common/nn_defs.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
