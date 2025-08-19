@@ -32,4 +32,4 @@
 #define OUTPUT_DENSE0_OUTPUT "output_dense_0_output_aie.txt"
 
 
-#define HOST_OUTPUT "host_output.txt"
+#define EMBED_HOST_OUTPUT "host_output.txt"

@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     std::string weights2_part1File = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "1.txt";
     std::string bias1File          = base_path + "/" + EMBED_DENSE0_BIAS;
     std::string bias2File          = base_path + "/" + EMBED_DENSE1_BIAS;
-    std::string outputFile         = base_path + "/" + EMBED_HOST_OUTPUT;
+    const std::string outputFile   = base_path + "/" + EMBED_HOST_OUTPUT;
 
     try {
         xrt::device device(0);
