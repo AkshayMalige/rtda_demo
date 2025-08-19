@@ -3,7 +3,7 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
-#include "include.h"
+#include "../common/nn_defs.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -43,7 +43,7 @@ static constexpr unsigned int TP_DIM_A_LEADING = 1;
 
 // --- AUTO-CALCULATED CASCADE LENGTHS ---
 static constexpr unsigned int TP_CASC_LEN_768 = aie_params::calculate_casc_len(M, K, sizeof(float));
-// Assumes OUTPUT_SIZE == 128 and HIDDEN_SIZE == 128 are provided by include.h (as in your code)
+// Assumes OUTPUT_SIZE == 128 and HIDDEN_SIZE == 128 are provided by nn_defs.h (as in your code)
 static constexpr unsigned int TP_CASC_LEN_128 = aie_params::calculate_casc_len(OUTPUT_SIZE, HIDDEN_SIZE, sizeof(float));
 
 // Kernels
@@ -130,9 +130,9 @@ public:
 
     // ----------------------------
     // Layer 3: 128x128 (NEW)
-    // Inputs: SUBSOLVER0_LEAKYRELU_1_PREFIX{i}.txt     <-- define in include.h if not present
-    // Weights: SUBSOLVER0_DENSE2_WEIGHTS_PREFIX{i}.txt <-- define in include.h if not present
-    // Output: SUBSOLVER0_DENSE2_OUTPUT                 <-- define in include.h if not present
+    // Inputs: SUBSOLVER0_LEAKYRELU_1_PREFIX{i}.txt     <-- define in nn_defs.h if not present
+    // Weights: SUBSOLVER0_DENSE2_WEIGHTS_PREFIX{i}.txt <-- define in nn_defs.h if not present
+    // Output: SUBSOLVER0_DENSE2_OUTPUT                 <-- define in nn_defs.h if not present
     // ----------------------------
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_1_PREFIX       + std::to_string(i) + ".txt";
@@ -148,9 +148,9 @@ public:
 
     // ----------------------------
     // Layer 4: 128x128 (NEW)
-    // Inputs: SUBSOLVER0_LEAKYRELU_2_PREFIX{i}.txt     <-- define in include.h if not present
-    // Weights: SUBSOLVER0_DENSE3_WEIGHTS_PREFIX{i}.txt <-- define in include.h if not present
-    // Output: SUBSOLVER0_DENSE3_OUTPUT                 <-- define in include.h if not present
+    // Inputs: SUBSOLVER0_LEAKYRELU_2_PREFIX{i}.txt     <-- define in nn_defs.h if not present
+    // Weights: SUBSOLVER0_DENSE3_WEIGHTS_PREFIX{i}.txt <-- define in nn_defs.h if not present
+    // Output: SUBSOLVER0_DENSE3_OUTPUT                 <-- define in nn_defs.h if not present
     // ----------------------------
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_2_PREFIX       + std::to_string(i) + ".txt";

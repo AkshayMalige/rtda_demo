@@ -1,6 +1,6 @@
 #pragma once
 #include <adf.h>
-#include "include.h"
+#include "../common/nn_defs.h"
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"

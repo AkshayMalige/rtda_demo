@@ -1,11 +1,10 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 #include "../../common/data_paths.h"
+#include "../../common/nn_defs.h"
 #include <ap_int.h>
 #include <fstream>
 #include <iostream>
-
-#define SIZE 128
 
 typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 0> axis_t;
@@ -36,13 +35,13 @@ int main() {
         return 1;
     }
 
-    for (int i = 0; i < SIZE; ++i) {
+    for (int i = 0; i < HIDDEN_SIZE; ++i) {
         data_t val;
         fin_data >> val;
         axis_t temp;
         temp.data = val;
         temp.keep = -1;
-        temp.last = (i == SIZE - 1);
+        temp.last = (i == HIDDEN_SIZE - 1);
         in_stream.write(temp);
 
         data_t bias_val;
@@ -50,7 +49,7 @@ int main() {
         axis_t bias_temp;
         bias_temp.data = bias_val;
         bias_temp.keep = -1;
-        bias_temp.last = (i == SIZE - 1);
+        bias_temp.last = (i == HIDDEN_SIZE - 1);
         bias_stream.write(bias_temp);
     }
     fin_data.close();
@@ -64,7 +63,7 @@ int main() {
         return 1;
     }
 
-    for (int i = 0; i < SIZE; ++i) {
+    for (int i = 0; i < HIDDEN_SIZE; ++i) {
         axis_t temp = out_stream.read();
         fout << temp.data << std::endl;
     }
