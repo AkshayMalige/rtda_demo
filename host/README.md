@@ -8,6 +8,11 @@
 - Cross-compilation sysroot for PetaLinux (default: `/opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux`)
 - Data files: `input_data.txt`, `weights_dense1.txt`, `weights_dense2_part0.txt`, `weights_dense2_part1.txt`
 
+File names for inputs, weights, and outputs are centralized in
+[`common/data_paths.h`](../common/data_paths.h).  Set the `DATA_DIR`
+environment variable to point the host application to the directory
+containing these files (defaults to `./data`).
+
 ## Build
 The provided `Makefile` cross-compiles the host application for AArch64.
 
