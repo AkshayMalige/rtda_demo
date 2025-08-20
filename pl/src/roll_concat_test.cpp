@@ -3,6 +3,7 @@
 #include <cmath>
 #include <fstream>
 #include "../../common/nn_defs.h"
+#include "../../common/data_paths.h"
 
 #define OUTPUT_SIZE (HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE)
 
@@ -28,7 +29,12 @@ int main() {
     data_t test_output[OUTPUT_SIZE];
 
     // Read input vector from file
-    std::ifstream infile("../data/embed_model_output.txt");
+    std::ifstream infile("../"+ std::string(DATA_DIR) + "/" + std::string(EMBED_MODEL_OUTPUT));
+    if (!infile.is_open()) {
+        std::cerr << "ERROR: Cannot open EMBED_MODEL_OUTPUT" << std::endl;
+        return 1;
+    }
+
     if (!infile) {
         std::cerr << "Failed to open input file" << std::endl;
         return 1;
