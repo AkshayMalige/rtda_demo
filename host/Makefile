@@ -3,7 +3,8 @@
 # Toolchain and paths
 SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
 CXX     := aarch64-linux-gnu-g++
-DATA_DIR ?= $(abspath ../data)
+# Default data directory lives one level above the project root
+DATA_DIR ?= $(abspath ../../data)
 export DATA_DIR
 
 # Sources and targets
