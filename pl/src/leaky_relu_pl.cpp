@@ -7,16 +7,18 @@ typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 0> axis_t;
 
 extern "C" {
-    // Apply bias then leaky ReLU to HIDDEN_SIZE elements
+    // Apply bias then leaky ReLU to `size` elements
     void leaky_relu_pl(hls::stream<axis_t>& in_stream,
                        hls::stream<axis_t>& bias_stream,
-                       hls::stream<axis_t>& out_stream) {
-        #pragma HLS interface axis port=in_stream bundle=gmem depth=HIDDEN_SIZE
-        #pragma HLS interface axis port=bias_stream bundle=gmem depth=HIDDEN_SIZE
-        #pragma HLS interface axis port=out_stream bundle=gmem depth=HIDDEN_SIZE
+                       hls::stream<axis_t>& out_stream,
+                       int size) {
+        #pragma HLS interface axis port=in_stream bundle=gmem depth=OUTPUT_DENSE0_OUT_PAD
+        #pragma HLS interface axis port=bias_stream bundle=gmem depth=OUTPUT_DENSE0_OUT_PAD
+        #pragma HLS interface axis port=out_stream bundle=gmem depth=OUTPUT_DENSE0_OUT_PAD
+        #pragma HLS INTERFACE s_axilite port=size bundle=control
         #pragma HLS INTERFACE s_axilite port=return bundle=control
 
-        for (int i = 0; i < HIDDEN_SIZE; i++) {
+        for (int i = 0; i < size; i++) {
             #pragma HLS pipeline II=1
             axis_t val       = in_stream.read();
             axis_t bias_val  = bias_stream.read();
