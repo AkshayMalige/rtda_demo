@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::string graph_name = "aieml";
+    std::string graph_name = "aieml3";
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg.rfind("--graph=", 0) == 0) {
