@@ -41,6 +41,7 @@ struct GraphConfig {
     std::string s2mm;
     std::string output_file;
     int output_size;
+    int relu_size;
 };
 
 static GraphConfig make_config(const std::string& graph, const std::string& base_path) {
@@ -59,6 +60,7 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
         cfg.s2mm = "s2mm_pl:{s2mm_out}";
         cfg.output_file = base_path + "/" + EMBED_HOST_OUTPUT;
         cfg.output_size = EMBED_FINAL_OUTPUT_SIZE;
+        cfg.relu_size = HIDDEN_SIZE;
         return cfg;
     } else if (graph == "aieml2") {
         GraphConfig cfg;
@@ -103,6 +105,7 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
         cfg.s2mm = "s2mm_pl:{s2mm_out}";
         cfg.output_file = base_path + "/" + SUBSOLVER0_HOST_OUTPUT;
         cfg.output_size = SUBSOLVER0_FINAL_OUTPUT_SIZE;
+        cfg.relu_size = HIDDEN_SIZE;
         return cfg;
     } else if (graph == "aieml3") {
         GraphConfig cfg;
@@ -116,6 +119,7 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
         cfg.s2mm = "s2mm_pl:{s2mm_out}";
         cfg.output_file = base_path + "/" + OUTPUT_HOST_OUTPUT;
         cfg.output_size = OUTPUT_FINAL_OUTPUT_SIZE;
+        cfg.relu_size = OUTPUT_DENSE0_OUT_PAD;
         return cfg;
     } else {
         throw std::runtime_error("Unknown graph selection: " + graph);
@@ -174,7 +178,12 @@ int main(int argc, char** argv) {
         s2mm_run.start();
 
         std::vector<xrt::run> relu_runs;
-        for (auto& k : relu_kernels) { auto r = xrt::run(k); r.start(); relu_runs.push_back(std::move(r)); }
+        for (auto& k : relu_kernels) {
+            auto r = xrt::run(k);
+            r.set_arg(3, cfg.relu_size);
+            r.start();
+            relu_runs.push_back(std::move(r));
+        }
         std::vector<xrt::run> split_runs;
         for (auto& k : split_kernels) { auto r = xrt::run(k); r.start(); split_runs.push_back(std::move(r)); }
 
