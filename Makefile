@@ -26,7 +26,7 @@ GRAPH    ?= aieml
 LINK_CFG  := ./common/linker_$(GRAPH).cfg
 # Location for generated input and output files. Default to a directory one
 # level above the project to keep the repository tree clean.
-DATA_DIR  ?= $(abspath ../data)
+DATA_DIR  ?= $(abspath ./data)
 HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm
 POST_BOOT := post_boot.sh
 ###########################################################################
