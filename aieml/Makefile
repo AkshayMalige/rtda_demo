@@ -11,6 +11,7 @@ TARGET       ?= hw
 
 # Location of input/weight files used by PLIO connections (override from top-level)
 DATA_DIR    ?= ../data
+DATA_DIR := $(abspath $(DATA_DIR))
 
 # Frequency for the Programmable Logic (PL) interfaces in MHz.
 PL_FREQ_MHZ  ?= 300
