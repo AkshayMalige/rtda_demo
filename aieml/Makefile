@@ -12,7 +12,9 @@ PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202
 TARGET       ?= hw
 
 # Location of input/weight files used by PLIO connections (override from top-level)
-DATA_DIR    ?= ../data
+# Defaults two levels up so data lives outside the source tree when building
+# this subproject directly.
+DATA_DIR    ?= ../../data
 DATA_DIR := $(abspath $(DATA_DIR))
 
 # Frequency for the Programmable Logic (PL) interfaces in MHz.
