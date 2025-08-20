@@ -29,11 +29,18 @@
 #define SUBSOLVER0_LEAKYRELU_2_PREFIX  "solver_0_leakyrelu_2_output_part"
 #define SUBSOLVER0_DENSE3_WEIGHTS_PREFIX "solver_0_dense_3_weights_part"
 #define SUBSOLVER0_DENSE3_OUTPUT       "solver_0_dense_3_output_aie.txt"
+#define SUBSOLVER0_DENSE0_BIAS         "solver_0_dense_0_bias.txt"
+#define SUBSOLVER0_DENSE1_BIAS         "solver_0_dense_1_bias.txt"
+#define SUBSOLVER0_DENSE2_BIAS         "solver_0_dense_2_bias.txt"
+#define SUBSOLVER0_DENSE3_BIAS         "solver_0_dense_3_bias.txt"
+#define SUBSOLVER0_HOST_OUTPUT         "solver_0_host_output.txt"
 
 // OUTPUT graph files ------------------------------------------------------
 #define OUTPUT_INPUT_DATA           "output_input.txt"
 #define OUTPUT_DENSE0_WEIGHTS       "output_dense_0_weights.txt"
 #define OUTPUT_DENSE0_OUTPUT        "output_dense_0_output_aie.txt"
+#define OUTPUT_DENSE0_BIAS          "output_dense_0_bias.txt"
+#define OUTPUT_HOST_OUTPUT          "output_host_output.txt"
 
 // Miscellaneous -----------------------------------------------------------
 #define EMBED_HOST_OUTPUT           "host_output.txt"
