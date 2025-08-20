@@ -19,7 +19,9 @@ EMU_PS    ?= QEMU
 PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
 PACK_CFG  := ./pack.cfg
 LINK_CFG  := ./common/linker.cfg
-DATA_DIR  ?= $(abspath ./data)
+# Location for generated input and output files. Default to a directory one
+# level above the project to keep the repository tree clean.
+DATA_DIR  ?= $(abspath ../data)
 HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm
 POST_BOOT := post_boot.sh
 ###########################################################################

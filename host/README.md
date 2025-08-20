@@ -1,7 +1,7 @@
 # Host Application
 
 ## Overview
-`host.cpp` orchestrates the execution of the ML inference pipeline on the Versal platform. The application loads an `xclbin` bitstream, reads input and weight files from the local `data/` directory, allocates device buffers, and coordinates the PL kernels and AIE graph using the XRT C++ API. Data is streamed to the design through multiple `mm2s` kernels, intermediate results pass through two leaky ReLU stages and a splitter in the programmable logic, and final outputs are collected via an `s2mm` kernel for verification.
+`host.cpp` orchestrates the execution of the ML inference pipeline on the Versal platform. The application loads an `xclbin` bitstream, reads input and weight files from the parent `../data/` directory, allocates device buffers, and coordinates the PL kernels and AIE graph using the XRT C++ API. Data is streamed to the design through multiple `mm2s` kernels, intermediate results pass through two leaky ReLU stages and a splitter in the programmable logic, and final outputs are collected via an `s2mm` kernel for verification.
 
 ### Dependencies
 - XRT headers and libraries for C++17 (experimental API)
@@ -11,7 +11,7 @@
 File names for inputs, weights, and outputs are centralized in
 [`common/data_paths.h`](../common/data_paths.h).  Set the `DATA_DIR`
 environment variable to point the host application to the directory
-containing these files (defaults to `./data`).
+containing these files (defaults to `../data`).
 
 ## Build
 The provided `Makefile` cross-compiles the host application for AArch64.

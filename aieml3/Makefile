@@ -2,6 +2,8 @@
 # Makefile for Vitis AIE Graph Compilation & Simulation (Single 768x128 Dense Layer)
 # ===================================================================
 
+SHELL := /bin/bash
+
 # ==== CONFIG ====
 # Target platform for hardware compilation.
 PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
@@ -10,7 +12,8 @@ PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202
 TARGET       ?= hw
 
 # Location of input/weight files used by PLIO connections (override from top-level)
-DATA_DIR    ?= ../data
+# Default outside the repository when this subdirectory is built directly.
+DATA_DIR    ?= ../../data
 DATA_DIR := $(abspath $(DATA_DIR))
 
 # Frequency for the Programmable Logic (PL) interfaces in MHz.

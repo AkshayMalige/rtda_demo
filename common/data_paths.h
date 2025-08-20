@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 #ifndef DATA_DIR
-#define DATA_DIR (std::getenv("DATA_DIR") ? std::getenv("DATA_DIR") : "../data")
+#define DATA_DIR (std::getenv("DATA_DIR") ? std::getenv("DATA_DIR") : "../../data")
 #endif
 
 // EMBED graph files -------------------------------------------------------
