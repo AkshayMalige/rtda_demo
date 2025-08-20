@@ -10,6 +10,10 @@
 #include "data_paths.h"
 #include "nn_defs.h"
 
+// ------ Set this to "aieml", "aieml2", or "aieml3" ------
+static constexpr const char* kGraphName = "aieml3";
+// ---------------------------------------------------------
+
 // Load text files containing floats into a vector
 static std::vector<float> read_file_to_vector(const std::string& filename, int size) {
     std::vector<float> data;
@@ -19,22 +23,16 @@ static std::vector<float> read_file_to_vector(const std::string& filename, int s
         throw std::runtime_error("ERROR: Could not open file " + filename);
     }
     float val;
-    while (file >> val) {
-        data.push_back(val);
-    }
+    while (file >> val) { data.push_back(val); }
     file.close();
-    if (data.size() != static_cast<size_t>(size)) {
+    if ((int)data.size() != size) {
         throw std::runtime_error("ERROR: File " + filename +
                                  " does not contain the expected " + std::to_string(size) + " elements.");
     }
     return data;
 }
 
-struct MM2SInfo {
-    std::string file;
-    int size;
-    std::string kernel;
-};
+struct MM2SInfo { std::string file; int size; std::string kernel; };
 
 struct GraphConfig {
     std::vector<MM2SInfo> mm2s;
@@ -110,11 +108,11 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
         GraphConfig cfg;
         cfg.mm2s = {
             {base_path + "/" + OUTPUT_DENSE0_WEIGHTS, OUTPUT_DENSE0_WEIGHTS_SIZE, "mm2s_pl:{mm2s_weights}"},
-            {base_path + "/" + OUTPUT_DENSE0_BIAS, OUTPUT_DENSE0_BIAS_SIZE, "mm2s_pl:{mm2s_bias}"},
-            {base_path + "/" + OUTPUT_INPUT_DATA, OUTPUT_DENSE0_INPUT_SIZE, "mm2s_pl:{mm2s_din}"},
+            {base_path + "/" + OUTPUT_DENSE0_BIAS,    OUTPUT_DENSE0_BIAS_SIZE,    "mm2s_pl:{mm2s_bias}"},
+            {base_path + "/" + OUTPUT_INPUT_DATA,     OUTPUT_DENSE0_INPUT_SIZE,   "mm2s_pl:{mm2s_din}"},
         };
         cfg.relus = {"leaky_relu_pl:{relu}"};
-        cfg.splitters = {}; // no splitter
+        cfg.splitters = {};
         cfg.s2mm = "s2mm_pl:{s2mm_out}";
         cfg.output_file = base_path + "/" + OUTPUT_HOST_OUTPUT;
         cfg.output_size = OUTPUT_FINAL_OUTPUT_SIZE;
@@ -125,35 +123,25 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3) {
-        std::cout << "Usage: " << argv[0] << " <a.xclbin> --graph=<aieml|aieml2|aieml3>" << std::endl;
+    if (argc < 2) {
+        std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
         return 1;
     }
 
-    std::string graph_name;
-    for (int i = 2; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg.rfind("--graph=", 0) == 0) {
-            graph_name = arg.substr(8);
-        }
-    }
-    if (graph_name.empty()) {
-        std::cout << "Usage: " << argv[0] << " <a.xclbin> --graph=<aieml|aieml2|aieml3>" << std::endl;
-        return 1;
-    }
+    const std::string xclbinFilename = argv[1];
+    const std::string base_path = "./data";
 
-    std::string xclbinFilename = argv[1];
-    std::string base_path = "./data";
-
-    GraphConfig cfg = make_config(graph_name, base_path);
+    // Use the single variable above instead of a command-line option
+    GraphConfig cfg = make_config(kGraphName, base_path);
 
     try {
         xrt::device device(0);
         xrt::xclbin xclbin(xclbinFilename);
         auto xclbin_uuid = device.load_xclbin(xclbin);
 
-        // Load inputs and weights/biases into device buffers
+        // Load inputs/weights/biases into device buffers
         std::vector<xrt::bo> mm2s_bos;
+        mm2s_bos.reserve(cfg.mm2s.size());
         for (auto& spec : cfg.mm2s) {
             auto data = read_file_to_vector(spec.file, spec.size);
             xrt::bo bo(device, data.size() * sizeof(float), xrt::bo::flags::normal, 0);
@@ -177,7 +165,7 @@ int main(int argc, char** argv) {
             split_kernels.emplace_back(device, xclbin_uuid, name.c_str());
         }
         xrt::kernel s2mm_kernel(device, xclbin_uuid, cfg.s2mm.c_str());
-        xrt::graph aie_graph(device, xclbin_uuid, "g");
+        xrt::graph  aie_graph(device, xclbin_uuid, "g");
 
         // Start consumer kernels
         auto s2mm_run = xrt::run(s2mm_kernel);
@@ -186,22 +174,14 @@ int main(int argc, char** argv) {
         s2mm_run.start();
 
         std::vector<xrt::run> relu_runs;
-        for (auto& k : relu_kernels) {
-            auto r = xrt::run(k);
-            r.start();
-            relu_runs.push_back(std::move(r));
-        }
+        for (auto& k : relu_kernels) { auto r = xrt::run(k); r.start(); relu_runs.push_back(std::move(r)); }
         std::vector<xrt::run> split_runs;
-        for (auto& k : split_kernels) {
-            auto r = xrt::run(k);
-            r.start();
-            split_runs.push_back(std::move(r));
-        }
+        for (auto& k : split_kernels) { auto r = xrt::run(k); r.start(); split_runs.push_back(std::move(r)); }
 
-        // Launch the AI Engine graph
+        // Run AIE graph
         aie_graph.run(1);
 
-        // Start producer kernels
+        // Start producers
         std::vector<xrt::run> mm2s_runs;
         for (size_t i = 0; i < mm2s_kernels.size(); ++i) {
             auto run = xrt::run(mm2s_kernels[i]);
@@ -211,9 +191,7 @@ int main(int argc, char** argv) {
             mm2s_runs.push_back(std::move(run));
         }
 
-        for (auto& r : mm2s_runs) {
-            r.wait();
-        }
+        for (auto& r : mm2s_runs) r.wait();
         aie_graph.wait();
         s2mm_run.wait();
 
@@ -224,16 +202,12 @@ int main(int argc, char** argv) {
 
         std::ofstream out(cfg.output_file);
         for (int i = 0; i < cfg.output_size; ++i) {
-            std::cout << host_output_data[i] << std::endl;
-            out << host_output_data[i] << std::endl;
+            std::cout << host_output_data[i] << '\n';
+            out << host_output_data[i] << '\n';
         }
-        out.close();
-
     } catch (const std::exception& e) {
         std::cerr << "ERROR: " << e.what() << std::endl;
         return 1;
     }
-
     return 0;
 }
-
