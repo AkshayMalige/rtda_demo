@@ -135,8 +135,8 @@ $(XCLBIN): link host $(POST_BOOT) | $(PKG_DIR)
 	@echo "    XSA      = $(XSA)"
 	@echo "    EXEC     = $(EXEC)"
 	@echo "Packaging design into $(PKG_DIR) as $@"
-	v++ --package $(PKG_FLAGS) $(PKG_COMMON) --config $(LINK_CFG) \
-	        $(AIE_LIB) $(XSA) -o $@
+	v++ --package $(PKG_FLAGS) $(PKG_COMMON) \
+		$(AIE_LIB) $(XSA) -o $@
 	@echo "✅ Packaged design created in $(PKG_DIR)"
 
 $(PKG_DIR):
