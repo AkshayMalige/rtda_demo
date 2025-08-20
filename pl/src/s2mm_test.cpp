@@ -17,9 +17,9 @@ int main() {
     std::vector<data_t> golden_data;
     golden_data.reserve(SIZE);
 
-    std::ifstream fin(std::string(DATA_DIR) + "/output_data_ref.txt");
+    std::ifstream fin(std::string(DATA_DIR) + "/" + OUTPUT_DENSE0_OUTPUT);
     if (!fin.is_open()) {
-        std::cerr << "ERROR: Cannot open input file leakyrelu_output_ref.txt" << std::endl;
+        std::cerr << "ERROR: Cannot open " << OUTPUT_DENSE0_OUTPUT << std::endl;
         return 1;
     }
 
