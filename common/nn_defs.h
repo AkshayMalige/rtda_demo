@@ -5,6 +5,8 @@ constexpr int HIDDEN_SIZE = 128;
 constexpr int OUTPUT_SIZE = 128;
 constexpr float LEAKY_SLOPE = 0.1f;
 constexpr int CASCADE_LENGTH = 2;
+constexpr int ROLL_CONC_SUBSET_SIZE 6
+
 
 constexpr int EMBED_DENSE0_INPUT_SIZE = INPUT_SIZE;
 constexpr int EMBED_DENSE0_WEIGHTS_SIZE = HIDDEN_SIZE * INPUT_SIZE;
