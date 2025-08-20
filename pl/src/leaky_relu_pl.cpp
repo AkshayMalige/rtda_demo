@@ -11,9 +11,9 @@ extern "C" {
     void leaky_relu_pl(hls::stream<axis_t>& in_stream,
                        hls::stream<axis_t>& bias_stream,
                        hls::stream<axis_t>& out_stream) {
-        #pragma HLS interface axis port=in_stream bundle=gmem depth=128
-        #pragma HLS interface axis port=bias_stream bundle=gmem depth=128
-        #pragma HLS interface axis port=out_stream bundle=gmem depth=128
+        #pragma HLS interface axis port=in_stream bundle=gmem depth=HIDDEN_SIZE
+        #pragma HLS interface axis port=bias_stream bundle=gmem depth=HIDDEN_SIZE
+        #pragma HLS interface axis port=out_stream bundle=gmem depth=HIDDEN_SIZE
         #pragma HLS INTERFACE s_axilite port=return bundle=control
 
         for (int i = 0; i < HIDDEN_SIZE; i++) {
