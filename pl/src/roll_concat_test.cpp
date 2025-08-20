@@ -1,6 +1,7 @@
 #include <hls_stream.h>
 #include <iostream>
 #include <cmath>
+#include <fstream>
 #include "../../common/nn_defs.h"
 
 #define OUTPUT_SIZE (HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE)
@@ -26,11 +27,17 @@ int main() {
     data_t ref_output[OUTPUT_SIZE];
     data_t test_output[OUTPUT_SIZE];
 
-    // Initialize input with known pattern
+    // Read input vector from file
+    std::ifstream infile("../data/embed_model_output.txt");
+    if (!infile) {
+        std::cerr << "Failed to open input file" << std::endl;
+        return 1;
+    }
     for (int i = 0; i < HIDDEN_SIZE; i++) {
-        input[i] = (data_t)i;
+        infile >> input[i];
         in_stream.write(input[i]);
     }
+    infile.close();
 
     // Run kernel
     roll_concat(in_stream, out_stream);
