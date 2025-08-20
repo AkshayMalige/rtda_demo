@@ -19,7 +19,7 @@ EMU_PS    ?= QEMU
 PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
 PACK_CFG  := ./pack.cfg
 LINK_CFG  := ./common/linker.cfg
-DATA_DIR  ?= ./data
+DATA_DIR  ?= $(abspath ./data)
 HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm
 POST_BOOT := post_boot.sh
 ###########################################################################
@@ -58,10 +58,10 @@ host:
 	$(MAKE) -C host $(SUBOPTS)
 
 $(AIE_LIB):
-	$(MAKE) -C $(AIE_DIR) TARGET=$(AIE_TGT) PLATFORM=$(PLATFORM) DATA_DIR=../$(DATA_DIR)
+	$(MAKE) -C $(AIE_DIR) TARGET=$(AIE_TGT) PLATFORM=$(PLATFORM) DATA_DIR=$(DATA_DIR)
 
 $(PL_XOS):
-	$(MAKE) -C pl TARGET=$(TARGET) DATA_DIR=../$(DATA_DIR) KERNELS="$(HLS_KERNELS)"
+	$(MAKE) -C pl TARGET=$(TARGET) DATA_DIR=$(DATA_DIR) KERNELS="$(HLS_KERNELS)"
 
 ########################  v++ --package flags ##############################
 PKG_COMMON = --platform $(PLATFORM) --package.out_dir $(PKG_DIR) \
