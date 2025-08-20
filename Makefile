@@ -105,7 +105,7 @@ endif
 # Create the platform XSA (system link). Ensure PL .xo and AIE lib exist first.
 link: $(XSA)
 
-$(XSA): $(AIE_LIB) $(PL_XOS)
+$(XSA): $(AIE_LIB) $(PL_XOS) $(LINK_CFG)
 	@echo "🔗 Linking with:"
 	@echo "    PL_XOS   = $(PL_XOS)"
 	@echo "    AIE_LIB  = $(AIE_LIB)"
