@@ -79,7 +79,7 @@ This command will generate:
 python data/generate_test_data.py --input-dim 6 --hidden-dim 128 --output-dim 128 --dtype float32 --seed 123
 ```
 
-> ⚙️ All data is dumped into the top-level `./data/` directory and formatted for `plio` input streams.
+> ⚙️ All data is dumped into the project-parent `../data/` directory and formatted for `plio` input streams.
 
 ---
 
@@ -125,7 +125,7 @@ Your project is organized as follows:
 │   ├── README.md
 │   ├── graph.cpp
 │   └── graph.h
-├── data/                     # Generated input, weights, and reference output
+├── ../data/                  # Generated input, weights, and reference output
 ├── pl/                       # Programmable logic (HLS) kernels
 │   ├── Makefile
 │   └── README.md
