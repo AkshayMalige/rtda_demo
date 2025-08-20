@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
         }
 
         // Launch the AI Engine graph
-        aie_graph.run();
+        aie_graph.run(1);
 
         // Start producer kernels
         std::vector<xrt::run> mm2s_runs;
@@ -210,6 +210,7 @@ int main(int argc, char** argv) {
         for (auto& r : mm2s_runs) {
             r.wait();
         }
+        aie_graph.wait();
         s2mm_run.wait();
 
         // Retrieve results
