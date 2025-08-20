@@ -12,7 +12,8 @@ typedef hls::axis<data_t, 0, 0, 0> axis_t;
 extern "C" {
     void leaky_relu_pl(hls::stream<axis_t>& in_stream,
                        hls::stream<axis_t>& bias_stream,
-                       hls::stream<axis_t>& out_stream);
+                       hls::stream<axis_t>& out_stream,
+                       int size);
 }
 
 int main() {
@@ -55,7 +56,7 @@ int main() {
     fin_data.close();
     fin_bias.close();
 
-    leaky_relu_pl(in_stream, bias_stream, out_stream);
+    leaky_relu_pl(in_stream, bias_stream, out_stream, HIDDEN_SIZE);
 
     std::ofstream fout(std::string(DATA_DIR) + "/leakyrelu_output_pl.txt");
     if (!fout.is_open()) {
