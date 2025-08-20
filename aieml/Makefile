@@ -2,6 +2,8 @@
 # Makefile for Vitis AIE Graph Compilation & Simulation
 # ===================================================================
 
+SHELL := /bin/bash
+
 # ==== CONFIG ====
 # Target platform for hardware compilation.
 PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
