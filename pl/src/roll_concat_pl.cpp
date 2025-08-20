@@ -10,9 +10,8 @@ void roll_concat(hls::stream<data_t> &in, hls::stream<data_t> &out) {
 #pragma HLS INTERFACE axis port=in
 #pragma HLS INTERFACE axis port=out
 #pragma HLS INTERFACE ap_ctrl_none port=return
-#pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
-
     data_t buffer[HIDDEN_SIZE];
+#pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
 
     // Read input vector
     for (int i = 0; i < HIDDEN_SIZE; i++) {
