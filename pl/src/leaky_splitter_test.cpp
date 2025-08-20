@@ -18,7 +18,7 @@ int main() {
     hls::stream<axis_t> in_stream;
     hls::stream<axis_t> out_stream[CASCADE_LENGTH];
 
-    std::ifstream fin(std::string(DATA_DIR) + "/leakyrelu_output_ref.txt");
+    std::ifstream fin(std::string(DATA_DIR) + "/" + EMBED_LEAKYRELU0_OUTPUT);
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open dense1_output_ref.txt" << std::endl;
         return 1;
@@ -38,8 +38,8 @@ int main() {
     leaky_splitter_pl(in_stream, out_stream);
 
     std::ofstream fout[CASCADE_LENGTH];
-    fout[0].open(std::string(DATA_DIR) + "/leakyrelu_output_pl_part0.txt");
-    fout[1].open(std::string(DATA_DIR) + "/leakyrelu_output_pl_part1.txt");
+    fout[0].open(std::string(DATA_DIR) + "/" + EMBED_LEAKYRELU0_OUTPUT_PREFIX + "0.txt");
+    fout[1].open(std::string(DATA_DIR) + "/" + EMBED_LEAKYRELU0_OUTPUT_PREFIX + "1.txt");
 
     for (int i = 0; i < CASCADE_LENGTH; ++i) {
         if (!fout[i].is_open()) {
