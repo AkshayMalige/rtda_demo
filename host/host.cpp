@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
     }
 
     std::string xclbinFilename = argv[1];
-    std::string base_path = DATA_DIR;
+    std::string base_path = "./data";
 
     GraphConfig cfg = make_config(graph_name, base_path);
 
