@@ -125,17 +125,21 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " <a.xclbin> [--graph=<aieml|aieml2|aieml3>]" << std::endl;
+    if (argc < 3) {
+        std::cout << "Usage: " << argv[0] << " <a.xclbin> --graph=<aieml|aieml2|aieml3>" << std::endl;
         return 1;
     }
 
-    std::string graph_name = "aieml3";
+    std::string graph_name;
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg.rfind("--graph=", 0) == 0) {
             graph_name = arg.substr(8);
         }
+    }
+    if (graph_name.empty()) {
+        std::cout << "Usage: " << argv[0] << " <a.xclbin> --graph=<aieml|aieml2|aieml3>" << std::endl;
+        return 1;
     }
 
     std::string xclbinFilename = argv[1];
