@@ -7,7 +7,7 @@
 #define OUTPUT_SIZE (HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE)
 
 typedef float data_t;
-void roll_concat(hls::stream<data_t> &in, hls::stream<data_t> &out);
+void roll_concat_pl(hls::stream<data_t> &in, hls::stream<data_t> &out);
 
 // Golden model
 void reference_model(data_t in[HIDDEN_SIZE], data_t out[OUTPUT_SIZE]) {
@@ -40,7 +40,7 @@ int main() {
     infile.close();
 
     // Run kernel
-    roll_concat(in_stream, out_stream);
+    roll_concat_pl(in_stream, out_stream);
 
     // Capture output
     for (int i = 0; i < OUTPUT_SIZE; i++) {
