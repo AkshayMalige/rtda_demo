@@ -9,6 +9,14 @@ The design partitions work across three components of the Versal architecture:
   - `aieml/` – embedding graph (`dense1 → dense2`).
   - `aieml2/` – sub‑solver graph with four consecutive dense layers.
   - `aieml3/` – output head projecting to 27 classes (padded to 32).
+- **Convenience build targets** – choose a graph at the top level by setting the
+  `GRAPH` variable or invoking one of the shortcut targets. For example:
+
+  ```bash
+  make aieml2 TARGET=hw_emu
+  ```
+
+  Valid graphs are `aieml`, `aieml2`, and `aieml3`.
 - **Programmable Logic (PL)** – supplies data‑mover kernels and two leaky ReLU units.
 - **Host application** – runs on the processing system and orchestrates data movement and graph execution through XRT.
 
