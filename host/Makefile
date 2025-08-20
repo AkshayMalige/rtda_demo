@@ -3,6 +3,8 @@
 # Toolchain and paths
 SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
 CXX     := aarch64-linux-gnu-g++
+DATA_DIR ?= $(abspath ../data)
+export DATA_DIR
 
 # Sources and targets
 SRC := host.cpp
@@ -14,7 +16,8 @@ CXXFLAGS ?= -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
         --sysroot=$(SYSROOT) \
         -I$(SYSROOT)/usr/include/xrt \
         -I$(SYSROOT)/usr/include \
-        -I./ -I./src/ -I../common -I/aietools/include -I/include
+        -I./ -I./src/ -I../common -I/aietools/include -I/include \
+        -DDATA_DIR='"$(DATA_DIR)"'
 
 LDFLAGS ?= --sysroot=$(SYSROOT) \
 	-L$(SYSROOT)/usr/lib \

@@ -35,8 +35,7 @@ int main(int argc, char** argv) {
 
     std::string xclbinFilename = argv[1];
 
-    // std::string base_path = DATA_DIR;
-    std::string base_path = "./data";
+    std::string base_path = DATA_DIR;
     std::string inputDataFile      = base_path + "/" + EMBED_INPUT_DATA;
     std::string weights1File       = base_path + "/" + EMBED_DENSE0_WEIGHTS;
     std::string weights2_part0File = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "0.txt";
