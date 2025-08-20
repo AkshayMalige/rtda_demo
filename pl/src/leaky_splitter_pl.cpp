@@ -10,8 +10,8 @@ extern "C" {
     // Split an input stream into CASCADE_LENGTH outputs
     void leaky_splitter_pl(hls::stream<axis_t>& in_stream,
                            hls::stream<axis_t> out_stream[CASCADE_LENGTH]) {
-        #pragma HLS interface axis port=in_stream
-        #pragma HLS interface axis port=out_stream
+        #pragma HLS interface axis port=in_stream depth=HIDDEN_SIZE
+        #pragma HLS interface axis port=out_stream depth=HIDDEN_SIZE / CASCADE_LENGTH
         #pragma HLS INTERFACE s_axilite port=return bundle=control
 
         const int SPLIT_SIZE = HIDDEN_SIZE / CASCADE_LENGTH;
