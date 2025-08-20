@@ -29,7 +29,7 @@ int main() {
     data_t test_output[OUTPUT_SIZE];
 
     // Read input vector from file
-    std::ifstream infile("../"+ std::string(DATA_DIR) + "/" + std::string(EMBED_MODEL_OUTPUT));
+    std::ifstream infile(std::string(DATA_DIR) + "/" + EMBED_MODEL_OUTPUT);
     if (!infile.is_open()) {
         std::cerr << "ERROR: Cannot open EMBED_MODEL_OUTPUT" << std::endl;
         return 1;
