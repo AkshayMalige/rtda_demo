@@ -19,11 +19,9 @@ components:
 
   - name: pl_kernels
     type: kernel
-    path: pl/ip
+    path: pl/ip/
     kernels:
       - leaky_relu_hls.xo
-      - leaky_splitter_hls.xo
-      - roll_concat_hls.xo
       - s2mm_hls.xo
       - mm2s_hls.xo
       - axis_switch_hls.xo
