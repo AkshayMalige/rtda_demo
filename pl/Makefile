@@ -6,7 +6,7 @@
 VITIS_HLS ?= vitis_hls
 
 # List of kernels (add more as needed)
-KERNELS ?= mm2s leaky_relu leaky_splitter s2mm roll_concat
+KERNELS ?= leaky_relu leaky_splitter s2mm roll_concat
 # KERNELS := roll_concat
 
 
