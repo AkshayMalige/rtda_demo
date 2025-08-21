@@ -11,7 +11,7 @@
 #include "nn_defs.h"
 
 // ------ Set this to "aieml", "aieml2", or "aieml3" ------
-static constexpr const char* kGraphName = "aieml";
+static constexpr const char* kGraphName = "aieml3";
 // ---------------------------------------------------------
 
 // Load text files containing floats into a vector
