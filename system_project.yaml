@@ -24,6 +24,7 @@ components:
       - mm2s_8_128.xo
       - s2mm_16_128.xo
       - s2mm_32_128.xo
+      - axis_switch.xo
 
   - name: hw_link_output
     type: xsa
