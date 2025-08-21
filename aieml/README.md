@@ -19,32 +19,21 @@ programmable logic. Later stages are implemented in
 
 ## Build
 
-The supplied `Makefile` wraps the standard build flow. From the repository
-root, compile the graph with:
+The `Makefile` provides two convenience targets:
 
-```bash
-cd aieml
-make graph TARGET=hw       # or TARGET=x86sim
-```
+- `make aiesim` – compile and run cycle-accurate simulation using file-based
+  weights.
+- `make hw` – build the graph for hardware. This defines the
+  `USE_PRELOADED_WEIGHTS` flag so weights are delivered through the shared DMA
+  stream.
 
-To invoke the compiler directly without the wrapper:
+Both commands produce `Work/libadf.a` inside this directory. To invoke the
+compiler directly without the wrapper:
 
 ```bash
 cd aieml
 v++ --compile --mode aie --target hw ./graph.cpp \
     --platform=${PLATFORM} -I./data
-```
-
-Both commands produce `Work/libadf.a` inside this directory.
-
-## Simulation
-
-After a successful build, run cycle-approximate simulation:
-
-```bash
-make sim TARGET=hw        # uses `aiesimulator` under the hood
-# or run manually
-# aiesimulator --pkg-dir=Work --profile --dump-vcd=foo
 ```
 
 ## Data Flow
