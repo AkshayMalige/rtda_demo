@@ -21,7 +21,7 @@ components:
     type: kernel
     path: pl/build_hw_emu
     kernels:
-      - mm2s_8_128.xo
+      - mm2s_hls.xo
       - s2mm_16_128.xo
       - s2mm_32_128.xo
       - axis_switch.xo
