@@ -19,12 +19,14 @@ components:
 
   - name: pl_kernels
     type: kernel
-    path: pl/build_hw_emu
+    path: pl/ip
     kernels:
+      - leaky_relu_hls.xo
+      - leaky_splitter_hls.xo
+      - roll_concat_hls.xo
+      - s2mm_hls.xo
       - mm2s_hls.xo
-      - s2mm_16_128.xo
-      - s2mm_32_128.xo
-      - axis_switch.xo
+      - axis_switch_hls.xo
 
   - name: hw_link_output
     type: xsa

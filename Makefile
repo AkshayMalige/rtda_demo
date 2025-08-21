@@ -29,9 +29,9 @@ LINK_CFG  := ./common/linker_$(GRAPH).cfg
 DATA_DIR  ?= $(abspath ./data)
 
 ifeq ($(GRAPH),aieml3)
-  HLS_KERNELS := leaky_relu s2mm
+  HLS_KERNELS := leaky_relu axis_switch s2mm mm2s
 else
-  HLS_KERNELS := leaky_relu leaky_splitter roll_concat s2mm
+  HLS_KERNELS := leaky_relu leaky_splitter roll_concat axis_switch s2mm mm2s
 endif
 
 POST_BOOT := post_boot.sh
