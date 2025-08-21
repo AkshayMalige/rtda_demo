@@ -4,6 +4,9 @@
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
 #include "nn_defs.h"
+#ifndef __AIESIM__
+#include <array>
+#endif
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -65,22 +68,18 @@ class NeuralNetworkGraph : public graph {
 public:
   // Layer 0: 768x128
   input_plio  layer0_in[TP_CASC_LEN_768];
-  input_plio  layer0_weights[TP_CASC_LEN_768];
   output_plio layer0_out;
 
   // Layer 1: 128x128
   input_plio  layer1_in[TP_CASC_LEN_128];
-  input_plio  layer1_weights[TP_CASC_LEN_128];
   output_plio layer1_out;
 
   // Layer 2: 128x128 (NEW)
   input_plio  layer2_in[TP_CASC_LEN_128];
-  input_plio  layer2_weights[TP_CASC_LEN_128];
   output_plio layer2_out;
 
   // Layer 3: 128x128 (NEW)
   input_plio  layer3_in[TP_CASC_LEN_128];
-  input_plio  layer3_weights[TP_CASC_LEN_128];
   output_plio layer3_out;
 
   // Kernels
@@ -88,6 +87,31 @@ public:
   dense128x128 dense128_L2;
   dense128x128 dense128_L3;
   dense128x128 dense128_L4;
+
+#ifdef __AIESIM__
+  input_plio  layer0_weights[TP_CASC_LEN_768];
+  input_plio  layer1_weights[TP_CASC_LEN_128];
+  input_plio  layer2_weights[TP_CASC_LEN_128];
+  input_plio  layer3_weights[TP_CASC_LEN_128];
+#else
+  // Local weight buffers
+  adf::parameter::array<float, SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE> layer0_weights[TP_CASC_LEN_768];
+  adf::parameter::array<float, SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE> layer1_weights[TP_CASC_LEN_128];
+  adf::parameter::array<float, SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE> layer2_weights[TP_CASC_LEN_128];
+  adf::parameter::array<float, SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE> layer3_weights[TP_CASC_LEN_128];
+  input_port weight_stream;
+
+  void init_weights() {
+    for (int p = 0; p < (int)TP_CASC_LEN_768; ++p)
+      for (float &w : layer0_weights[p]) { w = weight_stream.read(); }
+    for (int p = 0; p < (int)TP_CASC_LEN_128; ++p)
+      for (float &w : layer1_weights[p]) { w = weight_stream.read(); }
+    for (int p = 0; p < (int)TP_CASC_LEN_128; ++p)
+      for (float &w : layer2_weights[p]) { w = weight_stream.read(); }
+    for (int p = 0; p < (int)TP_CASC_LEN_128; ++p)
+      for (float &w : layer3_weights[p]) { w = weight_stream.read(); }
+  }
+#endif
 
   NeuralNetworkGraph() {
     std::string base_path = DATA_DIR;
@@ -100,11 +124,15 @@ public:
     // ----------------------------
     for (int i = 0; i < (int)TP_CASC_LEN_768; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_INPUT_DATA_PREFIX        + std::to_string(i) + ".txt";
+      layer0_in[i] = input_plio::create(("layer0_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
+#ifdef __AIESIM__
       std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
-      layer0_in[i]      = input_plio::create( ("layer0_in_"      + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str() );
-      layer0_weights[i] = input_plio::create( ("layer0_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str() );
+      layer0_weights[i] = input_plio::create(("layer0_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
+      connect<>(layer0_weights[i].out[0], dense768.inA[i]);
+#else
+      connect<parameter>(layer0_weights[i], dense768.inA[i]);
+#endif
       connect<>(layer0_in[i].out[0], dense768.inB[i]);
-      connect<>(layer0_weights[i].out[0],  dense768.inA[i]);
     }
     layer0_out = output_plio::create("layer0_out", plio_32_bits,
                                      (base_path + "/" + SUBSOLVER0_DENSE0_OUTPUT).c_str());
@@ -118,11 +146,15 @@ public:
     // ----------------------------
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_0_PREFIX       + std::to_string(i) + ".txt";
+      layer1_in[i] = input_plio::create(("layer1_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
+#ifdef __AIESIM__
       std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
-      layer1_in[i]      = input_plio::create( ("layer1_in_"      + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str() );
-      layer1_weights[i] = input_plio::create( ("layer1_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str() );
+      layer1_weights[i] = input_plio::create(("layer1_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
+      connect<>(layer1_weights[i].out[0], dense128_L2.inA[i]);
+#else
+      connect<parameter>(layer1_weights[i], dense128_L2.inA[i]);
+#endif
       connect<>(layer1_in[i].out[0], dense128_L2.inB[i]);
-      connect<>(layer1_weights[i].out[0],  dense128_L2.inA[i]);
     }
     layer1_out = output_plio::create("layer1_out", plio_32_bits,
                                      (base_path + "/" + SUBSOLVER0_DENSE1_OUTPUT).c_str());
@@ -136,11 +168,15 @@ public:
     // ----------------------------
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_1_PREFIX       + std::to_string(i) + ".txt";
+      layer2_in[i] = input_plio::create(("layer2_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
+#ifdef __AIESIM__
       std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE2_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
-      layer2_in[i]      = input_plio::create( ("layer2_in_"      + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str() );
-      layer2_weights[i] = input_plio::create( ("layer2_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str() );
+      layer2_weights[i] = input_plio::create(("layer2_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
+      connect<>(layer2_weights[i].out[0], dense128_L3.inA[i]);
+#else
+      connect<parameter>(layer2_weights[i], dense128_L3.inA[i]);
+#endif
       connect<>(layer2_in[i].out[0], dense128_L3.inB[i]);
-      connect<>(layer2_weights[i].out[0],  dense128_L3.inA[i]);
     }
     layer2_out = output_plio::create("layer2_out", plio_32_bits,
                                      (base_path + "/" + SUBSOLVER0_DENSE2_OUTPUT).c_str());
@@ -154,11 +190,15 @@ public:
     // ----------------------------
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_2_PREFIX       + std::to_string(i) + ".txt";
+      layer3_in[i] = input_plio::create(("layer3_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
+#ifdef __AIESIM__
       std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE3_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
-      layer3_in[i]      = input_plio::create( ("layer3_in_"      + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str() );
-      layer3_weights[i] = input_plio::create( ("layer3_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str() );
+      layer3_weights[i] = input_plio::create(("layer3_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
+      connect<>(layer3_weights[i].out[0], dense128_L4.inA[i]);
+#else
+      connect<parameter>(layer3_weights[i], dense128_L4.inA[i]);
+#endif
       connect<>(layer3_in[i].out[0], dense128_L4.inB[i]);
-      connect<>(layer3_weights[i].out[0],  dense128_L4.inA[i]);
     }
     layer3_out = output_plio::create("layer3_out", plio_32_bits,
                                      (base_path + "/" + SUBSOLVER0_DENSE3_OUTPUT).c_str());
