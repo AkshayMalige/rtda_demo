@@ -4,6 +4,9 @@
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
 #include "nn_defs.h"
+#ifndef __AIESIM__
+#include <array>
+#endif
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -33,18 +36,31 @@ using dense128x27_padded32 = matrix_vector_mul_graph<
 class NeuralNetworkGraph : public graph {
 public:
     input_plio  layer0_in;
-    input_plio  layer0_weights;
     output_plio layer0_out;
 
     dense128x27_padded32 dense1;
 
+#ifdef __AIESIM__
+    input_plio  layer0_weights;
+#else
+    adf::parameter::array<float, OUTPUT_DENSE0_WEIGHTS_SIZE> layer0_weights;
+    input_port weight_stream;
+    void init_weights() {
+        for (float &w : layer0_weights) { w = weight_stream.read(); }
+    }
+#endif
+
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
-        layer0_in      = input_plio::create("layer0_in",  plio_32_bits, (base_path + "/" + OUTPUT_INPUT_DATA).c_str());
-        layer0_weights = input_plio::create("layer0_weights", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_WEIGHTS).c_str());
-        layer0_out     = output_plio::create("layer0_out", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_OUTPUT).c_str());
+        layer0_in  = input_plio::create("layer0_in",  plio_32_bits, (base_path + "/" + OUTPUT_INPUT_DATA).c_str());
+        layer0_out = output_plio::create("layer0_out", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_OUTPUT).c_str());
 
+#ifdef __AIESIM__
+        layer0_weights = input_plio::create("layer0_weights", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_WEIGHTS).c_str());
         connect<>(layer0_weights.out[0], dense1.inA[0]);
+#else
+        connect<parameter>(layer0_weights, dense1.inA[0]);
+#endif
         connect<>(layer0_in.out[0], dense1.inB[0]);
         connect<>(dense1.out[0], layer0_out.in[0]);
     }
