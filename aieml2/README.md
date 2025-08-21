@@ -16,21 +16,12 @@ those files to be overridden with the `DATA_DIR` environment variable.
 
 ## Build
 
-From the repository root, compile the graph:
+Two wrapper targets are provided:
 
-```bash
-cd aieml2
-make graph TARGET=hw       # or TARGET=x86sim
-```
+- `make aiesim` – compile and simulate the graph with file-based weights.
+- `make hw` – build for hardware. This enables the `USE_PRELOADED_WEIGHTS`
+  macro so that weights are supplied by a shared DMA stream.
 
-## Simulation
-
-After a successful build, run cycle‑approximate simulation:
-
-```bash
-make sim TARGET=hw        # uses `aiesimulator`
-```
-
-Simulation reads all inputs from `DATA_DIR` and writes layer outputs back to
-the same location.
+Both commands write the compiled artefacts to `Work/`. Simulation reads all
+inputs from `DATA_DIR` and writes layer outputs back to the same location.
 

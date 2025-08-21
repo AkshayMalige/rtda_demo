@@ -16,20 +16,12 @@ can be changed by setting `DATA_DIR`.
 
 ## Build
 
-From the repository root:
+Use the convenience targets provided in the `Makefile`:
 
-```bash
-cd aieml3
-make graph TARGET=hw       # or TARGET=x86sim
-```
-
-## Simulation
-
-Run cycle‑approximate simulation once the build completes:
-
-```bash
-make sim TARGET=hw        # uses `aiesimulator`
-```
+- `make aiesim` – compile and run simulation with weights loaded from
+  files.
+- `make hw` – build the graph for hardware with the shared DMA weight stream
+  enabled via `USE_PRELOADED_WEIGHTS`.
 
 Results are written next to the input files under `DATA_DIR`.
 
