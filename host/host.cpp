@@ -189,7 +189,8 @@ int main(int argc, char** argv) {
         auto switch_run = xrt::run(axis_switch_kernel);
         switch_run.start();
 
-        // Run AIE graph
+        // Initialize and run AIE graph before starting MM2S transfers
+        aie_graph.init();
         aie_graph.run(1);
 
         // Start producers sequentially, reprogramming the mm2s kernel for each

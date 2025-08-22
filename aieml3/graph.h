@@ -64,4 +64,12 @@ public:
         connect<>(layer0_in.out[0], dense1.inB[0]);
         connect<>(dense1.out[0], layer0_out.in[0]);
     }
+
+    void init() {
+        graph::init();
+#ifdef USE_PRELOADED_WEIGHTS
+        init_weights();
+#endif
+    }
 };
+
