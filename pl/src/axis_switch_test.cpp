@@ -5,7 +5,7 @@
 static const int NUM_OUTPUTS = 17;
 
 typedef float data_t;
-typedef hls::axis<data_t, 0, 5, 0> axis_t;
+typedef hls::axis<data_t, 0, 0, 5> axis_t;
 
 extern "C" void axis_switch_pl(hls::stream<axis_t> &in, hls::stream<axis_t> out[NUM_OUTPUTS]);
 
