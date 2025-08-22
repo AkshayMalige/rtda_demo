@@ -31,7 +31,7 @@ make SYSROOT=/path/to/sysroot
 Ensure the cross-compiler (`aarch64-linux-gnu-g++`) and XRT development files are available in the environment.
 
 ## Runtime
-Run the executable on a Versal device running PetaLinux with XRT support.  Select which graph to drive using `--graph` (defaults to `aieml`):
+Run the executable on a Versal device running PetaLinux with XRT support.  Choose the graph at runtime with `--graph=<aieml|aieml2|aieml3>` (defaults to `aieml`):
 
 ```bash
 ./system_host a.xclbin --graph=aieml2

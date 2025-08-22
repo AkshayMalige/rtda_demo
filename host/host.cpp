@@ -10,10 +10,6 @@
 #include "data_paths.h"
 #include "nn_defs.h"
 
-// ------ Set this to "aieml", "aieml2", or "aieml3" ------
-static constexpr const char* kGraphName = "aieml3";
-// ---------------------------------------------------------
-
 // Load text files containing floats into a vector
 static std::vector<float> read_file_to_vector(const std::string& filename, int size) {
     std::vector<float> data;
@@ -127,15 +123,28 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
+        std::cout << "Usage: " << argv[0]
+                  << " <a.xclbin> [--graph=<aieml|aieml2|aieml3>]\n";
         return 1;
     }
 
     const std::string xclbinFilename = argv[1];
     const std::string base_path = "./data";
+    std::string graph_name = "aieml"; // default graph
 
-    // Use the single variable above instead of a command-line option
-    GraphConfig cfg = make_config(kGraphName, base_path);
+    for (int i = 2; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg.rfind("--graph=", 0) == 0) {
+            graph_name = arg.substr(8);
+        } else {
+            std::cerr << "Unknown option: " << arg << "\n";
+            std::cout << "Usage: " << argv[0]
+                      << " <a.xclbin> [--graph=<aieml|aieml2|aieml3>]\n";
+            return 1;
+        }
+    }
+
+    GraphConfig cfg = make_config(graph_name, base_path);
 
     try {
         xrt::device device(0);
