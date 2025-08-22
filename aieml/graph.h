@@ -4,7 +4,7 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
-#ifdef USE_PRELOADED_WEIGHTS
+#if USE_PRELOADED_WEIGHTS
 #include <array>
 #endif
 
@@ -54,7 +54,7 @@ public:
     input_plio  layer1_in[TP_CASC_LEN_LAYER2];
     output_plio layer1_out;
 
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
     input_plio  layer0_weights;
     input_plio  layer1_weights[TP_CASC_LEN_LAYER2];
 #else
@@ -80,7 +80,7 @@ public:
         layer0_out = output_plio::create("layer0_out", plio_32_bits,
                                         (base_path + "/" + EMBED_DENSE0_OUTPUT).c_str());
 
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
         layer0_weights = input_plio::create("layer0_weights", plio_32_bits,
                                             (base_path + "/" + EMBED_DENSE0_WEIGHTS).c_str());
         connect<>(layer0_weights.out[0], dense1.inA[0]);
@@ -94,7 +94,7 @@ public:
             std::string in_file = base_path + "/" + EMBED_LEAKYRELU0_OUTPUT_PREFIX + std::to_string(i) + ".txt";
             std::string in_name = "layer1_in_" + std::to_string(i);
             layer1_in[i] = input_plio::create(in_name.c_str(), plio_32_bits, in_file.c_str());
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
             std::string w_file  = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(i) + ".txt";
             std::string w_name  = "layer1_weights_" + std::to_string(i);
             layer1_weights[i] = input_plio::create(w_name.c_str(), plio_32_bits, w_file.c_str());
@@ -112,7 +112,7 @@ public:
 
     void init() {
         graph::init();
-#ifdef USE_PRELOADED_WEIGHTS
+#if USE_PRELOADED_WEIGHTS
         init_weights();
 #endif
     }

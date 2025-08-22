@@ -4,7 +4,7 @@
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
 #include "nn_defs.h"
-#ifdef USE_PRELOADED_WEIGHTS
+#if USE_PRELOADED_WEIGHTS
 #include <array>
 #endif
 
@@ -40,7 +40,7 @@ public:
 
     dense128x27_padded32 dense1;
 
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
     input_plio  layer0_weights;
 #else
     adf::parameter::array<float, OUTPUT_DENSE0_WEIGHTS_SIZE> layer0_weights;
@@ -55,7 +55,7 @@ public:
         layer0_in  = input_plio::create("layer0_in",  plio_32_bits, (base_path + "/" + OUTPUT_INPUT_DATA).c_str());
         layer0_out = output_plio::create("layer0_out", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_OUTPUT).c_str());
 
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
         layer0_weights = input_plio::create("layer0_weights", plio_32_bits, (base_path + "/" + OUTPUT_DENSE0_WEIGHTS).c_str());
         connect<>(layer0_weights.out[0], dense1.inA[0]);
 #else
@@ -67,7 +67,7 @@ public:
 
     void init() {
         graph::init();
-#ifdef USE_PRELOADED_WEIGHTS
+#if USE_PRELOADED_WEIGHTS
         init_weights();
 #endif
     }

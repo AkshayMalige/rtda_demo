@@ -19,8 +19,8 @@ those files to be overridden with the `DATA_DIR` environment variable.
 Two wrapper targets are provided:
 
 - `make aiesim` – compile and simulate the graph with file-based weights.
-- `make hw` – build for hardware. This enables the `USE_PRELOADED_WEIGHTS`
-  macro so that weights are supplied by a shared DMA stream.
+- `make hw` – build for hardware. Set `USE_PRELOADED_WEIGHTS` to 1 in
+  `common/nn_defs.h` so that weights are supplied by a shared DMA stream.
 
 Both commands write the compiled artefacts to `Work/`. Simulation reads all
 inputs from `DATA_DIR` and writes layer outputs back to the same location.
