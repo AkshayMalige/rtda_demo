@@ -191,6 +191,7 @@ int main(int argc, char** argv) {
             run.set_arg(0, mm2s_bos[i]);
             run.set_arg(2, 0);                    // offset within the buffer
             run.set_arg(3, cfg.mm2s[i].size);     // transfer length
+            run.set_arg(4, 0);                    // AXI stream destination
             run.start();
             run.wait();
         }
