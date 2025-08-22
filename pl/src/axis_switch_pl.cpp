@@ -15,6 +15,7 @@ void axis_switch_pl(hls::stream<axis_t> &in, hls::stream<axis_t> out[NUM_OUTPUTS
 #pragma HLS ARRAY_PARTITION variable=out complete
 
     bool last = false;
+    #pragma HLS loop_tripcount min=1 max=128
     while (!last) {
 #pragma HLS PIPELINE II=1
         axis_t val = in.read();
