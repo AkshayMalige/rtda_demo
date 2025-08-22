@@ -1,5 +1,9 @@
 #pragma once
 
+// Toggle between runtime-loaded and preloaded weights. Set to 1 to embed
+// weights into the graph at compile time or 0 to load them from files.
+#define USE_PRELOADED_WEIGHTS 0
+
 constexpr int INPUT_SIZE = 8;
 constexpr int HIDDEN_SIZE = 128;
 constexpr int OUTPUT_SIZE = 128;

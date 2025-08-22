@@ -23,9 +23,8 @@ The `Makefile` provides two convenience targets:
 
 - `make aiesim` – compile and run cycle-accurate simulation using file-based
   weights.
-- `make hw` – build the graph for hardware. This defines the
-  `USE_PRELOADED_WEIGHTS` flag so weights are delivered through the shared DMA
-  stream.
+- `make hw` – build the graph for hardware. Set `USE_PRELOADED_WEIGHTS` to 1 in
+  `common/nn_defs.h` to deliver weights through the shared DMA stream.
 
 Both commands produce `Work/libadf.a` inside this directory. To invoke the
 compiler directly without the wrapper:

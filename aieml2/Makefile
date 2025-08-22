@@ -10,7 +10,6 @@ PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202
 
 # Target for compilation and simulation. Options: x86sim, hw
 TARGET       ?= hw
-USE_PRELOADED_WEIGHTS ?= 0
 
 # Location of input/weight files used by PLIO connections (override from top-level)
 # Default outside the repository when this subdirectory is built directly.
@@ -63,9 +62,6 @@ AIE_FLAGS := \
         --pl-freq=$(PL_FREQ_MHZ) \
         $(AIE_INCLUDE_FLAGS)
 
-ifeq ($(USE_PRELOADED_WEIGHTS),1)
-AIE_FLAGS += --cflags=-DUSE_PRELOADED_WEIGHTS
-endif
 
 
 # ==== RULES ====
@@ -117,6 +113,6 @@ clean:
 aiesim: TARGET=hw
 aiesim: sim
 
-hw: TARGET=hw USE_PRELOADED_WEIGHTS=1
+hw: TARGET=hw
 hw: graph
 

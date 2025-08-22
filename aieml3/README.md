@@ -20,8 +20,8 @@ Use the convenience targets provided in the `Makefile`:
 
 - `make aiesim` – compile and run simulation with weights loaded from
   files.
-- `make hw` – build the graph for hardware with the shared DMA weight stream
-  enabled via `USE_PRELOADED_WEIGHTS`.
+- `make hw` – build the graph for hardware. Set `USE_PRELOADED_WEIGHTS` to 1 in
+  `common/nn_defs.h` to enable the shared DMA weight stream.
 
 Results are written next to the input files under `DATA_DIR`.
 

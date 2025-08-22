@@ -4,7 +4,7 @@
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
 #include "nn_defs.h"
-#ifdef USE_PRELOADED_WEIGHTS
+#if USE_PRELOADED_WEIGHTS
 #include <array>
 #endif
 
@@ -88,7 +88,7 @@ public:
   dense128x128 dense128_L3;
   dense128x128 dense128_L4;
 
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
   input_plio  layer0_weights[TP_CASC_LEN_768];
   input_plio  layer1_weights[TP_CASC_LEN_128];
   input_plio  layer2_weights[TP_CASC_LEN_128];
@@ -125,7 +125,7 @@ public:
     for (int i = 0; i < (int)TP_CASC_LEN_768; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_INPUT_DATA_PREFIX        + std::to_string(i) + ".txt";
       layer0_in[i] = input_plio::create(("layer0_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
         std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
         layer0_weights[i] = input_plio::create(("layer0_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
         connect<>(layer0_weights[i].out[0], dense768.inA[i]);
@@ -147,7 +147,7 @@ public:
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_0_PREFIX       + std::to_string(i) + ".txt";
       layer1_in[i] = input_plio::create(("layer1_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
         std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
         layer1_weights[i] = input_plio::create(("layer1_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
         connect<>(layer1_weights[i].out[0], dense128_L2.inA[i]);
@@ -169,7 +169,7 @@ public:
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_1_PREFIX       + std::to_string(i) + ".txt";
       layer2_in[i] = input_plio::create(("layer2_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
         std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE2_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
         layer2_weights[i] = input_plio::create(("layer2_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
         connect<>(layer2_weights[i].out[0], dense128_L3.inA[i]);
@@ -191,7 +191,7 @@ public:
     for (int i = 0; i < (int)TP_CASC_LEN_128; ++i) {
       std::string in_file = base_path + "/" + SUBSOLVER0_LEAKYRELU_2_PREFIX       + std::to_string(i) + ".txt";
       layer3_in[i] = input_plio::create(("layer3_in_" + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str());
-#if !defined(USE_PRELOADED_WEIGHTS)
+#if !USE_PRELOADED_WEIGHTS
         std::string w_file  = base_path + "/" + SUBSOLVER0_DENSE3_WEIGHTS_PREFIX    + std::to_string(i) + ".txt";
         layer3_weights[i] = input_plio::create(("layer3_weights_" + std::to_string(i)).c_str(), plio_32_bits, w_file.c_str());
         connect<>(layer3_weights[i].out[0], dense128_L4.inA[i]);
@@ -207,7 +207,7 @@ public:
 
   void init() {
     graph::init();
-#ifdef USE_PRELOADED_WEIGHTS
+#if USE_PRELOADED_WEIGHTS
     init_weights();
 #endif
   }
