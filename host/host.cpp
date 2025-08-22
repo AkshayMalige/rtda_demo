@@ -33,7 +33,11 @@ static std::vector<float> read_file_to_vector(const std::string& filename, int s
 }
 
 // Description of a transfer to be issued by the shared MM2S kernel
-struct MM2SInfo { std::string file; int size; };
+struct MM2SInfo {
+    std::string file;
+    int size;
+    int dest;
+};
 
 struct GraphConfig {
     std::vector<MM2SInfo> mm2s;
@@ -49,12 +53,12 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
     if (graph == "aieml") {
         GraphConfig cfg;
         cfg.mm2s = {
-            {base_path + "/" + EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_SIZE},
-            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "0.txt", EMBED_DENSE1_WEIGHTS_PART_SIZE},
-            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "1.txt", EMBED_DENSE1_WEIGHTS_PART_SIZE},
-            {base_path + "/" + EMBED_DENSE0_BIAS, EMBED_DENSE0_BIAS_SIZE},
-            {base_path + "/" + EMBED_DENSE1_BIAS, EMBED_DENSE1_BIAS_SIZE},
-            {base_path + "/" + EMBED_INPUT_DATA, EMBED_DENSE0_INPUT_SIZE},
+            {base_path + "/" + EMBED_DENSE0_WEIGHTS,                                   EMBED_DENSE0_WEIGHTS_SIZE,      1},
+            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "0.txt",                  EMBED_DENSE1_WEIGHTS_PART_SIZE, 1},
+            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "1.txt",                  EMBED_DENSE1_WEIGHTS_PART_SIZE, 1},
+            {base_path + "/" + EMBED_DENSE0_BIAS,                                     EMBED_DENSE0_BIAS_SIZE,         2},
+            {base_path + "/" + EMBED_DENSE1_BIAS,                                     EMBED_DENSE1_BIAS_SIZE,         3},
+            {base_path + "/" + EMBED_INPUT_DATA,                                      EMBED_DENSE0_INPUT_SIZE,        0},
         };
         cfg.relus = {"leaky_relu_pl:{relu}", "leaky_relu_pl:{relu2}"};
         cfg.splitters = {"leaky_splitter_pl:{splitter}"};
@@ -68,32 +72,32 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
         // Layer 0 weights
         for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
             cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE});
+                                SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE, 12});
         }
         // Layer 1-3 weights
         for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
             cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE});
+                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE, 12});
         }
         for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
             cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE2_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE});
+                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE, 12});
         }
         for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
             cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE3_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE});
+                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE, 12});
         }
         // Biases
         std::vector<std::string> bias_files = {SUBSOLVER0_DENSE0_BIAS, SUBSOLVER0_DENSE1_BIAS,
                                                SUBSOLVER0_DENSE2_BIAS, SUBSOLVER0_DENSE3_BIAS};
         for (int i = 0; i < 4; ++i) {
             cfg.mm2s.push_back({base_path + "/" + bias_files[i],
-                                SUBSOLVER0_LAYER_BIAS_SIZE});
+                                SUBSOLVER0_LAYER_BIAS_SIZE, 13 + i});
         }
         // Inputs for layer 0
         for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
             cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_INPUT_DATA_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_INPUT_PART_SIZE});
+                                SUBSOLVER0_INPUT_PART_SIZE, i});
         }
         cfg.relus = {"leaky_relu_pl:{relu0}", "leaky_relu_pl:{relu1}", "leaky_relu_pl:{relu2}", "leaky_relu_pl:{relu3}"};
         cfg.splitters = {"leaky_splitter_pl:{split0}", "leaky_splitter_pl:{split1}", "leaky_splitter_pl:{split2}"};
@@ -105,9 +109,9 @@ static GraphConfig make_config(const std::string& graph, const std::string& base
     } else if (graph == "aieml3") {
         GraphConfig cfg;
         cfg.mm2s = {
-            {base_path + "/" + OUTPUT_DENSE0_WEIGHTS, OUTPUT_DENSE0_WEIGHTS_SIZE},
-            {base_path + "/" + OUTPUT_DENSE0_BIAS,    OUTPUT_DENSE0_BIAS_SIZE},
-            {base_path + "/" + OUTPUT_INPUT_DATA,     OUTPUT_DENSE0_INPUT_SIZE},
+            {base_path + "/" + OUTPUT_DENSE0_WEIGHTS, OUTPUT_DENSE0_WEIGHTS_SIZE, 1},
+            {base_path + "/" + OUTPUT_DENSE0_BIAS,    OUTPUT_DENSE0_BIAS_SIZE,   2},
+            {base_path + "/" + OUTPUT_INPUT_DATA,     OUTPUT_DENSE0_INPUT_SIZE,  0},
         };
         cfg.relus = {"leaky_relu_pl:{relu}"};
         cfg.splitters = {};
@@ -153,6 +157,7 @@ int main(int argc, char** argv) {
         // Acquire kernel and graph handles
         // A single mm2s kernel is shared across all transfers
         xrt::kernel mm2s_kernel(device, xclbin_uuid, "mm2s_pl:{mm2s}");
+        xrt::kernel axis_switch_kernel(device, xclbin_uuid, "axis_switch_pl:{mm2s_switch}");
         std::vector<xrt::kernel> relu_kernels;
         for (auto& name : cfg.relus) {
             relu_kernels.emplace_back(device, xclbin_uuid, name.c_str());
@@ -180,6 +185,10 @@ int main(int argc, char** argv) {
         std::vector<xrt::run> split_runs;
         for (auto& k : split_kernels) { auto r = xrt::run(k); r.start(); split_runs.push_back(std::move(r)); }
 
+        // Start the AXI switch once; it will route all subsequent MM2S transfers
+        auto switch_run = xrt::run(axis_switch_kernel);
+        switch_run.start();
+
         // Run AIE graph
         aie_graph.run(1);
 
@@ -189,13 +198,14 @@ int main(int argc, char** argv) {
         for (size_t i = 0; i < cfg.mm2s.size(); ++i) {
             auto run = xrt::run(mm2s_kernel);
             run.set_arg(0, mm2s_bos[i]);
-            run.set_arg(2, 0);                    // offset within the buffer
-            run.set_arg(3, cfg.mm2s[i].size);     // transfer length
-            run.set_arg(4, 0);                    // AXI stream destination
+            run.set_arg(2, 0);                        // offset within the buffer
+            run.set_arg(3, cfg.mm2s[i].size);         // transfer length
+            run.set_arg(4, cfg.mm2s[i].dest);         // AXI stream destination
             run.start();
             run.wait();
         }
 
+        switch_run.wait();
         aie_graph.wait();
         s2mm_run.wait();
 
