@@ -109,4 +109,11 @@ public:
                                          (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
         connect<>(dense2.out[0], layer1_out.in[0]);
     }
+
+    void init() {
+        graph::init();
+#ifdef USE_PRELOADED_WEIGHTS
+        init_weights();
+#endif
+    }
 };

@@ -204,4 +204,12 @@ public:
                                      (base_path + "/" + SUBSOLVER0_DENSE3_OUTPUT).c_str());
     connect<>(dense128_L4.out[0], layer3_out.in[0]);
   }
+
+  void init() {
+    graph::init();
+#ifdef USE_PRELOADED_WEIGHTS
+    init_weights();
+#endif
+  }
 };
+
