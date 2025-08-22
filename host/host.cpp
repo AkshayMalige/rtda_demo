@@ -202,8 +202,7 @@ int main(int argc, char** argv) {
         switch_run.set_arg(18, switch_total);
         switch_run.start();
 
-        // Initialize and run AIE graph before starting MM2S transfers
-        aie_graph.init();
+        // Run AIE graph before starting MM2S transfers
         aie_graph.run(1);
 
         // Start producers sequentially, reprogramming the mm2s kernel for each
