@@ -145,12 +145,14 @@ int main(int argc, char** argv) {
         // Load inputs/weights/biases into device buffers
         std::vector<xrt::bo> mm2s_bos;
         mm2s_bos.reserve(cfg.mm2s.size());
+        int switch_total = 0;
         for (auto& spec : cfg.mm2s) {
             auto data = read_file_to_vector(spec.file, spec.size);
             xrt::bo bo(device, data.size() * sizeof(float), xrt::bo::flags::normal, 0);
             bo.write(data.data());
             bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
             mm2s_bos.push_back(std::move(bo));
+            switch_total += spec.size;
         }
         xrt::bo output_buf(device, cfg.output_size * sizeof(float), xrt::bo::flags::normal, 0);
 
@@ -187,6 +189,8 @@ int main(int argc, char** argv) {
 
         // Start the AXI switch once; it will route all subsequent MM2S transfers
         auto switch_run = xrt::run(axis_switch_kernel);
+        // Kernel has 1 input stream and 17 output streams; scalar argument is index 18
+        switch_run.set_arg(18, switch_total);
         switch_run.start();
 
         // Initialize and run AIE graph before starting MM2S transfers

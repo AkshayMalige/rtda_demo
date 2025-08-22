@@ -8,15 +8,21 @@ typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 5> axis_t;  // enable 5‑bit DEST field
 
 extern "C" {
-void axis_switch_pl(hls::stream<axis_t> &in, hls::stream<axis_t> out[NUM_OUTPUTS]) {
+void axis_switch_pl(hls::stream<axis_t> &in,
+                    hls::stream<axis_t> out[NUM_OUTPUTS],
+                    unsigned int total) {
 #pragma HLS INTERFACE axis port=in
 #pragma HLS INTERFACE axis port=out
+#pragma HLS INTERFACE s_axilite port=total bundle=control
 #pragma HLS INTERFACE s_axilite port=return bundle=control
 #pragma HLS ARRAY_PARTITION variable=out complete
 
+    unsigned int count = 0;
     bool last = false;
-    #pragma HLS loop_tripcount min=1 max=128
-    while (!last) {
+
+    // Loop either for a fixed host provided count or until TLAST is asserted
+    // on the incoming stream when 'total' is zero.
+    while ((total == 0 && !last) || (total != 0 && count < total)) {
 #pragma HLS PIPELINE II=1
         axis_t val = in.read();
         ap_uint<5> dest = val.dest;
@@ -77,7 +83,12 @@ void axis_switch_pl(hls::stream<axis_t> &in, hls::stream<axis_t> out[NUM_OUTPUTS
                 break;
             }
         }
-        last = val.last;
+
+        if (total == 0) {
+            last = val.last;
+        } else {
+            ++count;
+        }
     }
 }
 }
