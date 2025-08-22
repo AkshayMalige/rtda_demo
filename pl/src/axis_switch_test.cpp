@@ -7,7 +7,9 @@ static const int NUM_OUTPUTS = 17;
 typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 5> axis_t;
 
-extern "C" void axis_switch_pl(hls::stream<axis_t> &in, hls::stream<axis_t> out[NUM_OUTPUTS]);
+extern "C" void axis_switch_pl(hls::stream<axis_t> &in,
+                                hls::stream<axis_t> out[NUM_OUTPUTS],
+                                unsigned int total);
 
 int main() {
     hls::stream<axis_t> in;
@@ -24,7 +26,8 @@ int main() {
         in.write(val);
     }
 
-    axis_switch_pl(in, out);
+    // Invoke with an explicit element count
+    axis_switch_pl(in, out, NUM);
 
     // Verify that each output received the correct element
     for (int i = 0; i < NUM; ++i) {
