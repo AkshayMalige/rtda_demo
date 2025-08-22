@@ -6,9 +6,9 @@
 #include "../../common/data_paths.h"
 
 typedef float data_t;
-typedef hls::axis<data_t, 0, 0, 0> axis_t;
+typedef hls::axis<data_t, 0, 0, 5> axis_t;
 
-extern "C" void mm2s_pl(float* mem, hls::stream<axis_t>& s, int offset, int size);
+extern "C" void mm2s_pl(float* mem, hls::stream<axis_t>& s, int offset, int size, int dest);
 
 constexpr int SIZE = 128;
 
@@ -32,7 +32,7 @@ int main() {
     fin.close();
 
     hls::stream<axis_t> s_out;
-    mm2s_pl(mem_in.data(), s_out, 0, SIZE);
+    mm2s_pl(mem_in.data(), s_out, 0, SIZE, 0);
 
     bool pass = true;
     for (int i = 0; i < SIZE; ++i) {
