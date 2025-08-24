@@ -21,7 +21,7 @@ PACK_CFG  := ./pack.cfg
 
 # Select which AI Engine-ML graph to build
 # Valid options: aieml | aieml2 | aieml3
-GRAPH    ?= aieml3
+GRAPH    ?= aieml
 
 LINK_CFG  := ./common/linker_$(GRAPH).cfg
 # Location for generated input and output files. Default to a directory one
@@ -31,7 +31,7 @@ DATA_DIR  ?= $(abspath ./data)
 ifeq ($(GRAPH),aieml3)
   HLS_KERNELS := mm2s leaky_relu s2mm
 else
-  HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm
+  HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm 
 endif
 
 POST_BOOT := post_boot.sh
