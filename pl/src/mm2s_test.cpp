@@ -6,9 +6,9 @@
 #include <fstream>
 
 typedef float data_t;
-typedef hls::axis<data_t, 0, 0, 0> axis_t;
+typedef hls::axis<data_t, 0, 0, 4> axis_t;
 
-extern "C" void mm2s_pl(float* mem, hls::stream<axis_t>& s, int size);
+extern "C" void mm2s_pl(float* mem, hls::stream<axis_t>& s, int size, int dest);
 
 constexpr int SIZE = 8;
 
@@ -27,7 +27,7 @@ int main() {
     }
 
     hls::stream<axis_t> s_out;
-    mm2s_pl(mem, s_out, SIZE);
+    mm2s_pl(mem, s_out, SIZE, 0);
 
     bool pass = true;
     for (int i = 0; i < SIZE; ++i) {
