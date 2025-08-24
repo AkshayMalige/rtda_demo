@@ -44,6 +44,7 @@ class NeuralNetworkGraph : public graph {
 public:
     input_plio  layer0_in;
     input_plio  layer0_weights;
+    // Output of first dense layer exposed via PLIO for direct PL interfacing
     output_plio layer0_out;
 
     dense8x128   dense1;
@@ -51,6 +52,7 @@ public:
 
     input_plio  layer1_in[TP_CASC_LEN_LAYER2];
     input_plio  layer1_weights[TP_CASC_LEN_LAYER2];
+    // Final dense layer output directly drives a PLIO
     output_plio layer1_out;
 
     NeuralNetworkGraph() {
