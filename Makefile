@@ -28,7 +28,9 @@ LINK_CFG  := ./common/linker_$(GRAPH).cfg
 # level above the project to keep the repository tree clean.
 DATA_DIR  ?= $(abspath ./data)
 
-ifeq ($(GRAPH),aieml3)
+ifeq ($(GRAPH),aieml)
+  HLS_KERNELS :=
+else ifeq ($(GRAPH),aieml3)
   HLS_KERNELS := mm2s axis_switch leaky_relu s2mm
 else
   HLS_KERNELS := mm2s axis_switch leaky_relu leaky_splitter s2mm
@@ -41,8 +43,13 @@ POST_BOOT := post_boot.sh
 XO_DIR    := pl/ip
 AIE_DIR   := $(GRAPH)
 
-AIE_LIB   := $(AIE_DIR)/libadf.a
-PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
+AIE_LIB   := $(AIE_DIR)/Work/libadf.a
+
+ifeq ($(GRAPH),aieml)
+  PL_XOS    := pl/mm2s_pkt_weights.xo pl/mm2s_pkt_data.xo pl/s2mm_pkt_sink.xo
+else
+  PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
+endif
 
 XSA       := design_$(GRAPH)_$(TARGET).xsa
 EXEC      := host/system_host
@@ -77,8 +84,13 @@ aieml aieml2 aieml3: all
 $(AIE_LIB):
 	$(MAKE) -C $(AIE_DIR) TARGET=$(AIE_TGT) PLATFORM=$(PLATFORM) DATA_DIR=$(DATA_DIR)
 
+ifeq ($(GRAPH),aieml)
+$(PL_XOS):
+	@echo "Using pre-built packet-mover kernels: $@"
+else
 $(PL_XOS):
 	$(MAKE) -C pl TARGET=$(TARGET) DATA_DIR=$(DATA_DIR) KERNELS="$(HLS_KERNELS)"
+endif
 
 ########################  v++ --package flags ##############################
 PKG_COMMON = --platform $(PLATFORM) --package.out_dir $(PKG_DIR) \
