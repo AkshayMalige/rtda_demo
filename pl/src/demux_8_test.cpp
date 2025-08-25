@@ -7,7 +7,7 @@
 // axis_t definition matches demux_8_pl.cpp
 typedef ap_axiu<32, 1, 1, 8> axis_t; // data,user,id,dest
 
-extern "C" void demux_8(hls::stream<axis_t> &in, hls::stream<axis_t> &out0,
+extern "C" void demux_8_pl(hls::stream<axis_t> &in, hls::stream<axis_t> &out0,
                          hls::stream<axis_t> &out1, hls::stream<axis_t> &out2,
                          hls::stream<axis_t> &out3, hls::stream<axis_t> &out4,
                          hls::stream<axis_t> &out5, hls::stream<axis_t> &out6,
@@ -38,7 +38,7 @@ int main() {
     in.write(t);
   }
 
-  demux_8(in, out0, out1, out2, out3, out4, out5, out6, out7);
+  demux_8_pl(in, out0, out1, out2, out3, out4, out5, out6, out7);
 
   bool pass = true;
 

@@ -7,7 +7,7 @@
 // axis_t definition matches switch_mm2s_pl.cpp
 typedef ap_axiu<32,1,1,8> axis_t; // data,user,id,dest
 
-extern "C" void weights_mm2s(const ap_uint<32>* in,
+extern "C" void switch_mm2s_pl(const ap_uint<32>* in,
                               hls::stream<axis_t>& out,
                               uint32_t total_words);
 
@@ -31,7 +31,7 @@ int main() {
     }
 
     hls::stream<axis_t> out;
-    weights_mm2s(mem, out, total_words);
+    switch_mm2s_pl(mem, out, total_words);
 
     bool pass = true;
     for (int i = 0; i < payload_len; ++i) {

@@ -8,7 +8,7 @@
 typedef ap_axiu<32,1,1,8> axis_t;  // data,user,id,dest
 
 extern "C" {
-void weights_mm2s(const ap_uint<32>* in,      // AXI4-MM (DDR)
+void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
                   hls::stream<axis_t>& out,   // AXI4-Stream (1 physical bus)
                   uint32_t total_words        // total 32-bit words in "in"
 ) {

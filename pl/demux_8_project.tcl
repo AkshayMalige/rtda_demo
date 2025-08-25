@@ -1,5 +1,5 @@
 # ===================================================================
-# Vitis HLS Project TCL Script for 'demux_8'
+# Vitis HLS Project TCL Script for 'leaky_relu'
 # ===================================================================
 
 # --- Step 1: User Configuration ---
@@ -8,9 +8,9 @@ set part_name   "xcve2802-vsvh1760-2MP-e-S"
 
 # --- Step 2: Automatic Naming ---
 set project_name "${kernel_name}_hls"
-set top_function "demux_8"
-set kernel_file  "src/demux_8_pl.cpp"
-set tb_file      "src/demux_8_test.cpp"
+set top_function "${kernel_name}_pl"
+set kernel_file  "src/${kernel_name}_pl.cpp"
+set tb_file      "src/${kernel_name}_test.cpp"
 
 # --- Step 3: Command Handling ---
 if {$argc > 0} {
@@ -25,9 +25,12 @@ if {$argc > 0} {
 open_project $project_name
 set_top $top_function
 
+# Add your project's specific source files from src/
 add_files $kernel_file
 add_files -tb $tb_file
+add_files -tb ../data/
 
+# Use the -flow_target vitis flag for correct XO generation
 open_solution -flow_target vitis "solution1"
 
 set_part ${part_name}

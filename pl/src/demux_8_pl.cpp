@@ -6,7 +6,7 @@
 typedef ap_axiu<32,1,1,8> axis_t;
 
 extern "C" {
-void demux_8(
+void demux_8_pl(
   hls::stream<axis_t>& in,
   hls::stream<axis_t>& out0,
   hls::stream<axis_t>& out1,

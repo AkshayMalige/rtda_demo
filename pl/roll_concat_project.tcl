@@ -8,9 +8,9 @@ set part_name   "xcve2802-vsvh1760-2MP-e-S"
 
 # --- Step 2: Automatic Naming ---
 set project_name "${kernel_name}_hls"
-set top_function "roll_concat_pl"
-set kernel_file  "src/roll_concat_pl.cpp"
-set tb_file      "src/roll_concat_test.cpp"
+set top_function "${kernel_name}_pl"
+set kernel_file  "src/${kernel_name}_pl.cpp"
+set tb_file      "src/${kernel_name}_test.cpp"
 
 # --- Step 3: Command Handling ---
 if {$argc > 0} {
