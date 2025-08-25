@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <ap_axi_sdata.h> // ap_axiu
 
-// 32-bit data, 1-bit user, 8-bit dest; keep/strb implied by width (AXIS)
+// 32-bit data, 1-bit user, 1-bit id, 8-bit dest; keep/strb implied by width (AXIS)
 typedef ap_axiu<32,1,1,8> axis_t;  // data,user,id,dest
 
 extern "C" {
@@ -23,7 +23,7 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
 
   while (idx + WORDS_PER_HDR <= total_words) {
     // Header layout:
-    // w0: [31:24]=part, [23:16]=kind, [15:0]=layer_id
+    // w0: [31:24]=part, [23:16]=kind, [15:8]=reserved, [7:0]=layer_id
     // w1: len_words (payload length)
     // w2: reserved
     // w3: reserved
@@ -35,7 +35,7 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
 
     ap_uint<8>  part     = w0.range(31,24);
     ap_uint<8>  kind     = w0.range(23,16);
-    ap_uint<16> layer_id = w0.range(15, 0);
+    ap_uint<8>  layer_id = w0.range(7,0);
     uint32_t    len_words= (uint32_t)w1;
 
     // Safety: bail if malformed
@@ -50,7 +50,7 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
       t.strb = -1;
       t.user = 0;
       t.id   = 0;
-      t.dest = (ap_uint<8>)layer_id;
+      t.dest = layer_id;
       t.last = (i == (len_words - 1)) ? 1 : 0;
       out.write(t);
     }

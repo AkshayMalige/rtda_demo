@@ -14,7 +14,7 @@ extern "C" void switch_mm2s_pl(const ap_uint<32>* in,
 int main() {
     const ap_uint<8> part = 1;
     const ap_uint<8> kind = 2;
-    const ap_uint<16> layer_id = 3;
+    const ap_uint<8> layer_id = 3;
     const int payload_len = 3;
 
     ap_uint<32> payload[payload_len] = {0xdeadbeef, 0xcafebabe, 0x12345678};
@@ -22,7 +22,7 @@ int main() {
     const int total_words = 4 + payload_len;
     ap_uint<32> mem[total_words];
 
-    mem[0] = (part << 24) | (kind << 16) | layer_id;
+    mem[0] = (part << 24) | (kind << 16) | (layer_id);
     mem[1] = payload_len;
     mem[2] = 0;
     mem[3] = 0;
