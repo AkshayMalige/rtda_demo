@@ -2,6 +2,7 @@
 #include <hls_stream.h>
 #include <stdint.h>
 #include <ap_axi_sdata.h> // ap_axiu
+#include "../bus_ids.hpp"
 
 // 32-bit data, 1-bit user, 1-bit id, 8-bit dest
 typedef ap_axiu<32,1,1,8> axis_t;
@@ -31,9 +32,9 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
     ap_uint<32> w1 = in[idx + 1];
     idx += WORDS_PER_HDR;
 
-    ap_uint<8>  part     = w0.range(31,24);
-    ap_uint<8>  kind     = w0.range(23,16);
-    ap_uint<8>  layer_id = w0.range(7,0);
+    ap_uint<8>  part    = w0.range(31,24);
+    ap_uint<8>  kind    = w0.range(23,16);
+    ap_uint<8>  bus_id  = w0.range(7,0);
     uint32_t    len_words= (uint32_t)w1;
 
     if (idx + len_words > total_words) break; // guard
@@ -47,7 +48,7 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
       t.strb = -1;
       t.user = 0;
       t.id   = 0;
-      t.dest = layer_id;
+      t.dest = bus_id;
       t.last = (i == len_words - 1);
       out.write(t);
     }

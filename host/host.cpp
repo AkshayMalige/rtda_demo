@@ -3,248 +3,169 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <cstring>
+
 #include "experimental/xrt_kernel.h"
 #include "experimental/xrt_graph.h"
 #include "experimental/xrt_device.h"
 #include "experimental/xrt_bo.h"
+
 #include "data_paths.h"
 #include "nn_defs.h"
-
-// ------ Set this to "aieml", "aieml2", or "aieml3" ------
-static constexpr const char* kGraphName = "aieml";
-// ---------------------------------------------------------
+#include "../pl/bus_ids.hpp"
 
 // Load text files containing floats into a vector
 static std::vector<float> read_file_to_vector(const std::string& filename, int size) {
-    std::vector<float> data;
-    data.reserve(size);
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        throw std::runtime_error("ERROR: Could not open file " + filename);
-    }
-    float val;
-    while (file >> val) { data.push_back(val); }
-    file.close();
-    if ((int)data.size() != size) {
-        throw std::runtime_error("ERROR: File " + filename +
-                                 " does not contain the expected " + std::to_string(size) + " elements.");
-    }
-    return data;
+  std::vector<float> data;
+  data.reserve(size);
+  std::ifstream file(filename);
+  if (!file.is_open()) {
+    throw std::runtime_error("ERROR: Could not open file " + filename);
+  }
+  float val;
+  while (file >> val) { data.push_back(val); }
+  file.close();
+  if ((int)data.size() != size) {
+    throw std::runtime_error("ERROR: File " + filename +
+                             " does not contain the expected " + std::to_string(size) + " elements.");
+  }
+  return data;
 }
 
-struct MM2SInfo {
-    std::string file;
-    int         size;
-    std::string kernel;
-    bool        preload;
+// Packet description used to build the memory buffer for switch_mm2s_pl
+struct PacketSpec {
+  std::string file;
+  int         size;
+  std::uint8_t bus_id;
+  std::uint8_t kind;
 };
 
-struct GraphConfig {
-    std::vector<MM2SInfo> mm2s;
-    std::vector<std::string> relus;
-    std::vector<std::string> splitters;
-    std::string s2mm;
-    std::string output_file;
-    int output_size;
-    int relu_size;
-};
+enum DataKind : std::uint8_t { KIND_INPUT = 0, KIND_WEIGHT = 1, KIND_BIAS = 2 };
 
-static GraphConfig make_config(const std::string& graph, const std::string& base_path) {
-    if (graph == "aieml") {
-        GraphConfig cfg;
-        cfg.mm2s = {
-            {base_path + "/" + EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_SIZE, "mm2s_pl:{mm2s_weights1}", true},
-            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "0.txt", EMBED_DENSE1_WEIGHTS_PART_SIZE, "mm2s_pl:{mm2s_weights2_0}", true},
-            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "1.txt", EMBED_DENSE1_WEIGHTS_PART_SIZE, "mm2s_pl:{mm2s_weights2_1}", true},
-            {base_path + "/" + EMBED_DENSE0_BIAS, EMBED_DENSE0_BIAS_SIZE, "mm2s_pl:{mm2s_bias1}", true},
-            {base_path + "/" + EMBED_DENSE1_BIAS, EMBED_DENSE1_BIAS_SIZE, "mm2s_pl:{mm2s_bias2}", true},
-            {base_path + "/" + EMBED_INPUT_DATA, EMBED_DENSE0_INPUT_SIZE, "mm2s_pl:{mm2s_din}", false},
-        };
-        cfg.relus = {"leaky_relu_pl:{relu}", "leaky_relu_pl:{relu2}"};
-        cfg.splitters = {"leaky_splitter_pl:{splitter}"};
-        cfg.s2mm = "s2mm_pl:{s2mm_out}";
-        cfg.output_file = base_path + "/" + EMBED_HOST_OUTPUT;
-        cfg.output_size = EMBED_FINAL_OUTPUT_SIZE;
-        cfg.relu_size = HIDDEN_SIZE;
-        return cfg;
-    } else if (graph == "aieml2") {
-        GraphConfig cfg;
-        // Layer 0 weights
-        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer0_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        // Layer 1-3 weights
-        for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer1_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE2_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer2_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE3_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer3_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        // Biases
-        std::vector<std::string> bias_files = {SUBSOLVER0_DENSE0_BIAS, SUBSOLVER0_DENSE1_BIAS,
-                                               SUBSOLVER0_DENSE2_BIAS, SUBSOLVER0_DENSE3_BIAS};
-        for (int i = 0; i < 4; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + bias_files[i],
-                                SUBSOLVER0_LAYER_BIAS_SIZE,
-                                "mm2s_pl:{bias" + std::to_string(i) + "}",
-                                true});
-        }
-        // Inputs for layer 0
-        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_INPUT_DATA_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_INPUT_PART_SIZE,
-                                "mm2s_pl:{layer0_in_" + std::to_string(i) + "}",
-                                false});
-        }
-        cfg.relus = {"leaky_relu_pl:{relu0}", "leaky_relu_pl:{relu1}", "leaky_relu_pl:{relu2}", "leaky_relu_pl:{relu3}"};
-        cfg.splitters = {"leaky_splitter_pl:{split0}", "leaky_splitter_pl:{split1}", "leaky_splitter_pl:{split2}"};
-        cfg.s2mm = "s2mm_pl:{s2mm_out}";
-        cfg.output_file = base_path + "/" + SUBSOLVER0_HOST_OUTPUT;
-        cfg.output_size = SUBSOLVER0_FINAL_OUTPUT_SIZE;
-        cfg.relu_size = HIDDEN_SIZE;
-        return cfg;
-    } else if (graph == "aieml3") {
-        GraphConfig cfg;
-        cfg.mm2s = {
-            {base_path + "/" + OUTPUT_DENSE0_WEIGHTS, OUTPUT_DENSE0_WEIGHTS_SIZE, "mm2s_pl:{mm2s_weights}", true},
-            {base_path + "/" + OUTPUT_DENSE0_BIAS,    OUTPUT_DENSE0_BIAS_SIZE,    "mm2s_pl:{mm2s_bias}",    true},
-            {base_path + "/" + OUTPUT_INPUT_DATA,     OUTPUT_DENSE0_INPUT_SIZE,   "mm2s_pl:{mm2s_din}",     false},
-        };
-        cfg.relus = {"leaky_relu_pl:{relu}"};
-        cfg.splitters = {};
-        cfg.s2mm = "s2mm_pl:{s2mm_out}";
-        cfg.output_file = base_path + "/" + OUTPUT_HOST_OUTPUT;
-        cfg.output_size = OUTPUT_FINAL_OUTPUT_SIZE;
-        cfg.relu_size = OUTPUT_DENSE0_OUT_PAD;
-        return cfg;
-    } else {
-        throw std::runtime_error("Unknown graph selection: " + graph);
+static std::vector<std::uint32_t> build_packets(const std::vector<PacketSpec>& specs) {
+  std::vector<std::uint32_t> words;
+  for (const auto& spec : specs) {
+    auto data = read_file_to_vector(spec.file, spec.size);
+    std::uint32_t w0 = (0u << 24) | (std::uint32_t(spec.kind) << 16) | std::uint32_t(spec.bus_id);
+    std::uint32_t w1 = spec.size; // length in 32-bit words
+    words.push_back(w0);
+    words.push_back(w1);
+    words.push_back(0);
+    words.push_back(0);
+    for (float f : data) {
+      std::uint32_t w;
+      std::memcpy(&w, &f, sizeof(float));
+      words.push_back(w);
     }
+  }
+  return words;
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
-        return 1;
+  if (argc < 2) {
+    std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
+    return 1;
+  }
+
+  const std::string xclbinFilename = argv[1];
+  const std::string base_path = "./data";
+
+  try {
+    xrt::device device(0);
+    xrt::xclbin xclbin(xclbinFilename);
+    auto uuid = device.load_xclbin(xclbin);
+
+    // Build packetised buffers
+    std::vector<PacketSpec> preload_specs = {
+        {base_path + "/" + EMBED_DENSE0_WEIGHTS,        EMBED_DENSE0_WEIGHTS_SIZE,        bus::WEIGHTS0,   KIND_WEIGHT},
+        {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::string("0.txt"), EMBED_DENSE1_WEIGHTS_PART_SIZE, bus::WEIGHTS1_A, KIND_WEIGHT},
+        {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::string("1.txt"), EMBED_DENSE1_WEIGHTS_PART_SIZE, bus::WEIGHTS1_B, KIND_WEIGHT},
+        {base_path + "/" + EMBED_DENSE0_BIAS,           EMBED_DENSE0_BIAS_SIZE,           bus::BIAS0,      KIND_BIAS},
+        {base_path + "/" + EMBED_DENSE1_BIAS,           EMBED_DENSE1_BIAS_SIZE,           bus::BIAS1,      KIND_BIAS},
+    };
+
+    std::vector<PacketSpec> input_specs = {
+        {base_path + "/" + EMBED_INPUT_DATA, EMBED_DENSE0_INPUT_SIZE, bus::DIN, KIND_INPUT}
+    };
+
+    auto preload_words = build_packets(preload_specs);
+    auto input_words   = build_packets(input_specs);
+
+    xrt::bo preload_bo(device, preload_words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
+    preload_bo.write(preload_words.data(), preload_words.size() * sizeof(std::uint32_t));
+    preload_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+    xrt::bo input_bo(device, input_words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
+    input_bo.write(input_words.data(), input_words.size() * sizeof(std::uint32_t));
+    input_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+    xrt::bo output_buf(device, EMBED_FINAL_OUTPUT_SIZE * sizeof(float), xrt::bo::flags::normal, 0);
+
+    // Kernel handles
+    xrt::kernel switch_kernel(device, uuid, "switch_mm2s_pl:{mm2s_switch}");
+    xrt::kernel demux_kernel(device, uuid, "demux_8_pl:{demux}");
+    xrt::kernel relu_kernel(device, uuid, "leaky_relu_pl:{relu}");
+    xrt::kernel relu2_kernel(device, uuid, "leaky_relu_pl:{relu2}");
+    xrt::kernel splitter_kernel(device, uuid, "leaky_splitter_pl:{splitter}");
+    xrt::kernel s2mm_kernel(device, uuid, "s2mm_pl:{s2mm_out}");
+    xrt::graph  aie_graph(device, uuid, "g");
+
+    // Start demux first, then other consumer kernels
+    auto demux_run = xrt::run(demux_kernel);
+    demux_run.start();
+
+    auto s2mm_run = xrt::run(s2mm_kernel);
+    s2mm_run.set_arg(1, output_buf);
+    s2mm_run.set_arg(2, EMBED_FINAL_OUTPUT_SIZE);
+    s2mm_run.start();
+
+    auto relu_run = xrt::run(relu_kernel);
+    relu_run.set_arg(3, HIDDEN_SIZE);
+    relu_run.start();
+
+    auto relu2_run = xrt::run(relu2_kernel);
+    relu2_run.set_arg(3, HIDDEN_SIZE);
+    relu2_run.start();
+
+    auto split_run = xrt::run(splitter_kernel);
+    split_run.start();
+
+    // Preload weights and biases before starting the graph
+    auto preload_run = xrt::run(switch_kernel);
+    preload_run.set_arg(0, preload_bo);
+    preload_run.set_arg(2, preload_words.size());
+    preload_run.start();
+    preload_run.wait();
+
+    // Run AIE graph
+    aie_graph.run(1);
+
+    // Stream input data once the graph is running
+    auto input_run = xrt::run(switch_kernel);
+    input_run.set_arg(0, input_bo);
+    input_run.set_arg(2, input_words.size());
+    input_run.start();
+
+    input_run.wait();
+    aie_graph.wait();
+    s2mm_run.wait();
+
+    // Retrieve results
+    std::vector<float> host_output_data(EMBED_FINAL_OUTPUT_SIZE);
+    output_buf.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    output_buf.read(host_output_data.data());
+
+    std::ofstream out(base_path + "/" + EMBED_HOST_OUTPUT);
+    for (int i = 0; i < EMBED_FINAL_OUTPUT_SIZE; ++i) {
+      std::cout << host_output_data[i] << '\n';
+      out << host_output_data[i] << '\n';
     }
 
-    const std::string xclbinFilename = argv[1];
-    const std::string base_path = "./data";
+  } catch (const std::exception& e) {
+    std::cerr << "ERROR: " << e.what() << std::endl;
+    return 1;
+  }
 
-    // Use the single variable above instead of a command-line option
-    GraphConfig cfg = make_config(kGraphName, base_path);
-
-    try {
-        xrt::device device(0);
-        xrt::xclbin xclbin(xclbinFilename);
-        auto xclbin_uuid = device.load_xclbin(xclbin);
-
-        // Load inputs/weights/biases into device buffers
-        std::vector<xrt::bo> mm2s_bos;
-        mm2s_bos.reserve(cfg.mm2s.size());
-        for (auto& spec : cfg.mm2s) {
-            auto data = read_file_to_vector(spec.file, spec.size);
-            xrt::bo bo(device, data.size() * sizeof(float), xrt::bo::flags::normal, 0);
-            bo.write(data.data());
-            bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-            mm2s_bos.push_back(std::move(bo));
-        }
-        xrt::bo output_buf(device, cfg.output_size * sizeof(float), xrt::bo::flags::normal, 0);
-
-        // Acquire kernel and graph handles
-        std::vector<xrt::kernel> mm2s_kernels;
-        for (auto& spec : cfg.mm2s) {
-            mm2s_kernels.emplace_back(device, xclbin_uuid, spec.kernel.c_str());
-        }
-        std::vector<xrt::kernel> relu_kernels;
-        for (auto& name : cfg.relus) {
-            relu_kernels.emplace_back(device, xclbin_uuid, name.c_str());
-        }
-        std::vector<xrt::kernel> split_kernels;
-        for (auto& name : cfg.splitters) {
-            split_kernels.emplace_back(device, xclbin_uuid, name.c_str());
-        }
-        xrt::kernel s2mm_kernel(device, xclbin_uuid, cfg.s2mm.c_str());
-        xrt::graph  aie_graph(device, xclbin_uuid, "g");
-
-        // Start consumer kernels
-        auto s2mm_run = xrt::run(s2mm_kernel);
-        s2mm_run.set_arg(1, output_buf);
-        s2mm_run.set_arg(2, cfg.output_size);
-        s2mm_run.start();
-
-        std::vector<xrt::run> relu_runs;
-        for (auto& k : relu_kernels) {
-            auto r = xrt::run(k);
-            r.set_arg(3, cfg.relu_size);
-            r.start();
-            relu_runs.push_back(std::move(r));
-        }
-        std::vector<xrt::run> split_runs;
-        for (auto& k : split_kernels) {
-            auto r = xrt::run(k);
-            r.start();
-            split_runs.push_back(std::move(r));
-        }
-
-        // Preload weights/biases before starting the AIE graph
-        for (size_t i = 0; i < mm2s_kernels.size(); ++i) {
-            if (cfg.mm2s[i].preload) {
-                auto run = xrt::run(mm2s_kernels[i]);
-                run.set_arg(0, mm2s_bos[i]);
-                run.set_arg(2, cfg.mm2s[i].size);
-                run.start();
-                run.wait();
-            }
-        }
-
-        // Run AIE graph
-        aie_graph.run(1);
-
-        // Start producers for input data streams
-        std::vector<xrt::run> mm2s_runs;
-        for (size_t i = 0; i < mm2s_kernels.size(); ++i) {
-            if (!cfg.mm2s[i].preload) {
-                auto run = xrt::run(mm2s_kernels[i]);
-                run.set_arg(0, mm2s_bos[i]);
-                run.set_arg(2, cfg.mm2s[i].size);
-                run.start();
-                mm2s_runs.push_back(std::move(run));
-            }
-        }
-
-        for (auto& r : mm2s_runs) r.wait();
-        aie_graph.wait();
-        s2mm_run.wait();
-
-        // Retrieve results
-        std::vector<float> host_output_data(cfg.output_size);
-        output_buf.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-        output_buf.read(host_output_data.data());
-
-        std::ofstream out(cfg.output_file);
-        for (int i = 0; i < cfg.output_size; ++i) {
-            std::cout << host_output_data[i] << '\n';
-            out << host_output_data[i] << '\n';
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "ERROR: " << e.what() << std::endl;
-        return 1;
-    }
-    return 0;
+  return 0;
 }
+
