@@ -1,7 +1,7 @@
 # Host Application
 
 ## Overview
-`host.cpp` orchestrates the execution of the ML inference pipeline on the Versal platform. The application loads an `xclbin` bitstream, reads input and weight files from the parent `../data/` directory, allocates device buffers, and coordinates the PL kernels and AIE graph using the XRT C++ API. Based on the `--graph` argument, the host populates kernel lists and buffer sizes for `aieml`, `aieml2`, or `aieml3` and streams the required data through `mm2s` kernels. Intermediate results pass through leaky ReLU and splitter stages in the programmable logic, and final outputs are collected via an `s2mm` kernel for verification.
+`host.cpp` orchestrates the execution of the ML inference pipeline on the Versal platform. The application loads an `xclbin` bitstream, reads input and weight files from the parent `../data/` directory, allocates device buffers, and coordinates the PL kernels and AIE graph using the XRT C++ API. For the current demo the application targets the `aieml` graph and drives **packetised** data movers: `mm2s_pkt_weights` for all weight/bias packets, `mm2s_pkt_data` for activation packets, and `s2mm_pkt_sink` to collect graph outputs. Each packet includes a destination ID so the host can demultiplex results regardless of arrival order.
 
 ### Dependencies
 - XRT headers and libraries for C++17 (experimental API)
@@ -31,10 +31,10 @@ make SYSROOT=/path/to/sysroot
 Ensure the cross-compiler (`aarch64-linux-gnu-g++`) and XRT development files are available in the environment.
 
 ## Runtime
-Run the executable on a Versal device running PetaLinux with XRT support.  Select which graph to drive using `--graph` (defaults to `aieml`):
+Run the executable on a Versal device (or in hardware emulation) passing the path to the generated `xclbin`:
 
 ```bash
-./system_host a.xclbin --graph=aieml2
+./system_host path/to/system.xclbin
 ```
 
-The host starts consumer kernels (`s2mm`, required `leaky_relu` instances, and any `leaky_splitter` kernels), launches the AIE graph, then drives producer kernels (`mm2s` instances) to stream inputs, weights, and biases. The application waits for completion and dumps the results to standard output. Kernel instance names must match those declared in the linker configuration.
+The host starts the `s2mm_pkt_sink` kernel, launches the AIE graph, and then streams all weight and activation packets. After all packets are sent the graph is stopped and results are read back into `host_output.txt`.

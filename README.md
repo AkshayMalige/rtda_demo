@@ -75,6 +75,12 @@ source set_envs.sh
    make package
    ```
 
+6. **Run the host application**
+   Pass the generated `xclbin` to the host executable (path will vary with build target, e.g. hardware emulation shown below):
+   ```bash
+   ./host/system_host system_project/_x.hw_emu/system.xclbin
+   ```
+
 ---
 
 ## 🧪 Generate Dummy Test Data & Weights
