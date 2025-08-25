@@ -8,7 +8,7 @@ set part_name   "xcve2802-vsvh1760-2MP-e-S"
 
 # --- Step 2: Automatic Naming ---
 set project_name "${kernel_name}_hls"
-set top_function "weights_demux_8"
+set top_function "demux_8"
 set kernel_file  "src/demux_8_pl.cpp"
 set tb_file      "src/demux_8_test.cpp"
 
