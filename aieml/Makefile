@@ -108,6 +108,15 @@ else
 	DATA_DIR=$(DATA_DIR) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --dump-vcd=foo --output-time-stamp=no
 	@echo "COMPLETE: Hardware simulation finished."
 endif
+# --- Packetized Simulation ---
+sim_pkt: graph
+	@echo "--- Generating packetized inputs ---"
+	python3 ../data/tools/gen_packet_inputs.py ../data/packet_plan.json $(DATA_DIR)/in_weights.txt
+	python3 ../data/tools/gen_packet_inputs.py ../data/packet_plan.json $(DATA_DIR)/in_data.txt
+	@echo "--- Starting Hardware Simulation (aiesimulator) ---"
+	DATA_DIR=$(DATA_DIR) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --dump-vcd=foo --output-time-stamp=no
+	@echo "COMPLETE: Packetized simulation finished."
+
 
 # --- Clean Target ---
 clean:
