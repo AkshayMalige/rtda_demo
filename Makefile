@@ -235,9 +235,16 @@ clean_all:
 	rm -rf package.* build_* *.xclbin *.xsa *.log
 
 help:
-	@echo "Usage:"
-	@echo "  make all TARGET=sw_emu EMU_PS=QEMU"
-	@echo "  make link TARGET=hw_emu"
+	@echo "Top-level targets:"
+	@echo "  aieml|aieml2|aieml3  Build + link + package for the selected graph"
+	@echo "  link                  Create the system XSA"
+	@echo "  package               Package the design (runs emu for hw_emu)"
+	@echo "  run                   Launch emulation or print HW instructions"
+	@echo "  clean                 Remove package and temp files"
+	@echo "  clean_all             Also clean component builds"
+	@echo "  print_vars            Show effective configuration"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make aieml2 TARGET=hw_emu"
 	@echo "  make package TARGET=hw"
-	@echo "  make run TARGET=sw_emu EMU_PS=x86sim"
-############################################################################
+	############################################################################

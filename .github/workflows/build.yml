@@ -1,0 +1,16 @@
+name: Build AIE and PL
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build AIE graph and PL kernels
+        run: |
+          source set_envs.sh
+          make -C aieml graph
+          make -C pl kernels
