@@ -13,7 +13,11 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
                   uint32_t total_words        // total 32-bit words in "in"
 ) {
 #pragma HLS INTERFACE m_axi     port=in  offset=slave bundle=gmem depth=65536
-#pragma HLS INTERFACE axis      port=out
+#ifndef __SYNTHESIS__
+#pragma HLS INTERFACE axis port=out depth=256
+#else
+#pragma HLS INTERFACE axis port=out
+#endif
 #pragma HLS INTERFACE s_axilite port=in           bundle=control
 #pragma HLS INTERFACE s_axilite port=total_words  bundle=control
 #pragma HLS INTERFACE s_axilite port=return       bundle=control
