@@ -16,6 +16,9 @@ static constexpr unsigned int TP_SSR = 1;
 static constexpr unsigned int TP_DIM_A_LEADING = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
 
+static constexpr unsigned int TODO_WAYS = 4;
+static constexpr unsigned int WAYS = TODO_WAYS;
+
 using dense8x128 = matrix_vector_mul_graph<
     float, float,
     HIDDEN_SIZE,
@@ -42,6 +45,15 @@ using dense128x128 = matrix_vector_mul_graph<
 // Graph connects dense1 and dense2; leaky ReLU is handled in PL
 class NeuralNetworkGraph : public graph {
 public:
+    input_plio  in_weights;
+    input_plio  in_data;
+    output_plio out_merged;
+
+    pktsplit<WAYS> weights_split;
+    pktsplit<WAYS> data_split;
+    pktmerge<WAYS> out_merge;
+
+
     input_plio  layer0_in;
     input_plio  layer0_weights;
     // Output of first dense layer exposed via PLIO for direct PL interfacing
@@ -57,6 +69,16 @@ public:
 
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
+        in_weights = input_plio::create("in_weights", plio_64_bits, (base_path + "/in_weights.txt").c_str());
+        in_data    = input_plio::create("in_data",    plio_64_bits, (base_path + "/in_data.txt").c_str());
+        out_merged = output_plio::create("out_merged", plio_64_bits, (base_path + "/out_merged.txt").c_str());
+
+        connect<>(in_weights.out[0], weights_split.in[0]);
+        connect<>(in_data.out[0],    data_split.in[0]);
+        connect<>(weights_split.out[0], out_merge.in[0]);
+        connect<>(data_split.out[0],   out_merge.in[1]);
+        connect<>(out_merge.out[0], out_merged.in[0]);
+
         layer0_in      = input_plio::create("layer0_in", plio_32_bits,
                                              (base_path + "/" + EMBED_INPUT_DATA).c_str());
         layer0_weights = input_plio::create("layer0_weights", plio_32_bits,
