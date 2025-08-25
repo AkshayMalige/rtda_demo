@@ -86,8 +86,16 @@ $(GRAPH_LIB): $(GRAPH_SRC) graph.h ../common/nn_defs.h ../common/data_paths.h
 		exit 1; \
 	fi
 	@set -o pipefail; \
-	$(AIECC) $(AIE_FLAGS) $(GRAPH_SRC) --workdir=$(WORK_DIR) 2>&1 | tee $(WORK_DIR)/aiecompiler.log
-	@echo "COMPLETE: AIE graph compiled."
+        $(AIECC) $(AIE_FLAGS) $(GRAPH_SRC) --workdir=$(WORK_DIR) 2>&1 | tee $(WORK_DIR)/aiecompiler.log
+        @echo "COMPLETE: AIE graph compiled."
+	@hdr_file=`find $(WORK_DIR) -name packet_ids.h | head -n 1`; \
+	if [ -n "$$hdr_file" ]; then \
+	mkdir -p ../export/generated; \
+	cp $$hdr_file ../export/generated/packet_ids.h; \
+	echo "EXPORTED: packet IDs header to ../export/generated/packet_ids.h"; \
+	else \
+	echo "WARNING: packet_ids.h not found under $(WORK_DIR)"; \
+	fi
 
 # --- Simulation ---
 sim: graph
