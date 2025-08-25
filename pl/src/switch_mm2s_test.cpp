@@ -7,6 +7,10 @@
 // axis_t definition matches switch_mm2s_pl.cpp
 typedef ap_axiu<32,1,1,8> axis_t; // data,user,id,dest
 
+#ifndef MEM_DEPTH
+#define MEM_DEPTH 1024
+#endif
+
 extern "C" void switch_mm2s_pl(const ap_uint<32>* in,
                               hls::stream<axis_t>& out,
                               uint32_t total_words);
@@ -20,7 +24,8 @@ int main() {
     ap_uint<32> payload[payload_len] = {0xdeadbeef, 0xcafebabe, 0x12345678};
 
     const int total_words = 4 + payload_len;
-    ap_uint<32> mem[total_words];
+    // ap_uint<32> mem[total_words];
+    static ap_uint<32> mem[MEM_DEPTH] = {0};  // must be >= pragma depth
 
     mem[0] = (part << 24) | (kind << 16) | (layer_id);
     mem[1] = payload_len;
