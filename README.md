@@ -71,15 +71,20 @@ source set_envs.sh
    make -C host
    ```
 5. **System linking and packaging**
-   ```bash
-   make package
-   ```
 
-6. **Run the host application**
-   Pass the generated `xclbin` to the host executable (path will vary with build target, e.g. hardware emulation shown below):
-   ```bash
-   ./host/system_host system_project/_x.hw_emu/system.xclbin
-   ```
+   - **Hardware emulation** – packages the design, launches QEMU and runs the
+     host application.  Results are verified against golden outputs.
+     ```bash
+     make package TARGET=hw_emu
+     ```
+
+   - **Hardware** – generates an SD-card image and BOOT files for a VEK280
+     board (Vitis 2024.2).
+     ```bash
+     make package TARGET=hw
+     ```
+     Copy the resulting `package.aieml.hw/` directory to an SD card and boot the
+     board to run the design.
 
 ---
 
