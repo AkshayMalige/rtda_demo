@@ -15,15 +15,15 @@ components:
 
   - name: aie_graph
     type: aie
-    path: aie
+    path: aieml
 
   - name: pl_kernels
     type: kernel
-    path: pl/build_hw_emu
+    path: pl
     kernels:
-      - mm2s_8_128.xo
-      - s2mm_16_128.xo
-      - s2mm_32_128.xo
+      - mm2s_pkt_weights.xo
+      - mm2s_pkt_data.xo
+      - s2mm_pkt_sink.xo
 
   - name: hw_link_output
     type: xsa
