@@ -16,30 +16,25 @@ extern "C" void demux_8(hls::stream<axis_t> &in, hls::stream<axis_t> &out0,
 int main() {
   hls::stream<axis_t> in;
   hls::stream<axis_t> out0, out1, out2, out3, out4, out5, out6, out7;
-
   const int packet_len = 3;
+  const int NUM_BEATS = packet_len * 2;
 
-  // First packet routed to output 3
-  for (int i = 0; i < packet_len; ++i) {
+  // Preload input stream with NUM_BEATS beats
+  for (int i = 0; i < NUM_BEATS; ++i) {
     axis_t t;
-    t.data = 0x10 + i;
     t.keep = -1;
-    t.last = (i == packet_len - 1);
-    t.dest = 3;
-    t.id = 0;
+    t.id   = 0;
     t.user = 0;
-    in.write(t);
-  }
-
-  // Second packet routed to output 7
-  for (int i = 0; i < packet_len; ++i) {
-    axis_t t;
-    t.data = 0x20 + i;
-    t.keep = -1;
-    t.last = (i == packet_len - 1);
-    t.dest = 7;
-    t.id = 0;
-    t.user = 0;
+    if (i < packet_len) {
+      t.data = 0x10 + i;
+      t.dest = 3;
+      t.last = (i == packet_len - 1);
+    } else {
+      int j = i - packet_len;
+      t.data = 0x20 + j;
+      t.dest = 7;
+      t.last = (i == NUM_BEATS - 1);
+    }
     in.write(t);
   }
 
