@@ -42,7 +42,46 @@ void demux_8(
 
   bool       have_route = false;
   ap_uint<8> route      = 0;
+#ifndef __SYNTHESIS__
+  const int NUM_BEATS = 6;
+  for (int i = 0; i < NUM_BEATS; ++i) {
+#pragma HLS PIPELINE II=1
+    // Blocking read simplifies logic and helps the scheduler
+    axis_t t = in.read();
 
+    // On the first beat of a packet, latch TDEST as the route
+    if (!have_route) {
+      route = t.dest;
+      have_route = true;
+    }
+
+    // Prepare output beat: preserve data/keep/strb/last; clear meta we don't use
+    axis_t o = t;
+    o.id   = 0;
+    o.user = 0;
+    o.dest = 0; // we've already consumed TDEST into 'route'
+
+    // Clamp to 0..7 (unknown TDESTs go to out7 by default)
+    ap_uint<8> r = (route < 8) ? route : (ap_uint<8>)7;
+
+    switch (r) {
+      case 0: out0.write(o); break;
+      case 1: out1.write(o); break;
+      case 2: out2.write(o); break;
+      case 3: out3.write(o); break;
+      case 4: out4.write(o); break;
+      case 5: out5.write(o); break;
+      case 6: out6.write(o); break;
+      default: out7.write(o); break;
+    }
+
+    // End of packet → unlock route for next packet
+    if (t.last) {
+      have_route = false;
+    }
+  }
+  return;  // let csim/cosim finish
+#else
   while (1) {
 #pragma HLS PIPELINE II=1
     // Blocking read simplifies logic and helps the scheduler
@@ -79,5 +118,6 @@ void demux_8(
       have_route = false;
     }
   }
+#endif
 }
 }
