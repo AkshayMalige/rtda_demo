@@ -2,6 +2,8 @@
 
 This project demonstrates a custom low-latency neural network pipeline implemented on the AMD Versal™ VEK280 platform using the AI Engine-ML (AIE-ML) and Vitis tools. The core model consists of two dense layers with leaky ReLU activations after each layer, targeting power-efficient acceleration of small MLP inference tasks. It supports runtime configurability of dimensions and data types (`int8`, `int16`, `float16`, `float32`), with automated test data generation and full simulation support.
 
+> **Version pin:** Vitis 2024.2 targeting the `xilinx_vek280_base_202420_1` platform.
+
 > **Note**: source `set_envs.sh` first.
 The design partitions work across three components of the Versal architecture:
 
@@ -30,6 +32,28 @@ All build instructions are split into component READMEs:
 Recent refactoring introduced a shared `common/data_paths.h` header and a `DATA_DIR`
 environment variable so the host, PL tests, and AIE graphs can locate generated text
 files consistently across components.
+
+### Packet Switching Overview
+
+Packetized streams connect the PL and AIE graph through packet split/merge IP.
+Switches support up to 32 legs. Each packet carries a destination header word and
+asserts `TLAST` on the final payload word. The merge stage reorders packets so results
+are returned to the host in leg order regardless of arrival time.
+
+### 🚀 How to Run
+
+Replace `aieml` with `aieml2` or `aieml3` to exercise other graphs.
+
+```bash
+# AI Engine cycle-approximate simulation
+make -C aieml sim
+
+# Full system on hardware emulation
+make aieml TARGET=hw_emu
+
+# Full system on hardware
+make aieml TARGET=hw
+```
 
 ---
 
