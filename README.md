@@ -60,6 +60,8 @@ source set_envs.sh
    ```bash
    make -C aieml graph
    ```
+   The build also exports packet-switch packet IDs to `export/generated/packet_ids.h`
+   for inclusion by the PL and other components.
 3. **Kernel build (PL)**
    ```bash
    make -C pl kernels
