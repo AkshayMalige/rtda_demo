@@ -1,44 +1,35 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-echo "🔧 Setting up environment for Versal VEK280..."
+# Ensure XILINX_VITIS points to a 2024.2 installation
+if [[ -z "${XILINX_VITIS}" || "${XILINX_VITIS}" != *2024.2* ]]; then
+  echo "ERROR: XILINX_VITIS must reference Vitis 2024.2" >&2
+  return 1 2>/dev/null || exit 1
+fi
 
-# === Source Xilinx Runtime (XRT) ===
-echo "📦 Sourcing XRT..."
-source /opt/xilinx/xrt/setup.sh
+# Ensure platform repo paths are provided
+if [[ -z "${PLATFORM_REPO_PATHS}" ]]; then
+  echo "ERROR: PLATFORM_REPO_PATHS is not set" >&2
+  return 1 2>/dev/null || exit 1
+fi
 
-# === Set and Source Vitis environment ===
-echo "📦 Setting and sourcing Vitis 2024.2..."
-export XILINX_VITIS=/tools/Xilinx/Vitis/2024.2
-source ${XILINX_VITIS}/settings64.sh
+# Locate a VEK280 base platform
+IFS=':' read -r -a repo_paths <<< "${PLATFORM_REPO_PATHS}"
+PLATFORM=""
+for p in "${repo_paths[@]}"; do
+  [[ -d "$p" ]] || continue
+  candidate=$(find "$p" -maxdepth 5 -type f -name "*vek280*base*.xpfm" | grep -E "2024\\.2|202420" | head -n 1)
+  if [[ -n "$candidate" ]]; then
+    PLATFORM="$candidate"
+    break
+  fi
+done
 
-# === Source PetaLinux environment ===
-echo "📦 Sourcing PetaLinux 2024.2..."
-source /tools/Xilinx/PetaLinux/settings.sh
+if [[ -z "$PLATFORM" ]]; then
+  echo "ERROR: Could not locate a VEK280 base platform in PLATFORM_REPO_PATHS" >&2
+  return 1 2>/dev/null || exit 1
+fi
+export PLATFORM
 
-# === Unset conflicting LD_LIBRARY_PATH ===
-echo "🧹 Unsetting LD_LIBRARY_PATH to avoid conflicts..."
-unset LD_LIBRARY_PATH
+# Set default target
+export TARGET="${TARGET:-hw_emu}"
 
-# === Set up cross-compilation environment ===
-echo "🔁 Setting up cross-compilation environment..."
-source /opt/petalinux/2024.2/environment-setup-cortexa72-cortexa53-xilinx-linux
-
-# === Set environment variables for system image ===
-export EDGE_COMMON_SW=/home/synthara/versal_common/xilinx-versal-common-v2024.2
-export IMAGE=${EDGE_COMMON_SW}/Image
-export ROOTFS=${EDGE_COMMON_SW}/rootfs.ext4
-export SYSROOT=/opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
-
-# === Set Vitis platform path ===
-export PLATFORM=${XILINX_VITIS}/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
-
-echo ""
-echo "🔍 Environment summary:"
-echo "  XILINX_VITIS  = $XILINX_VITIS"
-echo "  PLATFORM      = $PLATFORM"
-echo "  SYSROOT       = $SYSROOT"
-echo "  EDGE_COMMON_SW= $EDGE_COMMON_SW"
-echo "  IMAGE         = $IMAGE"
-echo "  ROOTFS        = $ROOTFS"
-echo ""
-echo "✅ Versal VEK280 environment setup complete."

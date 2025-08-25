@@ -2,6 +2,7 @@
 
 This project demonstrates a custom low-latency neural network pipeline implemented on the AMD Versal™ VEK280 platform using the AI Engine-ML (AIE-ML) and Vitis tools. The core model consists of two dense layers with leaky ReLU activations after each layer, targeting power-efficient acceleration of small MLP inference tasks. It supports runtime configurability of dimensions and data types (`int8`, `int16`, `float16`, `float32`), with automated test data generation and full simulation support.
 
+> **Note**: source `set_envs.sh` first.
 The design partitions work across three components of the Versal architecture:
 
 - **AI Engine‑ML graphs** – execute dense layers. The project now contains three
