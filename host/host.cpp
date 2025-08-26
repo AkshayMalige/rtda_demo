@@ -42,7 +42,7 @@ static void send_packet(xrt::device& device,
   std::vector<std::uint32_t> words;
   append_packet(words, data, bus_id, kind);
 
-  xrt::bo bo(device, words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
+  xrt::bo bo(device, words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, switch_kernel.group_id(0));
   bo.write(words.data(), words.size() * sizeof(std::uint32_t), 0);
   bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
