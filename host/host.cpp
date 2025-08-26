@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
     unsigned int demux_words = weight_words.size() + input_words.size();
     // Start demux first, then other consumer kernels
     auto demux_run = xrt::run(demux_kernel);
-    demux_run.set_arg(0, demux_words);
+    demux_run.set_arg(9, demux_words);
     demux_run.start();
 
     auto s2mm_run = xrt::run(s2mm_kernel);
