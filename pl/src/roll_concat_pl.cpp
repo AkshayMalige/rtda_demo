@@ -9,7 +9,7 @@ typedef float data_t;
 void roll_concat_pl(hls::stream<data_t> &in, hls::stream<data_t> &out) {
 #pragma HLS INTERFACE axis port=in
 #pragma HLS INTERFACE axis port=out
-#pragma HLS INTERFACE ap_ctrl_none port=return
+#pragma HLS INTERFACE ap_ctrl_hs port=return
     data_t buffer[HIDDEN_SIZE];
 #pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
 
