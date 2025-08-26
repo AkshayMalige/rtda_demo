@@ -1,0 +1,3 @@
+# Ignore generated hardware artefacts
+pl/ip/
+build_*/
