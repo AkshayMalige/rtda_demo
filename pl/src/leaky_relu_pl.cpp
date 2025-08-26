@@ -12,9 +12,9 @@ extern "C" {
                        hls::stream<axis_t>& bias_stream,
                        hls::stream<axis_t>& out_stream,
                        int size) {
-        #pragma HLS interface axis port=in_stream bundle=gmem depth=OUTPUT_DENSE0_OUT_PAD
-        #pragma HLS interface axis port=bias_stream bundle=gmem depth=OUTPUT_DENSE0_OUT_PAD
-        #pragma HLS interface axis port=out_stream bundle=gmem depth=OUTPUT_DENSE0_OUT_PAD
+        #pragma HLS interface axis port=in_stream depth=HIDDEN_SIZE
+        #pragma HLS interface axis port=bias_stream depth=HIDDEN_SIZE
+        #pragma HLS interface axis port=out_stream depth=HIDDEN_SIZE
         #pragma HLS INTERFACE s_axilite port=size bundle=control
         #pragma HLS INTERFACE s_axilite port=return bundle=control
 
