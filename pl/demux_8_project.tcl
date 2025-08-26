@@ -1,16 +1,15 @@
 # ===================================================================
-# Vitis HLS Project TCL Script for 'roll_concat'
+# Vitis HLS Project TCL Script for 'leaky_relu'
 # ===================================================================
 
 # --- Step 1: User Configuration ---
-set kernel_name "roll_concat"
+set kernel_name "demux_8"
 set part_name   "xcve2802-vsvh1760-2MP-e-S"
 
 # --- Step 2: Automatic Naming ---
 set project_name "${kernel_name}_hls"
-set top_function "roll_concat_pl"
-set kernel_file  "src/roll_concat_pl.cpp"
-set tb_file      "src/roll_concat_test.cpp"
+set top_function "${kernel_name}_pl"
+set kernel_file  "src/${kernel_name}_pl.cpp"
 
 # --- Step 3: Command Handling ---
 if {$argc > 0} {
@@ -27,8 +26,11 @@ set_top $top_function
 
 # Add your project's specific source files from src/
 add_files $kernel_file
-add_files -tb $tb_file
-add_files -tb ../data/embed_model_output.txt
+add_files -tb src/demux_8_test.cpp
+add_files -tb ../data/
+add_files -tb ../common/data_paths.h
+
+
 
 # Use the -flow_target vitis flag for correct XO generation
 open_solution -flow_target vitis "solution1"
