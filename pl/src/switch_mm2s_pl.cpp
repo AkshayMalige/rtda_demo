@@ -2,6 +2,7 @@
 #include <hls_stream.h>
 #include <stdint.h>
 #include <ap_axi_sdata.h> // ap_axiu
+#include <cassert>
 #include "../bus_ids.hpp"
 
 // 32-bit data, 1-bit user, 1-bit id, 8-bit dest
@@ -37,7 +38,11 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
     ap_uint<8>  bus_id  = w0.range(7,0);
     uint32_t    len_words= (uint32_t)w1;
 
-    if (idx + len_words > total_words) break; // guard
+    // Guard against malformed packets that claim more words than remain
+    if (idx + len_words > total_words) {
+      assert(idx + len_words <= total_words);
+      len_words = total_words - idx;
+    }
 
     // Stream payload
     for (uint32_t i = 0; i < len_words; ++i) {
