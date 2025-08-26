@@ -114,6 +114,9 @@ int main(int argc, char** argv) {
     xrt::kernel s2mm_kernel(device, uuid, "s2mm_pl:{s2mm_out}");
     xrt::graph  aie_graph(device, uuid, "g");
 
+    // Initialize AI Engine graph before any data movement
+    aie_graph.init();
+
     unsigned int demux_words = weight_words.size() + input_words.size();
     // Start demux first, then other consumer kernels
     auto demux_run = xrt::run(demux_kernel);
