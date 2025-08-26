@@ -30,8 +30,10 @@ DATA_DIR  ?= $(abspath ./data)
 
 ifeq ($(GRAPH),aieml3)
   HLS_KERNELS := mm2s leaky_relu s2mm
+else ifeq ($(GRAPH),aieml)
+  HLS_KERNELS := switch_mm2s demux_8 leaky_relu leaky_splitter s2mm
 else
-  HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm 
+  HLS_KERNELS := mm2s leaky_relu leaky_splitter s2mm
 endif
 
 POST_BOOT := post_boot.sh
