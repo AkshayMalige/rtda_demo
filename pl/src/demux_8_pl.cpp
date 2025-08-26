@@ -15,8 +15,7 @@ void demux_8_pl(
   hls::stream<axis_t>& out4,
   hls::stream<axis_t>& out5,
   hls::stream<axis_t>& out6,
-  hls::stream<axis_t>& out7,
-  unsigned int        word_count
+  hls::stream<axis_t>& out7
 ) {
   // AXI-Stream ports
 #pragma HLS INTERFACE axis port=in
@@ -29,7 +28,6 @@ void demux_8_pl(
 #pragma HLS INTERFACE axis port=out6
 #pragma HLS INTERFACE axis port=out7
   // AXI-Lite control interface
-#pragma HLS INTERFACE s_axilite port=word_count bundle=control
 #pragma HLS INTERFACE s_axilite port=return bundle=control
 
   // Optional elasticity on ports (tune if you see back-pressure)
@@ -44,10 +42,11 @@ void demux_8_pl(
 
   bool       have_route = false;
   ap_uint<8> route      = 0;
-  for (unsigned int i = 0; i < word_count; ++i) {
+  axis_t t;
+  do {
 #pragma HLS PIPELINE II=1
     // Blocking read simplifies logic and helps the scheduler
-    axis_t t = in.read();
+    t = in.read();
 
     // On the first beat of a packet, latch TDEST as the route
     if (!have_route) {
@@ -79,6 +78,6 @@ void demux_8_pl(
     if (t.last) {
       have_route = false;
     }
-  }
+  } while (!t.last);
 }
 }
