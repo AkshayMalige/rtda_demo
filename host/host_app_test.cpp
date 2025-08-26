@@ -3,9 +3,11 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include "weights_bus.hpp"
 #include "../pl/bus_ids.hpp"
+#include "../common/data_paths.h"
 
 static std::vector<float> read_file_to_vector(const std::string& fn, int count) {
   std::vector<float> vals;
@@ -17,7 +19,7 @@ static std::vector<float> read_file_to_vector(const std::string& fn, int count) 
 }
 
 int main() {
-  auto data = read_file_to_vector("data/solver_0_input_part0.txt", 3);
+  auto data = read_file_to_vector(std::string(DATA_DIR) + "/" + EMBED_INPUT_DATA, 3);
   std::vector<std::uint32_t> words;
   append_packet(words, data, bus::DIN, KIND_INPUT);
   for (float f : data)
