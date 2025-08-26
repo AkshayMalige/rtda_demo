@@ -6,8 +6,7 @@
 VITIS_HLS ?= vitis_hls
 
 # List of kernels (add more as needed)
-KERNELS ?= mm2s leaky_relu leaky_splitter s2mm demux_8 switch_mm2s roll_concat switch_mm2s demux_8
-# KERNELS := roll_concat
+KERNELS ?= demux_8 switch_mm2s
 
 IP_DIR   ?= ip
 LOG_FILE ?= vitis_hls.log
