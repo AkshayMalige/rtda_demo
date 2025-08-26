@@ -156,7 +156,6 @@ int main(int argc, char** argv) {
     relu2_run.wait();
     split_run.wait();
     demux_run.wait();
-    demux_run.stop();
 
     // Retrieve results
     std::vector<float> host_output_data(EMBED_FINAL_OUTPUT_SIZE);
