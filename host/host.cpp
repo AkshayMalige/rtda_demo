@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   }
 
   const std::string xclbinFilename = argv[1];
-  const std::string base_path = "./data";
+  const std::string base_path = DATA_DIR;
 
   try {
     xrt::device device(0);
