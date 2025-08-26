@@ -3,8 +3,8 @@
 # Toolchain and paths
 SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
 CXX     := aarch64-linux-gnu-g++
-# Default data directory lives one level above the project root
-DATA_DIR ?= $(abspath ../../data)
+# Default data directory within the project root (can be overridden)
+DATA_DIR ?= $(abspath ../data)
 export DATA_DIR
 
 # Sources and targets
@@ -16,7 +16,7 @@ CXXFLAGS ?= -Wall -std=c++17 -Wno-int-to-pointer-cast \
         --sysroot=$(SYSROOT) \
         -I$(SYSROOT)/usr/include/xrt \
         -I$(SYSROOT)/usr/include \
-        -I./ -I../common -I/aietools/include -I/include \
+        -I./ -I../common \
         -DDATA_DIR='"$(DATA_DIR)"'
 
 LDFLAGS ?= --sysroot=$(SYSROOT) \
