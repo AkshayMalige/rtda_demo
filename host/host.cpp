@@ -76,6 +76,10 @@ static void preload_weights_aieml(xrt::device& device,
     std::uint32_t len = words[idx + 1];
     std::size_t packet_words = 4 + static_cast<std::size_t>(len);
 
+    if (idx + packet_words > words.size()) {
+      throw std::runtime_error("Packet length exceeds buffer size");
+    }
+
     auto demux_run = xrt::run(demux_kernel);
     demux_run.start();
 
@@ -110,7 +114,12 @@ int main(int argc, char** argv) {
     auto input_data = read_file_to_vector(base_path + "/" + EMBED_INPUT_DATA,
                                           EMBED_DENSE0_INPUT_SIZE);
     std::vector<std::uint32_t> input_words;
-    append_packet(input_words, input_data, bus::DIN, KIND_INPUT);
+  append_packet(input_words, input_data, bus::DIN, KIND_INPUT);
+
+    std::uint32_t in_len = input_words[1];
+    if (input_words.size() < 4 + static_cast<std::size_t>(in_len)) {
+      throw std::runtime_error("Input packet length exceeds buffer size");
+    }
 
     xrt::bo input_bo(device, input_words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
     input_bo.write(input_words.data(), input_words.size() * sizeof(std::uint32_t), 0);
