@@ -6,8 +6,10 @@
 #include <hls_stream.h>
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include "../bus_ids.hpp"
+#include "../../common/data_paths.h"
 
 // axis_t definition matches demux_8_pl.cpp
 using axis_t = ap_axiu<32,1,1,8>; // data,user,id,dest
@@ -74,9 +76,9 @@ static bool run_packet(const std::vector<ap_uint<32>>& data, ap_uint<8> dest) {
 
 int main() {
   bool pass = true;
-  pass &= run_packet(load_data("solver_0_input_part0.txt", 3), bus::DIN);
-  pass &= run_packet(load_data("solver_0_dense_0_weights_part0.txt", 3), bus::WEIGHTS0);
-  pass &= run_packet(load_data("solver_0_dense_0_bias.txt", 2), bus::BIAS0);
+  pass &= run_packet(load_data(std::string(DATA_DIR) + "/" + EMBED_INPUT_DATA, 3), bus::DIN);
+  pass &= run_packet(load_data(std::string(DATA_DIR) + "/" + EMBED_DENSE0_WEIGHTS, 3), bus::WEIGHTS0);
+  pass &= run_packet(load_data(std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS, 2), bus::BIAS0);
 
   if (pass) {
     std::cout << "Test PASSED" << std::endl;

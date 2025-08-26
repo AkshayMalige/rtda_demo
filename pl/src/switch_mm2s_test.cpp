@@ -6,8 +6,10 @@
 #include <hls_stream.h>
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include "../bus_ids.hpp"
+#include "../../common/data_paths.h"
 
 // axis_t definition matches switch_mm2s_pl.cpp
 using axis_t = ap_axiu<32,1,1,8>; // data,user,id,dest
@@ -80,9 +82,9 @@ static bool check_stream(hls::stream<axis_t>& s,
 }
 
 int main() {
-  auto din = load_data("solver_0_input_part0.txt", 3);
-  auto w0  = load_data("solver_0_dense_0_weights_part0.txt", 3);
-  auto b0  = load_data("solver_0_dense_0_bias.txt", 2);
+  auto din = load_data(std::string(DATA_DIR) + "/" + EMBED_INPUT_DATA, 3);
+  auto w0  = load_data(std::string(DATA_DIR) + "/" + EMBED_DENSE0_WEIGHTS, 3);
+  auto b0  = load_data(std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS, 2);
 
   std::vector<ap_uint<32>> words;
   append_packet(words, din, bus::DIN,      KIND_INPUT);
