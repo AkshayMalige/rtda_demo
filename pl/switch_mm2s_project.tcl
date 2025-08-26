@@ -10,7 +10,6 @@ set part_name   "xcve2802-vsvh1760-2MP-e-S"
 set project_name "${kernel_name}_hls"
 set top_function "${kernel_name}_pl"
 set kernel_file  "src/${kernel_name}_pl.cpp"
-set tb_file      "src/${kernel_name}_test.cpp"
 
 # --- Step 3: Command Handling ---
 if {$argc > 0} {
@@ -27,7 +26,7 @@ set_top $top_function
 
 # Add your project's specific source files from src/
 add_files $kernel_file
-add_files -tb $tb_file
+add_files -tb src/switch_mm2s_test.cpp
 add_files -tb ../data/
 
 # Use the -flow_target vitis flag for correct XO generation
