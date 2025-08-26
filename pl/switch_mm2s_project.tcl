@@ -3,7 +3,7 @@
 # ===================================================================
 
 # --- Step 1: User Configuration ---
-set kernel_name "demux_8"
+set kernel_name "switch_mm2s"
 set part_name   "xcve2802-vsvh1760-2MP-e-S"
 
 # --- Step 2: Automatic Naming ---
@@ -28,9 +28,6 @@ set_top $top_function
 add_files $kernel_file
 add_files -tb src/demux_8_test.cpp
 add_files -tb ../data/
-add_files -tb ../bus_ids.hpp
-
-
 
 # Use the -flow_target vitis flag for correct XO generation
 open_solution -flow_target vitis "solution1"
