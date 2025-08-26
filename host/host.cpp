@@ -151,6 +151,9 @@ int main(int argc, char** argv) {
     input_run.wait();
     aie_graph.wait();
     s2mm_run.wait();
+    relu_run.wait();
+    relu2_run.wait();
+    split_run.wait();
     demux_run.wait();
     demux_run.stop();
 
