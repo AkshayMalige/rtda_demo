@@ -20,6 +20,7 @@ extern "C" {
             #pragma HLS pipeline II=1
             axis_t val = in_stream.read();
             int out_idx = i / SPLIT_SIZE;
+            val.last = ((i % SPLIT_SIZE) == SPLIT_SIZE - 1);
             out_stream[out_idx].write(val);
         }
     }
