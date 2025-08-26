@@ -33,10 +33,8 @@ static std::vector<float> read_file_to_vector(const std::string& filename, int s
   return data;
 }
 
-// Build and stream weight and bias packets for the aieml graph.
-static void preload_weights_aieml(xrt::device& device,
-                                  xrt::kernel& switch_kernel,
-                                  const std::string& base_path) {
+// Build weight and bias packets for the aieml graph.
+static std::vector<std::uint32_t> build_weights_aieml(const std::string& base_path) {
   std::vector<std::uint32_t> words;
 
   auto w0 = read_file_to_vector(base_path + "/" + EMBED_DENSE0_WEIGHTS,
@@ -61,6 +59,13 @@ static void preload_weights_aieml(xrt::device& device,
                                 EMBED_DENSE1_BIAS_SIZE);
   append_packet(words, b1, bus::BIAS1, KIND_BIAS);
 
+  return words;
+}
+
+// Stream pre-built packets through the switch kernel.
+static void preload_weights_aieml(xrt::device& device,
+                                  xrt::kernel& switch_kernel,
+                                  const std::vector<std::uint32_t>& words) {
   xrt::bo bo(device, words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
   bo.write(words.data(), words.size() * sizeof(std::uint32_t), 0);
   bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
@@ -86,6 +91,8 @@ int main(int argc, char** argv) {
     xrt::xclbin xclbin(xclbinFilename);
     auto uuid = device.load_xclbin(xclbin);
 
+    auto weight_words = build_weights_aieml(base_path);
+
     // Build packetised input buffer
     auto input_data = read_file_to_vector(base_path + "/" + EMBED_INPUT_DATA,
                                           EMBED_DENSE0_INPUT_SIZE);
@@ -107,8 +114,10 @@ int main(int argc, char** argv) {
     xrt::kernel s2mm_kernel(device, uuid, "s2mm_pl:{s2mm_out}");
     xrt::graph  aie_graph(device, uuid, "g");
 
+    unsigned int demux_words = weight_words.size() + input_words.size();
     // Start demux first, then other consumer kernels
     auto demux_run = xrt::run(demux_kernel);
+    demux_run.set_arg(0, demux_words);
     demux_run.start();
 
     auto s2mm_run = xrt::run(s2mm_kernel);
@@ -128,7 +137,7 @@ int main(int argc, char** argv) {
     split_run.start();
 
     // Preload weights and biases before starting the graph
-    preload_weights_aieml(device, switch_kernel, base_path);
+    preload_weights_aieml(device, switch_kernel, weight_words);
 
     // Run AIE graph
     aie_graph.run(1);
@@ -142,6 +151,8 @@ int main(int argc, char** argv) {
     input_run.wait();
     aie_graph.wait();
     s2mm_run.wait();
+    demux_run.wait();
+    demux_run.stop();
 
     // Retrieve results
     std::vector<float> host_output_data(EMBED_FINAL_OUTPUT_SIZE);

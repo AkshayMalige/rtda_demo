@@ -11,7 +11,7 @@ extern "C" void demux_8_pl(hls::stream<axis_t> &in, hls::stream<axis_t> &out0,
                          hls::stream<axis_t> &out1, hls::stream<axis_t> &out2,
                          hls::stream<axis_t> &out3, hls::stream<axis_t> &out4,
                          hls::stream<axis_t> &out5, hls::stream<axis_t> &out6,
-                         hls::stream<axis_t> &out7);
+                         hls::stream<axis_t> &out7, unsigned int word_count);
 
 int main() {
   hls::stream<axis_t> in;
@@ -38,7 +38,7 @@ int main() {
     in.write(t);
   }
 
-  demux_8_pl(in, out0, out1, out2, out3, out4, out5, out6, out7);
+  demux_8_pl(in, out0, out1, out2, out3, out4, out5, out6, out7, NUM_BEATS);
 
   bool pass = true;
 
