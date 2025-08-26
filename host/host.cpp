@@ -62,19 +62,32 @@ static std::vector<std::uint32_t> build_weights_aieml(const std::string& base_pa
   return words;
 }
 
-// Stream pre-built packets through the switch kernel.
+// Stream pre-built packets through the switch and demux kernels.
 static void preload_weights_aieml(xrt::device& device,
                                   xrt::kernel& switch_kernel,
+                                  xrt::kernel& demux_kernel,
                                   const std::vector<std::uint32_t>& words) {
   xrt::bo bo(device, words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
   bo.write(words.data(), words.size() * sizeof(std::uint32_t), 0);
   bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
-  auto run = xrt::run(switch_kernel);
-  run.set_arg(0, bo);
-  run.set_arg(2, words.size());
-  run.start();
-  run.wait();
+  std::size_t idx = 0;
+  while (idx < words.size()) {
+    std::uint32_t len = words[idx + 1];
+    std::size_t packet_words = 4 + static_cast<std::size_t>(len);
+
+    auto demux_run = xrt::run(demux_kernel);
+    demux_run.start();
+
+    auto run = xrt::run(switch_kernel);
+    run.set_arg(0, bo, idx * sizeof(std::uint32_t));
+    run.set_arg(2, packet_words);
+    run.start();
+    run.wait();
+
+    demux_run.wait();
+    idx += packet_words;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -117,12 +130,6 @@ int main(int argc, char** argv) {
     // Initialize AI Engine graph before any data movement
     aie_graph.init();
 
-    unsigned int demux_words = weight_words.size() + input_words.size();
-    // Start demux first, then other consumer kernels
-    auto demux_run = xrt::run(demux_kernel);
-    demux_run.set_arg(9, demux_words);
-    demux_run.start();
-
     auto s2mm_run = xrt::run(s2mm_kernel);
     s2mm_run.set_arg(1, output_buf);
     s2mm_run.set_arg(2, EMBED_FINAL_OUTPUT_SIZE);
@@ -140,12 +147,15 @@ int main(int argc, char** argv) {
     split_run.start();
 
     // Preload weights and biases before starting the graph
-    preload_weights_aieml(device, switch_kernel, weight_words);
+    preload_weights_aieml(device, switch_kernel, demux_kernel, weight_words);
 
     // Run AIE graph
     aie_graph.run(1);
 
     // Stream input data once the graph is running
+    auto demux_run = xrt::run(demux_kernel);
+    demux_run.start();
+
     auto input_run = xrt::run(switch_kernel);
     input_run.set_arg(0, input_bo);
     input_run.set_arg(2, input_words.size());
