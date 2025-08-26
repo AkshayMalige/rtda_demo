@@ -6,7 +6,7 @@
 VITIS_HLS ?= vitis_hls
 
 # List of kernels (add more as needed)
-KERNELS ?= demux_8 switch_mm2s
+KERNELS ?= switch_mm2s demux_8
 
 IP_DIR   ?= ip
 LOG_FILE ?= vitis_hls.log
