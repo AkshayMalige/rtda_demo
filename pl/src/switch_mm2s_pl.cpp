@@ -33,16 +33,15 @@ void switch_mm2s_pl(const ap_uint<32>* in,      // AXI4-MM (DDR)
     ap_uint<32> w1 = in[idx + 1];
     idx += WORDS_PER_HDR;
 
-    ap_uint<8>  part    = w0.range(31,24);
-    ap_uint<8>  kind    = w0.range(23,16);
-    ap_uint<8>  bus_id  = w0.range(7,0);
-    uint32_t    len_words= (uint32_t)w1;
+    ap_uint<8>  bus_id   = w0.range(7,0);
+    uint32_t    len_words = (uint32_t)w1;
 
     // Guard against malformed packets that claim more words than remain
     if (idx + len_words > total_words) {
-      assert(idx + len_words <= total_words);
+      // Truncate to the remaining words
       len_words = total_words - idx;
     }
+    assert(idx + len_words <= total_words);
 
     // Stream payload
     for (uint32_t i = 0; i < len_words; ++i) {
