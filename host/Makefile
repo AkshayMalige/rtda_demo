@@ -1,4 +1,4 @@
-# Makefile to compile host.cpp for PetaLinux sysroot using aarch64-linux-gnu-g++
+# Simple Makefile to build host.cpp
 
 # Toolchain and paths
 SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
@@ -9,33 +9,28 @@ export DATA_DIR
 
 # Sources and targets
 SRC := host.cpp
-OBJ := $(SRC:.cpp=.o)
 OUT ?= system_host
 
 # Compiler and linker flags
-CXXFLAGS ?= -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
+CXXFLAGS ?= -Wall -std=c++17 -Wno-int-to-pointer-cast \
         --sysroot=$(SYSROOT) \
         -I$(SYSROOT)/usr/include/xrt \
         -I$(SYSROOT)/usr/include \
-        -I./ -I./src/ -I../common -I/aietools/include -I/include \
+        -I./ -I../common -I/aietools/include -I/include \
         -DDATA_DIR='"$(DATA_DIR)"'
 
 LDFLAGS ?= --sysroot=$(SYSROOT) \
-	-L$(SYSROOT)/usr/lib \
-	-lstdc++ -lxrt_coreutil -lxrt_core -lpthread
+        -L$(SYSROOT)/usr/lib \
+        -lstdc++ -lxrt_coreutil -lxrt_core -lpthread
 
 .PHONY: all clean
 
 all: $(OUT)
 
-$(OBJ): $(SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $<
-
-$(OUT): $(OBJ)
-	$(CXX) $^ $(LDFLAGS) -o $@
+$(OUT): $(SRC)
+	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -o $@
 	@echo "✅ Built host executable: $(OUT)"
 
 clean:
-	rm -f $(OBJ) $(OUT) *.log
+	rm -f $(OUT) *.log
 	@echo "🧹 Cleaned up build artifacts"
-
