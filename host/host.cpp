@@ -13,6 +13,7 @@
 #include "data_paths.h"
 #include "nn_defs.h"
 #include "../pl/bus_ids.hpp"
+#include "weights_bus.hpp"
 
 // Load text files containing floats into a vector
 static std::vector<float> read_file_to_vector(const std::string& filename, int size) {
@@ -32,33 +33,43 @@ static std::vector<float> read_file_to_vector(const std::string& filename, int s
   return data;
 }
 
-// Packet description used to build the memory buffer for switch_mm2s_pl
-struct PacketSpec {
-  std::string file;
-  int         size;
-  std::uint8_t bus_id;
-  std::uint8_t kind;
-};
-
-enum DataKind : std::uint8_t { KIND_INPUT = 0, KIND_WEIGHT = 1, KIND_BIAS = 2 };
-
-static std::vector<std::uint32_t> build_packets(const std::vector<PacketSpec>& specs) {
+// Build and stream weight and bias packets for the aieml graph.
+static void preload_weights_aieml(xrt::device& device,
+                                  xrt::kernel& switch_kernel,
+                                  const std::string& base_path) {
   std::vector<std::uint32_t> words;
-  for (const auto& spec : specs) {
-    auto data = read_file_to_vector(spec.file, spec.size);
-    std::uint32_t w0 = (0u << 24) | (std::uint32_t(spec.kind) << 16) | std::uint32_t(spec.bus_id);
-    std::uint32_t w1 = spec.size; // length in 32-bit words
-    words.push_back(w0);
-    words.push_back(w1);
-    words.push_back(0);
-    words.push_back(0);
-    for (float f : data) {
-      std::uint32_t w;
-      std::memcpy(&w, &f, sizeof(float));
-      words.push_back(w);
-    }
-  }
-  return words;
+
+  auto w0 = read_file_to_vector(base_path + "/" + EMBED_DENSE0_WEIGHTS,
+                                EMBED_DENSE0_WEIGHTS_SIZE);
+  append_packet(words, w0, bus::WEIGHTS0, KIND_WEIGHT);
+
+  auto w1a = read_file_to_vector(base_path + "/" +
+                                 EMBED_DENSE1_WEIGHTS_PREFIX + std::string("0.txt"),
+                                 EMBED_DENSE1_WEIGHTS_PART_SIZE);
+  append_packet(words, w1a, bus::WEIGHTS1_A, KIND_WEIGHT);
+
+  auto w1b = read_file_to_vector(base_path + "/" +
+                                 EMBED_DENSE1_WEIGHTS_PREFIX + std::string("1.txt"),
+                                 EMBED_DENSE1_WEIGHTS_PART_SIZE);
+  append_packet(words, w1b, bus::WEIGHTS1_B, KIND_WEIGHT);
+
+  auto b0 = read_file_to_vector(base_path + "/" + EMBED_DENSE0_BIAS,
+                                EMBED_DENSE0_BIAS_SIZE);
+  append_packet(words, b0, bus::BIAS0, KIND_BIAS);
+
+  auto b1 = read_file_to_vector(base_path + "/" + EMBED_DENSE1_BIAS,
+                                EMBED_DENSE1_BIAS_SIZE);
+  append_packet(words, b1, bus::BIAS1, KIND_BIAS);
+
+  xrt::bo bo(device, words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
+  bo.write(words.data(), words.size() * sizeof(std::uint32_t), 0);
+  bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+  auto run = xrt::run(switch_kernel);
+  run.set_arg(0, bo);
+  run.set_arg(2, words.size());
+  run.start();
+  run.wait();
 }
 
 int main(int argc, char** argv) {
@@ -75,28 +86,14 @@ int main(int argc, char** argv) {
     xrt::xclbin xclbin(xclbinFilename);
     auto uuid = device.load_xclbin(xclbin);
 
-    // Build packetised buffers
-    std::vector<PacketSpec> preload_specs = {
-        {base_path + "/" + EMBED_DENSE0_WEIGHTS,        EMBED_DENSE0_WEIGHTS_SIZE,        bus::WEIGHTS0,   KIND_WEIGHT},
-        {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::string("0.txt"), EMBED_DENSE1_WEIGHTS_PART_SIZE, bus::WEIGHTS1_A, KIND_WEIGHT},
-        {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::string("1.txt"), EMBED_DENSE1_WEIGHTS_PART_SIZE, bus::WEIGHTS1_B, KIND_WEIGHT},
-        {base_path + "/" + EMBED_DENSE0_BIAS,           EMBED_DENSE0_BIAS_SIZE,           bus::BIAS0,      KIND_BIAS},
-        {base_path + "/" + EMBED_DENSE1_BIAS,           EMBED_DENSE1_BIAS_SIZE,           bus::BIAS1,      KIND_BIAS},
-    };
-
-    std::vector<PacketSpec> input_specs = {
-        {base_path + "/" + EMBED_INPUT_DATA, EMBED_DENSE0_INPUT_SIZE, bus::DIN, KIND_INPUT}
-    };
-
-    auto preload_words = build_packets(preload_specs);
-    auto input_words   = build_packets(input_specs);
-
-    xrt::bo preload_bo(device, preload_words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
-    preload_bo.write(preload_words.data(), preload_words.size() * sizeof(std::uint32_t));
-    preload_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // Build packetised input buffer
+    auto input_data = read_file_to_vector(base_path + "/" + EMBED_INPUT_DATA,
+                                          EMBED_DENSE0_INPUT_SIZE);
+    std::vector<std::uint32_t> input_words;
+    append_packet(input_words, input_data, bus::DIN, KIND_INPUT);
 
     xrt::bo input_bo(device, input_words.size() * sizeof(std::uint32_t), xrt::bo::flags::normal, 0);
-    input_bo.write(input_words.data(), input_words.size() * sizeof(std::uint32_t));
+    input_bo.write(input_words.data(), input_words.size() * sizeof(std::uint32_t), 0);
     input_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
     xrt::bo output_buf(device, EMBED_FINAL_OUTPUT_SIZE * sizeof(float), xrt::bo::flags::normal, 0);
@@ -131,11 +128,7 @@ int main(int argc, char** argv) {
     split_run.start();
 
     // Preload weights and biases before starting the graph
-    auto preload_run = xrt::run(switch_kernel);
-    preload_run.set_arg(0, preload_bo);
-    preload_run.set_arg(2, preload_words.size());
-    preload_run.start();
-    preload_run.wait();
+    preload_weights_aieml(device, switch_kernel, base_path);
 
     // Run AIE graph
     aie_graph.run(1);
