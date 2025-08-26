@@ -150,6 +150,7 @@ int main(int argc, char** argv) {
 
     input_run.wait();
     aie_graph.wait();
+    aie_graph.end();
     s2mm_run.wait();
     relu_run.wait();
     relu2_run.wait();
