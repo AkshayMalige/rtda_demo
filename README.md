@@ -17,7 +17,7 @@ The design partitions work across three components of the Versal architecture:
   ```
 
   Valid graphs are `aieml`, `aieml2`, and `aieml3`.
-- **Programmable Logic (PL)** – supplies data‑mover kernels and two leaky ReLU units.
+- **Programmable Logic (PL)** – provides `switch_mm2s`, `s2mm`, and `demux_8` data‑mover kernels for streaming between DDR and the AI Engine.
 - **Host application** – runs on the processing system and orchestrates data movement and graph execution through XRT.
 
 All build instructions are split into component READMEs:
