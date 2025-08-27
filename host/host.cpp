@@ -66,7 +66,9 @@ int main(int argc, char *argv[]) {
   }
 
   std::string xclbin_file = argv[1];
-  std::string data_file = std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS;
+//   std::string data_file = std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS;
+  std::string data_file = "./data/embed_dense_0_bias.txt";
+
   uint8_t dest = 3;
 
   // -----------------------------------------------------------------------
