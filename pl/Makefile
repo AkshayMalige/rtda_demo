@@ -5,6 +5,11 @@
 # ===================================================================
 VITIS_HLS ?= vitis_hls
 
+# Resolve data directory to an absolute path so simulations can locate input
+# files regardless of the working directory used by Vitis HLS.
+DATA_DIR ?= $(abspath ../data)
+export DATA_DIR
+
 # List of kernels (add more as needed)
 # KERNELS ?= mm2s leaky_relu leaky_splitter s2mm switch_mm2s demux_8
 KERNELS := s2mm switch_mm2s demux_8
@@ -35,6 +40,7 @@ kernels:
 .PHONY: sim
 sim:
 	@echo "--- Running Simulation for TARGET=$(TARGET) ---"
+	@echo "DATA_DIR=$(DATA_DIR)"
 ifneq ($(filter $(TARGET),hw hw_emu),)
 	for KERNEL in $(KERNELS); do \
 		echo "--- Running hw/hw_emu co-simulation for $$KERNEL ---"; \
