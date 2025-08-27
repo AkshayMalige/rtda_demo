@@ -1,6 +1,6 @@
-# 🧠 AI Engine-ML Neural Network Pipeline: Dense1 → LeakyReLU → Dense2 → LeakyReLU
+# 🧠 AI Engine-ML Neural Network Pipeline: Dense1 → Dense2
 
-This project demonstrates a custom low-latency neural network pipeline implemented on the AMD Versal™ VEK280 platform using the AI Engine-ML (AIE-ML) and Vitis tools. The core model consists of two dense layers with leaky ReLU activations after each layer, targeting power-efficient acceleration of small MLP inference tasks. It supports runtime configurability of dimensions and data types (`int8`, `int16`, `float16`, `float32`), with automated test data generation and full simulation support.
+This project demonstrates a custom low-latency neural network pipeline implemented on the AMD Versal™ VEK280 platform using the AI Engine-ML (AIE-ML) and Vitis tools. The core model consists of two dense layers targeting power-efficient acceleration of small MLP inference tasks. It supports runtime configurability of dimensions and data types (`int8`, `int16`, `float16`, `float32`), with automated test data generation and full simulation support.
 
 The design partitions work across three components of the Versal architecture:
 
@@ -17,7 +17,7 @@ The design partitions work across three components of the Versal architecture:
   ```
 
   Valid graphs are `aieml`, `aieml2`, and `aieml3`.
-- **Programmable Logic (PL)** – supplies data‑mover kernels and two leaky ReLU units.
+- **Programmable Logic (PL)** – supplies data‑mover kernels `s2mm`, `switch_mm2s`, and `demux_8`.
 - **Host application** – runs on the processing system and orchestrates data movement and graph execution through XRT.
 
 All build instructions are split into component READMEs:
@@ -91,7 +91,7 @@ python data/generate_test_data.py --input-dim 6 --hidden-dim 128 --output-dim 12
 
 ---
 
-## ⚙️ Build the AIE Graph: `dense1 → leaky_relu → dense2`
+## ⚙️ Build the AIE Graph: `dense1 → dense2`
 
 Move into the AIE source directory and compile the graph:
 
@@ -155,5 +155,5 @@ Your project is organized as follows:
 ## 🚧 Notes & WIP
 
 - This design assumes full window-based streaming between kernels using PLIO.
-- `dense2` expects the output from `leaky_relu` in full windows — ensure the dummy data generator creates enough input samples.
+- `dense2` expects full-window input — ensure the dummy data generator creates enough input samples.
 - Current focus is on validating functional correctness before host-integration or hardware execution.
