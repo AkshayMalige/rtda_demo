@@ -11,8 +11,8 @@ DATA_DIR ?= $(abspath ../data)
 export DATA_DIR
 
 # List of kernels (add more as needed)
-# KERNELS ?= mm2s leaky_relu leaky_splitter s2mm switch_mm2s demux_8
-KERNELS := s2mm switch_mm2s demux_8
+KERNELS ?= s2mm switch_mm2s demux_8
+# KERNELS := demux_8
 
 
 IP_DIR   ?= ip
