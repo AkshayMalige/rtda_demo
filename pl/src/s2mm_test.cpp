@@ -18,7 +18,9 @@ int main() {
     std::vector<data_t> golden_data;
     golden_data.reserve(SIZE);
     
-    std::string filepath = std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS;
+    const char* data_dir = DATA_DIR;
+    std::cout << "DATA_DIR resolved to: " << data_dir << std::endl;
+    std::string filepath = std::string(data_dir) + "/" + EMBED_DENSE0_BIAS;
     std::ifstream fin(filepath);
     if (!fin.is_open()) {
         std::cerr << "ERROR: Cannot open file: " << filepath << std::endl;
