@@ -28,7 +28,7 @@ set_top $top_function
 # Add your project's specific source files from src/
 add_files $kernel_file
 add_files -tb $tb_file
-add_files -tb ../data/leakyrelu_output_ref.txt
+add_files -tb ../data/embed_dense_0_output.txt
 
 # Use the -flow_target vitis flag for correct XO generation
 open_solution -flow_target vitis "solution1"
