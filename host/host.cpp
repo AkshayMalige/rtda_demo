@@ -64,15 +64,15 @@ make_switch_packet_ddr(const std::vector<float> &vals, uint8_t dest)
 
 int main(int argc, char *argv[])
 {
-  if (argc != 4) {
+  if (argc != 3) {
     std::cout << "Usage: " << argv[0]
-              << " <xclbin> <data.txt> <dest (0‑7)>\n";
+              << " <xclbin> <dest (0‑7)>\n";
     return 1;
   }
 
   std::string xclbin_file = argv[1];
-  std::string data_file   = argv[2];
-  uint8_t     dest        = static_cast<uint8_t>(std::stoi(argv[3]));
+  std::string data_file   = std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS;
+  uint8_t     dest        = static_cast<uint8_t>(std::stoi(argv[2]));
 
   // -----------------------------------------------------------------------
   // Prepare host data
