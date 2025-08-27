@@ -26,8 +26,11 @@ set_top $top_function
 
 # Add your project's specific source files from src/
 add_files $kernel_file
-add_files -tb src/demux_8_test.cpp
+add_files -tb "src/${kernel_name}_test.cpp"
 add_files -tb ../data/
+#add_files -tb ../bus_ids.hpp
+
+
 
 # Use the -flow_target vitis flag for correct XO generation
 open_solution -flow_target vitis "solution1"
