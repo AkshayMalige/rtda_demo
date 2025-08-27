@@ -7,28 +7,26 @@
 //    4. print the values returned by whichever s2mm received data
 // ---------------------------------------------------------------------------
 
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <cstring>
 
+#include "experimental/xrt_bo.h"
 #include "experimental/xrt_device.h"
 #include "experimental/xrt_kernel.h"
-#include "experimental/xrt_bo.h"
 
-#include "../pl/bus_ids.hpp"     // keep next to TB or adjust include path
 #include "../common/data_paths.h"
+#include "../pl/bus_ids.hpp" // keep next to TB or adjust include path
 
 // ---------------------------------------------------------------------------
 // Utilities reused from switch_mm2s_test.cpp
 // ---------------------------------------------------------------------------
 
 // Read a whitespace separated list of floats from disk.
-static std::vector<float>
-read_f32_list(const std::string &file)
-{
+static std::vector<float> read_f32_list(const std::string &file) {
   std::ifstream fin(file);
   if (!fin)
     throw std::runtime_error("Cannot open " + file);
@@ -43,12 +41,11 @@ read_f32_list(const std::string &file)
 // Build the memory image consumed by switch_mm2s_pl.
 // The first two 32‑bit words form a header: [dest][length]
 static std::vector<uint32_t>
-make_switch_packet_ddr(const std::vector<float> &vals, uint8_t dest)
-{
+make_switch_packet_ddr(const std::vector<float> &vals, uint8_t dest) {
   std::vector<uint32_t> pkt;
   pkt.reserve(vals.size() + 2);
-  pkt.push_back(dest);               // TDEST
-  pkt.push_back(vals.size());        // payload length
+  pkt.push_back(dest);        // TDEST
+  pkt.push_back(vals.size()); // payload length
 
   for (float f : vals) {
     uint32_t w;
@@ -62,22 +59,20 @@ make_switch_packet_ddr(const std::vector<float> &vals, uint8_t dest)
 // Main
 // ---------------------------------------------------------------------------
 
-int main(int argc, char *argv[])
-{
-  if (argc != 4) {
-    std::cout << "Usage: " << argv[0]
-              << " <xclbin> <data.txt> <dest (0‑7)>\n";
+int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    std::cout << "Usage: " << argv[0] << " <xclbin>\n";
     return 1;
   }
 
   std::string xclbin_file = argv[1];
-  std::string data_file   = argv[2];
-  uint8_t     dest        = static_cast<uint8_t>(std::stoi(argv[3]));
+  std::string data_file = std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS;
+  uint8_t dest = 3;
 
   // -----------------------------------------------------------------------
   // Prepare host data
   // -----------------------------------------------------------------------
-  auto data   = read_f32_list(data_file);
+  auto data = read_f32_list(data_file);
   auto packet = make_switch_packet_ddr(data, dest);
 
   // -----------------------------------------------------------------------
@@ -86,7 +81,7 @@ int main(int argc, char *argv[])
   xrt::device dev(0);
   auto uuid = dev.load_xclbin(xrt::xclbin{xclbin_file});
 
-  xrt::kernel sw_k   (dev, uuid, "switch_mm2s_pl:{switch_mm2s}");
+  xrt::kernel sw_k(dev, uuid, "switch_mm2s_pl:{switch_mm2s}");
   xrt::kernel demux_k(dev, uuid, "demux_8_pl:{demux}");
 
   std::vector<xrt::kernel> s2mm_k;
@@ -97,16 +92,15 @@ int main(int argc, char *argv[])
   // -----------------------------------------------------------------------
   // Buffer allocation
   // -----------------------------------------------------------------------
-  xrt::bo pkt_bo(dev, packet.size() * sizeof(uint32_t),
-                 xrt::bo::flags::normal, sw_k.group_id(0));
+  xrt::bo pkt_bo(dev, packet.size() * sizeof(uint32_t), xrt::bo::flags::normal,
+                 sw_k.group_id(0));
   pkt_bo.write(packet.data());
   pkt_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
   std::vector<xrt::bo> out_bos;
   for (int i = 0; i < 8; ++i)
-    out_bos.emplace_back(
-        dev, data.size() * sizeof(float),
-        xrt::bo::flags::normal, s2mm_k[i].group_id(0));
+    out_bos.emplace_back(dev, data.size() * sizeof(float),
+                         xrt::bo::flags::normal, s2mm_k[i].group_id(0));
 
   // -----------------------------------------------------------------------
   // Launch kernels
@@ -144,7 +138,10 @@ int main(int argc, char *argv[])
 
     bool valid = false;
     for (float v : out)
-      if (v != 0.0f) { valid = true; break; }
+      if (v != 0.0f) {
+        valid = true;
+        break;
+      }
 
     if (valid) {
       std::cout << "AXI channel " << ch << " received:\n";
