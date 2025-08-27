@@ -28,8 +28,6 @@ set_top $top_function
 add_files $kernel_file
 add_files -tb src/demux_8_test.cpp
 add_files -tb ../data/
-add_files -tb ../bus_ids.hpp
-
 
 
 # Use the -flow_target vitis flag for correct XO generation
