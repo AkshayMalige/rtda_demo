@@ -94,15 +94,28 @@ int main(int argc, char *argv[]) {
   // -----------------------------------------------------------------------
   // Buffer allocation
   // -----------------------------------------------------------------------
-  xrt::bo pkt_bo(dev, packet.size() * sizeof(uint32_t), xrt::bo::flags::normal,
-                 sw_k.group_id(0));
+  // Capture and validate the switch kernel's group ID
+  auto sw_bank = sw_k.group_id(0);
+  auto pkt_flags = xrt::bo::flags::normal;
+  if (sw_bank == -1) {
+    sw_bank = 0;                 // default to bank 0 if undefined
+    pkt_flags = xrt::bo::flags::host_only;
+  }
+  xrt::bo pkt_bo(dev, packet.size() * sizeof(uint32_t), pkt_flags, sw_bank);
   pkt_bo.write(packet.data());
   pkt_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
   std::vector<xrt::bo> out_bos;
-  for (int i = 0; i < 8; ++i)
-    out_bos.emplace_back(dev, data.size() * sizeof(float),
-                         xrt::bo::flags::normal, s2mm_k[i].group_id(0));
+  for (int i = 0; i < 8; ++i) {
+    // Capture and validate each s2mm kernel's group ID
+    auto s2mm_bank = s2mm_k[i].group_id(0);
+    auto out_flags = xrt::bo::flags::normal;
+    if (s2mm_bank == -1) {
+      s2mm_bank = 0;             // use default bank if group_id is invalid
+      out_flags = xrt::bo::flags::host_only;
+    }
+    out_bos.emplace_back(dev, data.size() * sizeof(float), out_flags, s2mm_bank);
+  }
 
   // -----------------------------------------------------------------------
   // Launch kernels
