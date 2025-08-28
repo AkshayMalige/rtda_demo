@@ -1,169 +1,143 @@
-// host_switch.cpp
-// ---------------------------------------------------------------------------
-// Simple host to exercise the switch_mm2s → demux_8 → s2mm data‑mover chain.
-//    1. read float values from a text file
-//    2. build a “switch packet” (header + payload) for the chosen AXI channel
-//    3. launch switch_mm2s, demux_8 and eight s2mm CUs
-//    4. print the values returned by whichever s2mm received data
-// ---------------------------------------------------------------------------
-
-#include <cstring>
-#include <fstream>
+// host.cpp — run as: ./system_host <a.xclbin>
+// Build: g++ -std=gnu++17 host.cpp -o system_host -lxrt_coreutil
 #include <iostream>
-#include <stdexcept>
-#include <string>
+#include <fstream>
+#include <sstream>
 #include <vector>
+#include <string>
+#include <cstdint>
+#include <cstring>
+#include <iomanip>
+#include <algorithm>
 
-#include "experimental/xrt_bo.h"
-#include "experimental/xrt_device.h"
-#include "experimental/xrt_kernel.h"
+#include <xrt/xrt_device.h>
+#include <xrt/xrt_kernel.h>
+#include <xrt/xrt_bo.h>
+#include <xrt/xrt_uuid.h>
 
-#include "../common/data_paths.h"
-#include "../pl/bus_ids.hpp" // keep next to TB or adjust include path
+// --- If you have bus_ids.hpp, include it and pick a bus/channel from it.
+// --- Otherwise just change BUS_ID below to 0..255 (demux channel = BUS_ID & 7).
+// #include "../pl/bus_ids.hpp"
+static constexpr int BUS_ID = 6;  // <- choose the destination/channel you want
 
-// ---------------------------------------------------------------------------
-// Utilities reused from switch_mm2s_test.cpp
-// ---------------------------------------------------------------------------
+// Fixed test file on target filesystem:
+static const char* kDataFile = "./data/embed_dense_0_bias.txt";
 
-// Read a whitespace separated list of floats from disk.
-static std::vector<float> read_f32_list(const std::string &file) {
-  std::ifstream fin(file);
-  if (!fin)
-    throw std::runtime_error("Cannot open " + file);
+// ---------- helpers: read floats and pack switch_mm2s header ----------
+static inline uint32_t f32_to_u32(float f){ uint32_t u; std::memcpy(&u,&f,4); return u; }
 
-  std::vector<float> vals;
-  float v{};
-  while (fin >> v)
-    vals.push_back(v);
+static std::vector<float> read_f32_list(const std::string& path) {
+  std::ifstream fin(path);
+  if (!fin) { throw std::runtime_error("cannot open: " + path); }
+  std::vector<float> vals; std::string line;
+  while (std::getline(fin, line)) {
+    if (line.empty()) continue;
+    float v = 0.f; std::istringstream iss(line); iss >> v;
+    if (!iss.fail()) vals.push_back(v);
+  }
   return vals;
 }
 
-// Build the memory image consumed by switch_mm2s_pl.
-// The first two 32‑bit words form a header: [dest][length]
+// [ctrl,len,0,0] + payload, ctrl[7:0] = TDEST
 static std::vector<uint32_t>
-make_switch_packet_ddr(const std::vector<float> &vals, uint8_t dest) {
-  std::vector<uint32_t> pkt;
-  pkt.reserve(vals.size() + 2);
-  pkt.push_back(dest);        // TDEST
-  pkt.push_back(vals.size()); // payload length
-
-  for (float f : vals) {
-    uint32_t w;
-    std::memcpy(&w, &f, sizeof(w));
-    pkt.push_back(w);
-  }
-  return pkt;
+make_switch_packet_words(uint8_t bus_id, const std::vector<float>& payload) {
+  const uint32_t len = (uint32_t)payload.size();
+  std::vector<uint32_t> w; w.reserve(4 + len);
+  uint32_t ctrl = 0; ctrl |= (uint32_t)bus_id;
+  w.push_back(ctrl);
+  w.push_back(len);
+  w.push_back(0);
+  w.push_back(0);
+  for (float f : payload) w.push_back(f32_to_u32(f));
+  return w;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
+static inline std::vector<std::string> s2mm_names() {
+  return {"s2mm_0","s2mm_1","s2mm_2","s2mm_3","s2mm_4","s2mm_5","s2mm_6","s2mm_7"};
+}
 
-int main(int argc, char *argv[]) {
-  if (argc != 2) {
-    std::cout << "Usage: " << argv[0] << " <xclbin>\n";
+int main(int argc, char** argv) try {
+  if (argc < 2) {
+    std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
     return 1;
   }
+  std::string xclbin_path = argv[1];
 
-  std::string xclbin_file = argv[1];
-//   std::string data_file = std::string(DATA_DIR) + "/" + EMBED_DENSE0_BIAS;
-  std::string data_file = "./data/embed_dense_0_bias.txt";
+  // --- read data, build packet ---
+  auto floats = read_f32_list(kDataFile);
+  if (floats.empty()) throw std::runtime_error(std::string("no data in: ") + kDataFile);
+  const uint8_t tdest = (uint8_t)(BUS_ID & 0xFF);
+  const unsigned demux_ch = (unsigned)(tdest & 7);
+  auto words = make_switch_packet_words(tdest, floats);
 
-  uint8_t dest = 3;
+  std::cout << "xclbin : " << xclbin_path << "\n"
+            << "file   : " << kDataFile << "\n"
+            << "values : " << floats.size() << "\n"
+            << "TDEST  : " << (int)tdest << " (demux channel " << demux_ch << ")\n";
 
-  // -----------------------------------------------------------------------
-  // Prepare host data
-  // -----------------------------------------------------------------------
-  auto data = read_f32_list(data_file);
-  auto packet = make_switch_packet_ddr(data, dest);
+  // --- device/xclbin ---
+  xrt::device dev{0};
+  xrt::xclbin xb{xclbin_path};
+  auto uuid = dev.load_xclbin(xb);
 
-  // -----------------------------------------------------------------------
-  // Load xclbin and acquire kernel handles
-  // -----------------------------------------------------------------------
-  xrt::device dev(0);
-  auto uuid = dev.load_xclbin(xrt::xclbin{xclbin_file});
+  // instance names from linker_switch.cfg
+  xrt::kernel k_mm2s{dev, uuid, "switch_mm2s"};  // switch_mm2s_pl(in, total_words)
+  xrt::kernel k_demux{dev, uuid, "demux"};       // demux_8_pl()
 
-  xrt::kernel sw_k(dev, uuid, "switch_mm2s_pl:{switch_mm2s}");
-  xrt::kernel demux_k(dev, uuid, "demux_8_pl:{demux}");
+  std::vector<xrt::kernel> ks2;
+  for (auto& nm : s2mm_names()) { try { ks2.emplace_back(dev, uuid, nm); } catch(...){} }
+  if (ks2.empty()) throw std::runtime_error("no s2mm_* instances found");
 
-  std::vector<xrt::kernel> s2mm_k;
-  for (int i = 0; i < 8; ++i)
-    s2mm_k.emplace_back(dev, uuid,
-                        ("s2mm_pl:{s2mm_" + std::to_string(i) + "}").c_str());
+  unsigned target = std::min<unsigned>(demux_ch, ks2.size()-1);
 
-  // -----------------------------------------------------------------------
-  // Buffer allocation
-  // -----------------------------------------------------------------------
-  // Capture and validate the switch kernel's group ID
-  auto sw_bank = sw_k.group_id(0);
-  auto pkt_flags = xrt::bo::flags::normal;
-  if (sw_bank == -1) {
-    sw_bank = 0;                 // default to bank 0 if undefined
-    pkt_flags = xrt::bo::flags::host_only;
-  }
-  xrt::bo pkt_bo(dev, packet.size() * sizeof(uint32_t), pkt_flags, sw_bank);
-  pkt_bo.write(packet.data());
-  pkt_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  // --- BOs ---
+  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), k_mm2s.group_id(0)};
+  in_bo.write(words.data());
+  in_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
-  std::vector<xrt::bo> out_bos;
-  for (int i = 0; i < 8; ++i) {
-    // Capture and validate each s2mm kernel's group ID
-    auto s2mm_bank = s2mm_k[i].group_id(0);
-    auto out_flags = xrt::bo::flags::normal;
-    if (s2mm_bank == -1) {
-      s2mm_bank = 0;             // use default bank if group_id is invalid
-      out_flags = xrt::bo::flags::host_only;
-    }
-    out_bos.emplace_back(dev, data.size() * sizeof(float), out_flags, s2mm_bank);
+  std::vector<xrt::bo> out_bo; out_bo.reserve(ks2.size());
+  for (size_t i=0;i<ks2.size();++i) {
+    size_t n = (i==target) ? floats.size() : 1;
+    out_bo.emplace_back(dev, n*sizeof(float), ks2[i].group_id(0));
   }
 
-  // -----------------------------------------------------------------------
-  // Launch kernels
-  // -----------------------------------------------------------------------
-  std::vector<xrt::run> s2mm_runs;
-  s2mm_runs.reserve(8);
-  for (int i = 0; i < 8; ++i) {
-    xrt::run r{s2mm_k[i]};
-    r.set_arg(0, out_bos[i]);
-    r.set_arg(1, data.size());
-    r.start();
-    s2mm_runs.push_back(std::move(r));
+  // --- runs (avoid variadic operator(); use set_arg + start) ---
+  // s2mm_pl(mem, size) — non-target size=0 so it returns immediately
+  std::vector<xrt::run> r_s2mm; r_s2mm.reserve(ks2.size());
+  for (size_t i=0;i<ks2.size();++i) {
+    r_s2mm.emplace_back(ks2[i]);
+    r_s2mm.back().set_arg(0, out_bo[i]);                      // mem
+    int size = (i==target) ? (int)floats.size() : 0;          // size
+    r_s2mm.back().set_arg(1, size);
+    r_s2mm.back().start();
   }
 
-  xrt::run demux_run{demux_k};
-  demux_run.start();
+  xrt::run r_demux{k_demux}; r_demux.start();                 // no args
+  xrt::run r_mm2s{k_mm2s};
+  r_mm2s.set_arg(0, in_bo);                                   // in_ptr
+  r_mm2s.set_arg(1, (uint32_t)words.size());                  // total_words
+  r_mm2s.start();
 
-  xrt::run switch_run{sw_k};
-  switch_run.set_arg(0, pkt_bo);
-  switch_run.set_arg(1, packet.size());
-  switch_run.start();
+  r_mm2s.wait();
+  r_demux.wait();
+  r_s2mm[target].wait();
 
-  switch_run.wait();
-  demux_run.wait();
-  for (auto &r : s2mm_runs)
-    r.wait();
-
-  // -----------------------------------------------------------------------
-  // Retrieve and print results
-  // -----------------------------------------------------------------------
-  for (int ch = 0; ch < 8; ++ch) {
-    out_bos[ch].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    std::vector<float> out(data.size());
-    out_bos[ch].read(out.data());
-
-    bool valid = false;
-    for (float v : out)
-      if (v != 0.0f) {
-        valid = true;
-        break;
-      }
-
-    if (valid) {
-      std::cout << "AXI channel " << ch << " received:\n";
-      for (float v : out)
-        std::cout << "  " << v << '\n';
-    }
+  // --- read back & print ---
+  std::vector<float> out(floats.size(), 0.f);
+  if (!out.empty()) {
+    out_bo[target].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    out_bo[target].read(out.data());
   }
 
+  std::cout << std::fixed << std::setprecision(6);
+  for (size_t i=0;i<out.size();++i)
+    std::cout << "OUT[" << i << "] = " << out[i]
+              << "  (axi-channel=" << demux_ch << ")\n";
+
+  std::cout << "DONE\n";
   return 0;
+
+} catch (const std::exception& e) {
+  std::cerr << "ERROR: " << e.what() << "\n";
+  return 1;
 }
