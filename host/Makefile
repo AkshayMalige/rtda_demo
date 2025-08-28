@@ -1,41 +1,37 @@
-# Makefile to compile host.cpp for PetaLinux sysroot using aarch64-linux-gnu-g++
+# ---- Makefile (drop-in) ----
 
-# Toolchain and paths
-SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
+SYSROOT := /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
 CXX     := aarch64-linux-gnu-g++
-# Default data directory lives one level above the project root
-DATA_DIR ?= $(abspath ../../data)
-export DATA_DIR
 
-# Sources and targets
-SRC := host.cpp
-OBJ := $(SRC:.cpp=.o)
-OUT ?= system_host
+# Include paths (copied from your log)
+INC := -I$(SYSROOT)/usr/include/xrt \
+       -I$(SYSROOT)/usr/include \
+       -I./ -I./src/ -I../common -I/aietools/include -I/include
 
-# Compiler and linker flags
-CXXFLAGS ?= -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
-        --sysroot=$(SYSROOT) \
-        -I$(SYSROOT)/usr/include/xrt \
-        -I$(SYSROOT)/usr/include \
-        -I./ -I./src/ -I../common -I/aietools/include -I/include \
-        -DDATA_DIR='"$(DATA_DIR)"'
+# Compile flags
+CXXFLAGS := -Wall -std=c++17 -Wno-int-to-pointer-cast --sysroot=$(SYSROOT) \
+            $(INC) \
+            -DDATA_DIR='"/home/synthara/VersalPrjs/LDRD/data"'
 
-LDFLAGS ?= --sysroot=$(SYSROOT) \
-	-L$(SYSROOT)/usr/lib \
-	-lstdc++ -lxrt_coreutil -lxrt_core -lpthread
+# Linker search paths:
+#   You had only .../usr/lib; libuuid is in $(SYSROOT)/lib (and sometimes lib64)
+LDFLAGS := --sysroot=$(SYSROOT) \
+           -L$(SYSROOT)/usr/lib \
+           -L$(SYSROOT)/lib \
+           -L$(SYSROOT)/lib64 \
+           -Wl,--no-as-needed
 
-.PHONY: all clean
+# Libraries: add -luuid (this is what fixes "uuid_copy ... DSO missing")
+LDLIBS := -lxrt_coreutil -lxrt_core -luuid -lpthread
 
-all: $(OUT)
+# Targets
+all: system_host
 
-$(OBJ): $(SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+system_host: host.o
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
-$(OUT): $(OBJ)
-	$(CXX) $^ $(LDFLAGS) -o $@
-	@echo "✅ Built host executable: $(OUT)"
+host.o: host.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJ) $(OUT) *.log
-	@echo "🧹 Cleaned up build artifacts"
-
+	rm -f *.o system_host

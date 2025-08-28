@@ -1,162 +1,137 @@
-// host.cpp — run as: ./system_host <a.xclbin>
-// Build: g++ -std=gnu++17 host.cpp -o system_host -lxrt_coreutil
+// host.cpp — minimal & robust for switch_mm2s_pl → demux_8_pl → s2mm_pl[x8]
+// Build + run commands are at the bottom of this file.
+
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <vector>
 #include <string>
-#include <cstdint>
+#include <sstream>
+#include <stdexcept>
 #include <cstring>
 #include <iomanip>
-#include <algorithm>
-#include <stdexcept>
 
-#include <xrt/xrt_device.h>
-#include <xrt/xrt_kernel.h>
-#include <xrt/xrt_bo.h>
-#include <xrt/xrt_uuid.h>
+#include "experimental/xrt_device.h"
+#include "experimental/xrt_kernel.h"
+#include "experimental/xrt_bo.h"
 
-// Choose the channel (TDEST) you want to exercise.
-// demux output = (BUS_ID & 7)
-static constexpr int BUS_ID   = 6;
+// If your tree defines DATA_DIR in data_paths.h, you can include it.
+// Otherwise pass -DDATA_DIR='"/abs/path/to/data"' in CXXFLAGS.
+#ifdef __has_include
+#  if __has_include("data_paths.h")
+#    include "data_paths.h"
+#  endif
+#endif
+#ifndef DATA_DIR
+#  define DATA_DIR "/home/synthara/VersalPrjs/LDRD/data"
+#endif
 
-// Fixed test file on target filesystem.
-static const char* kDataFile = "./data/embed_dense_0_bias.txt";
-
-// ---------- helpers: read floats and pack switch_mm2s header ----------
+// -------- helpers (reused) --------
 static inline uint32_t f32_to_u32(float f){ uint32_t u; std::memcpy(&u,&f,4); return u; }
 
-static std::vector<float> read_f32_list(const std::string& path) {
+static std::vector<float> read_f32_list(const std::string& path){
   std::ifstream fin(path);
-  if (!fin) throw std::runtime_error("cannot open: " + path);
+  if(!fin) throw std::runtime_error("cannot open: " + path);
   std::vector<float> vals; std::string line;
-  while (std::getline(fin, line)) {
-    if (line.empty()) continue;
-    float v=0.f; std::istringstream iss(line); iss >> v;
-    if (!iss.fail()) vals.push_back(v);
+  while(std::getline(fin,line)){
+    if(line.empty()) continue;
+    float v=0.f; std::istringstream(line) >> v;
+    vals.push_back(v);
   }
   return vals;
 }
 
-// [ctrl,len,0,0] + payload, ctrl[7:0] = TDEST
+// switch packet in DDR: [0]=ctrl([7:0]=bus_id), [1]=len, [2]=0, [3]=0, [4..]=payload(u32 of f32)
 static std::vector<uint32_t>
-make_switch_packet_words(uint8_t bus_id, const std::vector<float>& payload) {
-  const uint32_t len = (uint32_t)payload.size();
-  std::vector<uint32_t> w; w.reserve(4 + len);
-  uint32_t ctrl = 0; ctrl |= (uint32_t)bus_id;
-  w.push_back(ctrl);
-  w.push_back(len);
-  w.push_back(0);
-  w.push_back(0);
-  for (float f : payload) w.push_back(f32_to_u32(f));
-  return w;
+make_switch_packet_ddr(uint8_t bus_id, const std::vector<float>& payload_f32){
+  const uint32_t len = static_cast<uint32_t>(payload_f32.size());
+  std::vector<uint32_t> d; d.reserve(4 + len);
+  d.push_back(static_cast<uint32_t>(bus_id & 0xFF));
+  d.push_back(len);
+  d.push_back(0);
+  d.push_back(0);
+  for(float f : payload_f32) d.push_back(f32_to_u32(f));
+  return d;
 }
 
-// Open all eight s2mm_pl instances
-static std::vector<xrt::kernel>
-open_s2mm_kernels(xrt::device& dev, const xrt::uuid& uuid) {
-  const char* s2mm_names[] = {
-    "s2mm_pl:{s2mm_0}", "s2mm_pl:{s2mm_1}", "s2mm_pl:{s2mm_2}", "s2mm_pl:{s2mm_3}",
-    "s2mm_pl:{s2mm_4}", "s2mm_pl:{s2mm_5}", "s2mm_pl:{s2mm_6}", "s2mm_pl:{s2mm_7}"
-  };
-  std::vector<xrt::kernel> ks;
-  for (auto n : s2mm_names)
-    ks.emplace_back(dev, uuid, n);
-  return ks;
-}
+int main(int argc, char** argv){
+  try{
+    if(argc < 2){
+      std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
+      return 1;
+    }
+    const std::string xclbin_path = argv[1];
 
-int main(int argc, char** argv) try {
-  if (argc < 2) {
-    std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
-    return 1;
+    // ---- Hardcoded input & channel ----
+    // const std::string filename = "embed_dense_0_bias.txt";          // change if you like
+    // const std::string data_file = std::string(DATA_DIR) + "/" + filename;
+    const std::string data_file = "./data/embed_dense_0_bias.txt";
+    const uint8_t     BUS_ID    = 4;                                 // maps to s2mm_4 via demux
+
+    // ---- Load data ----
+    auto payload = read_f32_list(data_file);
+    if(payload.empty()) throw std::runtime_error("Input file is empty: " + data_file);
+
+    // ---- Build packet for switch_mm2s ----
+    auto pkt_u32      = make_switch_packet_ddr(BUS_ID, payload);
+    const uint32_t nw = static_cast<uint32_t>(pkt_u32.size());       // header(4) + payload
+
+    // ---- XRT setup ----
+    xrt::device dev{0};
+    auto uuid = dev.load_xclbin(xclbin_path);
+
+    // MUST match linker_demux.cfg aliases exactly:
+    xrt::kernel k_mm2s{dev, uuid.get(), "switch_mm2s_pl:{switch_mm2s}"};
+    xrt::kernel k_demux{dev, uuid.get(), "demux_8_pl:{demux}"};
+    xrt::kernel k_s2mm {dev, uuid.get(), "s2mm_pl:{s2mm_4}"};                  // matches BUS_ID=4
+
+    // ---- Correct memory banks via group_id(0) ----
+    const int mm2s_gid = k_mm2s.group_id(0);
+    const int s2mm_gid = k_s2mm.group_id(0);
+    if(mm2s_gid < 0) throw std::runtime_error("mm2s arg0 not mapped to a memory bank");
+    if(s2mm_gid < 0) throw std::runtime_error("s2mm arg0 not mapped to a memory bank");
+    xrt::memory_group mm2s_bank = static_cast<xrt::memory_group>(mm2s_gid);
+    xrt::memory_group s2mm_bank = static_cast<xrt::memory_group>(s2mm_gid);
+
+    // ---- Buffers ----
+    const size_t pkt_bytes = pkt_u32.size() * sizeof(uint32_t);
+    xrt::bo bo_pkt{dev, pkt_bytes, XRT_BO_FLAGS_NONE, mm2s_bank};
+    std::memcpy(bo_pkt.map<void*>(), pkt_u32.data(), pkt_bytes);
+    bo_pkt.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+    const size_t out_bytes = payload.size() * sizeof(float);
+    xrt::bo bo_out{dev, out_bytes, XRT_BO_FLAGS_NONE, s2mm_bank};
+    bo_out.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+    // ---- Run order: demux → s2mm_4 → mm2s ----
+    xrt::run r_demux{k_demux}; r_demux.start();
+
+    xrt::run r_s2mm{k_s2mm};
+    r_s2mm.set_arg(0, bo_out);
+    r_s2mm.set_arg(1, static_cast<int>(payload.size()));  // EXACT payload count (no header)
+    r_s2mm.start();
+
+    xrt::run r_mm2s{k_mm2s};
+    r_mm2s.set_arg(0, bo_pkt);
+    r_mm2s.set_arg(1, nw);                                // header + payload words
+    r_mm2s.start();
+
+    r_mm2s.wait();
+    r_s2mm.wait();
+    r_demux.wait();
+
+    // ---- Readback ----
+    bo_out.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    const float* out = bo_out.map<float*>();
+
+    std::cout << "BUS_ID (TDEST) sent = " << (unsigned)BUS_ID << "\n";
+    std::cout << std::fixed << std::setprecision(6);
+    for(size_t i=0;i<payload.size();++i)
+      std::cout << "OUT["<<i<<"] = " << out[i] << "\n";
+    std::cout << "DONE.\n";
+    return 0;
   }
-  const std::string xclbin_path = argv[1];
-
-  // --- read data, build packet ---
-  auto floats = read_f32_list(kDataFile);
-  if (floats.empty())
-    throw std::runtime_error(std::string("no data in: ") + kDataFile);
-
-  const uint8_t  tdest    = (uint8_t)(BUS_ID & 0xFF);
-  const unsigned demux_ch = (unsigned)(tdest & 7);
-  auto words = make_switch_packet_words(tdest, floats);
-
-  std::cout << "xclbin : " << xclbin_path << "\n"
-            << "file   : " << kDataFile << "\n"
-            << "values : " << floats.size() << "\n"
-            << "TDEST  : " << (int)tdest << " (demux channel " << demux_ch << ")\n";
-
-  // --- device/xclbin ---
-  xrt::device dev{0};
-  xrt::xclbin xb{xclbin_path};
-  auto uuid = dev.load_xclbin(xb);
-
-  // instance names from your linker: switch_mm2s_pl:{switch_mm2s}, demux_8_pl:{demux}
-  xrt::kernel k_mm2s{dev, uuid, "switch_mm2s_pl:{switch_mm2s}"}; // switch_mm2s_pl(in, total_words)
-  xrt::kernel k_demux{dev, uuid, "demux_8_pl:{demux}"};          // demux_8_pl()
-
-  // open s2mm CUs
-  auto ks2 = open_s2mm_kernels(dev, uuid);
-  unsigned target = demux_ch;
-
-  // --- buffers ---
-  auto gid = k_mm2s.group_id(0);
-  if (gid >= dev.get_xclbin_mem_topology().size())
-    throw std::runtime_error("mm2s unmapped to memory bank");
-  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), xrt::bo::flags::normal, gid};
-  in_bo.write(words.data());
-  in_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-
-  std::vector<xrt::bo> out_bo; out_bo.reserve(ks2.size());
-  for (size_t i=0;i<ks2.size();++i) {
-    size_t n = (i==target) ? floats.size() : 1;      // allocate >=1 element
-    auto gid = ks2[i].group_id(0);
-    if (gid >= dev.get_xclbin_mem_topology().size())
-      throw std::runtime_error("s2mm unmapped to memory bank");
-    out_bo.emplace_back(dev, n*sizeof(float), xrt::bo::flags::normal, gid); // arg0 is mem
+  catch(const std::exception& e){
+    std::cerr << "EXCEPTION: " << e.what() << "\n";
+    return 99;
   }
-
-  // --- runs (use set_arg + start; avoids variadic operator()) ---
-  // s2mm_pl(mem, size) — non-target gets size=0 so it returns immediately
-  std::vector<xrt::run> r_s2mm; r_s2mm.reserve(ks2.size());
-  for (size_t i=0;i<ks2.size();++i) {
-    r_s2mm.emplace_back(ks2[i]);
-    r_s2mm.back().set_arg(0, out_bo[i]);                     // mem
-    int size = (i==target) ? (int)floats.size() : 0;
-    r_s2mm.back().set_arg(1, size);                          // size
-    r_s2mm.back().start();
-  }
-
-  // demux: no scalar args
-  xrt::run r_demux{k_demux}; r_demux.start();
-
-  // switch_mm2s_pl(in_ptr, total_words)
-  xrt::run r_mm2s{k_mm2s};
-  r_mm2s.set_arg(0, in_bo);
-  r_mm2s.set_arg(1, (uint32_t)words.size());
-  r_mm2s.start();
-
-  // wait
-  r_mm2s.wait();
-  r_demux.wait();
-  r_s2mm[target].wait();
-
-  // --- read back & print ---
-  std::vector<float> out(floats.size(), 0.f);
-  if (!out.empty()) {
-    out_bo[target].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    out_bo[target].read(out.data());
-  }
-
-  std::cout << std::fixed << std::setprecision(6);
-  for (size_t i=0;i<out.size();++i)
-    std::cout << "OUT[" << i << "] = " << out[i]
-              << "  (axi-channel=" << demux_ch << ")\n";
-
-  std::cout << "DONE\n";
-  return 0;
-
-} catch (const std::exception& e) {
-  std::cerr << "ERROR: " << e.what() << "\n";
-  return 1;
 }
