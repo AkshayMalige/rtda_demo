@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <iomanip>
+#include <limits>
 
 #include "experimental/xrt_device.h"
 #include "experimental/xrt_kernel.h"
@@ -87,8 +88,16 @@ int main(int argc, char** argv){
     // ---- Correct memory banks via group_id(0) ----
     const int mm2s_gid = k_mm2s.group_id(0);
     const int s2mm_gid = k_s2mm.group_id(0);
-    if(mm2s_gid < 0) throw std::runtime_error("mm2s arg0 not mapped to a memory bank");
-    if(s2mm_gid < 0) throw std::runtime_error("s2mm arg0 not mapped to a memory bank");
+
+    const auto nbanks = dev.get_info<xrt::device::info::num_banks>();
+    auto is_valid_bank = [nbanks](int gid) {
+      return gid >= 0 && gid < static_cast<int>(nbanks) && gid != 0xFFFF;
+    };
+    if(!is_valid_bank(mm2s_gid))
+      throw std::runtime_error("mm2s arg0 not mapped to a valid memory bank");
+    if(!is_valid_bank(s2mm_gid))
+      throw std::runtime_error("s2mm arg0 not mapped to a valid memory bank");
+
     xrt::memory_group mm2s_bank = static_cast<xrt::memory_group>(mm2s_gid);
     xrt::memory_group s2mm_bank = static_cast<xrt::memory_group>(s2mm_gid);
 
