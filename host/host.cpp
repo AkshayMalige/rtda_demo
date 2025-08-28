@@ -89,11 +89,11 @@ int main(int argc, char** argv){
     const int mm2s_gid = k_mm2s.group_id(0);
     const int s2mm_gid = k_s2mm.group_id(0);
 
-    // Query the number of memory banks on the device.
-    // The XRT API expects the query to use the `xrt::info::device`
-    // namespace, not `xrt::device::info` which was used previously and
-    // caused compilation to fail on recent XRT releases.
-    const auto nbanks = dev.get_info<xrt::info::device::num_banks>();
+    // Query the number of memory banks on the device.  The XRT API uses
+    // the `xrt::device::info` namespace for this query in current
+    // releases, so we fetch `num_banks` from there to ensure the code
+    // builds across tool versions.
+    const auto nbanks = dev.get_info<xrt::device::info::num_banks>();
     auto is_valid_bank = [nbanks](int gid) {
       return gid >= 0 && gid < static_cast<int>(nbanks) && gid != 0xFFFF;
     };
