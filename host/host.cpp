@@ -184,14 +184,14 @@ int main(int argc, char** argv) {
 
         // Start consumer kernels
         auto s2mm_run = xrt::run(s2mm_kernel);
-        s2mm_run.set_arg(1, output_buf);
-        s2mm_run.set_arg(2, cfg.output_size);
+        s2mm_run.set_arg(0, output_buf);
+        s2mm_run.set_arg(1, cfg.output_size);
         s2mm_run.start();
 
         std::vector<xrt::run> relu_runs;
         for (auto& k : relu_kernels) {
             auto r = xrt::run(k);
-            r.set_arg(3, cfg.relu_size);
+            r.set_arg(0, cfg.relu_size);
             r.start();
             relu_runs.push_back(std::move(r));
         }
@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
             if (cfg.mm2s[i].preload) {
                 auto run = xrt::run(mm2s_kernels[i]);
                 run.set_arg(0, mm2s_bos[i]);
-                run.set_arg(2, cfg.mm2s[i].size);
+                run.set_arg(1, cfg.mm2s[i].size);
                 run.start();
                 run.wait();
             }
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
             if (!cfg.mm2s[i].preload) {
                 auto run = xrt::run(mm2s_kernels[i]);
                 run.set_arg(0, mm2s_bos[i]);
-                run.set_arg(2, cfg.mm2s[i].size);
+                run.set_arg(1, cfg.mm2s[i].size);
                 run.start();
                 mm2s_runs.push_back(std::move(run));
             }
