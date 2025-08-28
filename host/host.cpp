@@ -14,6 +14,9 @@
 #include <xrt/xrt_kernel.h>
 #include <xrt/xrt_bo.h>
 #include <xrt/xrt_uuid.h>
+#ifndef XRT_INVALID_MEMIDX
+#define XRT_INVALID_MEMIDX 0xFFFF
+#endif
 
 // --- If you have bus_ids.hpp, include it and pick a bus/channel from it.
 // --- Otherwise just change BUS_ID below to 0..255 (demux channel = BUS_ID & 7).
@@ -91,14 +94,20 @@ int main(int argc, char** argv) try {
   unsigned target = std::min<unsigned>(demux_ch, ks2.size()-1);
 
   // --- BOs ---
-  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), k_mm2s.group_id(0)};
+  unsigned memidx = k_mm2s.group_id(0);
+  if (memidx == XRT_INVALID_MEMIDX)
+    memidx = 0;
+  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), memidx};
   in_bo.write(words.data());
   in_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
   std::vector<xrt::bo> out_bo; out_bo.reserve(ks2.size());
   for (size_t i=0;i<ks2.size();++i) {
     size_t n = (i==target) ? floats.size() : 1;
-    out_bo.emplace_back(dev, n*sizeof(float), ks2[i].group_id(0));
+    unsigned memidx = ks2[i].group_id(0);
+    if (memidx == XRT_INVALID_MEMIDX)
+      memidx = 0;
+    out_bo.emplace_back(dev, n*sizeof(float), memidx);
   }
 
   // --- runs (avoid variadic operator(); use set_arg + start) ---
