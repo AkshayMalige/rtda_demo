@@ -100,14 +100,20 @@ int main(int argc, char** argv) try {
   unsigned target = demux_ch;
 
   // --- buffers ---
-  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), k_mm2s.group_id(0)};
+  auto gid = k_mm2s.group_id(0);
+  if (gid >= dev.get_xclbin_mem_topology().size())
+    throw std::runtime_error("mm2s unmapped to memory bank");
+  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), xrt::bo::flags::normal, gid};
   in_bo.write(words.data());
   in_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
   std::vector<xrt::bo> out_bo; out_bo.reserve(ks2.size());
   for (size_t i=0;i<ks2.size();++i) {
     size_t n = (i==target) ? floats.size() : 1;      // allocate >=1 element
-    out_bo.emplace_back(dev, n*sizeof(float), ks2[i].group_id(0)); // arg0 is mem
+    auto gid = ks2[i].group_id(0);
+    if (gid >= dev.get_xclbin_mem_topology().size())
+      throw std::runtime_error("s2mm unmapped to memory bank");
+    out_bo.emplace_back(dev, n*sizeof(float), xrt::bo::flags::normal, gid); // arg0 is mem
   }
 
   // --- runs (use set_arg + start; avoids variadic operator()) ---
