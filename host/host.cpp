@@ -52,31 +52,16 @@ make_switch_packet_words(uint8_t bus_id, const std::vector<float>& payload) {
   return w;
 }
 
-// Robust CU opener for s2mm_pl
+// Open all eight s2mm_pl instances
 static std::vector<xrt::kernel>
 open_s2mm_kernels(xrt::device& dev, const xrt::uuid& uuid) {
-  std::vector<xrt::kernel> ks;
-  auto try_add = [&](const char* nm){
-    try { ks.emplace_back(dev, uuid, nm); } catch (...) {}
-  };
-
-  // Preferred: fully qualified kernel:{cu} for 8 instances
-  const char* q8[] = {
+  const char* s2mm_names[] = {
     "s2mm_pl:{s2mm_0}", "s2mm_pl:{s2mm_1}", "s2mm_pl:{s2mm_2}", "s2mm_pl:{s2mm_3}",
     "s2mm_pl:{s2mm_4}", "s2mm_pl:{s2mm_5}", "s2mm_pl:{s2mm_6}", "s2mm_pl:{s2mm_7}"
   };
-  for (auto qn : q8) try_add(qn);
-
-  // Single-CU variants (some builds)
-  try_add("s2mm_pl:{s2mm}");
-  try_add("s2mm_pl");  // only if exactly one CU exists
-
-  // Last-resort: bare CU names (older runtimes sometimes allow this)
-  const char* bare8[] = { "s2mm_0","s2mm_1","s2mm_2","s2mm_3","s2mm_4","s2mm_5","s2mm_6","s2mm_7" };
-  for (auto b : bare8) try_add(b);
-
-  if (ks.empty())
-    throw std::runtime_error("No s2mm kernels found. Check instance names in linker_switch.cfg.");
+  std::vector<xrt::kernel> ks;
+  for (auto n : s2mm_names)
+    ks.emplace_back(dev, uuid, n);
   return ks;
 }
 
@@ -110,9 +95,9 @@ int main(int argc, char** argv) try {
   xrt::kernel k_mm2s{dev, uuid, "switch_mm2s_pl:{switch_mm2s}"}; // switch_mm2s_pl(in, total_words)
   xrt::kernel k_demux{dev, uuid, "demux_8_pl:{demux}"};          // demux_8_pl()
 
-  // open s2mm CUs robustly
+  // open s2mm CUs
   auto ks2 = open_s2mm_kernels(dev, uuid);
-  unsigned target = std::min<unsigned>(demux_ch, ks2.size()-1);
+  unsigned target = demux_ch;
 
   // --- buffers ---
   auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), k_mm2s.group_id(0)};
