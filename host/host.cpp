@@ -9,21 +9,18 @@
 #include <cstring>
 #include <iomanip>
 #include <algorithm>
+#include <stdexcept>
 
 #include <xrt/xrt_device.h>
 #include <xrt/xrt_kernel.h>
 #include <xrt/xrt_bo.h>
 #include <xrt/xrt_uuid.h>
-#ifndef XRT_INVALID_MEMIDX
-#define XRT_INVALID_MEMIDX 0xFFFF
-#endif
 
-// --- If you have bus_ids.hpp, include it and pick a bus/channel from it.
-// --- Otherwise just change BUS_ID below to 0..255 (demux channel = BUS_ID & 7).
-// #include "../pl/bus_ids.hpp"
-static constexpr int BUS_ID = 6;  // <- choose the destination/channel you want
+// Choose the channel (TDEST) you want to exercise.
+// demux output = (BUS_ID & 7)
+static constexpr int BUS_ID   = 6;
 
-// Fixed test file on target filesystem:
+// Fixed test file on target filesystem.
 static const char* kDataFile = "./data/embed_dense_0_bias.txt";
 
 // ---------- helpers: read floats and pack switch_mm2s header ----------
@@ -31,11 +28,11 @@ static inline uint32_t f32_to_u32(float f){ uint32_t u; std::memcpy(&u,&f,4); re
 
 static std::vector<float> read_f32_list(const std::string& path) {
   std::ifstream fin(path);
-  if (!fin) { throw std::runtime_error("cannot open: " + path); }
+  if (!fin) throw std::runtime_error("cannot open: " + path);
   std::vector<float> vals; std::string line;
   while (std::getline(fin, line)) {
     if (line.empty()) continue;
-    float v = 0.f; std::istringstream iss(line); iss >> v;
+    float v=0.f; std::istringstream iss(line); iss >> v;
     if (!iss.fail()) vals.push_back(v);
   }
   return vals;
@@ -55,8 +52,32 @@ make_switch_packet_words(uint8_t bus_id, const std::vector<float>& payload) {
   return w;
 }
 
-static inline std::vector<std::string> s2mm_names() {
-  return {"s2mm_0","s2mm_1","s2mm_2","s2mm_3","s2mm_4","s2mm_5","s2mm_6","s2mm_7"};
+// Robust CU opener for s2mm_pl
+static std::vector<xrt::kernel>
+open_s2mm_kernels(xrt::device& dev, const xrt::uuid& uuid) {
+  std::vector<xrt::kernel> ks;
+  auto try_add = [&](const char* nm){
+    try { ks.emplace_back(dev, uuid, nm); } catch (...) {}
+  };
+
+  // Preferred: fully qualified kernel:{cu} for 8 instances
+  const char* q8[] = {
+    "s2mm_pl:{s2mm_0}", "s2mm_pl:{s2mm_1}", "s2mm_pl:{s2mm_2}", "s2mm_pl:{s2mm_3}",
+    "s2mm_pl:{s2mm_4}", "s2mm_pl:{s2mm_5}", "s2mm_pl:{s2mm_6}", "s2mm_pl:{s2mm_7}"
+  };
+  for (auto qn : q8) try_add(qn);
+
+  // Single-CU variants (some builds)
+  try_add("s2mm_pl:{s2mm}");
+  try_add("s2mm_pl");  // only if exactly one CU exists
+
+  // Last-resort: bare CU names (older runtimes sometimes allow this)
+  const char* bare8[] = { "s2mm_0","s2mm_1","s2mm_2","s2mm_3","s2mm_4","s2mm_5","s2mm_6","s2mm_7" };
+  for (auto b : bare8) try_add(b);
+
+  if (ks.empty())
+    throw std::runtime_error("No s2mm kernels found. Check instance names in linker_switch.cfg.");
+  return ks;
 }
 
 int main(int argc, char** argv) try {
@@ -64,12 +85,14 @@ int main(int argc, char** argv) try {
     std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
     return 1;
   }
-  std::string xclbin_path = argv[1];
+  const std::string xclbin_path = argv[1];
 
   // --- read data, build packet ---
   auto floats = read_f32_list(kDataFile);
-  if (floats.empty()) throw std::runtime_error(std::string("no data in: ") + kDataFile);
-  const uint8_t tdest = (uint8_t)(BUS_ID & 0xFF);
+  if (floats.empty())
+    throw std::runtime_error(std::string("no data in: ") + kDataFile);
+
+  const uint8_t  tdest    = (uint8_t)(BUS_ID & 0xFF);
   const unsigned demux_ch = (unsigned)(tdest & 7);
   auto words = make_switch_packet_words(tdest, floats);
 
@@ -83,50 +106,46 @@ int main(int argc, char** argv) try {
   xrt::xclbin xb{xclbin_path};
   auto uuid = dev.load_xclbin(xb);
 
-  // instance names from linker_switch.cfg
-  xrt::kernel k_mm2s{dev, uuid, "switch_mm2s"};  // switch_mm2s_pl(in, total_words)
-  xrt::kernel k_demux{dev, uuid, "demux"};       // demux_8_pl()
+  // instance names from your linker: switch_mm2s_pl:{switch_mm2s}, demux_8_pl:{demux}
+  xrt::kernel k_mm2s{dev, uuid, "switch_mm2s_pl:{switch_mm2s}"}; // switch_mm2s_pl(in, total_words)
+  xrt::kernel k_demux{dev, uuid, "demux_8_pl:{demux}"};          // demux_8_pl()
 
-  std::vector<xrt::kernel> ks2;
-  for (auto& nm : s2mm_names()) { try { ks2.emplace_back(dev, uuid, nm); } catch(...){} }
-  if (ks2.empty()) throw std::runtime_error("no s2mm_* instances found");
-
+  // open s2mm CUs robustly
+  auto ks2 = open_s2mm_kernels(dev, uuid);
   unsigned target = std::min<unsigned>(demux_ch, ks2.size()-1);
 
-  // --- BOs ---
-  unsigned memidx = k_mm2s.group_id(0);
-  if (memidx == XRT_INVALID_MEMIDX)
-    memidx = 0;
-  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), memidx};
+  // --- buffers ---
+  auto in_bo = xrt::bo{dev, words.size()*sizeof(uint32_t), k_mm2s.group_id(0)};
   in_bo.write(words.data());
   in_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
   std::vector<xrt::bo> out_bo; out_bo.reserve(ks2.size());
   for (size_t i=0;i<ks2.size();++i) {
-    size_t n = (i==target) ? floats.size() : 1;
-    unsigned memidx = ks2[i].group_id(0);
-    if (memidx == XRT_INVALID_MEMIDX)
-      memidx = 0;
-    out_bo.emplace_back(dev, n*sizeof(float), memidx);
+    size_t n = (i==target) ? floats.size() : 1;      // allocate >=1 element
+    out_bo.emplace_back(dev, n*sizeof(float), ks2[i].group_id(0)); // arg0 is mem
   }
 
-  // --- runs (avoid variadic operator(); use set_arg + start) ---
-  // s2mm_pl(mem, size) — non-target size=0 so it returns immediately
+  // --- runs (use set_arg + start; avoids variadic operator()) ---
+  // s2mm_pl(mem, size) — non-target gets size=0 so it returns immediately
   std::vector<xrt::run> r_s2mm; r_s2mm.reserve(ks2.size());
   for (size_t i=0;i<ks2.size();++i) {
     r_s2mm.emplace_back(ks2[i]);
-    r_s2mm.back().set_arg(0, out_bo[i]);                      // mem
-    int size = (i==target) ? (int)floats.size() : 0;          // size
-    r_s2mm.back().set_arg(1, size);
+    r_s2mm.back().set_arg(0, out_bo[i]);                     // mem
+    int size = (i==target) ? (int)floats.size() : 0;
+    r_s2mm.back().set_arg(1, size);                          // size
     r_s2mm.back().start();
   }
 
-  xrt::run r_demux{k_demux}; r_demux.start();                 // no args
+  // demux: no scalar args
+  xrt::run r_demux{k_demux}; r_demux.start();
+
+  // switch_mm2s_pl(in_ptr, total_words)
   xrt::run r_mm2s{k_mm2s};
-  r_mm2s.set_arg(0, in_bo);                                   // in_ptr
-  r_mm2s.set_arg(1, (uint32_t)words.size());                  // total_words
+  r_mm2s.set_arg(0, in_bo);
+  r_mm2s.set_arg(1, (uint32_t)words.size());
   r_mm2s.start();
 
+  // wait
   r_mm2s.wait();
   r_demux.wait();
   r_s2mm[target].wait();
