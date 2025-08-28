@@ -25,7 +25,7 @@ LINK_CFG  := ./common/linker_switch.cfg
 DATA_DIR  ?= $(abspath ./data)
 
 # HLS kernels used in this design
-HLS_KERNELS := switch_mm2s demux_8 s2mm
+HLS_KERNELS := switch_mm2s s2mm demux_8
 
 POST_BOOT := post_boot.sh
 ###########################################################################
