@@ -107,7 +107,9 @@ launch_hw_emu.sh: package_hw_emu
 
 clean:
 	rm -rf _x v++_* ${XOS} ${OS} ${LIBADF} *.o.* *.o *.xpe *.xo.* \
-	       aie_base*.xclbin* *.xsa *.log *.jou xnwOut Work Map_Report.csv \
-	       ilpProblem* sol.db drivers .Xil aiesimu* x86simu*
+	       aie_base*.xclbin* *.xsa *.log *.jou *.BIN *.bin *.bif qemu* *.wcfg *.wdb *.img pmc_args.txt log.txt xnwOut Work Map_Report.csv \
+	       ilpProblem* sol.db drivers .Xil aiesimu* x86simu* $(PKG_DIR) build_* *.xclbin *.xsa *.log \
+		    sd_card launch_hw_emu.sh *.link_summary *.package_summary _x .Xil _ide sim cfg emu_qemu_scripts
+
 	$(MAKE) -C pl_kernels clean
 	$(MAKE) -C sw clean
