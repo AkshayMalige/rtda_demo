@@ -24,7 +24,7 @@ void hls_packet_receiver2(hls::stream<ap_axiu<32,0,0,0>> &in, hls::stream<ap_axi
 	for(unsigned int iter=0;iter<total_num_packet;iter++){
 		ap_axiu<32,0,0,0> tmp=in.read();//first word is packet header
 		unsigned int ID=getPacketId(tmp.data);
-		unsigned int channel=packet_ids[ID];
+		unsigned int channel=ID;
 		for(int j=0;j<PACKET_LEN;j++){
 			tmp=in.read();
 			switch(channel){
