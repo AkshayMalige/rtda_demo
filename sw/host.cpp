@@ -48,16 +48,12 @@ int main(int argc, char* argv[]) {
 	xrtBufferHandle out_bo4 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
 	xrtBufferHandle out_bo5 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
 	xrtBufferHandle out_bo6 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle out_bo7 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle out_bo8 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	int *host_out1 = (int*)xrtBOMap(out_bo1);
-	int *host_out2 = (int*)xrtBOMap(out_bo2);
-	int *host_out3 = (int*)xrtBOMap(out_bo3);
-	int *host_out4 = (int*)xrtBOMap(out_bo4);
-	int *host_out5 = (int*)xrtBOMap(out_bo5);
-	int *host_out6 = (int*)xrtBOMap(out_bo6);
-	int *host_out7 = (int*)xrtBOMap(out_bo7);
-	int *host_out8 = (int*)xrtBOMap(out_bo8);
+        int *host_out1 = (int*)xrtBOMap(out_bo1);
+        int *host_out2 = (int*)xrtBOMap(out_bo2);
+        int *host_out3 = (int*)xrtBOMap(out_bo3);
+        int *host_out4 = (int*)xrtBOMap(out_bo4);
+        int *host_out5 = (int*)xrtBOMap(out_bo5);
+        int *host_out6 = (int*)xrtBOMap(out_bo6);
 	
 	// input memory
 	xrtBufferHandle in_bo1 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
@@ -66,29 +62,23 @@ int main(int argc, char* argv[]) {
 	xrtBufferHandle in_bo4 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
 	xrtBufferHandle in_bo5 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
 	xrtBufferHandle in_bo6 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle in_bo7 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle in_bo8 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	int *host_in1 = (int*)xrtBOMap(in_bo1);
-	int *host_in2 = (int*)xrtBOMap(in_bo2);
-	int *host_in3 = (int*)xrtBOMap(in_bo3);
-	int *host_in4 = (int*)xrtBOMap(in_bo4);
-	int *host_in5 = (int*)xrtBOMap(in_bo5);
-	int *host_in6 = (int*)xrtBOMap(in_bo6);
-	int *host_in7 = (int*)xrtBOMap(in_bo7);
-	int *host_in8 = (int*)xrtBOMap(in_bo8);
+        int *host_in1 = (int*)xrtBOMap(in_bo1);
+        int *host_in2 = (int*)xrtBOMap(in_bo2);
+        int *host_in3 = (int*)xrtBOMap(in_bo3);
+        int *host_in4 = (int*)xrtBOMap(in_bo4);
+        int *host_in5 = (int*)xrtBOMap(in_bo5);
+        int *host_in6 = (int*)xrtBOMap(in_bo6);
 
 	std::cout<<" memory allocation complete"<<std::endl;
 	// initialize input memory
 	for(int i=0;i<mem_size/sizeof(int);i++){
-		*(host_in1+i)=i;
-		*(host_in2+i)=2*i;
-		*(host_in3+i)=3*i;
-		*(host_in4+i)=4*i;
-		*(host_in5+i)=5*i;
-		*(host_in6+i)=6*i;
-		*(host_in7+i)=7*i;
-		*(host_in8+i)=8*i;
-	}
+                *(host_in1+i)=i;
+                *(host_in2+i)=2*i;
+                *(host_in3+i)=3*i;
+                *(host_in4+i)=4*i;
+                *(host_in5+i)=5*i;
+                *(host_in6+i)=6*i;
+        }
 	
 	// start output kernels
 	xrtKernelHandle s2mm_k1 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_1}");
@@ -121,16 +111,6 @@ int main(int argc, char* argv[]) {
 	xrtRunSetArg(s2mm_r6, 0, out_bo6);
 	xrtRunSetArg(s2mm_r6, 2, mem_size/sizeof(int));
 	xrtRunStart(s2mm_r6);
-	xrtKernelHandle s2mm_k7 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_7}");
-	xrtRunHandle s2mm_r7 = xrtRunOpen(s2mm_k7);
-	xrtRunSetArg(s2mm_r7, 0, out_bo7);
-	xrtRunSetArg(s2mm_r7, 2, mem_size/sizeof(int));
-	xrtRunStart(s2mm_r7);
-	xrtKernelHandle s2mm_k8 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_8}");
-	xrtRunHandle s2mm_r8 = xrtRunOpen(s2mm_k8);
-	xrtRunSetArg(s2mm_r8, 0, out_bo8);
-	xrtRunSetArg(s2mm_r8, 2, mem_size/sizeof(int));
-	xrtRunStart(s2mm_r8);
 
 
 	xrtKernelHandle hls_packet_receiver_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver:{hls_packet_receiver_1}");
@@ -177,17 +157,7 @@ int main(int argc, char* argv[]) {
 	xrtRunSetArg(mm2s_r6, 0, in_bo6);
 	xrtRunSetArg(mm2s_r6, 2, mem_size/sizeof(int));
 	xrtRunStart(mm2s_r6);
-	xrtKernelHandle mm2s_k7 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_7}");
-	xrtRunHandle mm2s_r7 = xrtRunOpen(mm2s_k7);
-	xrtRunSetArg(mm2s_r7, 0, in_bo7);
-	xrtRunSetArg(mm2s_r7, 2, mem_size/sizeof(int));
-	xrtRunStart(mm2s_r7);
-	xrtKernelHandle mm2s_k8 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_8}");
-	xrtRunHandle mm2s_r8 = xrtRunOpen(mm2s_k8);
-	xrtRunSetArg(mm2s_r8, 0, in_bo8);
-	xrtRunSetArg(mm2s_r8, 2, mem_size/sizeof(int));
-	xrtRunStart(mm2s_r8);
-	xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
+        xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
 	xrtRunHandle hls_packet_sender_r = xrtRunOpen(hls_packet_sender_k);
 	xrtRunSetArg(hls_packet_sender_r, 5, packet_num);
 	xrtRunStart(hls_packet_sender_r);
@@ -205,8 +175,6 @@ int main(int argc, char* argv[]) {
         xrtRunWait(mm2s_r4);
         xrtRunWait(mm2s_r5);
         xrtRunWait(mm2s_r6);
-        xrtRunWait(mm2s_r7);
-        xrtRunWait(mm2s_r8);
         xrtRunWait(hls_packet_sender_r);
         xrtRunWait(s2mm_r1);
         xrtRunWait(s2mm_r2);
@@ -214,8 +182,6 @@ int main(int argc, char* argv[]) {
         xrtRunWait(s2mm_r4);
         xrtRunWait(s2mm_r5);
         xrtRunWait(s2mm_r6);
-        xrtRunWait(s2mm_r7);
-        xrtRunWait(s2mm_r8);
         xrtRunWait(hls_packet_receiver_r);
         xrtRunWait(hls_packet_receiver_r2);
         std::cout<<" run wait complete"<<std::endl;
@@ -246,14 +212,6 @@ int main(int argc, char* argv[]) {
                         match=1;
                         std::cout<<"host_out6["<<i<<"]="<<host_out6[i]<<std::endl;
                 }
-                if(*(host_out7+i)!=*(host_in7+i)+7){
-                        match=1;
-                        std::cout<<"host_out7["<<i<<"]="<<host_out7[i]<<std::endl;
-                }
-                if(*(host_out8+i)!=*(host_in8+i)+8){
-                        match=1;
-                        std::cout<<"host_out8["<<i<<"]="<<host_out8[i]<<std::endl;
-                }
         }
 
         // release memory
@@ -263,9 +221,7 @@ int main(int argc, char* argv[]) {
 	xrtRunClose(s2mm_r4);
 	xrtRunClose(s2mm_r5);
 	xrtRunClose(s2mm_r6);
-	xrtRunClose(s2mm_r7);
-	xrtRunClose(s2mm_r8);
-	xrtRunClose(hls_packet_receiver_r);
+        xrtRunClose(hls_packet_receiver_r);
 	xrtRunClose(hls_packet_receiver_r2);
 	xrtKernelClose(s2mm_k1);
 	xrtKernelClose(s2mm_k2);
@@ -273,9 +229,7 @@ int main(int argc, char* argv[]) {
 	xrtKernelClose(s2mm_k4);
 	xrtKernelClose(s2mm_k5);
 	xrtKernelClose(s2mm_k6);
-	xrtKernelClose(s2mm_k7);
-	xrtKernelClose(s2mm_k8);
-	xrtKernelClose(hls_packet_receiver_k);
+        xrtKernelClose(hls_packet_receiver_k);
 	xrtKernelClose(hls_packet_receiver_k2);
 	xrtRunClose(mm2s_r1);
 	xrtRunClose(mm2s_r2);
@@ -283,17 +237,13 @@ int main(int argc, char* argv[]) {
 	xrtRunClose(mm2s_r4);
 	xrtRunClose(mm2s_r5);
 	xrtRunClose(mm2s_r6);
-	xrtRunClose(mm2s_r7);
-	xrtRunClose(mm2s_r8);
-	xrtRunClose(hls_packet_sender_r);
+        xrtRunClose(hls_packet_sender_r);
 	xrtKernelClose(mm2s_k1);
 	xrtKernelClose(mm2s_k2);
 	xrtKernelClose(mm2s_k3);
 	xrtKernelClose(mm2s_k4);
 	xrtKernelClose(mm2s_k5);
 	xrtKernelClose(mm2s_k6);
-        xrtKernelClose(mm2s_k7);
-        xrtKernelClose(mm2s_k8);
         xrtKernelClose(hls_packet_sender_k);
         xrtBOFree(out_bo1);
         xrtBOFree(out_bo2);
@@ -301,16 +251,12 @@ int main(int argc, char* argv[]) {
         xrtBOFree(out_bo4);
         xrtBOFree(out_bo5);
         xrtBOFree(out_bo6);
-        xrtBOFree(out_bo7);
-        xrtBOFree(out_bo8);
         xrtBOFree(in_bo1);
         xrtBOFree(in_bo2);
         xrtBOFree(in_bo3);
         xrtBOFree(in_bo4);
         xrtBOFree(in_bo5);
         xrtBOFree(in_bo6);
-        xrtBOFree(in_bo7);
-        xrtBOFree(in_bo8);
         gr.end();
         xrtDeviceClose(dhdl);
 	
