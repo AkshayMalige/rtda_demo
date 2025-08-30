@@ -220,29 +220,45 @@ int main(int argc, char* argv[]) {
         xrtRunWait(hls_packet_receiver_r2);
         std::cout<<" run wait complete"<<std::endl;
 
-	// post-processing data;
-	for(int i=0;i<mem_size/sizeof(int);i++){	
-		if(*(host_out1+i)!=*(host_in1+i)+1){
-			match=1;
-			std::cout<<"host_out1["<<i<<"]="<<host_out1[i]<<std::endl;
-		}
-		if(*(host_out2+i)!=*(host_in2+i)+2){
-			match=1;
-			std::cout<<"host_out2["<<i<<"]="<<host_out2[i]<<std::endl;
-		}
-		if(*(host_out3+i)!=*(host_in3+i)+3){
-			match=1;
-			std::cout<<"host_out3["<<i<<"]="<<host_out3[i]<<std::endl;
-		}
-		if(*(host_out4+i)!=*(host_in4+i)+4){
-			match=1;
-			std::cout<<"host_out4["<<i<<"]="<<host_out4[i]<<std::endl;
-		}
-	}
+        // post-processing data;
+        for(int i=0;i<mem_size/sizeof(int);i++){
+                if(*(host_out1+i)!=*(host_in1+i)+1){
+                        match=1;
+                        std::cout<<"host_out1["<<i<<"]="<<host_out1[i]<<std::endl;
+                }
+                if(*(host_out2+i)!=*(host_in2+i)+2){
+                        match=1;
+                        std::cout<<"host_out2["<<i<<"]="<<host_out2[i]<<std::endl;
+                }
+                if(*(host_out3+i)!=*(host_in3+i)+3){
+                        match=1;
+                        std::cout<<"host_out3["<<i<<"]="<<host_out3[i]<<std::endl;
+                }
+                if(*(host_out4+i)!=*(host_in4+i)+4){
+                        match=1;
+                        std::cout<<"host_out4["<<i<<"]="<<host_out4[i]<<std::endl;
+                }
+                if(*(host_out5+i)!=*(host_in5+i)+5){
+                        match=1;
+                        std::cout<<"host_out5["<<i<<"]="<<host_out5[i]<<std::endl;
+                }
+                if(*(host_out6+i)!=*(host_in6+i)+6){
+                        match=1;
+                        std::cout<<"host_out6["<<i<<"]="<<host_out6[i]<<std::endl;
+                }
+                if(*(host_out7+i)!=*(host_in7+i)+7){
+                        match=1;
+                        std::cout<<"host_out7["<<i<<"]="<<host_out7[i]<<std::endl;
+                }
+                if(*(host_out8+i)!=*(host_in8+i)+8){
+                        match=1;
+                        std::cout<<"host_out8["<<i<<"]="<<host_out8[i]<<std::endl;
+                }
+        }
 
-	// release memory
-	xrtRunClose(s2mm_r1);
-	xrtRunClose(s2mm_r2);
+        // release memory
+        xrtRunClose(s2mm_r1);
+        xrtRunClose(s2mm_r2);
 	xrtRunClose(s2mm_r3);
 	xrtRunClose(s2mm_r4);
 	xrtRunClose(s2mm_r5);
@@ -276,19 +292,27 @@ int main(int argc, char* argv[]) {
 	xrtKernelClose(mm2s_k4);
 	xrtKernelClose(mm2s_k5);
 	xrtKernelClose(mm2s_k6);
-	xrtKernelClose(mm2s_k7);
-	xrtKernelClose(mm2s_k8);
-	xrtKernelClose(hls_packet_sender_k);
-	xrtBOFree(out_bo1);
-	xrtBOFree(out_bo2);
-	xrtBOFree(out_bo3);
-	xrtBOFree(out_bo4);
-	xrtBOFree(in_bo1);
-	xrtBOFree(in_bo2);
-	xrtBOFree(in_bo3);
-	xrtBOFree(in_bo4);
-	gr.end();
-	xrtDeviceClose(dhdl);
+        xrtKernelClose(mm2s_k7);
+        xrtKernelClose(mm2s_k8);
+        xrtKernelClose(hls_packet_sender_k);
+        xrtBOFree(out_bo1);
+        xrtBOFree(out_bo2);
+        xrtBOFree(out_bo3);
+        xrtBOFree(out_bo4);
+        xrtBOFree(out_bo5);
+        xrtBOFree(out_bo6);
+        xrtBOFree(out_bo7);
+        xrtBOFree(out_bo8);
+        xrtBOFree(in_bo1);
+        xrtBOFree(in_bo2);
+        xrtBOFree(in_bo3);
+        xrtBOFree(in_bo4);
+        xrtBOFree(in_bo5);
+        xrtBOFree(in_bo6);
+        xrtBOFree(in_bo7);
+        xrtBOFree(in_bo8);
+        gr.end();
+        xrtDeviceClose(dhdl);
 	
 	std::cout << "TEST " << (match ? "FAILED" : "PASSED") << std::endl; 
 	return (match ? EXIT_FAILURE :  EXIT_SUCCESS);
