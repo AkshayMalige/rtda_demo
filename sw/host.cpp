@@ -63,10 +63,18 @@ int main(int argc, char* argv[]) {
 	xrtBufferHandle in_bo2 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
 	xrtBufferHandle in_bo3 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
 	xrtBufferHandle in_bo4 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
+	xrtBufferHandle in_bo5 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
+	xrtBufferHandle in_bo6 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
+	xrtBufferHandle in_bo7 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
+	xrtBufferHandle in_bo8 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
 	int *host_in1 = (int*)xrtBOMap(in_bo1);
 	int *host_in2 = (int*)xrtBOMap(in_bo2);
 	int *host_in3 = (int*)xrtBOMap(in_bo3);
 	int *host_in4 = (int*)xrtBOMap(in_bo4);
+	int *host_in5 = (int*)xrtBOMap(in_bo5);
+	int *host_in6 = (int*)xrtBOMap(in_bo6);
+	int *host_in7 = (int*)xrtBOMap(in_bo7);
+	int *host_in8 = (int*)xrtBOMap(in_bo8);
 
 	std::cout<<" memory allocation complete"<<std::endl;
 	// initialize input memory
@@ -75,6 +83,10 @@ int main(int argc, char* argv[]) {
 		*(host_in2+i)=2*i;
 		*(host_in3+i)=3*i;
 		*(host_in4+i)=4*i;
+		*(host_in5+i)=5*i;
+		*(host_in6+i)=6*i;
+		*(host_in7+i)=7*i;
+		*(host_in8+i)=8*i;
 	}
 	
 	// start output kernels
