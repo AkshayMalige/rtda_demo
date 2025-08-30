@@ -120,9 +120,9 @@ int main(int argc, char* argv[]) {
 	std::cout<<" output kernel complete"<<std::endl;
 
 	xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
-	xrtRunHandle hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
-        xrtRunSetArg(hls_packet_receiver_r2, 5, total_packet_num2); // six packets per iteration
-	xrtRunStart(hls_packet_receiver_r2);
+        xrtRunHandle hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
+        xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // six packets per iteration
+        xrtRunStart(hls_packet_receiver_r2);
 	std::cout<<" output kernel2 complete"<<std::endl;
 
 	// start input kernels
@@ -169,20 +169,35 @@ int main(int argc, char* argv[]) {
         std::cout<<" graph run complete"<<std::endl;
 
         // wait for all runs to complete
+        std::cout << "waiting for mm2s_r1" << std::endl;
         xrtRunWait(mm2s_r1);
+        std::cout << "waiting for mm2s_r2" << std::endl;
         xrtRunWait(mm2s_r2);
+        std::cout << "waiting for mm2s_r3" << std::endl;
         xrtRunWait(mm2s_r3);
+        std::cout << "waiting for mm2s_r4" << std::endl;
         xrtRunWait(mm2s_r4);
+        std::cout << "waiting for mm2s_r5" << std::endl;
         xrtRunWait(mm2s_r5);
+        std::cout << "waiting for mm2s_r6" << std::endl;
         xrtRunWait(mm2s_r6);
+        std::cout << "waiting for hls_packet_sender_r" << std::endl;
         xrtRunWait(hls_packet_sender_r);
+        std::cout << "waiting for s2mm_r1" << std::endl;
         xrtRunWait(s2mm_r1);
+        std::cout << "waiting for s2mm_r2" << std::endl;
         xrtRunWait(s2mm_r2);
+        std::cout << "waiting for s2mm_r3" << std::endl;
         xrtRunWait(s2mm_r3);
+        std::cout << "waiting for s2mm_r4" << std::endl;
         xrtRunWait(s2mm_r4);
+        std::cout << "waiting for s2mm_r5" << std::endl;
         xrtRunWait(s2mm_r5);
+        std::cout << "waiting for s2mm_r6" << std::endl;
         xrtRunWait(s2mm_r6);
+        std::cout << "waiting for hls_packet_receiver_r" << std::endl;
         xrtRunWait(hls_packet_receiver_r);
+        std::cout << "waiting for hls_packet_receiver_r2" << std::endl;
         xrtRunWait(hls_packet_receiver_r2);
         std::cout<<" run wait complete"<<std::endl;
 
