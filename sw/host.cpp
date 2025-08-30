@@ -169,20 +169,35 @@ int main(int argc, char* argv[]) {
         std::cout<<" graph run complete"<<std::endl;
 
         // wait for all runs to complete
+        std::cout << "waiting for mm2s_r1" << std::endl;
         xrtRunWait(mm2s_r1);
+        std::cout << "waiting for mm2s_r2" << std::endl;
         xrtRunWait(mm2s_r2);
+        std::cout << "waiting for mm2s_r3" << std::endl;
         xrtRunWait(mm2s_r3);
+        std::cout << "waiting for mm2s_r4" << std::endl;
         xrtRunWait(mm2s_r4);
+        std::cout << "waiting for mm2s_r5" << std::endl;
         xrtRunWait(mm2s_r5);
+        std::cout << "waiting for mm2s_r6" << std::endl;
         xrtRunWait(mm2s_r6);
+        std::cout << "waiting for hls_packet_sender_r" << std::endl;
         xrtRunWait(hls_packet_sender_r);
+        std::cout << "waiting for s2mm_r1" << std::endl;
         xrtRunWait(s2mm_r1);
+        std::cout << "waiting for s2mm_r2" << std::endl;
         xrtRunWait(s2mm_r2);
+        std::cout << "waiting for s2mm_r3" << std::endl;
         xrtRunWait(s2mm_r3);
+        std::cout << "waiting for s2mm_r4" << std::endl;
         xrtRunWait(s2mm_r4);
+        std::cout << "waiting for s2mm_r5" << std::endl;
         xrtRunWait(s2mm_r5);
+        std::cout << "waiting for s2mm_r6" << std::endl;
         xrtRunWait(s2mm_r6);
+        std::cout << "waiting for hls_packet_receiver_r" << std::endl;
         xrtRunWait(hls_packet_receiver_r);
+        std::cout << "waiting for hls_packet_receiver_r2" << std::endl;
         xrtRunWait(hls_packet_receiver_r2);
         std::cout<<" run wait complete"<<std::endl;
 
