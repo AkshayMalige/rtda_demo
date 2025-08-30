@@ -33,6 +33,10 @@ void hls_packet_sender(
     hls::stream<ap_axiu<32, 0, 0, 0>>& s1,
     hls::stream<ap_axiu<32, 0, 0, 0>>& s2,
     hls::stream<ap_axiu<32, 0, 0, 0>>& s3,
+	hls::stream<ap_axiu<32, 0, 0, 0>>& s4,
+    hls::stream<ap_axiu<32, 0, 0, 0>>& s5,
+    hls::stream<ap_axiu<32, 0, 0, 0>>& s6,
+    hls::stream<ap_axiu<32, 0, 0, 0>>& s7,
     hls::stream<ap_axiu<32, 0, 0, 0>>& out,    // Stream to AI Engine
     hls::stream<ap_axiu<32, 0, 0, 0>>& plout,  // Stream to packet_receiver2
     const unsigned int num) {
@@ -64,10 +68,10 @@ void hls_packet_sender(
                     case 1: data_pkt = s1.read(); break;
                     case 2: data_pkt = s2.read(); break;
                     case 3: data_pkt = s3.read(); break;
-                    case 4: data_pkt = s0.read(); break;
-                    case 5: data_pkt = s1.read(); break;
-                    case 6: data_pkt = s2.read(); break;
-                    case 7: data_pkt = s3.read(); break;
+                    case 4: data_pkt = s4.read(); break;
+                    case 5: data_pkt = s5.read(); break;
+                    case 6: data_pkt = s6.read(); break;
+                    case 7: data_pkt = s7.read(); break;
                 }
 
                 if (j == PACKET_LEN - 1) {
