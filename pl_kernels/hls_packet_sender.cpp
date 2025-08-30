@@ -8,11 +8,11 @@ SPDX-License-Identifier: MIT
 #include "packet_ids_c.h"
 
 static const unsigned int pktType = 0;
-static const int PACKET_NUM = 8; // How many kernels do packet switching
+static const int PACKET_NUM = 6; // How many kernels do packet switching
 static const int PACKET_LEN = 8; // Length for a packet
 
 // Macro values are generated in packet_ids_c.h
-static const unsigned int packet_ids[PACKET_NUM] = {Datain0_0, Datain0_1, Datain0_2, Datain0_3, 4, 5, 6, 7};
+static const unsigned int packet_ids[PACKET_NUM] = {Datain0_0, Datain0_1, Datain0_2, Datain0_3, 4, 5};
 
 ap_uint<32> generateHeader(unsigned int pktType, unsigned int ID) {
 #pragma HLS inline
@@ -35,8 +35,6 @@ void hls_packet_sender(
     hls::stream<ap_axiu<32, 0, 0, 0>>& s3,
 	hls::stream<ap_axiu<32, 0, 0, 0>>& s4,
     hls::stream<ap_axiu<32, 0, 0, 0>>& s5,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& s6,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& s7,
     hls::stream<ap_axiu<32, 0, 0, 0>>& out,    // Stream to AI Engine
     hls::stream<ap_axiu<32, 0, 0, 0>>& plout,  // Stream to packet_receiver2
     const unsigned int num) {
@@ -70,8 +68,6 @@ void hls_packet_sender(
                     case 3: data_pkt = s3.read(); break;
                     case 4: data_pkt = s4.read(); break;
                     case 5: data_pkt = s5.read(); break;
-                    case 6: data_pkt = s6.read(); break;
-                    case 7: data_pkt = s7.read(); break;
                 }
 
                 if (j == PACKET_LEN - 1) {
