@@ -120,9 +120,9 @@ int main(int argc, char* argv[]) {
 	std::cout<<" output kernel complete"<<std::endl;
 
 	xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
-	xrtRunHandle hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
-        xrtRunSetArg(hls_packet_receiver_r2, 5, total_packet_num2); // six packets per iteration
-	xrtRunStart(hls_packet_receiver_r2);
+        xrtRunHandle hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
+        xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // six packets per iteration
+        xrtRunStart(hls_packet_receiver_r2);
 	std::cout<<" output kernel2 complete"<<std::endl;
 
 	// start input kernels
