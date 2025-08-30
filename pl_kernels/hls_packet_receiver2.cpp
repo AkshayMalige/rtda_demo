@@ -7,10 +7,10 @@ SPDX-License-Identifier: MIT
 #include "ap_axi_sdata.h"
 #include "packet_ids_c.h"
 
-static const int PACKET_NUM=4;
+static const int PACKET_NUM=2;
 static const int PACKET_LEN=8;
 
-static const unsigned int packet_ids[PACKET_NUM]={4,5,6,7};
+static const unsigned int packet_ids[PACKET_NUM]={4,5};
 
 unsigned int getPacketId(ap_uint<32> header){
 #pragma HLS inline
@@ -19,7 +19,7 @@ unsigned int getPacketId(ap_uint<32> header){
 	return ID;
 }
 
-void hls_packet_receiver2(hls::stream<ap_axiu<32,0,0,0>> &in, hls::stream<ap_axiu<32,0,0,0>> &out0,hls::stream<ap_axiu<32,0,0,0>> &out1,hls::stream<ap_axiu<32,0,0,0>> &out2,hls::stream<ap_axiu<32,0,0,0>> &out3,
+void hls_packet_receiver2(hls::stream<ap_axiu<32,0,0,0>> &in, hls::stream<ap_axiu<32,0,0,0>> &out0,hls::stream<ap_axiu<32,0,0,0>> &out1,
 	const unsigned int total_num_packet){
 	for(unsigned int iter=0;iter<total_num_packet;iter++){
 		ap_axiu<32,0,0,0> tmp=in.read();//first word is packet header
@@ -30,8 +30,6 @@ void hls_packet_receiver2(hls::stream<ap_axiu<32,0,0,0>> &in, hls::stream<ap_axi
 			switch(channel){
 			case 4:out0.write(tmp);break;
 			case 5:out1.write(tmp);break;
-			case 6:out2.write(tmp);break;
-			case 7:out3.write(tmp);break;
 			}
 		}
 	}
