@@ -53,9 +53,15 @@ void hls_packet_sender(
             header_pkt.keep = -1;
             header_pkt.last = 0;
 
-            // Write header to both outputs
-            out.write(header_pkt);
+            // Write header to PL first so that PL kernels
+            // receive data even if the AI Engine back-pressures
+            // the sender. Packets with IDs 4 and 5 are meant only
+            // for the PL, so avoid writing them to the AI Engine
+            // output stream.
             plout.write(header_pkt);
+            if (i < 4) {
+                out.write(header_pkt);
+            }
 
             for (int j = 0; j < PACKET_LEN; j++) { // packet data
                 ap_axiu<32, 0, 0, 0> data_pkt;
@@ -76,9 +82,13 @@ void hls_packet_sender(
                     data_pkt.last = 0;
                 }
 
-                // 2. Write the SAME data to both output streams
-                out.write(data_pkt);
+                // 2. Write the data to PL first; only the first
+                // four packet IDs are forwarded to the AI Engine
+                // to match the pktsplit<4> configuration in the AIE graph.
                 plout.write(data_pkt);
+                if (i < 4) {
+                    out.write(data_pkt);
+                }
             }
         }
     }
