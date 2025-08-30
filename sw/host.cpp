@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
 	xrtRunStart(mm2s_r6);
         xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
 	xrtRunHandle hls_packet_sender_r = xrtRunOpen(hls_packet_sender_k);
-	xrtRunSetArg(hls_packet_sender_r, 5, packet_num);
+        xrtRunSetArg(hls_packet_sender_r, 8, packet_num);
 	xrtRunStart(hls_packet_sender_r);
 	std::cout<<" input kernel complete"<<std::endl;
 
