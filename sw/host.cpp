@@ -18,7 +18,7 @@ using namespace std;
 int main(int argc, char* argv[]) {
         int packet_num=2;
         int total_packet_num=packet_num*4;
-        int total_packet_num2=packet_num*8;
+        int total_packet_num2=packet_num*6; // six packets per iteration
         int mem_size=packet_num*32;
 
 	if(argc != 2) {
@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
 
 	xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
 	xrtRunHandle hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
-        xrtRunSetArg(hls_packet_receiver_r2, 5, total_packet_num2);
+        xrtRunSetArg(hls_packet_receiver_r2, 5, total_packet_num2); // six packets per iteration
 	xrtRunStart(hls_packet_receiver_r2);
 	std::cout<<" output kernel2 complete"<<std::endl;
 
