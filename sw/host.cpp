@@ -194,20 +194,31 @@ int main(int argc, char* argv[]) {
 	std::cout<<" input kernel complete"<<std::endl;
 
 	// start graph
-	adf::registerXRT(dhdl, uuid);
-	gr.run(2);
-	std::cout<<" graph run complete"<<std::endl;
+        adf::registerXRT(dhdl, uuid);
+        gr.run(2);
+        std::cout<<" graph run complete"<<std::endl;
 
-	// wait for s2mm to complete
-	xrtRunWait(s2mm_r1);
-	xrtRunWait(s2mm_r2);
-	xrtRunWait(s2mm_r3);
-	xrtRunWait(s2mm_r4);
-	xrtRunWait(s2mm_r5);
-	xrtRunWait(s2mm_r6);
-	xrtRunWait(s2mm_r7);
-	xrtRunWait(s2mm_r8);
-	std::cout<<" s2mm wait complete"<<std::endl;
+        // wait for all runs to complete
+        xrtRunWait(mm2s_r1);
+        xrtRunWait(mm2s_r2);
+        xrtRunWait(mm2s_r3);
+        xrtRunWait(mm2s_r4);
+        xrtRunWait(mm2s_r5);
+        xrtRunWait(mm2s_r6);
+        xrtRunWait(mm2s_r7);
+        xrtRunWait(mm2s_r8);
+        xrtRunWait(hls_packet_sender_r);
+        xrtRunWait(s2mm_r1);
+        xrtRunWait(s2mm_r2);
+        xrtRunWait(s2mm_r3);
+        xrtRunWait(s2mm_r4);
+        xrtRunWait(s2mm_r5);
+        xrtRunWait(s2mm_r6);
+        xrtRunWait(s2mm_r7);
+        xrtRunWait(s2mm_r8);
+        xrtRunWait(hls_packet_receiver_r);
+        xrtRunWait(hls_packet_receiver_r2);
+        std::cout<<" run wait complete"<<std::endl;
 
 	// post-processing data;
 	for(int i=0;i<mem_size/sizeof(int);i++){	
