@@ -219,11 +219,11 @@ int main(int argc, char* argv[]) {
                         match=1;
                         std::cout<<"host_out4["<<i<<"]="<<host_out4[i]<<std::endl;
                 }
-                if(*(host_out5+i)!=*(host_in5+i)+5){
+                if(*(host_out5+i)!=*(host_in5+i)){
                         match=1;
                         std::cout<<"host_out5["<<i<<"]="<<host_out5[i]<<std::endl;
                 }
-                if(*(host_out6+i)!=*(host_in6+i)+6){
+                if(*(host_out6+i)!=*(host_in6+i)){
                         match=1;
                         std::cout<<"host_out6["<<i<<"]="<<host_out6[i]<<std::endl;
                 }
