@@ -14,6 +14,6 @@ items:
   - { label: "Component simulations", percent: 100, note: "HLS C-sim/aiesim/hw_emu validated per-block" }
   - { label: "Full-system bring-up (VEK280)", percent: 0.60, note: "Full system link, package" }
   - { label: "Validation & benchmarking", percent: 0.30, note: "Latency/II/power/accuracy sweeps pending" }
-  - { label: "Explore other acritectures", percent: null, note: "Reduced precision, data shuffling, GMEM" }
+  - { label: "Precision Tuning", percent: null, note: "Reduced precision, data shuffling, GMEM" }
   - { label: "Reduced precision (fp32→fp16/fixed)", percent: null, note: "TBD" }
   - { label: "Dosumentation for community", percent: null, note: "TBD" }

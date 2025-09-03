@@ -6,6 +6,9 @@ Poster Progress Bar (PNG + SVG)
 - Placeholders: use percent = null / NA / - to render hatched bars with "—"
 - Palette defaults match your poster (AIE/PL/PS scheme-friendly)
 
+Basic usage:
+  python tools/poster_progress.py --config progress.yaml
+
 Usage examples:
   python tools/poster_progress.py --config progress.yaml --out-prefix assets/status
   python tools/poster_progress.py --title "Project Status — {date}" \
