@@ -1,0 +1,19 @@
+title: "Project Status — "
+accent_fill: "#00B4D8"
+bar_bg: "#E6E6E6"
+bar_stroke: "#CCCCCC"
+text_color: "#1C1C1C"
+subtitle_color: "#3A3A3A"
+
+items:
+  - { label: "ML model & datasets", percent: 0.80, note: "Subset-solver MLP trained; winners selected" }
+  - { label: "ONNX partitioning & optimizations", percent: 0.75, note: "Embed/solver/output blocks split; " }
+  - { label: "AIE-ML dense kernels", percent: 100, note: "8×128, 128×128 cascades; aiesim throughput" }
+  - { label: "PL kernels & packetization", percent: 100, note: "LeakyReLU, mm2s/s2mm, demux/switch implemented" }
+  - { label: "PS/host orchestration", percent: 0.55, note: "Weight pre-load & control path operational" }
+  - { label: "Component simulations", percent: 100, note: "HLS C-sim/aiesim/hw_emu validated per-block" }
+  - { label: "Full-system bring-up (VEK280)", percent: 0.60, note: "Full system link, package" }
+  - { label: "Validation & benchmarking", percent: 0.30, note: "Latency/II/power/accuracy sweeps pending" }
+  - { label: "Explore other acritectures", percent: null, note: "Reduced precision, data shuffling, GMEM" }
+  - { label: "Reduced precision (fp32→fp16/fixed)", percent: null, note: "TBD" }
+  - { label: "Dosumentation for community", percent: null, note: "TBD" }
