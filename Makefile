@@ -30,7 +30,7 @@ EMU_CMD = ./launch_hw_emu.sh
 ################################################################################################################################################
 
 
-XOS      = $(subst .cpp,.xo,$(wildcard pl_kernels/*.cpp)) 
+XOS      = $(subst .cpp,.xo,$(wildcard pl/*.cpp)) 
 VCC      = v++
 VPP_SPEC =system.cfg
 VPP_FLAGS=--save-temps --verbose --config ${VPP_SPEC}  
@@ -83,7 +83,7 @@ ${XSA}: ${LIBADF} ${VPP_SPEC} ${XOS}
 
 kernels: guard-PLATFORM_REPO_PATHS ${XOS}
 ${XOS}: 
-	$(MAKE) -C pl_kernels/ PLATFORM=${PLATFORM}
+	$(MAKE) -C pl/ PLATFORM=${PLATFORM}
 	
 host: guard-CXX guard-SDKTARGETSYSROOT ${HOST_EXE}
 ${HOST_EXE}: sw/*.cpp
@@ -111,5 +111,5 @@ clean:
 	       ilpProblem* sol.db drivers .Xil aiesimu* x86simu* $(PKG_DIR) build_* *.xclbin *.xsa *.log \
 		    sd_card launch_hw_emu.sh *.link_summary *.package_summary _x .Xil _ide sim cfg emu_qemu_scripts
 
-	$(MAKE) -C pl_kernels clean
+	$(MAKE) -C pl clean
 	$(MAKE) -C sw clean
