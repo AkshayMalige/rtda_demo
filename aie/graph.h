@@ -38,5 +38,11 @@ public:
 
     adf::connect<adf::pktstream> (in.out[0], sp.in[0]);
     adf::connect<adf::pktstream> (mg.out[0], out.in[0]);
+
+
+    adf::location<adf::kernel>(core[0]) = adf::tile(0, 1);
+    adf::location<adf::kernel>(core[1]) = adf::tile(1, 0);
+    adf::location<adf::kernel>(core[2]) = adf::tile(1, 1);
+    adf::location<adf::kernel>(core[3]) = adf::tile(1, 2);
   }
 };
