@@ -7,12 +7,9 @@ SPDX-License-Identifier: MIT
 #include <iostream>
 #include <unistd.h>
 #include <complex>
-#include "adf/adf_api/XRTConfig.h"
+#include "experimental/xrt_graph.h"
 #include "experimental/xrt_kernel.h"
 
-#include "graph.cpp"
-
-using namespace adf;
 using namespace std;
 
 int main(int argc, char* argv[]) {
@@ -163,9 +160,13 @@ int main(int argc, char* argv[]) {
 	xrtRunStart(hls_packet_sender_r);
 	std::cout<<" input kernel complete"<<std::endl;
 
-	// start graph
-        adf::registerXRT(dhdl, uuid);
-        gr.run(2);
+        // start graph
+        auto graph = xrtGraphOpen(dhdl, uuid, "mygraph");
+        if(!graph){
+                std::cerr << "Failed to open graph mygraph" << std::endl;
+                return EXIT_FAILURE;
+        }
+        xrtGraphRun(graph, 2);
         std::cout<<" graph run complete"<<std::endl;
 
         // wait for all runs to complete
@@ -278,7 +279,9 @@ int main(int argc, char* argv[]) {
         xrtBOFree(in_bo4);
         xrtBOFree(in_bo5);
         xrtBOFree(in_bo6);
-        gr.end();
+        xrtGraphWait(graph, 0);
+        xrtGraphEnd(graph);
+        xrtGraphClose(graph);
         xrtDeviceClose(dhdl);
 	
 	std::cout << "TEST " << (match ? "FAILED" : "PASSED") << std::endl; 
