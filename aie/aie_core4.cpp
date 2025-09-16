@@ -4,17 +4,13 @@ SPDX-License-Identifier: MIT
 */
 #include <aie_api/aie.hpp>
 #include <aie_api/aie_adf.hpp>
-const uint32 pktType=0;
-
 void aie_core4(input_pktstream *in,output_pktstream *out){
-	readincr(in);//read header and discard
-	uint32 ID=getPacketid(out,0);//for output pktstream
-	writeHeader(out,pktType,ID); //Generate header for output
+        uint32 header = readincr(in);
+        writeincr(out, header, false);
 
-	bool tlast;
-	for(int i=0;i<8;i++){
-		int32 tmp=readincr(in,tlast);
-		tmp+=4;
-		writeincr(out,tmp,i==7);//TLAST=1 for last word
-	}
+        bool tlast;
+        for(int i=0;i<8;i++){
+                int32 tmp=readincr(in,tlast);
+                writeincr(out,tmp,tlast);//Preserve TLAST from input
+        }
 }
