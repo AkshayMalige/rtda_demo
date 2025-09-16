@@ -203,29 +203,35 @@ int main(int argc, char* argv[]) {
 
         // post-processing data;
         for(int i=0;i<mem_size/sizeof(int);i++){
-                if(*(host_out1+i)!=*(host_in1+i)+1){
+                if(*(host_out1+i)!=*(host_in1+i)){
                         match=1;
-                        std::cout<<"host_out1["<<i<<"]="<<host_out1[i]<<std::endl;
+                        std::cout<<"Mismatch host_out1["<<i<<"]="<<host_out1[i]
+                                 <<" expected "<<host_in1[i]<<std::endl;
                 }
-                if(*(host_out2+i)!=*(host_in2+i)+2){
+                if(*(host_out2+i)!=*(host_in2+i)){
                         match=1;
-                        std::cout<<"host_out2["<<i<<"]="<<host_out2[i]<<std::endl;
+                        std::cout<<"Mismatch host_out2["<<i<<"]="<<host_out2[i]
+                                 <<" expected "<<host_in2[i]<<std::endl;
                 }
-                if(*(host_out3+i)!=*(host_in3+i)+3){
+                if(*(host_out3+i)!=*(host_in3+i)){
                         match=1;
-                        std::cout<<"host_out3["<<i<<"]="<<host_out3[i]<<std::endl;
+                        std::cout<<"Mismatch host_out3["<<i<<"]="<<host_out3[i]
+                                 <<" expected "<<host_in3[i]<<std::endl;
                 }
-                if(*(host_out4+i)!=*(host_in4+i)+4){
+                if(*(host_out4+i)!=*(host_in4+i)){
                         match=1;
-                        std::cout<<"host_out4["<<i<<"]="<<host_out4[i]<<std::endl;
+                        std::cout<<"Mismatch host_out4["<<i<<"]="<<host_out4[i]
+                                 <<" expected "<<host_in4[i]<<std::endl;
                 }
                 if(*(host_out5+i)!=*(host_in5+i)){
                         match=1;
-                        std::cout<<"host_out5["<<i<<"]="<<host_out5[i]<<std::endl;
+                        std::cout<<"Mismatch host_out5["<<i<<"]="<<host_out5[i]
+                                 <<" expected "<<host_in5[i]<<std::endl;
                 }
                 if(*(host_out6+i)!=*(host_in6+i)){
                         match=1;
-                        std::cout<<"host_out6["<<i<<"]="<<host_out6[i]<<std::endl;
+                        std::cout<<"Mismatch host_out6["<<i<<"]="<<host_out6[i]
+                                 <<" expected "<<host_in6[i]<<std::endl;
                 }
         }
 
