@@ -41,7 +41,8 @@ POST_BOOT := post_boot.sh
 XO_DIR    := pl/ip
 AIE_DIR   := $(GRAPH)
 
-AIE_LIB   := $(AIE_DIR)/libadf.a
+# AIE_LIB   := $(AIE_DIR)/libadf.a
+AIE_LIB   := aieml/libadf.a aieml2/libadf.a aieml3/libadf.a
 PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
 
 XSA       := design_$(GRAPH)_$(TARGET).xsa
@@ -116,7 +117,7 @@ $(XSA): $(AIE_LIB) $(PL_XOS) $(LINK_CFG)
 	@echo "    PL_XOS   = $(PL_XOS)"
 	@echo "    AIE_LIB  = $(AIE_LIB)"
 	@echo "    LINK_CFG = $(LINK_CFG)"
-	v++ --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
+	v++ -g --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
 		$(PL_XOS) $(AIE_LIB) -o $@
 	@echo "✅ Linked design: $@"
 
