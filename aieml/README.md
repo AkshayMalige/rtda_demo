@@ -19,20 +19,28 @@ programmable logic. Later stages are implemented in
 
 ## Build
 
-The supplied `Makefile` wraps the standard build flow. From the repository
-root, compile the graph with:
+The supplied `Makefile` wraps the standard build flow (now using `v++` so the
+`aie.cfg` partition directives take effect). From the repository root, compile
+the graph with:
 
 ```bash
 cd aieml
-make graph TARGET=hw       # or TARGET=x86sim
+make graph TARGET=hw       # or TARGET=hw_emu
 ```
 
 To invoke the compiler directly without the wrapper:
 
 ```bash
 cd aieml
-v++ --compile --mode aie --target hw ./graph.cpp \
-    --platform=${PLATFORM} -I./data
+v++ -c --mode aie --target hw graph.cpp \
+    --platform=${PLATFORM} \
+    --work_dir=Work \
+    --config=aie.cfg \
+    --include="./" \
+    --include="../common" \
+    --include="${DSPLIB_PATH}/L1/src/aie" \
+    --include="${DSPLIB_PATH}/L1/include/aie" \
+    --include="${DSPLIB_PATH}/L2/include/aie"
 ```
 
 Both commands produce `Work/libadf.a` inside this directory.
@@ -42,7 +50,7 @@ Both commands produce `Work/libadf.a` inside this directory.
 After a successful build, run cycle-approximate simulation:
 
 ```bash
-make sim TARGET=hw        # uses `aiesimulator` under the hood
+make sim                  # uses `aiesimulator` under the hood
 # or run manually
 # aiesimulator --pkg-dir=Work --profile --dump-vcd=foo
 ```
