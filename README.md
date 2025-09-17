@@ -21,3 +21,8 @@ Using the packet receiver (`pktsplit`) and packet sender (`pktmerge`) pattern sh
 ### Packet sender connections
 
 The `packet_sender` in this reference design fans out its output to two destinations. One path connects to a PLIO inside an AI Engine tile, supplying weights and runtime data directly to the kernels. The second path exits the AI Engine to the programmable logic, where external logic such as a `leaky_relu` bias stream in the main branch can consume the same packets. This dual-output arrangement forms the border between the AI Engine graph and the surrounding PL system, allowing shared data distribution to both internal tiles and PL-side modules.
+
+## Host execution
+
+The provided host application streams floating-point payloads into six PLIO channels (four AI Engine interfaces plus two PL paths) and verifies that the returned data matches bit-for-bit. Each channel expects `packet_num * PACKET_LEN` floats; by default the design sets `packet_num = 2` and `PACKET_LEN = 8`, so 16 values per channel and 96 values total. The file `data/embed_input.txt` supplies sample stimulus data and may contain one value per line or any whitespace-separated list of numbers. When exactly `packet_num * PACKET_LEN` values are provided, the host duplicates the payload across all six channels before checking the responses. Supplying `channel_count * packet_num * PACKET_LEN` values (96 by default) allows distinct data to be exercised on each interface if desired.
+
