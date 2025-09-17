@@ -9,8 +9,8 @@ void aie_core4(input_pktstream *in,output_pktstream *out){
         writeincr(out, header, false);
 
         bool tlast;
-        for(int i=0;i<8;i++){
+        do {
                 int32 tmp=readincr(in,tlast);
                 writeincr(out,tmp,tlast);//Preserve TLAST from input
-        }
+        } while(!tlast);
 }
