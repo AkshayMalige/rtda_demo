@@ -219,7 +219,7 @@ int main(int argc, char* argv[]) {
 	std::cout<<" input kernel complete"<<std::endl;
 
         // start graph
-        auto graph = xrtGraphOpen(dhdl, uuid, "mygraph");
+        auto graph = xrtGraphOpen(dhdl, uuid, "gr");
         if(!graph){
                 std::cerr << "Failed to open graph mygraph" << std::endl;
                 return EXIT_FAILURE;
