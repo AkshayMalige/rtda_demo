@@ -21,18 +21,35 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
         constexpr int channel_count = 6;
-        int packet_num=2;
-        int total_packet_num=packet_num*4;
-        int total_packet_num2=packet_num*channel_count; // six packets per iteration
-        int mem_size=packet_num*32;
+        constexpr unsigned int PACKET_LEN = 8;
+        // Per-channel word counts (packet IDs 0-5). Shorter channels validate TLAST-driven termination.
+        const std::array<unsigned int, channel_count> channel_words = {16, 13, 5, 8, 16, 6};
 
-        if(mem_size % sizeof(float) != 0) {
-                std::cerr << "Buffer size " << mem_size
-                          << " is not aligned to 32-bit floats" << std::endl;
-                return EXIT_FAILURE;
+        auto packets_for_words = [](unsigned int words) -> unsigned int {
+                return (words + PACKET_LEN - 1) / PACKET_LEN;
+        };
+
+        // Use the largest packet requirement so the sender can drain every channel without
+        // hitting the max_packets_per_channel ceiling.
+        unsigned int max_packets_per_channel = 0;
+        for (unsigned int words : channel_words) {
+                unsigned int channel_packets = packets_for_words(words);
+                if (channel_packets > max_packets_per_channel) {
+                        max_packets_per_channel = channel_packets;
+                }
         }
 
-        int words_per_channel = mem_size/sizeof(float);
+        unsigned int total_packets_ai = 0;
+        for (int idx = 0; idx < 4; ++idx) {
+                total_packets_ai += packets_for_words(channel_words[idx]);
+        }
+
+        unsigned int total_packets_pl = 0;
+        for (int idx = 4; idx < channel_count; ++idx) {
+                total_packets_pl += packets_for_words(channel_words[idx]);
+        }
+
+        const std::size_t max_channel_words = *std::max_element(channel_words.begin(), channel_words.end());
 
 	if(argc != 2) {
 		std::cout << "Usage: " << argv[0] <<" <xclbin>" << std::endl;
@@ -54,38 +71,31 @@ int main(int argc, char* argv[]) {
 	xuid_t uuid;
 	xrtDeviceGetXclbinUUID(dhdl, uuid);
 
-	// output memory
-	xrtBufferHandle out_bo1 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle out_bo2 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle out_bo3 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle out_bo4 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-        xrtBufferHandle out_bo5 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-        xrtBufferHandle out_bo6 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-        float *host_out1 = reinterpret_cast<float*>(xrtBOMap(out_bo1));
-        float *host_out2 = reinterpret_cast<float*>(xrtBOMap(out_bo2));
-        float *host_out3 = reinterpret_cast<float*>(xrtBOMap(out_bo3));
-        float *host_out4 = reinterpret_cast<float*>(xrtBOMap(out_bo4));
-        float *host_out5 = reinterpret_cast<float*>(xrtBOMap(out_bo5));
-        float *host_out6 = reinterpret_cast<float*>(xrtBOMap(out_bo6));
-	
-	// input memory
-	xrtBufferHandle in_bo1 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle in_bo2 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle in_bo3 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-	xrtBufferHandle in_bo4 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-        xrtBufferHandle in_bo5 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-        xrtBufferHandle in_bo6 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-        float *host_in1 = reinterpret_cast<float*>(xrtBOMap(in_bo1));
-        float *host_in2 = reinterpret_cast<float*>(xrtBOMap(in_bo2));
-        float *host_in3 = reinterpret_cast<float*>(xrtBOMap(in_bo3));
-        float *host_in4 = reinterpret_cast<float*>(xrtBOMap(in_bo4));
-        float *host_in5 = reinterpret_cast<float*>(xrtBOMap(in_bo5));
-        float *host_in6 = reinterpret_cast<float*>(xrtBOMap(in_bo6));
+        std::array<xrtBufferHandle, channel_count> out_bos;
+        std::array<xrtBufferHandle, channel_count> in_bos;
+        std::array<float*, channel_count> host_outputs;
+        std::array<float*, channel_count> host_inputs;
+        const std::array<const char*, channel_count> s2mm_kernel_names = {
+                "s2mm:{s2mm_1}", "s2mm:{s2mm_2}", "s2mm:{s2mm_3}",
+                "s2mm:{s2mm_4}", "s2mm:{s2mm_5}", "s2mm:{s2mm_6}"
+        };
+        const std::array<const char*, channel_count> mm2s_kernel_names = {
+                "mm2s:{mm2s_1}", "mm2s:{mm2s_2}", "mm2s:{mm2s_3}",
+                "mm2s:{mm2s_4}", "mm2s:{mm2s_5}", "mm2s:{mm2s_6}"
+        };
+        for (int channel = 0; channel < channel_count; ++channel) {
+                const unsigned int words = channel_words[channel];
+                if (words == 0u) {
+                        std::cerr << "channel_words[" << channel << "] must be greater than zero" << std::endl;
+                        return EXIT_FAILURE;
+                }
 
-        std::array<float*, channel_count> host_inputs = {host_in1, host_in2, host_in3,
-                                                        host_in4, host_in5, host_in6};
-        std::array<float*, channel_count> host_outputs = {host_out1, host_out2, host_out3,
-                                                         host_out4, host_out5, host_out6};
+                const std::size_t byte_count = static_cast<std::size_t>(words) * sizeof(float);
+                out_bos[channel] = xrtBOAlloc(dhdl, byte_count, 0, /*BANK=*/0);
+                host_outputs[channel] = reinterpret_cast<float*>(xrtBOMap(out_bos[channel]));
+                in_bos[channel] = xrtBOAlloc(dhdl, byte_count, 0, /*BANK=*/0);
+                host_inputs[channel] = reinterpret_cast<float*>(xrtBOMap(in_bos[channel]));
+        }
 
         std::ifstream input_file;
         input_file.open("./data/embed_input.txt");
@@ -116,107 +126,69 @@ int main(int argc, char* argv[]) {
                 return EXIT_FAILURE;
         }
 
-        const std::size_t total_required_words = static_cast<std::size_t>(words_per_channel) * channel_count;
-        if(file_values.size() == static_cast<std::size_t>(words_per_channel)) {
-                for(auto* dest : host_inputs) {
-                        std::copy(file_values.begin(), file_values.end(), dest);
-                }
-        } else if(file_values.size() == total_required_words) {
-                for(std::size_t channel = 0; channel < channel_count; ++channel) {
-                        auto start = file_values.begin() + channel * words_per_channel;
-                        std::copy(start, start + words_per_channel, host_inputs[channel]);
-                }
-        } else {
+        if (file_values.size() < max_channel_words) {
                 std::cerr << "Input file data/embed_input.txt contains " << file_values.size()
-                          << " values; expected " << words_per_channel << " or "
-                          << total_required_words << std::endl;
+                          << " values; expected at least " << max_channel_words << std::endl;
                 return EXIT_FAILURE;
         }
 
-        std::cout<<" memory allocation complete"<<std::endl;
+        for (int channel = 0; channel < channel_count; ++channel) {
+                std::copy(file_values.begin(),
+                          file_values.begin() + channel_words[channel],
+                          host_inputs[channel]);
+                std::fill_n(host_outputs[channel], channel_words[channel], 0.0f);
+        }
+
+        std::cout << "memory allocation complete" << std::endl;
 	
-	// start output kernels
-	xrtKernelHandle s2mm_k1 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_1}");
-	xrtRunHandle s2mm_r1 = xrtRunOpen(s2mm_k1);
-        xrtRunSetArg(s2mm_r1, 0, out_bo1);
-        xrtRunSetArg(s2mm_r1, 2, words_per_channel);
-	xrtRunStart(s2mm_r1);
-	xrtKernelHandle s2mm_k2 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_2}");
-	xrtRunHandle s2mm_r2 = xrtRunOpen(s2mm_k2);
-        xrtRunSetArg(s2mm_r2, 0, out_bo2);
-        xrtRunSetArg(s2mm_r2, 2, words_per_channel);
-	xrtRunStart(s2mm_r2);
-	xrtKernelHandle s2mm_k3 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_3}");
-	xrtRunHandle s2mm_r3 = xrtRunOpen(s2mm_k3);
-        xrtRunSetArg(s2mm_r3, 0, out_bo3);
-        xrtRunSetArg(s2mm_r3, 2, words_per_channel);
-	xrtRunStart(s2mm_r3);
-	xrtKernelHandle s2mm_k4 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_4}");
-	xrtRunHandle s2mm_r4 = xrtRunOpen(s2mm_k4);
-        xrtRunSetArg(s2mm_r4, 0, out_bo4);
-        xrtRunSetArg(s2mm_r4, 2, words_per_channel);
-	xrtRunStart(s2mm_r4);
-	xrtKernelHandle s2mm_k5 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_5}");
-	xrtRunHandle s2mm_r5 = xrtRunOpen(s2mm_k5);
-        xrtRunSetArg(s2mm_r5, 0, out_bo5);
-        xrtRunSetArg(s2mm_r5, 2, words_per_channel);
-	xrtRunStart(s2mm_r5);
-	xrtKernelHandle s2mm_k6 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_6}");
-	xrtRunHandle s2mm_r6 = xrtRunOpen(s2mm_k6);
-        xrtRunSetArg(s2mm_r6, 0, out_bo6);
-        xrtRunSetArg(s2mm_r6, 2, words_per_channel);
-	xrtRunStart(s2mm_r6);
+        // start output kernels
+        std::array<xrtKernelHandle, channel_count> s2mm_kernels;
+        std::array<xrtRunHandle, channel_count> s2mm_runs;
+        for (int channel = 0; channel < channel_count; ++channel) {
+                s2mm_kernels[channel] = xrtPLKernelOpen(dhdl, uuid, s2mm_kernel_names[channel]);
+                s2mm_runs[channel] = xrtRunOpen(s2mm_kernels[channel]);
+                xrtRunSetArg(s2mm_runs[channel], 0, out_bos[channel]);
+                xrtRunSetArg(s2mm_runs[channel], 2, channel_words[channel]);
+                xrtRunStart(s2mm_runs[channel]);
+        }
 
+        xrtKernelHandle hls_packet_receiver_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver:{hls_packet_receiver_1}");
+        xrtRunHandle hls_packet_receiver_r = xrtRunOpen(hls_packet_receiver_k);
+        xrtRunSetArg(hls_packet_receiver_r, 5, total_packets_ai);
+        xrtRunStart(hls_packet_receiver_r);
+        std::cout << "output kernel complete" << std::endl;
 
-	xrtKernelHandle hls_packet_receiver_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver:{hls_packet_receiver_1}");
-	xrtRunHandle hls_packet_receiver_r = xrtRunOpen(hls_packet_receiver_k);
-	xrtRunSetArg(hls_packet_receiver_r, 5, total_packet_num);
-	xrtRunStart(hls_packet_receiver_r);
-	std::cout<<" output kernel complete"<<std::endl;
-
-	xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
+        xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
         xrtRunHandle hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
-        xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // six packets per iteration
+        xrtRunSetArg(hls_packet_receiver_r2, 3, total_packets_pl);
         xrtRunStart(hls_packet_receiver_r2);
-	std::cout<<" output kernel2 complete"<<std::endl;
+        std::cout << "output kernel2 complete" << std::endl;
 
-	// start input kernels
-	xrtKernelHandle mm2s_k1 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_1}");
-	xrtRunHandle mm2s_r1 = xrtRunOpen(mm2s_k1);
-        xrtRunSetArg(mm2s_r1, 0, in_bo1);
-        xrtRunSetArg(mm2s_r1, 2, words_per_channel);
-	xrtRunStart(mm2s_r1);
-	xrtKernelHandle mm2s_k2 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_2}");
-	xrtRunHandle mm2s_r2 = xrtRunOpen(mm2s_k2);
-        xrtRunSetArg(mm2s_r2, 0, in_bo2);
-        xrtRunSetArg(mm2s_r2, 2, words_per_channel);
-	xrtRunStart(mm2s_r2);
-	xrtKernelHandle mm2s_k3 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_3}");
-	xrtRunHandle mm2s_r3 = xrtRunOpen(mm2s_k3);
-        xrtRunSetArg(mm2s_r3, 0, in_bo3);
-        xrtRunSetArg(mm2s_r3, 2, words_per_channel);
-	xrtRunStart(mm2s_r3);
-	xrtKernelHandle mm2s_k4 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_4}");
-	xrtRunHandle mm2s_r4 = xrtRunOpen(mm2s_k4);
-        xrtRunSetArg(mm2s_r4, 0, in_bo4);
-        xrtRunSetArg(mm2s_r4, 2, words_per_channel);
-	xrtRunStart(mm2s_r4);
-	
-	xrtKernelHandle mm2s_k5 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_5}");
-	xrtRunHandle mm2s_r5 = xrtRunOpen(mm2s_k5);
-        xrtRunSetArg(mm2s_r5, 0, in_bo5);
-        xrtRunSetArg(mm2s_r5, 2, words_per_channel);
-	xrtRunStart(mm2s_r5);
-	xrtKernelHandle mm2s_k6 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_6}");
-	xrtRunHandle mm2s_r6 = xrtRunOpen(mm2s_k6);
-        xrtRunSetArg(mm2s_r6, 0, in_bo6);
-        xrtRunSetArg(mm2s_r6, 2, words_per_channel);
-	xrtRunStart(mm2s_r6);
+        // start input kernels
+        std::array<xrtKernelHandle, channel_count> mm2s_kernels;
+        std::array<xrtRunHandle, channel_count> mm2s_runs;
+        for (int channel = 0; channel < channel_count; ++channel) {
+                mm2s_kernels[channel] = xrtPLKernelOpen(dhdl, uuid, mm2s_kernel_names[channel]);
+                mm2s_runs[channel] = xrtRunOpen(mm2s_kernels[channel]);
+                xrtRunSetArg(mm2s_runs[channel], 0, in_bos[channel]);
+                xrtRunSetArg(mm2s_runs[channel], 2, channel_words[channel]);
+                xrtRunStart(mm2s_runs[channel]);
+        }
         xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
-	xrtRunHandle hls_packet_sender_r = xrtRunOpen(hls_packet_sender_k);
-        xrtRunSetArg(hls_packet_sender_r, 8, packet_num);
-	xrtRunStart(hls_packet_sender_r);
-	std::cout<<" input kernel complete"<<std::endl;
+        xrtRunHandle hls_packet_sender_r = xrtRunOpen(hls_packet_sender_k);
+        constexpr unsigned int sender_channel_words_arg_start = 8;
+        for (int channel = 0; channel < channel_count; ++channel) {
+                xrtRunSetArg(
+                        hls_packet_sender_r,
+                        sender_channel_words_arg_start + channel,
+                        channel_words[channel]);
+        }
+        xrtRunSetArg(
+                hls_packet_sender_r,
+                sender_channel_words_arg_start + channel_count,
+                max_packets_per_channel);
+        xrtRunStart(hls_packet_sender_r);
+        std::cout << "input kernel complete" << std::endl;
 
         // start graph
         auto graph = xrtGraphOpen(dhdl, uuid, "gr");
@@ -225,44 +197,28 @@ int main(int argc, char* argv[]) {
                 return EXIT_FAILURE;
         }
         xrtGraphRun(graph, 2);
-        std::cout<<" graph run complete"<<std::endl;
+        std::cout << "graph run complete" << std::endl;
 
         // wait for all runs to complete
-        std::cout << "waiting for mm2s_r1" << std::endl;
-        xrtRunWait(mm2s_r1);
-        std::cout << "waiting for mm2s_r2" << std::endl;
-        xrtRunWait(mm2s_r2);
-        std::cout << "waiting for mm2s_r3" << std::endl;
-        xrtRunWait(mm2s_r3);
-        std::cout << "waiting for mm2s_r4" << std::endl;
-        xrtRunWait(mm2s_r4);
-        std::cout << "waiting for mm2s_r5" << std::endl;
-        xrtRunWait(mm2s_r5);
-        std::cout << "waiting for mm2s_r6" << std::endl;
-        xrtRunWait(mm2s_r6);
+        for (int channel = 0; channel < channel_count; ++channel) {
+                std::cout << "waiting for mm2s_r" << channel + 1 << std::endl;
+                xrtRunWait(mm2s_runs[channel]);
+        }
         std::cout << "waiting for hls_packet_sender_r" << std::endl;
         xrtRunWait(hls_packet_sender_r);
-        std::cout << "waiting for s2mm_r1" << std::endl;
-        xrtRunWait(s2mm_r1);
-        std::cout << "waiting for s2mm_r2" << std::endl;
-        xrtRunWait(s2mm_r2);
-        std::cout << "waiting for s2mm_r3" << std::endl;
-        xrtRunWait(s2mm_r3);
-        std::cout << "waiting for s2mm_r4" << std::endl;
-        xrtRunWait(s2mm_r4);
-        std::cout << "waiting for s2mm_r5" << std::endl;
-        xrtRunWait(s2mm_r5);
-        std::cout << "waiting for s2mm_r6" << std::endl;
-        xrtRunWait(s2mm_r6);
+        for (int channel = 0; channel < channel_count; ++channel) {
+                std::cout << "waiting for s2mm_r" << channel + 1 << std::endl;
+                xrtRunWait(s2mm_runs[channel]);
+        }
         std::cout << "waiting for hls_packet_receiver_r" << std::endl;
         xrtRunWait(hls_packet_receiver_r);
         std::cout << "waiting for hls_packet_receiver_r2" << std::endl;
         xrtRunWait(hls_packet_receiver_r2);
-        std::cout<<" run wait complete"<<std::endl;
+        std::cout << "run wait complete" << std::endl;
 
         // post-processing data;
         for(int channel = 0; channel < channel_count; ++channel) {
-                for(int i=0;i<words_per_channel;i++){
+                for(unsigned int i = 0; i < channel_words[channel]; ++i) {
                         float actual = host_outputs[channel][i];
                         float expected = host_inputs[channel][i];
                         uint32_t actual_bits = 0;
@@ -283,48 +239,30 @@ int main(int argc, char* argv[]) {
         }
 
         // release memory
-        xrtRunClose(s2mm_r1);
-        xrtRunClose(s2mm_r2);
-	xrtRunClose(s2mm_r3);
-	xrtRunClose(s2mm_r4);
-	xrtRunClose(s2mm_r5);
-	xrtRunClose(s2mm_r6);
+        for (int channel = 0; channel < channel_count; ++channel) {
+                xrtRunClose(s2mm_runs[channel]);
+        }
         xrtRunClose(hls_packet_receiver_r);
-	xrtRunClose(hls_packet_receiver_r2);
-	xrtKernelClose(s2mm_k1);
-	xrtKernelClose(s2mm_k2);
-	xrtKernelClose(s2mm_k3);
-	xrtKernelClose(s2mm_k4);
-	xrtKernelClose(s2mm_k5);
-	xrtKernelClose(s2mm_k6);
+        xrtRunClose(hls_packet_receiver_r2);
+        for (int channel = 0; channel < channel_count; ++channel) {
+                xrtKernelClose(s2mm_kernels[channel]);
+        }
         xrtKernelClose(hls_packet_receiver_k);
-	xrtKernelClose(hls_packet_receiver_k2);
-	xrtRunClose(mm2s_r1);
-	xrtRunClose(mm2s_r2);
-	xrtRunClose(mm2s_r3);
-	xrtRunClose(mm2s_r4);
-	xrtRunClose(mm2s_r5);
-	xrtRunClose(mm2s_r6);
+        xrtKernelClose(hls_packet_receiver_k2);
+        for (int channel = 0; channel < channel_count; ++channel) {
+                xrtRunClose(mm2s_runs[channel]);
+        }
         xrtRunClose(hls_packet_sender_r);
-	xrtKernelClose(mm2s_k1);
-	xrtKernelClose(mm2s_k2);
-	xrtKernelClose(mm2s_k3);
-	xrtKernelClose(mm2s_k4);
-	xrtKernelClose(mm2s_k5);
-	xrtKernelClose(mm2s_k6);
+        for (int channel = 0; channel < channel_count; ++channel) {
+                xrtKernelClose(mm2s_kernels[channel]);
+        }
         xrtKernelClose(hls_packet_sender_k);
-        xrtBOFree(out_bo1);
-        xrtBOFree(out_bo2);
-        xrtBOFree(out_bo3);
-        xrtBOFree(out_bo4);
-        xrtBOFree(out_bo5);
-        xrtBOFree(out_bo6);
-        xrtBOFree(in_bo1);
-        xrtBOFree(in_bo2);
-        xrtBOFree(in_bo3);
-        xrtBOFree(in_bo4);
-        xrtBOFree(in_bo5);
-        xrtBOFree(in_bo6);
+        for (int channel = 0; channel < channel_count; ++channel) {
+                xrtBOFree(out_bos[channel]);
+        }
+        for (int channel = 0; channel < channel_count; ++channel) {
+                xrtBOFree(in_bos[channel]);
+        }
         xrtGraphWait(graph, 0);
         xrtGraphEnd(graph, 0);
         xrtGraphClose(graph);

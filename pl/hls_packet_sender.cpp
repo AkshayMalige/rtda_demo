@@ -15,7 +15,7 @@ static const int PACKET_LEN = 8; // Length for a packet
 static const unsigned int packet_ids[PACKET_NUM] = {Datain0_0, Datain0_1, Datain0_2, Datain0_3, 4, 5};
 
 ap_uint<32> generateHeader(unsigned int pktType, unsigned int ID) {
-#pragma HLS inline
+    #pragma HLS inline
     ap_uint<32> header = 0;
     header(7, 0) = ID;
     header(11, 8) = 0;
@@ -33,62 +33,95 @@ void hls_packet_sender(
     hls::stream<ap_axiu<32, 0, 0, 0>>& s1,
     hls::stream<ap_axiu<32, 0, 0, 0>>& s2,
     hls::stream<ap_axiu<32, 0, 0, 0>>& s3,
-	hls::stream<ap_axiu<32, 0, 0, 0>>& s4,
+    hls::stream<ap_axiu<32, 0, 0, 0>>& s4,
     hls::stream<ap_axiu<32, 0, 0, 0>>& s5,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& out,    // Stream to AI Engine
-    hls::stream<ap_axiu<32, 0, 0, 0>>& plout,  // Stream to packet_receiver2
-    const unsigned int num) {
-    
+    hls::stream<ap_axiu<32, 0, 0, 0>>& out,    // Stream to AI Engine (packet IDs 0-3)
+    hls::stream<ap_axiu<32, 0, 0, 0>>& plout,  // Stream to packet_receiver2 (packet IDs 4-5)
+    const unsigned int channel_words[PACKET_NUM],
+    const unsigned int max_packets_per_channel) {
+    #pragma HLS INTERFACE axis port=s0
+    #pragma HLS INTERFACE axis port=s1
+    #pragma HLS INTERFACE axis port=s2
+    #pragma HLS INTERFACE axis port=s3
+    #pragma HLS INTERFACE axis port=s4
+    #pragma HLS INTERFACE axis port=s5
+    #pragma HLS INTERFACE axis port=out
+    #pragma HLS INTERFACE axis port=plout
+    #pragma HLS INTERFACE s_axilite port=channel_words bundle=CTRL
+    #pragma HLS INTERFACE s_axilite port=max_packets_per_channel bundle=CTRL
+    #pragma HLS INTERFACE s_axilite port=return bundle=CTRL
+
     // This pragma tells HLS not to add implicit dependencies between the streams,
     // which is critical for preventing stalls.
     #pragma HLS DATAFLOW
 
-    for (unsigned int iter = 0; iter < num; iter++) {
+    unsigned int remaining_words[PACKET_NUM];
+    #pragma HLS ARRAY_PARTITION variable=remaining_words complete dim=1
+    unsigned int remaining_packets[PACKET_NUM];
+    #pragma HLS ARRAY_PARTITION variable=remaining_packets complete dim=1
+
+    for (int i = 0; i < PACKET_NUM; i++) {
+    #pragma HLS UNROLL
+        const unsigned int words = channel_words[i];
+        remaining_words[i] = words;
+        unsigned int packets_needed = (words + PACKET_LEN - 1) / PACKET_LEN;
+        // Respect the max_packets_per_channel guard while covering every word in the channel.
+        remaining_packets[i] = (packets_needed < max_packets_per_channel) ? packets_needed : max_packets_per_channel;
+    }
+
+    bool channels_pending = true;
+    while (channels_pending) {
+        channels_pending = false;
         for (int i = 0; i < PACKET_NUM; i++) {
-            unsigned int ID = packet_ids[i];
-            ap_uint<32> header = generateHeader(pktType, ID); // packet header
-            
-            ap_axiu<32, 0, 0, 0> header_pkt;
-            header_pkt.data = header;
-            header_pkt.keep = -1;
-            header_pkt.last = 0;
+            if ((remaining_words[i] > 0) && (remaining_packets[i] > 0)) {
+                channels_pending = true;
 
-            // Write header to PL first so that PL kernels
-            // receive data even if the AI Engine back-pressures
-            // the sender. Packets with IDs 4 and 5 are meant only
-            // for the PL, so avoid writing them to the AI Engine
-            // output stream.
-            plout.write(header_pkt);
-            if (i < 4) {
-                out.write(header_pkt);
-            }
+                unsigned int ID = packet_ids[i];
+                ap_uint<32> header = generateHeader(pktType, ID); // packet header
 
-            for (int j = 0; j < PACKET_LEN; j++) { // packet data
-                ap_axiu<32, 0, 0, 0> data_pkt;
+                ap_axiu<32, 0, 0, 0> header_pkt;
+                header_pkt.data = header;
+                header_pkt.keep = -1;
+                header_pkt.last = 0;
 
-                // 1. Read the data ONCE from the appropriate input stream
-                switch (i) {
-                    case 0: data_pkt = s0.read(); break;
-                    case 1: data_pkt = s1.read(); break;
-                    case 2: data_pkt = s2.read(); break;
-                    case 3: data_pkt = s3.read(); break;
-                    case 4: data_pkt = s4.read(); break;
-                    case 5: data_pkt = s5.read(); break;
-                }
-
-                if (j == PACKET_LEN - 1) {
-                    data_pkt.last = 1; // last word in a packet has TLAST=1
-                } else {
-                    data_pkt.last = 0;
-                }
-
-                // 2. Write the data to PL first; only the first
-                // four packet IDs are forwarded to the AI Engine
-                // to match the pktsplit<4> configuration in the AIE graph.
-                plout.write(data_pkt);
+                // Packet IDs 0-3 stay on the AI Engine stream; IDs 4-5 are exclusive to the PL path.
                 if (i < 4) {
-                    out.write(data_pkt);
+                    out.write(header_pkt);
+                } else {
+                    plout.write(header_pkt);
                 }
+
+                unsigned int words_this_packet = (remaining_words[i] > PACKET_LEN) ? PACKET_LEN : remaining_words[i];
+
+                for (unsigned int j = 0; j < words_this_packet; j++) {
+                #pragma HLS PIPELINE II=1
+                    ap_axiu<32, 0, 0, 0> data_pkt;
+                    data_pkt.data = 0;
+                    data_pkt.keep = -1;
+                    data_pkt.strb = -1;
+                    data_pkt.last = 0;
+
+                    switch (i) {
+                        case 0: data_pkt = s0.read(); break;
+                        case 1: data_pkt = s1.read(); break;
+                        case 2: data_pkt = s2.read(); break;
+                        case 3: data_pkt = s3.read(); break;
+                        case 4: data_pkt = s4.read(); break;
+                        case 5: data_pkt = s5.read(); break;
+                    }
+
+                    data_pkt.last = (j == words_this_packet - 1) ? (ap_uint<1>)1 : (ap_uint<1>)0;
+
+                    // Mirror the routing decision used for the packet header.
+                    if (i < 4) {
+                        out.write(data_pkt);
+                    } else {
+                        plout.write(data_pkt);
+                    }
+                }
+
+                remaining_words[i] -= words_this_packet;
+                remaining_packets[i]--;
             }
         }
     }
