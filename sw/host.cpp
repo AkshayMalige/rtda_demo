@@ -88,11 +88,7 @@ int main(int argc, char* argv[]) {
                                                          host_out4, host_out5, host_out6};
 
         std::ifstream input_file;
-        input_file.open("data/embed_input.txt");
-        if(!input_file.is_open()) {
-                input_file.clear();
-                input_file.open("../data/embed_input.txt");
-        }
+        input_file.open("./data/embed_input.txt");
 
         if(!input_file.is_open()) {
                 std::cerr << "Failed to open data/embed_input.txt" << std::endl;
@@ -330,7 +326,7 @@ int main(int argc, char* argv[]) {
         xrtBOFree(in_bo5);
         xrtBOFree(in_bo6);
         xrtGraphWait(graph, 0);
-        xrtGraphEnd(graph);
+        xrtGraphEnd(graph, 0);
         xrtGraphClose(graph);
         xrtDeviceClose(dhdl);
 	
