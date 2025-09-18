@@ -92,7 +92,9 @@ extern "C" void hls_packet_sender(
     channel_loop:
     for (int i = 0; i < PACKET_NUM; ++i) {
         unsigned int N = words[i];
-        if (N == 0) continue; // nothing to send on this channel
+        if (N == 0) {
+            continue; // safety guard; host side guarantees N >= 1
+        }
 
         const unsigned int ID = packet_ids[i];
         const ap_uint<32>  hdr_word = generateHeader(pktType, ID);
@@ -102,13 +104,8 @@ extern "C" void hls_packet_sender(
         hdr.keep = -1;
         hdr.last = 0;
 
-        // Route: ch 0..3 → AIE only; ch 4..5 → PL only
-        const bool to_aie = (i < 4);
-        const bool to_pl  = (i >= 4);
-
-        // ---- Emit header on the correct destination only ----
-        if (to_aie) { out.write(hdr); }
-        if (to_pl ) { plout.write(hdr); }
+        hls::stream<axis32_t>* dest = (i < 4) ? &out : &plout;
+        dest->write(hdr);
 
         payload_loop:
         for (unsigned int j = 0; j < N; ++j) {
@@ -118,8 +115,7 @@ extern "C" void hls_packet_sender(
             d.keep = -1;
             d.last = (j == (N - 1)) ? (ap_uint<1>)1 : (ap_uint<1>)0;
 
-            if (to_aie) { out.write(d); }
-            if (to_pl ) { plout.write(d); }
+            dest->write(d);
         }
     }
 }

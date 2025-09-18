@@ -5,6 +5,7 @@ SPDX-License-Identifier: MIT
 #include <stdlib.h>
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -27,8 +28,8 @@ int main(int argc, char* argv[]) {
 
     // --- Original sizing logic preserved ---
     int packet_num = 2;
-    int total_packet_num  = 4;
-    int total_packet_num2 = 2; // two packets per iteration
+    const int total_packet_num  = 4;
+    const int total_packet_num2 = 2; // one packet per PL channel
     int mem_size = packet_num * 32;
 
     if (mem_size % sizeof(float) != 0) {
@@ -116,13 +117,15 @@ int main(int argc, char* argv[]) {
         }
 
         if (vals.empty()) {
-            std::cerr << "No float values found in ./data/embed_input.txt" << std::endl;
-            return EXIT_FAILURE;
+            std::cerr << "No float values found in ./data/embed_input.txt; using zeros" << std::endl;
         }
 
         const std::size_t ncopy =
             std::min<std::size_t>(vals.size(), static_cast<std::size_t>(words_per_channel));
         nwords_effective = ncopy;  // used below to inform hls_packet_sender
+        if (nwords_effective == 0) {
+            nwords_effective = 1; // clamp to guarantee at least one payload word
+        }
 
         for (auto* dest : host_inputs) {
             std::fill(dest, dest + words_per_channel, 0.0f);
@@ -130,6 +133,12 @@ int main(int argc, char* argv[]) {
         }
     }
     // ----------------------------------------------------------------
+
+    const uint32_t words_per_packet = static_cast<uint32_t>(nwords_effective);
+    assert(nwords_effective <= static_cast<std::size_t>(words_per_channel));
+    assert(total_packet_num == 4);
+    assert(total_packet_num2 == 2);
+    assert(words_per_packet >= 1U);
 
     std::cout << "memory allocation complete" << std::endl;
 
@@ -141,32 +150,32 @@ int main(int argc, char* argv[]) {
     xrtKernelHandle s2mm_k1 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_1}");
     xrtRunHandle   s2mm_r1 = xrtRunOpen(s2mm_k1);
     xrtRunSetArg(s2mm_r1, 0, out_bo1);
-    xrtRunSetArg(s2mm_r1, 2, words_per_channel);
+    xrtRunSetArg(s2mm_r1, 2, words_per_packet);
 
     xrtKernelHandle s2mm_k2 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_2}");
     xrtRunHandle   s2mm_r2 = xrtRunOpen(s2mm_k2);
     xrtRunSetArg(s2mm_r2, 0, out_bo2);
-    xrtRunSetArg(s2mm_r2, 2, words_per_channel);
+    xrtRunSetArg(s2mm_r2, 2, words_per_packet);
 
     xrtKernelHandle s2mm_k3 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_3}");
     xrtRunHandle   s2mm_r3 = xrtRunOpen(s2mm_k3);
     xrtRunSetArg(s2mm_r3, 0, out_bo3);
-    xrtRunSetArg(s2mm_r3, 2, words_per_channel);
+    xrtRunSetArg(s2mm_r3, 2, words_per_packet);
 
     xrtKernelHandle s2mm_k4 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_4}");
     xrtRunHandle   s2mm_r4 = xrtRunOpen(s2mm_k4);
     xrtRunSetArg(s2mm_r4, 0, out_bo4);
-    xrtRunSetArg(s2mm_r4, 2, words_per_channel);
+    xrtRunSetArg(s2mm_r4, 2, words_per_packet);
 
     xrtKernelHandle s2mm_k5 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_5}");
     xrtRunHandle   s2mm_r5 = xrtRunOpen(s2mm_k5);
     xrtRunSetArg(s2mm_r5, 0, out_bo5);
-    xrtRunSetArg(s2mm_r5, 2, words_per_channel);
+    xrtRunSetArg(s2mm_r5, 2, words_per_packet);
 
     xrtKernelHandle s2mm_k6 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_6}");
     xrtRunHandle   s2mm_r6 = xrtRunOpen(s2mm_k6);
     xrtRunSetArg(s2mm_r6, 0, out_bo6);
-    xrtRunSetArg(s2mm_r6, 2, words_per_channel);
+    xrtRunSetArg(s2mm_r6, 2, words_per_packet);
 
     xrtKernelHandle hls_packet_receiver_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver:{hls_packet_receiver_1}");
     xrtRunHandle   hls_packet_receiver_r = xrtRunOpen(hls_packet_receiver_k);
@@ -175,47 +184,49 @@ int main(int argc, char* argv[]) {
 
     xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
     xrtRunHandle   hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
-    xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // six packets per iteration
+    xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // one packet per PL channel
     std::cout << "output kernel2 complete" << std::endl;
 
     // set up input kernels
     xrtKernelHandle mm2s_k1 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_1}");
     xrtRunHandle   mm2s_r1 = xrtRunOpen(mm2s_k1);
     xrtRunSetArg(mm2s_r1, 0, in_bo1);
-    xrtRunSetArg(mm2s_r1, 2, words_per_channel);
+    xrtRunSetArg(mm2s_r1, 2, words_per_packet);
 
     xrtKernelHandle mm2s_k2 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_2}");
     xrtRunHandle   mm2s_r2 = xrtRunOpen(mm2s_k2);
     xrtRunSetArg(mm2s_r2, 0, in_bo2);
-    xrtRunSetArg(mm2s_r2, 2, words_per_channel);
+    xrtRunSetArg(mm2s_r2, 2, words_per_packet);
 
     xrtKernelHandle mm2s_k3 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_3}");
     xrtRunHandle   mm2s_r3 = xrtRunOpen(mm2s_k3);
     xrtRunSetArg(mm2s_r3, 0, in_bo3);
-    xrtRunSetArg(mm2s_r3, 2, words_per_channel);
+    xrtRunSetArg(mm2s_r3, 2, words_per_packet);
 
     xrtKernelHandle mm2s_k4 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_4}");
     xrtRunHandle   mm2s_r4 = xrtRunOpen(mm2s_k4);
     xrtRunSetArg(mm2s_r4, 0, in_bo4);
-    xrtRunSetArg(mm2s_r4, 2, words_per_channel);
+    xrtRunSetArg(mm2s_r4, 2, words_per_packet);
 
     xrtKernelHandle mm2s_k5 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_5}");
     xrtRunHandle   mm2s_r5 = xrtRunOpen(mm2s_k5);
     xrtRunSetArg(mm2s_r5, 0, in_bo5);
-    xrtRunSetArg(mm2s_r5, 2, words_per_channel);
+    xrtRunSetArg(mm2s_r5, 2, words_per_packet);
 
     xrtKernelHandle mm2s_k6 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_6}");
     xrtRunHandle   mm2s_r6 = xrtRunOpen(mm2s_k6);
     xrtRunSetArg(mm2s_r6, 0, in_bo6);
-    xrtRunSetArg(mm2s_r6, 2, words_per_channel);
+    xrtRunSetArg(mm2s_r6, 2, words_per_packet);
 
     // ---- NEW: prepare and pass 6-element array to hls_packet_sender (arg 8) ----
     xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
     xrtRunHandle   hls_packet_sender_r = xrtRunOpen(hls_packet_sender_k);
 
     uint32_t max_words_host[6];
-    for (int i = 0; i < 6; ++i)
-        max_words_host[i] = static_cast<uint32_t>(nwords_effective);
+    for (int i = 0; i < 6; ++i) {
+        max_words_host[i] = words_per_packet;
+        assert(max_words_host[i] >= 1U);
+    }
 
     xrtBufferHandle max_words_bo = xrtBOAlloc(dhdl, 6 * sizeof(uint32_t), 0, /*BANK=*/0);
     auto* max_words_ptr = reinterpret_cast<uint32_t*>(xrtBOMap(max_words_bo));
@@ -302,9 +313,9 @@ int main(int argc, char* argv[]) {
     }
 
     for (int channel = 0; channel < channel_count; ++channel) {
-        for (int i = 0; i < words_per_channel; i++) {
-            float actual = host_outputs[channel][i];
-            float expected = host_inputs[channel][i];
+        for (std::size_t word_idx = 0; word_idx < nwords_effective; ++word_idx) {
+            float actual = host_outputs[channel][word_idx];
+            float expected = host_inputs[channel][word_idx];
             uint32_t actual_bits = 0;
             uint32_t expected_bits = 0;
             std::memcpy(&actual_bits, &actual, sizeof(float));
@@ -313,7 +324,7 @@ int main(int argc, char* argv[]) {
                 match = 1;
                 auto old_precision = std::cout.precision();
                 std::cout << std::setprecision(10)
-                          << "Mismatch host_out" << channel + 1 << "[" << i << "]="
+                          << "Mismatch host_out" << channel + 1 << "[" << word_idx << "]="
                           << actual << " (0x" << std::hex << actual_bits << std::dec
                           << ") expected " << expected << " (0x" << std::hex
                           << expected_bits << std::dec << ")" << std::endl;
