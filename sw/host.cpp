@@ -92,6 +92,10 @@ int main(int argc, char* argv[]) {
                                                       host_in4, host_in5, host_in6};
     std::array<float*, channel_count> host_outputs = {host_out1, host_out2, host_out3,
                                                       host_out4, host_out5, host_out6};
+    std::array<xrtBufferHandle, channel_count> input_bos = {in_bo1, in_bo2, in_bo3,
+                                                            in_bo4, in_bo5, in_bo6};
+    std::array<xrtBufferHandle, channel_count> output_bos = {out_bo1, out_bo2, out_bo3,
+                                                             out_bo4, out_bo5, out_bo6};
 
     // We'll need this for hls_packet_sender's 6-element argument
     size_t nwords_effective = 0;
@@ -128,6 +132,10 @@ int main(int argc, char* argv[]) {
     // ----------------------------------------------------------------
 
     std::cout << "memory allocation complete" << std::endl;
+
+    for (auto bo : input_bos) {
+        xrtBOSync(bo, XCL_BO_SYNC_BO_TO_DEVICE, mem_size, /*offset=*/0);
+    }
 
     // set up output kernels
     xrtKernelHandle s2mm_k1 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_1}");
@@ -289,6 +297,10 @@ int main(int argc, char* argv[]) {
     std::cout << "run wait complete" << std::endl;
 
     // post-processing data;
+    for (auto bo : output_bos) {
+        xrtBOSync(bo, XCL_BO_SYNC_BO_FROM_DEVICE, mem_size, /*offset=*/0);
+    }
+
     for (int channel = 0; channel < channel_count; ++channel) {
         for (int i = 0; i < words_per_channel; i++) {
             float actual = host_outputs[channel][i];
