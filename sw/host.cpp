@@ -129,91 +129,77 @@ int main(int argc, char* argv[]) {
 
     std::cout << "memory allocation complete" << std::endl;
 
-    // start output kernels
+    // set up output kernels
     xrtKernelHandle s2mm_k1 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_1}");
     xrtRunHandle   s2mm_r1 = xrtRunOpen(s2mm_k1);
     xrtRunSetArg(s2mm_r1, 0, out_bo1);
     xrtRunSetArg(s2mm_r1, 2, words_per_channel);
-    xrtRunStart(s2mm_r1);
 
     xrtKernelHandle s2mm_k2 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_2}");
     xrtRunHandle   s2mm_r2 = xrtRunOpen(s2mm_k2);
     xrtRunSetArg(s2mm_r2, 0, out_bo2);
     xrtRunSetArg(s2mm_r2, 2, words_per_channel);
-    xrtRunStart(s2mm_r2);
 
     xrtKernelHandle s2mm_k3 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_3}");
     xrtRunHandle   s2mm_r3 = xrtRunOpen(s2mm_k3);
     xrtRunSetArg(s2mm_r3, 0, out_bo3);
     xrtRunSetArg(s2mm_r3, 2, words_per_channel);
-    xrtRunStart(s2mm_r3);
 
     xrtKernelHandle s2mm_k4 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_4}");
     xrtRunHandle   s2mm_r4 = xrtRunOpen(s2mm_k4);
     xrtRunSetArg(s2mm_r4, 0, out_bo4);
     xrtRunSetArg(s2mm_r4, 2, words_per_channel);
-    xrtRunStart(s2mm_r4);
 
     xrtKernelHandle s2mm_k5 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_5}");
     xrtRunHandle   s2mm_r5 = xrtRunOpen(s2mm_k5);
     xrtRunSetArg(s2mm_r5, 0, out_bo5);
     xrtRunSetArg(s2mm_r5, 2, words_per_channel);
-    xrtRunStart(s2mm_r5);
 
     xrtKernelHandle s2mm_k6 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_6}");
     xrtRunHandle   s2mm_r6 = xrtRunOpen(s2mm_k6);
     xrtRunSetArg(s2mm_r6, 0, out_bo6);
     xrtRunSetArg(s2mm_r6, 2, words_per_channel);
-    xrtRunStart(s2mm_r6);
 
     xrtKernelHandle hls_packet_receiver_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver:{hls_packet_receiver_1}");
     xrtRunHandle   hls_packet_receiver_r = xrtRunOpen(hls_packet_receiver_k);
     xrtRunSetArg(hls_packet_receiver_r, 5, total_packet_num);
-    xrtRunStart(hls_packet_receiver_r);
     std::cout << "output kernel complete" << std::endl;
 
     xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
     xrtRunHandle   hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
     xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // six packets per iteration
-    xrtRunStart(hls_packet_receiver_r2);
     std::cout << "output kernel2 complete" << std::endl;
 
-    // start input kernels
+    // set up input kernels
     xrtKernelHandle mm2s_k1 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_1}");
     xrtRunHandle   mm2s_r1 = xrtRunOpen(mm2s_k1);
     xrtRunSetArg(mm2s_r1, 0, in_bo1);
     xrtRunSetArg(mm2s_r1, 2, words_per_channel);
-    xrtRunStart(mm2s_r1);
 
     xrtKernelHandle mm2s_k2 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_2}");
     xrtRunHandle   mm2s_r2 = xrtRunOpen(mm2s_k2);
     xrtRunSetArg(mm2s_r2, 0, in_bo2);
     xrtRunSetArg(mm2s_r2, 2, words_per_channel);
-    xrtRunStart(mm2s_r2);
 
     xrtKernelHandle mm2s_k3 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_3}");
     xrtRunHandle   mm2s_r3 = xrtRunOpen(mm2s_k3);
     xrtRunSetArg(mm2s_r3, 0, in_bo3);
     xrtRunSetArg(mm2s_r3, 2, words_per_channel);
-    xrtRunStart(mm2s_r3);
 
     xrtKernelHandle mm2s_k4 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_4}");
     xrtRunHandle   mm2s_r4 = xrtRunOpen(mm2s_k4);
     xrtRunSetArg(mm2s_r4, 0, in_bo4);
     xrtRunSetArg(mm2s_r4, 2, words_per_channel);
-    xrtRunStart(mm2s_r4);
 
     xrtKernelHandle mm2s_k5 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_5}");
     xrtRunHandle   mm2s_r5 = xrtRunOpen(mm2s_k5);
     xrtRunSetArg(mm2s_r5, 0, in_bo5);
     xrtRunSetArg(mm2s_r5, 2, words_per_channel);
-    xrtRunStart(mm2s_r5);
 
     xrtKernelHandle mm2s_k6 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_6}");
     xrtRunHandle   mm2s_r6 = xrtRunOpen(mm2s_k6);
     xrtRunSetArg(mm2s_r6, 0, in_bo6);
     xrtRunSetArg(mm2s_r6, 2, words_per_channel);
-    xrtRunStart(mm2s_r6);
 
     // ---- NEW: prepare and pass 6-element array to hls_packet_sender (arg 8) ----
     xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
@@ -232,7 +218,6 @@ int main(int argc, char* argv[]) {
     xrtRunSetArg(hls_packet_sender_r, 8, max_words_bo);
     // ---------------------------------------------------------------------------
 
-    xrtRunStart(hls_packet_sender_r);
     std::cout << "input kernel complete" << std::endl;
 
     // start graph
@@ -244,7 +229,30 @@ int main(int argc, char* argv[]) {
     xrtGraphRun(graph, 1);
     std::cout << "graph run complete" << std::endl;
 
-    // wait for all runs to complete
+    // startup sequence: receivers -> s2mm -> mm2s -> sender
+    xrtRunStart(hls_packet_receiver_r);
+    xrtRunStart(hls_packet_receiver_r2);
+
+    xrtRunStart(s2mm_r1);
+    xrtRunStart(s2mm_r2);
+    xrtRunStart(s2mm_r3);
+    xrtRunStart(s2mm_r4);
+    xrtRunStart(s2mm_r5);
+    xrtRunStart(s2mm_r6);
+
+    xrtRunStart(mm2s_r1);
+    xrtRunStart(mm2s_r2);
+    xrtRunStart(mm2s_r3);
+    xrtRunStart(mm2s_r4);
+    xrtRunStart(mm2s_r5);
+    xrtRunStart(mm2s_r6);
+
+    xrtRunStart(hls_packet_sender_r);
+
+    // wait for all runs to complete (reverse order)
+    std::cout << "waiting for hls_packet_sender_r" << std::endl;
+    xrtRunWait(hls_packet_sender_r);
+
     std::cout << "waiting for mm2s_r1" << std::endl;
     xrtRunWait(mm2s_r1);
     std::cout << "waiting for mm2s_r2" << std::endl;
@@ -257,8 +265,12 @@ int main(int argc, char* argv[]) {
     xrtRunWait(mm2s_r5);
     std::cout << "waiting for mm2s_r6" << std::endl;
     xrtRunWait(mm2s_r6);
-    std::cout << "waiting for hls_packet_sender_r" << std::endl;
-    xrtRunWait(hls_packet_sender_r);
+
+    std::cout << "waiting for hls_packet_receiver_r" << std::endl;
+    xrtRunWait(hls_packet_receiver_r);
+    std::cout << "waiting for hls_packet_receiver_r2" << std::endl;
+    xrtRunWait(hls_packet_receiver_r2);
+
     std::cout << "waiting for s2mm_r1" << std::endl;
     xrtRunWait(s2mm_r1);
     std::cout << "waiting for s2mm_r2" << std::endl;
@@ -271,10 +283,9 @@ int main(int argc, char* argv[]) {
     xrtRunWait(s2mm_r5);
     std::cout << "waiting for s2mm_r6" << std::endl;
     xrtRunWait(s2mm_r6);
-    std::cout << "waiting for hls_packet_receiver_r" << std::endl;
-    xrtRunWait(hls_packet_receiver_r);
-    std::cout << "waiting for hls_packet_receiver_r2" << std::endl;
-    xrtRunWait(hls_packet_receiver_r2);
+
+    std::cout << "waiting for graph" << std::endl;
+    xrtGraphWait(graph, 0);
     std::cout << "run wait complete" << std::endl;
 
     // post-processing data;
@@ -345,7 +356,6 @@ int main(int argc, char* argv[]) {
     xrtBOFree(in_bo5);
     xrtBOFree(in_bo6);
     xrtBOFree(max_words_bo);
-    xrtGraphWait(graph, 0);
     xrtGraphEnd(graph, 0);
     xrtGraphClose(graph);
     xrtDeviceClose(dhdl);
