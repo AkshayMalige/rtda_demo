@@ -241,7 +241,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Failed to open graph mygraph" << std::endl;
         return EXIT_FAILURE;
     }
-    xrtGraphRun(graph, 2);
+    xrtGraphRun(graph, 1);
     std::cout << "graph run complete" << std::endl;
 
     // wait for all runs to complete
