@@ -8,7 +8,6 @@ SPDX-License-Identifier: MIT
 #include "packet_ids_c.h"
 
 static const int PACKET_NUM=2;
-static const int PACKET_LEN=8;
 
 static const unsigned int packet_ids[PACKET_NUM]={4,5};
 
@@ -21,16 +20,30 @@ unsigned int getPacketId(ap_uint<32> header){
 
 void hls_packet_receiver2(hls::stream<ap_axiu<32,0,0,0>> &in, hls::stream<ap_axiu<32,0,0,0>> &out0,hls::stream<ap_axiu<32,0,0,0>> &out1,
 	const unsigned int total_num_packet){
-	for(unsigned int iter=0;iter<total_num_packet;iter++){
-		ap_axiu<32,0,0,0> tmp=in.read();//first word is packet header
-		unsigned int ID=getPacketId(tmp.data);
-		unsigned int channel=ID;
-		for(int j=0;j<PACKET_LEN;j++){
-			tmp=in.read();
-			switch(channel){
-			case 4:out0.write(tmp);break;
-			case 5:out1.write(tmp);break;
-			}
-		}
-	}
+        for(unsigned int iter=0;iter<total_num_packet;iter++){
+                ap_axiu<32,0,0,0> header=in.read();//first word is packet header
+                unsigned int ID=getPacketId(header.data);
+                unsigned int channel=0;
+                bool valid_channel=false;
+
+                for(int idx=0; idx<PACKET_NUM; ++idx){
+                        if(ID==packet_ids[idx]){
+                                channel=idx;
+                                valid_channel=true;
+                                break;
+                        }
+                }
+
+                bool last_word=false;
+                do{
+                        ap_axiu<32,0,0,0> tmp=in.read();
+                        last_word = tmp.last;
+                        if(valid_channel){
+                                switch(channel){
+                                case 0:out0.write(tmp);break;
+                                case 1:out1.write(tmp);break;
+                                }
+                        }
+                }while(!last_word);
+        }
 }

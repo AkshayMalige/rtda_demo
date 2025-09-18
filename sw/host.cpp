@@ -27,8 +27,8 @@ int main(int argc, char* argv[]) {
 
     // --- Original sizing logic preserved ---
     int packet_num = 2;
-    int total_packet_num  = packet_num * 4;
-    int total_packet_num2 = packet_num * channel_count; // six packets per iteration
+    int total_packet_num  = 4;
+    int total_packet_num2 = 2; // two packets per iteration
     int mem_size = packet_num * 32;
 
     if (mem_size % sizeof(float) != 0) {
