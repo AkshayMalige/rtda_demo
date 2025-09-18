@@ -1,95 +1,125 @@
-/*
-Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
-SPDX-License-Identifier: MIT
-*/
 #include "hls_stream.h"
 #include "ap_int.h"
 #include "ap_axi_sdata.h"
 #include "packet_ids_c.h"
 
 static const unsigned int pktType = 0;
-static const int PACKET_NUM = 6; // How many kernels do packet switching
-static const int PACKET_LEN = 8; // Length for a packet
+static const int PACKET_NUM = 6;
 
 // Macro values are generated in packet_ids_c.h
 static const unsigned int packet_ids[PACKET_NUM] = {Datain0_0, Datain0_1, Datain0_2, Datain0_3, 4, 5};
 
-ap_uint<32> generateHeader(unsigned int pktType, unsigned int ID) {
+typedef ap_axiu<32, 0, 0, 0> axis32_t;
+
+static inline ap_uint<32> generateHeader(unsigned int pktType, unsigned int ID) {
 #pragma HLS inline
     ap_uint<32> header = 0;
-    header(7, 0) = ID;
+    header(7, 0)  = ID;
     header(11, 8) = 0;
-    header(14, 12) = pktType;
-    header[15] = 0;
-    header(20, 16) = -1; // source row
-    header(27, 21) = -1; // source column
-    header(30, 28) = 0;
-    header[31] = header(30, 0).xor_reduce() ? (ap_uint<1>)0 : (ap_uint<1>)1;
+    header(14,12) = pktType;
+    header[15]    = 0;
+    header(20,16) = (ap_uint<5>)-1; // source row
+    header(27,21) = (ap_uint<7>)-1; // source col
+    header(30,28) = 0;
+    header[31]    = header(30, 0).xor_reduce() ? (ap_uint<1>)0 : (ap_uint<1>)1;
     return header;
 }
 
-void hls_packet_sender(
-    hls::stream<ap_axiu<32, 0, 0, 0>>& s0,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& s1,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& s2,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& s3,
-	hls::stream<ap_axiu<32, 0, 0, 0>>& s4,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& s5,
-    hls::stream<ap_axiu<32, 0, 0, 0>>& out,    // Stream to AI Engine
-    hls::stream<ap_axiu<32, 0, 0, 0>>& plout,  // Stream to packet_receiver2
-    const unsigned int num) {
-    
-    // This pragma tells HLS not to add implicit dependencies between the streams,
-    // which is critical for preventing stalls.
-    #pragma HLS DATAFLOW
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch"
 
-    for (unsigned int iter = 0; iter < num; iter++) {
-        for (int i = 0; i < PACKET_NUM; i++) {
-            unsigned int ID = packet_ids[i];
-            ap_uint<32> header = generateHeader(pktType, ID); // packet header
-            
-            ap_axiu<32, 0, 0, 0> header_pkt;
-            header_pkt.data = header;
-            header_pkt.keep = -1;
-            header_pkt.last = 0;
+// Helper: read exactly one word from channel i
+static inline axis32_t read_from_ch(
+    int i,
+    hls::stream<axis32_t>& s0,
+    hls::stream<axis32_t>& s1,
+    hls::stream<axis32_t>& s2,
+    hls::stream<axis32_t>& s3,
+    hls::stream<axis32_t>& s4,
+    hls::stream<axis32_t>& s5)
+{
+#pragma HLS inline
+    switch(i){
+        case 0: return s0.read();
+        case 1: return s1.read();
+        case 2: return s2.read();
+        case 3: return s3.read();
+        case 4: return s4.read();
+        default: return s5.read();
+    }
+}
 
-            // Write header to PL first so that PL kernels
-            // receive data even if the AI Engine back-pressures
-            // the sender. Packets with IDs 4 and 5 are meant only
-            // for the PL, so avoid writing them to the AI Engine
-            // output stream.
-            plout.write(header_pkt);
-            if (i < 4) {
-                out.write(header_pkt);
-            }
+#pragma GCC diagnostic pop
 
-            for (int j = 0; j < PACKET_LEN; j++) { // packet data
-                ap_axiu<32, 0, 0, 0> data_pkt;
+extern "C" void hls_packet_sender(
+    hls::stream<axis32_t>& s0,
+    hls::stream<axis32_t>& s1,
+    hls::stream<axis32_t>& s2,
+    hls::stream<axis32_t>& s3,
+    hls::stream<axis32_t>& s4,
+    hls::stream<axis32_t>& s5,
+    hls::stream<axis32_t>& out,    // → AI Engine (channels 0..3 only)
+    hls::stream<axis32_t>& plout,  // → PL (channels 4..5 only)
+    const unsigned int *max_words_per_ch)
+{
+    // ------- Interfaces (good HLS/Versal practice) -------
+    #pragma HLS INTERFACE axis port=s0
+    #pragma HLS INTERFACE axis port=s1
+    #pragma HLS INTERFACE axis port=s2
+    #pragma HLS INTERFACE axis port=s3
+    #pragma HLS INTERFACE axis port=s4
+    #pragma HLS INTERFACE axis port=s5
+    #pragma HLS INTERFACE axis port=out
+    #pragma HLS INTERFACE axis port=plout
 
-                // 1. Read the data ONCE from the appropriate input stream
-                switch (i) {
-                    case 0: data_pkt = s0.read(); break;
-                    case 1: data_pkt = s1.read(); break;
-                    case 2: data_pkt = s2.read(); break;
-                    case 3: data_pkt = s3.read(); break;
-                    case 4: data_pkt = s4.read(); break;
-                    case 5: data_pkt = s5.read(); break;
-                }
+    #pragma HLS INTERFACE m_axi     port=max_words_per_ch  offset=slave depth=PACKET_NUM bundle=gmem0
+    #pragma HLS INTERFACE s_axilite port=max_words_per_ch  bundle=control
+    #pragma HLS INTERFACE s_axilite port=return bundle=control
 
-                if (j == PACKET_LEN - 1) {
-                    data_pkt.last = 1; // last word in a packet has TLAST=1
-                } else {
-                    data_pkt.last = 0;
-                }
+    // Make a local copy so the tool can fully partition & schedule well
+    unsigned int words[PACKET_NUM];
+    #pragma HLS ARRAY_PARTITION variable=words complete dim=1
+    load_words: for (int i = 0; i < PACKET_NUM; ++i) {
+        #pragma HLS UNROLL
+        words[i] = max_words_per_ch[i];
+    }
 
-                // 2. Write the data to PL first; only the first
-                // four packet IDs are forwarded to the AI Engine
-                // to match the pktsplit<4> configuration in the AIE graph.
-                plout.write(data_pkt);
-                if (i < 4) {
-                    out.write(data_pkt);
-                }
-            }
+    // No artificial cross-stream deps; preserve streaming
+    #pragma HLS DATAFLOW disable_start_propagation
+
+    // One contiguous packet per channel:
+    //  header → payload[0..N-1] (TLAST set on last)
+    channel_loop:
+    for (int i = 0; i < PACKET_NUM; ++i) {
+        unsigned int N = words[i];
+        if (N == 0) continue; // nothing to send on this channel
+
+        const unsigned int ID = packet_ids[i];
+        const ap_uint<32>  hdr_word = generateHeader(pktType, ID);
+
+        axis32_t hdr;
+        hdr.data = hdr_word;
+        hdr.keep = -1;
+        hdr.last = 0;
+
+        // Route: ch 0..3 → AIE only; ch 4..5 → PL only
+        const bool to_aie = (i < 4);
+        const bool to_pl  = (i >= 4);
+
+        // ---- Emit header on the correct destination only ----
+        if (to_aie) { out.write(hdr); }
+        if (to_pl ) { plout.write(hdr); }
+
+        payload_loop:
+        for (unsigned int j = 0; j < N; ++j) {
+            #pragma HLS PIPELINE II=1
+
+            axis32_t d = read_from_ch(i, s0, s1, s2, s3, s4, s5);
+            d.keep = -1;
+            d.last = (j == (N - 1)) ? (ap_uint<1>)1 : (ap_uint<1>)0;
+
+            if (to_aie) { out.write(d); }
+            if (to_pl ) { plout.write(d); }
         }
     }
 }

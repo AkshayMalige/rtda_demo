@@ -12,16 +12,16 @@ export XILINX_VITIS=/tools/Xilinx/Vitis/2024.2
 source ${XILINX_VITIS}/settings64.sh
 
 # === Source PetaLinux environment ===
-echo "📦 Sourcing PetaLinux 2024.2..."
-source /tools/Xilinx/PetaLinux/settings.sh
+# echo "📦 Sourcing PetaLinux 2024.2..."
+# source /tools/Xilinx/PetaLinux/settings.sh
 
 # === Unset conflicting LD_LIBRARY_PATH ===
 echo "🧹 Unsetting LD_LIBRARY_PATH to avoid conflicts..."
 unset LD_LIBRARY_PATH
 
 # === Set up cross-compilation environment ===
-echo "🔁 Setting up cross-compilation environment..."
-source /opt/petalinux/2024.2/environment-setup-cortexa72-cortexa53-xilinx-linux
+# echo "🔁 Setting up cross-compilation environment..."
+# source /opt/petalinux/2024.2/environment-setup-cortexa72-cortexa53-xilinx-linux
 
 # === Set environment variables for system image ===
 export EDGE_COMMON_SW=/home/synthara/versal_common/xilinx-versal-common-v2024.2
