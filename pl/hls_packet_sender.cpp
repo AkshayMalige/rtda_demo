@@ -104,8 +104,11 @@ extern "C" void hls_packet_sender(
         hdr.keep = -1;
         hdr.last = 0;
 
-        hls::stream<axis32_t>* dest = (i < 4) ? &out : &plout;
-        dest->write(hdr);
+        if (i < 4) {
+            out.write(hdr);
+        } else {
+            plout.write(hdr);
+        }
 
         payload_loop:
         for (unsigned int j = 0; j < N; ++j) {
@@ -115,7 +118,11 @@ extern "C" void hls_packet_sender(
             d.keep = -1;
             d.last = (j == (N - 1)) ? (ap_uint<1>)1 : (ap_uint<1>)0;
 
-            dest->write(d);
+            if (i < 4) {
+                out.write(d);
+            } else {
+                plout.write(d);
+            }
         }
     }
 }
