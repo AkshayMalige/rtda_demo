@@ -1,13 +1,10 @@
 #include "hls_stream.h"
 #include "ap_int.h"
 #include "ap_axi_sdata.h"
-#include "packet_ids_c.h"
-
 static const unsigned int pktType = 0;
 static const int PACKET_NUM = 6;
 
-// Macro values are generated in packet_ids_c.h
-static const unsigned int packet_ids[PACKET_NUM] = {Datain0_0, Datain0_1, Datain0_2, Datain0_3, 4, 5};
+static const unsigned int packet_ids[PACKET_NUM] = {0, 1, 2, 3, 4, 5};
 
 typedef ap_axiu<32, 0, 0, 0> axis32_t;
 
@@ -97,6 +94,8 @@ extern "C" void hls_packet_sender(
         }
 
         const unsigned int ID = packet_ids[i];
+        const bool to_aie = (ID < 4);
+        const bool to_pl  = (ID >= 4);
         const ap_uint<32>  hdr_word = generateHeader(pktType, ID);
 
         axis32_t hdr;
@@ -104,9 +103,9 @@ extern "C" void hls_packet_sender(
         hdr.keep = -1;
         hdr.last = 0;
 
-        if (i < 4) {
+        if (to_aie) {
             out.write(hdr);
-        } else {
+        } else if (to_pl) {
             plout.write(hdr);
         }
 
@@ -118,9 +117,9 @@ extern "C" void hls_packet_sender(
             d.keep = -1;
             d.last = (j == (N - 1)) ? (ap_uint<1>)1 : (ap_uint<1>)0;
 
-            if (i < 4) {
+            if (to_aie) {
                 out.write(d);
-            } else {
+            } else if (to_pl) {
                 plout.write(d);
             }
         }
