@@ -1,18 +1,11 @@
-/*
-Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
-SPDX-License-Identifier: MIT
-*/
 #include "graph.h"
-
-using namespace adf;
-
-mygraph gr;
-
+NeuralNetworkGraph g;
 #if defined(__AIESIM__) || defined(__X86SIM__)
-int main(int argc, char ** argv) {
-  gr.init();
-  gr.run(2);
-  gr.end();
+int main() {
+  g.init();
+  g.run(1);
+  g.wait();
+  g.end();
   return 0;
 }
 #endif

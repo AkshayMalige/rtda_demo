@@ -19,9 +19,18 @@ PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420
 XSA   = aie_base_graph_${TARGET}.xsa
 HOST_EXE = host.exe
 
+DSPLIB_PATH  ?= /home/synthara/VersalPrjs/Vitis_Libraries/dsp
+AIE_INCLUDE_FLAGS := \
+	--include="./" \
+	--include="../common" \
+	--include="$(DSPLIB_PATH)/L1/src/aie" \
+	--include="$(DSPLIB_PATH)/L1/include/aie" \
+	--include="$(DSPLIB_PATH)/L2/include/aie"
+
 GRAPH    = aie/graph.cpp
 LIBADF  = libadf.a
-AIE_CMPL_CMD = v++ -c --mode aie --platform=${PLATFORM} --include="./aie" --work_dir=./Work ${GRAPH} 2>&1 | tee log.txt
+AIE_CFG       := aie/aie.cfg
+AIE_CMPL_CMD = v++ -c --mode aie --platform=${PLATFORM} --include="./aie" --config=$(AIE_CFG) --work_dir=./Work ${GRAPH} 2>&1 | tee log.txt
 AIE_SIM_CMD = aiesimulator --pkg-dir=./Work
 EMU_CMD = ./launch_hw_emu.sh
 
@@ -70,7 +79,7 @@ run: all run_hw_emu
 sd_card: all
 
 aie: guard-PLATFORM_REPO_PATHS ${LIBADF}
-${LIBADF}: ${GRAPH}
+${LIBADF}: ${GRAPH} common/nn_defs.h common/data_paths.h $(AIE_CFG)
 	${AIE_CMPL_CMD}
 
 aiesim: ${LIBADF}
