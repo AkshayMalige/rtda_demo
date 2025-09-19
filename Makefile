@@ -21,16 +21,17 @@ HOST_EXE = host.exe
 
 DSPLIB_PATH  ?= /home/synthara/VersalPrjs/Vitis_Libraries/dsp
 AIE_INCLUDE_FLAGS := \
-	--include="./" \
-	--include="../common" \
-	--include="$(DSPLIB_PATH)/L1/src/aie" \
-	--include="$(DSPLIB_PATH)/L1/include/aie" \
-	--include="$(DSPLIB_PATH)/L2/include/aie"
+        --include="./" \
+        --include="./aie" \
+        --include="./common" \
+        --include="$(DSPLIB_PATH)/L1/src/aie" \
+        --include="$(DSPLIB_PATH)/L1/include/aie" \
+        --include="$(DSPLIB_PATH)/L2/include/aie"
 
 GRAPH    = aie/graph.cpp
 LIBADF  = libadf.a
 AIE_CFG       := aie/aie.cfg
-AIE_CMPL_CMD = v++ -c --mode aie --platform=${PLATFORM} --include="./aie" --config=$(AIE_CFG) --work_dir=./Work ${GRAPH} 2>&1 | tee log.txt
+AIE_CMPL_CMD = v++ -c --mode aie --platform=${PLATFORM} $(AIE_INCLUDE_FLAGS) --config=$(AIE_CFG) --work_dir=./Work ${GRAPH} 2>&1 | tee log.txt
 AIE_SIM_CMD = aiesimulator --pkg-dir=./Work
 EMU_CMD = ./launch_hw_emu.sh
 
