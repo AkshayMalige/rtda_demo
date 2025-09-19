@@ -90,14 +90,17 @@ extern "C" void hls_packet_sender(
     for (int i = 0; i < PACKET_NUM; ++i) {
         unsigned int N = words[i];
         if (N == 0) {
-            continue; // safety guard; host side guarantees N >= 1
+            continue; // Skip zero-length channels entirely.
         }
 
         const unsigned int ID = packet_ids[i];
         const bool to_aie = (ID < 4);
         const bool to_pl  = (ID >= 4);
-        const ap_uint<32>  hdr_word = generateHeader(pktType, ID);
+        ap_uint<32>  hdr_word = generateHeader(pktType, ID);
+        hdr_word(27,16) = N & 0x0FFF;
+        hdr_word[31]    = hdr_word(30, 0).xor_reduce() ? (ap_uint<1>)0 : (ap_uint<1>)1;
 
+        // Packet v1: [HEADER(ID,pktType,len,parity)][N payload], TLAST on last. See docs/packet_contract.md
         axis32_t hdr;
         hdr.data = hdr_word;
         hdr.keep = -1;
