@@ -28,8 +28,6 @@ int main(int argc, char* argv[]) {
 
     // --- Original sizing logic preserved ---
     int packet_num = 2;
-    const int total_packet_num  = 4;
-    const int total_packet_num2 = 2; // one packet per PL channel
     int mem_size = packet_num * 32;
 
     if (mem_size % sizeof(float) != 0) {
@@ -123,9 +121,6 @@ int main(int argc, char* argv[]) {
         const std::size_t ncopy =
             std::min<std::size_t>(vals.size(), static_cast<std::size_t>(words_per_channel));
         nwords_effective = ncopy;  // used below to inform hls_packet_sender
-        if (nwords_effective == 0) {
-            nwords_effective = 1; // clamp to guarantee at least one payload word
-        }
 
         for (auto* dest : host_inputs) {
             std::fill(dest, dest + words_per_channel, 0.0f);
@@ -135,10 +130,11 @@ int main(int argc, char* argv[]) {
     // ----------------------------------------------------------------
 
     const uint32_t words_per_packet = static_cast<uint32_t>(nwords_effective);
+    uint32_t max_words_host[channel_count];
+    for (int i = 0; i < channel_count; ++i) {
+        max_words_host[i] = words_per_packet;
+    }
     assert(nwords_effective <= static_cast<std::size_t>(words_per_channel));
-    assert(total_packet_num == 4);
-    assert(total_packet_num2 == 2);
-    assert(words_per_packet >= 1U);
 
     std::cout << "memory allocation complete" << std::endl;
 
@@ -179,12 +175,27 @@ int main(int argc, char* argv[]) {
 
     xrtKernelHandle hls_packet_receiver_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver:{hls_packet_receiver_1}");
     xrtRunHandle   hls_packet_receiver_r = xrtRunOpen(hls_packet_receiver_k);
-    xrtRunSetArg(hls_packet_receiver_r, 5, total_packet_num);
-    std::cout << "output kernel complete" << std::endl;
 
     xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
     xrtRunHandle   hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
-    xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // one packet per PL channel
+
+    uint32_t total_packet_num  = 0U;
+    uint32_t total_packet_num2 = 0U;
+    for (int i = 0; i < channel_count; ++i) {
+        if (max_words_host[i] > 0U) {
+            if (i < 4) {
+                ++total_packet_num;
+            } else {
+                ++total_packet_num2;
+            }
+        }
+    }
+    std::cout << "AIE packets: " << total_packet_num << "  PL packets: " << total_packet_num2 << std::endl;
+
+    xrtRunSetArg(hls_packet_receiver_r, 5, total_packet_num);
+    std::cout << "output kernel complete" << std::endl;
+
+    xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2); // host-programmed packet count (PL domain)
     std::cout << "output kernel2 complete" << std::endl;
 
     // set up input kernels
@@ -221,12 +232,6 @@ int main(int argc, char* argv[]) {
     // ---- NEW: prepare and pass 6-element array to hls_packet_sender (arg 8) ----
     xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
     xrtRunHandle   hls_packet_sender_r = xrtRunOpen(hls_packet_sender_k);
-
-    uint32_t max_words_host[6];
-    for (int i = 0; i < 6; ++i) {
-        max_words_host[i] = words_per_packet;
-        assert(max_words_host[i] >= 1U);
-    }
 
     xrtBufferHandle max_words_bo = xrtBOAlloc(dhdl, 6 * sizeof(uint32_t), 0, /*BANK=*/0);
     auto* max_words_ptr = reinterpret_cast<uint32_t*>(xrtBOMap(max_words_bo));
