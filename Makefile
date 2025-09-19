@@ -31,8 +31,8 @@ AIE_INCLUDE_FLAGS := \
 GRAPH    = aie/graph.cpp
 LIBADF  = libadf.a
 AIE_CFG       := aie/aie.cfg
-AIE_CMPL_CMD = v++ -c --mode aie --platform=${PLATFORM} $(AIE_INCLUDE_FLAGS) --config=$(AIE_CFG) --work_dir=./Work ${GRAPH} 2>&1 | tee log.txt
-AIE_SIM_CMD = aiesimulator --pkg-dir=./Work
+AIE_CMPL_CMD = v++ -c --mode aie --platform=${PLATFORM} $(AIE_INCLUDE_FLAGS) --config=$(AIE_CFG) --work_dir=./aie/Work ${GRAPH} 2>&1 | tee log.txt
+AIE_SIM_CMD = aiesimulator --pkg-dir=./aie/Work
 EMU_CMD = ./launch_hw_emu.sh
 
 ##########################################################################################################################################################
@@ -117,7 +117,7 @@ launch_hw_emu.sh: package_hw_emu
 
 clean:
 	rm -rf _x v++_* ${XOS} ${OS} ${LIBADF} *.o.* *.o *.xpe *.xo.* \
-	       aie_base*.xclbin* *.xsa *.log *.jou *.BIN *.bin *.bif qemu* *.wcfg *.wdb *.img pmc_args.txt log.txt xnwOut Work Map_Report.csv \
+	       aie_base*.xclbin* *.xsa *.log *.jou *.BIN *.bin *.bif qemu* *.wcfg *.wdb *.img pmc_args.txt log.txt xnwOut Work ./aie/Work Map_Report.csv \
 	       ilpProblem* sol.db drivers .Xil aiesimu* x86simu* $(PKG_DIR) build_* *.xclbin *.xsa *.log \
 		    sd_card launch_hw_emu.sh *.link_summary *.package_summary _x .Xil _ide sim cfg emu_qemu_scripts
 
