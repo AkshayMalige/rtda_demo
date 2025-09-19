@@ -4,9 +4,8 @@
 
 .PHONY: clean
 
-all: $(subst .cpp,.xo,$(wildcard *.cpp)) ../Work/temp/packet_ids_c.h
+all: $(subst .cpp,.xo,$(wildcard *.cpp))
 %.xo: %.cpp
-	cp ../Work/temp/packet_ids_c.h .
 	sed 's/s2mm/$(basename $<)/' config.cfg > tmp.cfg
 	v++ -c --mode hls --platform ${PLATFORM} --config tmp.cfg
 
