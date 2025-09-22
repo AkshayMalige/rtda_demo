@@ -4,7 +4,7 @@ CXX     := aarch64-linux-gnu-g++
 # Default data directory lives one level above the project root
 HOST_EXE     = ../host.exe
 # Sources and targets
-SRC := host.cpp
+SRC := host.cpp packet_utils.cpp
 OBJ := $(SRC:.cpp=.o)
 OUT ?= ../system_host
 
