@@ -7,6 +7,18 @@ SPDX-License-Identifier: MIT
 #include "ap_axi_sdata.h"
 typedef ap_axiu<32,0,0,0> axis32_t;
 
+namespace {
+
+axis32_t format_header(axis32_t header_word) {
+#pragma HLS inline
+    axis32_t formatted = header_word;
+    formatted.keep     = -1;
+    formatted.last     = ap_uint<1>(0);
+    return formatted;
+}
+
+} // namespace
+
 void hls_packet_receiver2(hls::stream<axis32_t>& in, hls::stream<axis32_t>& out,
                           const unsigned int total_num_packet) {
 #pragma HLS INTERFACE axis port = in
@@ -31,10 +43,7 @@ void hls_packet_receiver2(hls::stream<axis32_t>& in, hls::stream<axis32_t>& out,
         unsigned       seen         = 0U;
 #endif
 
-        axis32_t header_out = header;
-        header_out.keep = -1;
-        header_out.last = ap_uint<1>(0);
-        out.write(header_out);
+        out.write(format_header(header));
 
         bool last_word = !has_payload;
         if (!last_word) {
