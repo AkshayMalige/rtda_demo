@@ -9,9 +9,7 @@ typedef ap_axiu<32,0,0,0> axis32_t;
 
 unsigned int getPacketId(ap_uint<32> header){
 #pragma HLS inline
-        ap_uint<32> ID=0;
-        ID(7,0)=header(7,0);
-        return ID;
+        return header(10,8);  // Extract routing ID from bits [10:8]
 }
 
 void hls_packet_receiver2(hls::stream<axis32_t> &in, hls::stream<axis32_t> &out0,hls::stream<axis32_t> &out1,

@@ -46,4 +46,7 @@
 
 // Miscellaneous -----------------------------------------------------------
 #define EMBED_HOST_OUTPUT           "host_output.txt"
+#define ALL_INPUT_PKTS  "embed_input.txt"
+#define ALL_OUTPUT_PKTS  "all_output.txt"
+
 

@@ -4,6 +4,8 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
+#include "packet_kernels.h"
+
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 static constexpr unsigned int TP_SHIFT = 0;
@@ -36,57 +38,103 @@ using dense128x128 = matrix_vector_mul_graph<
     TP_SAT,
     TP_SSR,
     TP_DIM_A_LEADING>;
-// Graph connects dense1 and dense2; leaky ReLU is handled in PL
+// Packet-routed neural network graph with 2 PLIOs
+// Uses pktsplit/pktmerge with packet-to-stream conversion kernels
+// Packet routing IDs:
+//   0 -> dense1.inA[0]   (layer-1 weights)
+//   1 -> dense1.inB[0]   (layer-1 activations)
+//   2 -> dense2.inA[0]   (layer-2 weights, lane0)
+//   3 -> dense2.inA[1]   (layer-2 weights, lane1)
+//   4 -> dense2.inB[0]   (layer-2 activations, lane0)
+//   5 -> dense2.inB[1]   (layer-2 activations, lane1)
 class NeuralNetworkGraph : public graph {
 public:
-    input_plio  layer0_in;
-    input_plio  layer0_weights;
-    // Output of first dense layer exposed via PLIO for direct PL interfacing
-    output_plio layer0_out;
+    // Only 2 PLIOs: input packets and output packets
+    input_plio  all_in_pkts;
+    output_plio all_out_pkts;
+
+    // Packet routing fabric
+    adf::pktsplit<6> sp;                                  // 6-way packet splitter
+    adf::pktmerge<1 + TP_CASC_LEN_LAYER2> mg_all;         // merge outputs
+
+    // Packet-to-stream conversion kernels (6 converters for 6 packet types)
+    kernel pkt2stream[6];
+
+    // Stream-to-packet conversion kernels
+    kernel stream2pkt[1 + TP_CASC_LEN_LAYER2];
+
+    // Neural network computation
     dense8x128   dense1;
     dense128x128 dense2;
-    input_plio  layer1_in[TP_CASC_LEN_LAYER2];
-    input_plio  layer1_weights[TP_CASC_LEN_LAYER2];
-    // Final dense layer output directly drives a PLIO
-    output_plio layer1_out;
+
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
-        layer0_in      = input_plio::create("layer0_in", plio_32_bits,
-                                             (base_path + "/" + EMBED_INPUT_DATA).c_str());
-        layer0_weights = input_plio::create("layer0_weights", plio_32_bits,
-                                             (base_path + "/" + EMBED_DENSE0_WEIGHTS).c_str());
-        layer0_out     = output_plio::create("layer0_out", plio_32_bits,
-                                             (base_path + "/" + EMBED_DENSE0_OUTPUT).c_str());
-        connect<>(layer0_weights.out[0], dense1.inA[0]);
-        connect<>(layer0_in.out[0], dense1.inB[0]);
-        connect<>(dense1.out[0], layer0_out.in[0]);
-        constexpr unsigned dense1_base_col = 0;
-        constexpr unsigned dense1_row = 0;
-        auto dense1_kernels = dense1.getKernels();
-        // for (unsigned i = 0; i < TP_CASC_LEN_LAYER1; ++i) {
-        //     adf::location<adf::kernel>(dense1_kernels[i]) =
-        //         adf::tile(dense1_base_col + i, dense1_row);
-        // }
-        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-            std::string in_file = base_path + "/" + EMBED_LEAKYRELU0_OUTPUT_PREFIX + std::to_string(i) + ".txt";
-            std::string w_file  = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(i) + ".txt";
-            std::string in_name = "layer1_in_" + std::to_string(i);
-            std::string w_name  = "layer1_weights_" + std::to_string(i);
-            layer1_in[i]      = input_plio::create(in_name.c_str(), plio_32_bits, in_file.c_str());
-            layer1_weights[i] = input_plio::create(w_name.c_str(), plio_32_bits, w_file.c_str());
-            connect<>(layer1_in[i].out[0], dense2.inB[i]);
-            connect<>(layer1_weights[i].out[0], dense2.inA[i]);
+
+        // Create packet routing components
+        sp = adf::pktsplit<6>::create();
+        mg_all = adf::pktmerge<1 + TP_CASC_LEN_LAYER2>::create();
+
+        // Create PLIOs
+        all_in_pkts  = input_plio ::create("all_in_pkts",  plio_32_bits, (base_path + "/" + ALL_INPUT_PKTS ).c_str());
+        all_out_pkts = output_plio::create("all_out_pkts", plio_32_bits, (base_path + "/" + ALL_OUTPUT_PKTS).c_str());
+
+        // Create packet-to-stream conversion kernels
+        for (int i = 0; i < 6; i++) {
+            pkt2stream[i] = kernel::create(packet_to_stream);
+            source(pkt2stream[i]) = "packet_kernels.cpp";
         }
-        layer1_out = output_plio::create("layer1_out", plio_32_bits,
-                                         (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
-        connect<>(dense2.out[0], layer1_out.in[0]);
-        
-        constexpr unsigned dense2_base_col = 2;
-        constexpr unsigned dense2_row = 0;
-        // auto dense2_kernels = dense2.getKernels();
+
+        // Create stream-to-packet conversion kernels
+        for (int i = 0; i < 1 + TP_CASC_LEN_LAYER2; i++) {
+            stream2pkt[i] = kernel::create(stream_to_packet);
+            source(stream2pkt[i]) = "packet_kernels.cpp";
+        }
+
+        // Connect input: PLIO -> pktsplit
+        adf::connect<adf::pktstream>(all_in_pkts.out[0], sp.in[0]);
+
+        // Connect pktsplit outputs to packet-to-stream converters
+        for (int i = 0; i < 6; i++) {
+            adf::connect<adf::pktstream>(sp.out[i], pkt2stream[i].in[0]);
+        }
+
+        // Connect packet-to-stream converters to neural network inputs
+        // dense1 connections
+        adf::connect<adf::stream>(pkt2stream[0].out[0], dense1.inA[0]);  // weights
+        adf::connect<adf::stream>(pkt2stream[1].out[0], dense1.inB[0]);  // activations
+
+        // dense2 connections (cascaded)
+        adf::connect<adf::stream>(pkt2stream[2].out[0], dense2.inA[0]);  // weights lane 0
+        adf::connect<adf::stream>(pkt2stream[3].out[0], dense2.inA[1]);  // weights lane 1
+        adf::connect<adf::stream>(pkt2stream[4].out[0], dense2.inB[0]);  // activations lane 0
+        adf::connect<adf::stream>(pkt2stream[5].out[0], dense2.inB[1]);  // activations lane 1
+
+        // Connect neural network outputs to stream-to-packet converters
+        adf::connect<adf::stream>(dense1.out[0], stream2pkt[0].in[0]);
+        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
+            adf::connect<adf::stream>(dense2.out[i], stream2pkt[1 + i].in[0]);
+        }
+
+        // Connect stream-to-packet converters to pktmerge
+        for (int i = 0; i < 1 + TP_CASC_LEN_LAYER2; i++) {
+            adf::connect<adf::pktstream>(stream2pkt[i].out[0], mg_all.in[i]);
+        }
+
+        // Connect pktmerge output to PLIO
+        adf::connect<adf::pktstream>(mg_all.out[0], all_out_pkts.in[0]);
+
+        // Optional placement constraints
+        // constexpr unsigned dense1_base_col = 0;
+        // constexpr unsigned dense1_row = 0;
+        // auto d1k = dense1.getKernels();
+        // for (unsigned i = 0; i < TP_CASC_LEN_LAYER1; ++i) {
+        //   location<kernel>(d1k[i]) = tile(dense1_base_col + i, dense1_row);
+        // }
+        // constexpr unsigned dense2_base_col = 2;
+        // constexpr unsigned dense2_row = 0;
+        // auto d2k = dense2.getKernels();
         // for (unsigned i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-        //     adf::location<adf::kernel>(dense2_kernels[i]) =
-        //         adf::tile(dense2_base_col + i, dense2_row);
+        //   location<kernel>(d2k[i]) = tile(dense2_base_col + i, dense2_row);
         // }
     }
 };
