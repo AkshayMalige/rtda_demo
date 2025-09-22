@@ -2,296 +2,312 @@
 Copyright (C) 2023, Advanced Micro Devices, Inc.
 SPDX-License-Identifier: MIT
 */
-#include <stdlib.h>
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cstddef>
+#include <cstdlib>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <unistd.h>
-#include <complex>
+#include <string>
 #include <vector>
 
 #include "experimental/xrt_graph.h"
 #include "experimental/xrt_kernel.h"
 
-using namespace std;
+#include "packet_utils.h"
+
+namespace {
+
+constexpr std::size_t channel_count = 6;
+constexpr std::array<uint32_t, channel_count> channel_ids{{0U, 1U, 2U, 3U, 4U, 5U}};
+constexpr uint32_t pkt_type = 0U;
+
+struct ChannelMetadata {
+    uint32_t      id = 0U;
+    uint32_t      payload_len = 0U;
+    const float*  expected = nullptr;
+    float*        actual = nullptr;
+};
+
+struct OutputStreamInfo {
+    const char* instance = nullptr;
+    std::vector<uint32_t> channel_ids;
+};
+
+struct OutputStreamRuntime {
+    OutputStreamInfo info;
+    std::size_t      word_count = 0U;
+    std::size_t      alloc_words = 0U;
+    xrtBufferHandle  bo = nullptr;
+    uint32_t*        host_ptr = nullptr;
+    xrtKernelHandle  kernel = nullptr;
+    xrtRunHandle     run = nullptr;
+};
+
+std::size_t compute_words_for_stream(const OutputStreamInfo& info, const std::array<ChannelMetadata, channel_count>& metadata) {
+    std::size_t total = 0U;
+    for (uint32_t id : info.channel_ids) {
+        if (id >= metadata.size())
+            continue;
+        const auto payload_len = metadata[id].payload_len;
+        if (payload_len == 0U)
+            continue;
+        total += 1U + payload_len;
+    }
+    return total;
+}
+
+struct ParseReport {
+    bool parity_error = false;
+    bool truncated    = false;
+};
+
+ParseReport parse_stream(const std::array<ChannelMetadata, channel_count>& metadata,
+                         const uint32_t* words,
+                         std::size_t word_count,
+                         std::array<uint32_t, channel_count>& offsets)
+{
+    ParseReport report{};
+    std::size_t idx = 0U;
+    while (idx < word_count) {
+        const uint32_t header = words[idx++];
+        if (!packet_utils::header_has_valid_parity(header)) {
+            report.parity_error = true;
+        }
+
+        const uint32_t id          = header & 0xFFU;
+        const uint32_t payload_len = (header >> 16) & 0x0FFFU;
+
+        if (idx + payload_len > word_count) {
+            report.truncated = true;
+            break;
+        }
+
+        if (id < metadata.size()) {
+            auto& offset             = offsets[id];
+            const uint32_t write_pos = offset;
+            float* dest              = metadata[id].actual;
+            const uint32_t expected  = metadata[id].payload_len;
+            const uint32_t copy_base = write_pos < expected ? write_pos : expected;
+            const uint32_t available = expected > copy_base ? (expected - copy_base) : 0U;
+            const uint32_t copy_len  = std::min(payload_len, available);
+
+            for (uint32_t j = 0U; j < copy_len; ++j) {
+                float value = 0.0f;
+                std::memcpy(&value, &words[idx + j], sizeof(uint32_t));
+                if (dest) {
+                    dest[copy_base + j] = value;
+                }
+            }
+
+            offset = write_pos + payload_len;
+        }
+
+        idx += payload_len;
+    }
+
+    return report;
+}
+
+} // namespace
 
 int main(int argc, char* argv[]) {
-    constexpr int channel_count = 6;
-
-    // ===== Capacity per channel =====
-    // Replace the old "packet_num * 32" trick with explicit capacity:
-    // Each channel BO holds up to max_words_per_channel 32-bit floats.
-    const int max_words_per_channel = 1024;                 // adjust as needed
-    const int mem_size              = max_words_per_channel * sizeof(float); // bytes
-    const int words_per_channel     = max_words_per_channel;
-
     if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " <xclbin>" << std::endl;
         return EXIT_FAILURE;
     }
-    char* xclbinFilename = argv[1];
 
-    int ret = 0;
-    int match = 0;
+    const std::string xclbin_filename = argv[1];
 
-    // Open device/xclbin
-    auto dhdl = xrtDeviceOpen(0); // device index=0
-    if (!dhdl) {
-        std::cerr << "Device open error\n";
-        return EXIT_FAILURE;
-    }
-    ret = xrtDeviceLoadXclbinFile(dhdl, xclbinFilename);
-    if (ret) {
-        std::cerr << "Xclbin Load fail, ret=" << ret << "\n";
-        return EXIT_FAILURE;
-    }
-    xuid_t uuid;
-    xrtDeviceGetXclbinUUID(dhdl, uuid);
+    constexpr std::size_t max_words_per_channel = 1024U;
 
-    // Output BOs
-    xrtBufferHandle out_bo1 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle out_bo2 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle out_bo3 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle out_bo4 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle out_bo5 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle out_bo6 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    float* host_out1 = reinterpret_cast<float*>(xrtBOMap(out_bo1));
-    float* host_out2 = reinterpret_cast<float*>(xrtBOMap(out_bo2));
-    float* host_out3 = reinterpret_cast<float*>(xrtBOMap(out_bo3));
-    float* host_out4 = reinterpret_cast<float*>(xrtBOMap(out_bo4));
-    float* host_out5 = reinterpret_cast<float*>(xrtBOMap(out_bo5));
-    float* host_out6 = reinterpret_cast<float*>(xrtBOMap(out_bo6));
+    std::array<std::vector<float>, channel_count> channel_inputs;
+    std::array<std::vector<float>, channel_count> channel_outputs;
 
-    // Input BOs
-    xrtBufferHandle in_bo1 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle in_bo2 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle in_bo3 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle in_bo4 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle in_bo5 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    xrtBufferHandle in_bo6 = xrtBOAlloc(dhdl, mem_size, 0, /*BANK=*/0);
-    float* host_in1 = reinterpret_cast<float*>(xrtBOMap(in_bo1));
-    float* host_in2 = reinterpret_cast<float*>(xrtBOMap(in_bo2));
-    float* host_in3 = reinterpret_cast<float*>(xrtBOMap(in_bo3));
-    float* host_in4 = reinterpret_cast<float*>(xrtBOMap(in_bo4));
-    float* host_in5 = reinterpret_cast<float*>(xrtBOMap(in_bo5));
-    float* host_in6 = reinterpret_cast<float*>(xrtBOMap(in_bo6));
-
-    std::array<float*, channel_count>          host_inputs  = {host_in1, host_in2, host_in3, host_in4, host_in5, host_in6};
-    std::array<float*, channel_count>          host_outputs = {host_out1, host_out2, host_out3, host_out4, host_out5, host_out6};
-    std::array<xrtBufferHandle, channel_count> input_bos    = {in_bo1, in_bo2, in_bo3, in_bo4, in_bo5, in_bo6};
-    std::array<xrtBufferHandle, channel_count> output_bos   = {out_bo1, out_bo2, out_bo3, out_bo4, out_bo5, out_bo6};
-
-    // Per-channel payload lengths (words). 0 means "skip this ID".
-    uint32_t max_words_host[channel_count];
-
-    // -------- Simplified file reading (broadcast to all channels) --------
-    size_t nwords_effective = 0;
+    std::vector<float> file_values;
     {
         std::ifstream in("./data/embed_model_output.txt");
         if (!in.is_open()) {
-            std::cerr << "./data/embed_input.txt does not exist in this path." << std::endl;
+            std::cerr << "./data/embed_model_output.txt does not exist in this path." << std::endl;
             return EXIT_FAILURE;
         }
-
-        std::vector<float> vals;
-        vals.reserve(words_per_channel);
-        float f = 0.0f;
-        while (in >> f) {
-            vals.push_back(f);
-        }
-        if (vals.empty()) {
-            std::cerr << "No float values found in ./data/embed_input.txt; using zeros" << std::endl;
-        }
-
-        const std::size_t ncopy = std::min<std::size_t>(vals.size(), static_cast<std::size_t>(words_per_channel));
-        nwords_effective = ncopy;  // used below and passed to kernels that need it
-
-        for (auto* dest : host_inputs) {
-            std::fill(dest, dest + words_per_channel, 0.0f);
-            std::copy(vals.begin(), vals.begin() + ncopy, dest);
+        float value = 0.0f;
+        while (in >> value) {
+            file_values.push_back(value);
         }
     }
-    // --------------------------------------------------------------------
 
-    const uint32_t words_per_packet = static_cast<uint32_t>(nwords_effective);
-    for (int i = 0; i < channel_count; ++i)
-        max_words_host[i] = words_per_packet;   // set per-channel N here (0 allowed)
-
-    // Sync inputs to device
-    for (auto bo : input_bos)
-        xrtBOSync(bo, XCL_BO_SYNC_BO_TO_DEVICE, mem_size, /*offset=*/0);
-
-    // Zero/sync outputs
-    for (int i = 0; i < channel_count; ++i) {
-        std::fill(host_outputs[i], host_outputs[i] + words_per_channel, 0.0f);
-        xrtBOSync(output_bos[i], XCL_BO_SYNC_BO_TO_DEVICE, mem_size, /*offset=*/0);
-    }
-
-    // === Open kernels ===
-    xrtKernelHandle s2mm_k1 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_1}");
-    xrtRunHandle    s2mm_r1 = xrtRunOpen(s2mm_k1);
-    xrtRunSetArg(s2mm_r1, 0, out_bo1);
-    xrtRunSetArg(s2mm_r1, 2, words_per_packet);
-
-    xrtKernelHandle s2mm_k2 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_2}");
-    xrtRunHandle    s2mm_r2 = xrtRunOpen(s2mm_k2);
-    xrtRunSetArg(s2mm_r2, 0, out_bo2);
-    xrtRunSetArg(s2mm_r2, 2, words_per_packet);
-
-    xrtKernelHandle s2mm_k3 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_3}");
-    xrtRunHandle    s2mm_r3 = xrtRunOpen(s2mm_k3);
-    xrtRunSetArg(s2mm_r3, 0, out_bo3);
-    xrtRunSetArg(s2mm_r3, 2, words_per_packet);
-
-    xrtKernelHandle s2mm_k4 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_4}");
-    xrtRunHandle    s2mm_r4 = xrtRunOpen(s2mm_k4);
-    xrtRunSetArg(s2mm_r4, 0, out_bo4);
-    xrtRunSetArg(s2mm_r4, 2, words_per_packet);
-
-    xrtKernelHandle s2mm_k5 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_5}");
-    xrtRunHandle    s2mm_r5 = xrtRunOpen(s2mm_k5);
-    xrtRunSetArg(s2mm_r5, 0, out_bo5);
-    xrtRunSetArg(s2mm_r5, 2, words_per_packet);
-
-    xrtKernelHandle s2mm_k6 = xrtPLKernelOpen(dhdl, uuid, "s2mm:{s2mm_6}");
-    xrtRunHandle    s2mm_r6 = xrtRunOpen(s2mm_k6);
-    xrtRunSetArg(s2mm_r6, 0, out_bo6);
-    xrtRunSetArg(s2mm_r6, 2, words_per_packet);
-
-    xrtKernelHandle hls_packet_receiver_k  = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver:{hls_packet_receiver_1}");
-    xrtRunHandle    hls_packet_receiver_r  = xrtRunOpen(hls_packet_receiver_k);
-
-    xrtKernelHandle hls_packet_receiver_k2 = xrtPLKernelOpen(dhdl, uuid, "hls_packet_receiver2:{hls_packet_receiver_2}");
-    xrtRunHandle    hls_packet_receiver_r2 = xrtRunOpen(hls_packet_receiver_k2);
-
-    // Count packets from max_words_host: IDs 0..3 → AIE, 4..5 → PL
-    uint32_t total_packet_num  = 0U;
-    uint32_t total_packet_num2 = 0U;
-    for (int i = 0; i < channel_count; ++i) {
-        if (max_words_host[i] > 0U) {
-            if (i < 4) ++total_packet_num;
-            else       ++total_packet_num2;
-        }
-    }
-    std::cout << "AIE packets: " << total_packet_num << "  PL packets: " << total_packet_num2 << std::endl;
-
-    xrtRunSetArg(hls_packet_receiver_r,  5, total_packet_num);
-    xrtRunSetArg(hls_packet_receiver_r2, 3, total_packet_num2);
-
-    // Input kernels (mm2s)
-    xrtKernelHandle mm2s_k1 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_1}");
-    xrtRunHandle    mm2s_r1 = xrtRunOpen(mm2s_k1);
-    xrtRunSetArg(mm2s_r1, 0, in_bo1);
-    xrtRunSetArg(mm2s_r1, 2, words_per_packet);
-
-    xrtKernelHandle mm2s_k2 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_2}");
-    xrtRunHandle    mm2s_r2 = xrtRunOpen(mm2s_k2);
-    xrtRunSetArg(mm2s_r2, 0, in_bo2);
-    xrtRunSetArg(mm2s_r2, 2, words_per_packet);
-
-    xrtKernelHandle mm2s_k3 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_3}");
-    xrtRunHandle    mm2s_r3 = xrtRunOpen(mm2s_k3);
-    xrtRunSetArg(mm2s_r3, 0, in_bo3);
-    xrtRunSetArg(mm2s_r3, 2, words_per_packet);
-
-    xrtKernelHandle mm2s_k4 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_4}");
-    xrtRunHandle    mm2s_r4 = xrtRunOpen(mm2s_k4);
-    xrtRunSetArg(mm2s_r4, 0, in_bo4);
-    xrtRunSetArg(mm2s_r4, 2, words_per_packet);
-
-    xrtKernelHandle mm2s_k5 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_5}");
-    xrtRunHandle    mm2s_r5 = xrtRunOpen(mm2s_k5);
-    xrtRunSetArg(mm2s_r5, 0, in_bo5);
-    xrtRunSetArg(mm2s_r5, 2, words_per_packet);
-
-    xrtKernelHandle mm2s_k6 = xrtPLKernelOpen(dhdl, uuid, "mm2s:{mm2s_6}");
-    xrtRunHandle    mm2s_r6 = xrtRunOpen(mm2s_k6);
-    xrtRunSetArg(mm2s_r6, 0, in_bo6);
-    xrtRunSetArg(mm2s_r6, 2, words_per_packet);
-
-    // Prepare and pass 6-element N array to hls_packet_sender (arg 8)
-    xrtKernelHandle hls_packet_sender_k = xrtPLKernelOpen(dhdl, uuid, "hls_packet_sender");
-    xrtRunHandle    hls_packet_sender_r = xrtRunOpen(hls_packet_sender_k);
-
-    xrtBufferHandle max_words_bo = xrtBOAlloc(dhdl, 6 * sizeof(uint32_t), 0, /*BANK=*/0);
-    auto* max_words_ptr = reinterpret_cast<uint32_t*>(xrtBOMap(max_words_bo));
-    std::memcpy(max_words_ptr, max_words_host, 6 * sizeof(uint32_t));
-    xrtBOSync(max_words_bo, XCL_BO_SYNC_BO_TO_DEVICE, 6 * sizeof(uint32_t), /*offset*/0);
-
-    // IMPORTANT: pass the BO at the pointer arg index (8)
-    xrtRunSetArg(hls_packet_sender_r, 8, max_words_bo);
-
-    // Open and run the AIE graph (name as in your xclbin)
-    auto graph = xrtGraphOpen(dhdl, uuid, "gr");
-    if (!graph) {
-        std::cerr << "Failed to open graph 'gr'" << std::endl;
+    const std::size_t source_words = std::min<std::size_t>(file_values.size(), max_words_per_channel);
+    if (source_words == 0U) {
+        std::cerr << "No float values found in ./data/embed_model_output.txt" << std::endl;
         return EXIT_FAILURE;
     }
+
+    for (std::size_t idx = 0U; idx < channel_count; ++idx) {
+        channel_inputs[idx].assign(file_values.begin(), file_values.begin() + source_words);
+        channel_outputs[idx].assign(source_words, 0.0f);
+    }
+
+    std::array<ChannelMetadata, channel_count> metadata{};
+    for (std::size_t idx = 0U; idx < channel_ids.size(); ++idx) {
+        const uint32_t id = channel_ids[idx];
+        const std::size_t len = channel_inputs[idx].size();
+        metadata[id].id          = id;
+        metadata[id].payload_len = static_cast<uint32_t>(len);
+        metadata[id].expected    = len ? channel_inputs[idx].data() : nullptr;
+        metadata[id].actual      = len ? channel_outputs[idx].data() : nullptr;
+    }
+
+    std::vector<packet_utils::PayloadView> payload_views;
+    payload_views.reserve(channel_ids.size());
+    for (uint32_t id : channel_ids) {
+        const auto& meta = metadata[id];
+        payload_views.push_back(packet_utils::PayloadView{meta.id, meta.expected, meta.payload_len});
+    }
+
+    const std::vector<uint32_t> input_words = packet_utils::pack_packets(payload_views, pkt_type);
+    const std::size_t total_input_words = input_words.size();
+
+    if (total_input_words == 0U) {
+        std::cerr << "All payloads are empty; nothing to transmit." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    auto device_handle = xrtDeviceOpen(0);
+    if (!device_handle) {
+        std::cerr << "Device open error\n";
+        return EXIT_FAILURE;
+    }
+    if (int ret = xrtDeviceLoadXclbinFile(device_handle, xclbin_filename.c_str())) {
+        std::cerr << "Xclbin Load fail, ret=" << ret << "\n";
+        xrtDeviceClose(device_handle);
+        return EXIT_FAILURE;
+    }
+
+    xuid_t uuid;
+    xrtDeviceGetXclbinUUID(device_handle, uuid);
+
+    const std::vector<OutputStreamInfo> output_streams = {
+        {"s2mm:{s2mm_1}", {0U, 1U, 2U, 3U}},
+        {"s2mm:{s2mm_2}", {4U, 5U}},
+    };
+
+    std::vector<OutputStreamRuntime> output_runtime;
+    output_runtime.reserve(output_streams.size());
+    for (const auto& info : output_streams) {
+        OutputStreamRuntime runtime;
+        runtime.info = info;
+        runtime.word_count = compute_words_for_stream(info, metadata);
+        runtime.alloc_words = std::max<std::size_t>(runtime.word_count, std::size_t{1});
+        runtime.bo = xrtBOAlloc(device_handle, runtime.alloc_words * sizeof(uint32_t), 0, 0);
+        runtime.host_ptr = reinterpret_cast<uint32_t*>(xrtBOMap(runtime.bo));
+        std::fill(runtime.host_ptr, runtime.host_ptr + runtime.alloc_words, 0U);
+        if (runtime.word_count > 0U) {
+            xrtBOSync(runtime.bo, XCL_BO_SYNC_BO_TO_DEVICE, runtime.word_count * sizeof(uint32_t), 0);
+        }
+        runtime.kernel = xrtPLKernelOpen(device_handle, uuid, runtime.info.instance);
+        runtime.run    = xrtRunOpen(runtime.kernel);
+        xrtRunSetArg(runtime.run, 0, runtime.bo);
+        xrtRunSetArg(runtime.run, 2, static_cast<int>(runtime.word_count));
+        output_runtime.push_back(runtime);
+    }
+
+    const std::size_t input_alloc_words = std::max<std::size_t>(total_input_words, std::size_t{1});
+    xrtBufferHandle input_bo = xrtBOAlloc(device_handle, input_alloc_words * sizeof(uint32_t), 0, 0);
+    auto* host_input_words   = reinterpret_cast<uint32_t*>(xrtBOMap(input_bo));
+    std::fill(host_input_words, host_input_words + input_alloc_words, 0U);
+    std::copy(input_words.begin(), input_words.end(), host_input_words);
+    xrtBOSync(input_bo, XCL_BO_SYNC_BO_TO_DEVICE, total_input_words * sizeof(uint32_t), 0);
+
+    auto mm2s_kernel = xrtPLKernelOpen(device_handle, uuid, "mm2s:{mm2s_1}");
+    auto mm2s_run    = xrtRunOpen(mm2s_kernel);
+    xrtRunSetArg(mm2s_run, 0, input_bo);
+    xrtRunSetArg(mm2s_run, 2, static_cast<int>(total_input_words));
+
+    auto graph = xrtGraphOpen(device_handle, uuid, "gr");
+    if (!graph) {
+        std::cerr << "Failed to open graph 'gr'" << std::endl;
+        for (auto& runtime : output_runtime) {
+            xrtRunClose(runtime.run);
+            xrtKernelClose(runtime.kernel);
+            xrtBOFree(runtime.bo);
+        }
+        xrtRunClose(mm2s_run);
+        xrtKernelClose(mm2s_kernel);
+        xrtBOFree(input_bo);
+        xrtDeviceClose(device_handle);
+        return EXIT_FAILURE;
+    }
+
     xrtGraphRun(graph, 1);
 
-    // Startup sequence: receivers -> s2mm -> mm2s -> sender
-    xrtRunStart(hls_packet_receiver_r);
-    xrtRunStart(hls_packet_receiver_r2);
+    for (auto& runtime : output_runtime) {
+        xrtRunStart(runtime.run);
+    }
 
-    xrtRunStart(s2mm_r1);
-    xrtRunStart(s2mm_r2);
-    xrtRunStart(s2mm_r3);
-    xrtRunStart(s2mm_r4);
-    xrtRunStart(s2mm_r5);
-    xrtRunStart(s2mm_r6);
+    xrtRunStart(mm2s_run);
 
-    xrtRunStart(mm2s_r1);
-    xrtRunStart(mm2s_r2);
-    xrtRunStart(mm2s_r3);
-    xrtRunStart(mm2s_r4);
-    xrtRunStart(mm2s_r5);
-    xrtRunStart(mm2s_r6);
+    xrtRunWait(mm2s_run);
 
-    xrtRunStart(hls_packet_sender_r);
+    for (auto& runtime : output_runtime) {
+        xrtRunWait(runtime.run);
+    }
 
-    // Wait
-    xrtRunWait(hls_packet_sender_r);
-    xrtRunWait(mm2s_r1);
-    xrtRunWait(mm2s_r2);
-    xrtRunWait(mm2s_r3);
-    xrtRunWait(mm2s_r4);
-    xrtRunWait(mm2s_r5);
-    xrtRunWait(mm2s_r6);
-
-    xrtRunWait(hls_packet_receiver_r);
-    xrtRunWait(hls_packet_receiver_r2);
-
-    xrtRunWait(s2mm_r1);
-    xrtRunWait(s2mm_r2);
-    xrtRunWait(s2mm_r3);
-    xrtRunWait(s2mm_r4);
-    xrtRunWait(s2mm_r5);
-    xrtRunWait(s2mm_r6);
-
-    // Graph end & sync outputs back
     xrtGraphWait(graph, 0);
-    for (auto bo : output_bos)
-        xrtBOSync(bo, XCL_BO_SYNC_BO_FROM_DEVICE, mem_size, /*offset=*/0);
 
-    // Quick compare (optional)
-    for (int channel = 0; channel < channel_count; ++channel) {
-        for (std::size_t word_idx = 0; word_idx < nwords_effective; ++word_idx) {
-            float actual = host_outputs[channel][word_idx];
-            float expected = host_inputs[channel][word_idx];
-            uint32_t actual_bits = 0, expected_bits = 0;
-            std::memcpy(&actual_bits, &actual, sizeof(float));
+    for (auto& runtime : output_runtime) {
+        if (runtime.word_count > 0U) {
+            xrtBOSync(runtime.bo, XCL_BO_SYNC_BO_FROM_DEVICE, runtime.word_count * sizeof(uint32_t), 0);
+        }
+    }
+
+    std::array<uint32_t, channel_count> observed_words{};
+    ParseReport aggregate_report{};
+    for (const auto& runtime : output_runtime) {
+        if (runtime.word_count == 0U)
+            continue;
+        const ParseReport report = parse_stream(metadata, runtime.host_ptr, runtime.word_count, observed_words);
+        aggregate_report.parity_error = aggregate_report.parity_error || report.parity_error;
+        aggregate_report.truncated    = aggregate_report.truncated    || report.truncated;
+    }
+
+    int mismatch = 0;
+    if (aggregate_report.parity_error) {
+        std::cerr << "Parity mismatch detected while parsing output stream(s)." << std::endl;
+        mismatch = 1;
+    }
+    if (aggregate_report.truncated) {
+        std::cerr << "Truncated packet detected in output stream(s)." << std::endl;
+        mismatch = 1;
+    }
+
+    for (std::size_t idx = 0U; idx < channel_ids.size(); ++idx) {
+        const uint32_t id = channel_ids[idx];
+        const auto& meta = metadata[id];
+        if (meta.payload_len == 0U)
+            continue;
+
+        if (observed_words[id] != meta.payload_len) {
+            std::cerr << "Channel " << id << " expected " << meta.payload_len
+                      << " words but observed " << observed_words[id] << std::endl;
+            mismatch = 1;
+        }
+
+        for (uint32_t word_idx = 0U; word_idx < meta.payload_len; ++word_idx) {
+            const float expected = meta.expected[word_idx];
+            const float actual   = meta.actual[word_idx];
+            uint32_t expected_bits = 0U;
+            uint32_t actual_bits   = 0U;
             std::memcpy(&expected_bits, &expected, sizeof(float));
-            if (actual_bits != expected_bits) {
-                match = 1;
+            std::memcpy(&actual_bits, &actual, sizeof(float));
+            if (expected_bits != actual_bits) {
+                mismatch = 1;
                 auto oldp = std::cout.precision();
                 std::cout << std::setprecision(10)
-                          << "Mismatch host_out" << (channel+1) << "[" << word_idx << "]="
+                          << "Mismatch channel " << id << "[" << word_idx << "]="
                           << actual << " (0x" << std::hex << actual_bits << std::dec
                           << ") expected " << expected << " (0x" << std::hex
                           << expected_bits << std::dec << ")\n";
@@ -300,57 +316,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Cleanup
-    xrtRunClose(s2mm_r1);
-    xrtRunClose(s2mm_r2);
-    xrtRunClose(s2mm_r3);
-    xrtRunClose(s2mm_r4);
-    xrtRunClose(s2mm_r5);
-    xrtRunClose(s2mm_r6);
-    xrtRunClose(hls_packet_receiver_r);
-    xrtRunClose(hls_packet_receiver_r2);
-    xrtKernelClose(s2mm_k1);
-    xrtKernelClose(s2mm_k2);
-    xrtKernelClose(s2mm_k3);
-    xrtKernelClose(s2mm_k4);
-    xrtKernelClose(s2mm_k5);
-    xrtKernelClose(s2mm_k6);
-    xrtKernelClose(hls_packet_receiver_k);
-    xrtKernelClose(hls_packet_receiver_k2);
+    for (auto& runtime : output_runtime) {
+        xrtRunClose(runtime.run);
+        xrtKernelClose(runtime.kernel);
+        xrtBOFree(runtime.bo);
+    }
 
-    xrtRunClose(mm2s_r1);
-    xrtRunClose(mm2s_r2);
-    xrtRunClose(mm2s_r3);
-    xrtRunClose(mm2s_r4);
-    xrtRunClose(mm2s_r5);
-    xrtRunClose(mm2s_r6);
-    xrtRunClose(hls_packet_sender_r);
-    xrtKernelClose(mm2s_k1);
-    xrtKernelClose(mm2s_k2);
-    xrtKernelClose(mm2s_k3);
-    xrtKernelClose(mm2s_k4);
-    xrtKernelClose(mm2s_k5);
-    xrtKernelClose(mm2s_k6);
-    xrtKernelClose(hls_packet_sender_k);
-
-    xrtBOFree(out_bo1);
-    xrtBOFree(out_bo2);
-    xrtBOFree(out_bo3);
-    xrtBOFree(out_bo4);
-    xrtBOFree(out_bo5);
-    xrtBOFree(out_bo6);
-    xrtBOFree(in_bo1);
-    xrtBOFree(in_bo2);
-    xrtBOFree(in_bo3);
-    xrtBOFree(in_bo4);
-    xrtBOFree(in_bo5);
-    xrtBOFree(in_bo6);
-    xrtBOFree(max_words_bo);
+    xrtRunClose(mm2s_run);
+    xrtKernelClose(mm2s_kernel);
+    xrtBOFree(input_bo);
 
     xrtGraphEnd(graph, 0);
     xrtGraphClose(graph);
-    xrtDeviceClose(dhdl);
+    xrtDeviceClose(device_handle);
 
-    std::cout << "TEST " << (match ? "FAILED" : "PASSED") << std::endl;
-    return (match ? EXIT_FAILURE : EXIT_SUCCESS);
+    std::cout << "TEST " << (mismatch ? "FAILED" : "PASSED") << std::endl;
+    return mismatch ? EXIT_FAILURE : EXIT_SUCCESS;
 }
