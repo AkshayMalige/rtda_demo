@@ -16,44 +16,61 @@ unsigned int getPacketId(ap_uint<32> header){
         return ID;
 }
 
-void hls_packet_receiver(hls::stream<axis32_t> &in, hls::stream<axis32_t> &out0,hls::stream<axis32_t> &out1,hls::stream<axis32_t> &out2,hls::stream<axis32_t> &out3,
-        const unsigned int total_num_packet){
-        const int packet_limit = static_cast<int>(total_num_packet);
-#ifdef VERIFY_PAYLOAD_LEN
-        static bool payload_len_mismatch = false;
-#endif
-        for(int pkt=0; pkt<packet_limit; ++pkt){
-                axis32_t header=in.read();//first word is packet header
-                unsigned int ID=getPacketId(header.data);
-                bool valid_channel = (ID < PACKET_NUM);
+void hls_packet_receiver(hls::stream<axis32_t>& in, hls::stream<axis32_t>& out,
+                         const unsigned int total_num_packet) {
+#pragma HLS INTERFACE axis port = in
+#pragma HLS INTERFACE axis port = out
+#pragma HLS INTERFACE s_axilite port = total_num_packet bundle = control
+#pragma HLS INTERFACE s_axilite port = return bundle = control
 
-                // Packet v1 deframe; consume payload until TLAST; count of packets provided by host.
+    const int packet_limit = static_cast<int>(total_num_packet);
 #ifdef VERIFY_PAYLOAD_LEN
-                const unsigned expected_len = static_cast<unsigned>(header.data(27,16)) & 0x0FFF;
-                unsigned seen = 0U;
+    static bool payload_len_mismatch = false;
 #endif
 
-                bool last_word=false;
-                do{
-                        axis32_t tmp=in.read();
-                        last_word = tmp.last;
+    packet_loop:
+    for (int pkt = 0; pkt < packet_limit; ++pkt) {
+        axis32_t header = in.read();
+        const ap_uint<32> header_word = header.data;
+        const ap_uint<8>  id          = static_cast<ap_uint<8>>(getPacketId(header_word));
+        const ap_uint<12> payload_len = header_word(27, 16);
+        const bool        valid_channel = (id < PACKET_NUM);
+        const bool        has_payload   = (header.last == ap_uint<1>(0));
+
 #ifdef VERIFY_PAYLOAD_LEN
-                        ++seen;
+        const unsigned expected_len = static_cast<unsigned>(payload_len);
+        unsigned       seen         = 0U;
 #endif
-                        if(valid_channel){
-                                switch(ID){
-                                case 0:out0.write(tmp);break;
-                                case 1:out1.write(tmp);break;
-                                case 2:out2.write(tmp);break;
-                                case 3:out3.write(tmp);break;
-                                default:break;
-                                }
-                        }
-                }while(!last_word);
-#ifdef VERIFY_PAYLOAD_LEN
-                if ((expected_len != 0U) && (seen != expected_len) && !payload_len_mismatch) {
-                        payload_len_mismatch = true;
-                }
-#endif
+
+        if (valid_channel) {
+            axis32_t header_out = header;
+            header_out.keep = -1;
+            header_out.last = has_payload ? ap_uint<1>(0) : ap_uint<1>(1);
+            out.write(header_out);
         }
+
+        bool last_word = !has_payload;
+        if (!last_word) {
+        payload_loop:
+            do {
+#pragma HLS PIPELINE II = 1
+                axis32_t tmp = in.read();
+                last_word     = tmp.last;
+                tmp.keep      = -1;
+
+                if (valid_channel) {
+                    out.write(tmp);
+                }
+#ifdef VERIFY_PAYLOAD_LEN
+                ++seen;
+#endif
+            } while (!last_word);
+        }
+
+#ifdef VERIFY_PAYLOAD_LEN
+        if ((expected_len != 0U) && (seen != expected_len) && !payload_len_mismatch) {
+            payload_len_mismatch = true;
+        }
+#endif
+    }
 }
