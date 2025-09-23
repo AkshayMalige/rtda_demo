@@ -34,7 +34,12 @@ using dense8x128 = matrix_vector_mul_graph<
     TP_CASC_LEN_LAYER1,
     TP_SAT,
     TP_SSR,
-    TP_DIM_A_LEADING>;
+    TP_DIM_A_LEADING,
+    TP_DIM_A_LEADING,             // TP_DIM_B_LEADING (row-major vectors)
+    0,                            // TP_ADD_TILING (no tiling)
+    0,                            // TP_INPUT_WINDOW_VSIZE (auto)
+    1,                            // TP_PORT_A uses a single port
+    1>;                           // TP_PORT_B uses a single port
 
 // Layer 2: 128-hidden × 128-output dense layer (HIDDEN_SIZE=128, OUTPUT_SIZE=128)
 // Matrix dimensions: A[128][128] × B[128][1] = C[128][1]
@@ -48,7 +53,12 @@ using dense128x128 = matrix_vector_mul_graph<
     TP_CASC_LEN_LAYER2,
     TP_SAT,
     TP_SSR,
-    TP_DIM_A_LEADING>;
+    TP_DIM_A_LEADING,
+    TP_DIM_A_LEADING,             // TP_DIM_B_LEADING (row-major vectors)
+    0,                            // TP_ADD_TILING (no tiling)
+    0,                            // TP_INPUT_WINDOW_VSIZE (auto)
+    TP_CASC_LEN_LAYER2,           // TP_PORT_A drives both cascaded tiles
+    TP_CASC_LEN_LAYER2>;          // TP_PORT_B drives both cascaded tiles
 
 class CoreNeuralNetworkGraph : public graph {
 public:
