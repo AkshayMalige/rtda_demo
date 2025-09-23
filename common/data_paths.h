@@ -17,6 +17,10 @@
 #define EMBED_DENSE1_BIAS           "embed_dense_1_bias.txt"
 #define EMBED_MODEL_OUTPUT           "embed_model_output.txt"
 
+// Packetized neural network IO files ---------------------------------------
+#define ALL_INPUT_PKTS               "all_input_pkts.txt"
+#define ALL_OUTPUT_PKTS              "all_output_pkts.txt"
+
 
 // SUBSOLVER0 graph files --------------------------------------------------
 #define SUBSOLVER0_INPUT_DATA_PREFIX   "solver_0_input_part"
