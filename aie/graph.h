@@ -74,9 +74,9 @@ public:
     pktsplit<6> pkt_split;
     pktmerge<2> pkt_merge;
 
-    PacketStreamNeuralNetworkGraph()
-        : combined_input("combined_input", plio_32_bits, COMBINED_INPUT_PATH.c_str()),
-          combined_output("combined_output", plio_32_bits, COMBINED_OUTPUT_PATH.c_str()) {
+    PacketStreamNeuralNetworkGraph() {
+        combined_input  = input_plio::create("combined_input", plio_32_bits, COMBINED_INPUT_PATH.c_str());
+        combined_output = output_plio::create("combined_output", plio_32_bits, COMBINED_OUTPUT_PATH.c_str());
         multi_pkt_to_float = kernel::create(multi_packet_to_float_converter);
         multi_float_to_pkt = kernel::create(multi_float_to_packet_converter);
 
