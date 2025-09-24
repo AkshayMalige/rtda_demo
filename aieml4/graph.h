@@ -1,9 +1,12 @@
 #pragma once
 #include <adf.h>
-#include <string>
 #include "nn_defs.h"
+#include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
+#include "leaky_relu.h"
+
+
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 static constexpr unsigned int TP_SHIFT = 0;
@@ -25,6 +28,8 @@ using dense8x128 = matrix_vector_mul_graph<
     TP_SAT,
     TP_SSR,
     TP_DIM_A_LEADING>;
+
+
 using dense128x128 = matrix_vector_mul_graph<
     float, float,
     OUTPUT_SIZE,
@@ -37,49 +42,50 @@ using dense128x128 = matrix_vector_mul_graph<
     TP_SSR,
     TP_DIM_A_LEADING>;
 // Graph connects dense1 and dense2; leaky ReLU is handled in PL
+
 class NeuralNetworkGraph : public graph {
 public:
-    input_gmio  layer0_in;
-    input_gmio  layer0_weights;
-    // Output of first dense layer exposed via GMIO for direct PL interfacing
-    output_gmio layer0_out;
+    input_plio  layer0_in;
+    input_plio  layer0_weights;
+    // Output of first dense layer exposed via PLIO for direct PL interfacing
+    output_plio layer0_out;
     dense8x128   dense1;
     dense128x128 dense2;
-    input_gmio  layer1_in[TP_CASC_LEN_LAYER2];
-    input_gmio  layer1_weights[TP_CASC_LEN_LAYER2];
-    // Final dense layer output directly drives a GMIO
-    output_gmio layer1_out;
+    input_plio  layer1_in[TP_CASC_LEN_LAYER2];
+    input_plio  layer1_weights[TP_CASC_LEN_LAYER2];
+    // Final dense layer output directly drives a PLIO
+    output_plio layer1_out;
+    kernel       k_lrelu0;
+
+
     NeuralNetworkGraph() {
-        layer0_in      = input_gmio::create("layer0_in_gmio", 256, 1000);
-        layer0_weights = input_gmio::create("layer0_weights_gmio", 256, 1000);
-        layer0_out     = output_gmio::create("layer0_out_gmio", 256, 1000);
+        std::string base_path = DATA_DIR;
+        layer0_in      = input_plio::create("layer0_in", plio_32_bits, (base_path + "/" + EMBED_INPUT_DATA).c_str());
+        layer0_weights = input_plio::create("layer0_weights", plio_32_bits, (base_path + "/" + EMBED_DENSE0_WEIGHTS).c_str());
+        layer0_out     = output_plio::create("layer0_out", plio_32_bits, (base_path + "/" + EMBED_DENSE0_OUTPUT).c_str());
         connect<>(layer0_weights.out[0], dense1.inA[0]);
         connect<>(layer0_in.out[0], dense1.inB[0]);
-        connect<>(dense1.out[0], layer0_out.in[0]);
-        constexpr unsigned dense1_base_col = 0;
-        constexpr unsigned dense1_row = 0;
-        auto dense1_kernels = dense1.getKernels();
-        // for (unsigned i = 0; i < TP_CASC_LEN_LAYER1; ++i) {
-        //     adf::location<adf::kernel>(dense1_kernels[i]) =
-        //         adf::tile(dense1_base_col + i, dense1_row);
-        // }
+        // connect<>(dense1.out[0], layer0_out.in[0]);
+
+        k_lrelu0 = kernel::create(leaky_relu_kernel);
+        runtime<ratio>(k_lrelu0) = 0.8;
+        connect<>(dense1.out[0], k_lrelu0.in[0]);
+        connect<>(k_lrelu0.out[0], layer0_out.in[0]);
+        dimensions(k_lrelu0.in[0])  = { HIDDEN_SIZE };
+        dimensions(k_lrelu0.out[0]) = { HIDDEN_SIZE };
+
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-            std::string in_name = "layer1_in_" + std::to_string(i) + "_gmio";
-            std::string w_name  = "layer1_weights_" + std::to_string(i) + "_gmio";
-            layer1_in[i]      = input_gmio::create(in_name.c_str(), 256, 1000);
-            layer1_weights[i] = input_gmio::create(w_name.c_str(), 256, 1000);
+            std::string in_file = base_path + "/" + EMBED_LEAKYRELU0_OUTPUT_PREFIX + std::to_string(i) + ".txt";
+            std::string w_file  = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(i) + ".txt";
+            std::string in_name = "layer1_in_" + std::to_string(i);
+            std::string w_name  = "layer1_weights_" + std::to_string(i);
+            layer1_in[i]      = input_plio::create(in_name.c_str(), plio_32_bits, in_file.c_str());
+            layer1_weights[i] = input_plio::create(w_name.c_str(), plio_32_bits, w_file.c_str());
             connect<>(layer1_in[i].out[0], dense2.inB[i]);
             connect<>(layer1_weights[i].out[0], dense2.inA[i]);
         }
-        layer1_out = output_gmio::create("layer1_out_gmio", 256, 1000);
+        layer1_out = output_plio::create("layer1_out", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
         connect<>(dense2.out[0], layer1_out.in[0]);
-        
-        constexpr unsigned dense2_base_col = 2;
-        constexpr unsigned dense2_row = 0;
-        // auto dense2_kernels = dense2.getKernels();
-        // for (unsigned i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-        //     adf::location<adf::kernel>(dense2_kernels[i]) =
-        //         adf::tile(dense2_base_col + i, dense2_row);
-        // }
+
     }
 };
