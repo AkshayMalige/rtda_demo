@@ -38,9 +38,9 @@ v++ -c --mode aie --target hw graph.cpp \
     --config=aie.cfg \
     --include="./" \
     --include="../common" \
-    --include="${DSPLIB_PATH}/L1/src/aie" \
-    --include="${DSPLIB_PATH}/L1/include/aie" \
-    --include="${DSPLIB_PATH}/L2/include/aie"
+    --include="../dsp_lib/L1/src/aie" \
+    --include="../dsp_lib/L1/include/aie" \
+    --include="../dsp_lib/L2/include/aie"
 ```
 
 Both commands produce `Work/libadf.a` inside this directory.

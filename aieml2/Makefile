@@ -28,7 +28,7 @@ VITIS_PATH   ?= /tools/Xilinx/Vitis/2024.2
 #   Example: DSPLIB_PATH  ?= /home/user/vitis/Vitis_Libraries/dsp
 #
 # ##########################################################################
-DSPLIB_PATH  ?= /home/synthara/VersalPrjs/Vitis_Libraries/dsp
+DSPLIB_PATH  ?= ../dsp_lib
 
 
 # ==== PROJECT FILES & DIRECTORIES ====
