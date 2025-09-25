@@ -28,7 +28,7 @@ using dense8x128 = matrix_vector_mul_graph<
     1,          // TP_USE_MATRIX_RELOAD (required for TP_API=1)
     1,          // TP_API (stream interface for vector B)
     0,          // TP_DUAL_IP (default = 0)
-    1>;  
+    1>;
 
 
 class NeuralNetworkGraph : public graph {

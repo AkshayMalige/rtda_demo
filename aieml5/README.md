@@ -6,10 +6,11 @@ with stream-based data flow, ADF packet switching infrastructure, and runtime pa
 ## Architecture Overview
 
 **Current Configuration:**
-- **Neural Network**: Single dense layer (8×128 matrix-vector multiplication)
+- **Neural Network**: Single dense layer (8×128 matrix-vector multiplication) with Leaky ReLU activation
 - **Matrix A**: 8×128 weights (1024 floats) loaded via RTP ports
 - **Vector B**: 8×1 input vector processed through packet stream
-- **Output**: 128×1 result vector
+- **Activation**: Leaky ReLU applied to 128×1 dense layer output
+- **Output**: 128×1 result vector after activation
 - **Packet Processing**: ADF packet switching with pktsplit/pktmerge infrastructure
 - **TP_API=1**: Stream interface for high-throughput data flow
 - **TP_USE_MATRIX_RELOAD=1**: Runtime parameter weight loading
@@ -21,6 +22,7 @@ with stream-based data flow, ADF packet switching infrastructure, and runtime pa
 ├── graph.h                          # Graph definition with packet processing pipeline
 ├── stream_to_packet.cpp/h           # Converts float stream to packet stream
 ├── packet_to_stream.cpp/h           # Converts packet stream back to float stream
+├── leaky_relu.cpp/h                 # Leaky ReLU activation function kernel
 ├── aie.cfg                          # AIE configuration file
 └── Makefile                         # Build configuration
 ```
@@ -38,7 +40,7 @@ make all                   # same as 'make graph'
 To invoke the compiler directly:
 
 ```bash
-v++ -c --mode aie --target hw graph.cpp stream_to_packet.cpp packet_to_stream.cpp \
+v++ -c --mode aie --target hw graph.cpp stream_to_packet.cpp packet_to_stream.cpp leaky_relu.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
@@ -86,8 +88,14 @@ make sim                  # uses `aiesimulator` under the hood
    - AIE core performs 8×128 matrix-vector multiplication using DSPLib
    - Uses hardware MAC (Multiply-Accumulate) units
 
-5. **Output (128 floats)**:
-   - Streams out via `dense1.out[0]`
+5. **Leaky ReLU Activation**:
+   - **Input**: 128 float values from dense layer output
+   - **Function**: f(x) = max(αx, x) where α is the leaky slope (typically 0.01-0.1)
+   - **AIE Implementation**: Custom kernel using buffer-based processing
+   - **Output**: 128 activated float values
+
+6. **Output (128 floats)**:
+   - Streams out via `k_lrelu0.out[0]` after activation
    - Goes to PLIO `output_data` → `EMBED_DENSE0_OUTPUT` file
 
 ## Hardware Components Involved
@@ -112,6 +120,11 @@ make sim                  # uses `aiesimulator` under the hood
    - Performs 8×128 matrix-vector multiplication
    - Uses hardware MAC operations with TP_API=1 stream interface
    - Matrix weights loaded via RTP ports
+
+5. **Leaky ReLU Activation Kernel** (`k_lrelu0`):
+   - Applies Leaky ReLU activation function to 128 float values
+   - Uses buffer-based input/output for efficient memory access
+   - Custom AIE kernel implementation with optimized vectorized operations
 
 ### AIE Core Architecture:
 - **Vector Engine**: Handles float32 MAC operations
