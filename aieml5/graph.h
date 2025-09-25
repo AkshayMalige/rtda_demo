@@ -36,7 +36,7 @@ public:
     input_plio  layer0_in;
     output_plio layer0_out;
     dense8x128   dense1;
-    adf::port<adf::direction::in> value;
+    input_port matrixA_rtp;
 
 
     NeuralNetworkGraph() {
@@ -46,7 +46,7 @@ public:
 
         // Matrix A is provided via RTP (runtime parameter) - no PLIO connection needed
         // Vector B uses stream interface with TP_API=1
-        adf::connect<adf::parameter>(value, adf::async(dense1.inA[0]));
+        adf::connect<adf::parameter>(matrixA_rtp, adf::async(dense1.inA[0]));
 
         connect<stream>(layer0_in.out[0], dense1.inB[0]);
         connect<stream>(dense1.out[0], layer0_out.in[0]);
