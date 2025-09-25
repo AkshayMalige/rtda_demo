@@ -26,11 +26,6 @@ void pkt_to_stream(input_pktstream *in, output_stream<float> *out) {
     if (!tlast) {
       do {
         int32_t raw = readincr(in, tlast);
-        union {
-          int32_t i;
-          float f;
-        } converter{raw};
-        writeincr(out, converter.f);
       } while (!tlast);
     }
   }

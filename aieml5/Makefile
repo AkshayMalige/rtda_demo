@@ -73,7 +73,7 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
-$(GRAPH_LIB): $(GRAPH_SRC) leaky_relu.cpp graph.h leaky_relu.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
+$(GRAPH_LIB): $(GRAPH_SRC) leaky_relu.cpp packetize.cpp pkt_to_stream.cpp graph.h leaky_relu.h packetize.h pkt_to_stream.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
@@ -85,7 +85,7 @@ $(GRAPH_LIB): $(GRAPH_SRC) leaky_relu.cpp graph.h leaky_relu.h ../common/nn_defs
 	        exit 1; \
 	fi
 	@set -o pipefail; \
-	$(VPP) $(VPP_FLAGS) $(GRAPH_SRC) leaky_relu.cpp 2>&1 | tee $(WORK_DIR)/vpp_aie.log
+	$(VPP) $(VPP_FLAGS) $(GRAPH_SRC) leaky_relu.cpp packetize.cpp pkt_to_stream.cpp 2>&1 | tee $(WORK_DIR)/vpp_aie.log
 	@echo "COMPLETE: AIE graph compiled."
 
 # --- Simulation ---

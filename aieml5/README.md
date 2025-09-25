@@ -1,7 +1,7 @@
-# AI Engine-ML Graph: Packet-Based Neural Network with Stream Processing
+# AI Engine-ML Graph: ADF Packet-Switched Neural Network with Stream Processing
 
-This directory demonstrates a **packet-based neural network processing pipeline** using Xilinx DSPLib
-with stream-based data flow, packet routing, and runtime parameter (RTP) weight loading.
+This directory demonstrates a **ADF packet-switched neural network processing pipeline** using Xilinx DSPLib
+with stream-based data flow, ADF packet switching infrastructure, and runtime parameter (RTP) weight loading.
 
 ## Architecture Overview
 
@@ -10,7 +10,7 @@ with stream-based data flow, packet routing, and runtime parameter (RTP) weight 
 - **Matrix A**: 8×128 weights (1024 floats) loaded via RTP ports
 - **Vector B**: 8×1 input vector processed through packet stream
 - **Output**: 128×1 result vector
-- **Packet Processing**: Custom packetization and routing kernels
+- **Packet Processing**: ADF packet switching with pktsplit/pktmerge infrastructure
 - **TP_API=1**: Stream interface for high-throughput data flow
 - **TP_USE_MATRIX_RELOAD=1**: Runtime parameter weight loading
 
@@ -20,7 +20,7 @@ with stream-based data flow, packet routing, and runtime parameter (RTP) weight 
 ├── graph.cpp                        # Instantiates `NeuralNetworkGraph` and runs it for simulation
 ├── graph.h                          # Graph definition with packet processing pipeline
 ├── packetize.cpp/h                  # Converts float stream to packet stream
-├── pkt_to_stream_with_routing.cpp/h # Routes packets and converts back to float stream
+├── pkt_to_stream.cpp/h               # Converts packet stream back to float stream
 ├── leaky_relu.cpp/h                 # Leaky ReLU activation function (unused in current flow)
 ├── aie.cfg                          # AIE configuration file
 └── Makefile                         # Build configuration
@@ -39,7 +39,7 @@ make all                   # same as 'make graph'
 To invoke the compiler directly:
 
 ```bash
-v++ -c --mode aie --target hw graph.cpp leaky_relu.cpp \
+v++ -c --mode aie --target hw graph.cpp leaky_relu.cpp packetize.cpp pkt_to_stream.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
@@ -62,27 +62,32 @@ make sim                  # uses `aiesimulator` under the hood
 # aiesimulator --pkg-dir=Work --profile --dump-vcd=foo
 ```
 
-## Data Flow for Packet-Based Neural Network Processing
+## Data Flow for ADF Packet-Switched Neural Network Processing
 
-### Packet Processing Pipeline:
+### ADF Packet Switching Pipeline:
 
 1. **Input Vector (8 floats)**:
    - Arrives via PLIO from `layer0_in` → `EMBED_INPUT_DATA` file
    - **Float Stream** → `packetize_kernel` → **Packet Stream**
-   - Packet header includes ID, type, and payload length
+   - Packet header automatically managed by ADF infrastructure
 
-2. **Packet Routing and Conversion**:
-   - **Packet Stream** → `pkt_to_stream_with_routing` → **Float Stream**
-   - Kernel checks packet ID (only processes ID=0 for dense1)
-   - Converts packet data back to float stream for neural network
+2. **ADF Packet Routing**:
+   - **Packet Stream** → `pktsplit<1>` → **Routed Packet Stream**
+   - ADF automatically handles packet ID assignment and routing
+   - No manual packet ID checking required
 
-3. **Matrix-Vector Multiplication**:
+3. **Packet-to-Stream Conversion**:
+   - **Routed Packet Stream** → `pkt_to_stream` → **Float Stream**
+   - Simple conversion without manual routing logic
+   - ADF ensures packets reach the correct destination
+
+4. **Matrix-Vector Multiplication**:
    - **Matrix A (8×128 weights)**: Loaded via **RTP (Runtime Parameter)** ports
-   - **Vector B (8×1 input)**: Processed through packet → stream conversion
+   - **Vector B (8×1 input)**: Processed through ADF packet switching
    - AIE core performs 8×128 matrix-vector multiplication using DSPLib
    - Uses hardware MAC (Multiply-Accumulate) units
 
-4. **Output (128 floats)**:
+5. **Output (128 floats)**:
    - Streams out via `dense1.out[0]`
    - Goes to PLIO `layer0_out` → `EMBED_DENSE0_OUTPUT` file
 
@@ -91,15 +96,20 @@ make sim                  # uses `aiesimulator` under the hood
 ### AIE Kernels in Pipeline:
 1. **Packetize Kernel** (`packetize_kernel`):
    - Converts float stream to packet stream
-   - Adds packet header with ID and type information
-   - Uses `getPacketid()` for router-assigned packet IDs
+   - Uses `getPacketid()` for ADF-assigned packet IDs
+   - Automatic packet header generation with ADF infrastructure
 
-2. **Packet-to-Stream Routing Kernel** (`pkt_to_stream_with_routing`):
-   - Routes packets based on ID (only processes ID=0)
-   - Converts packet data back to float stream
-   - Discards non-matching packets
+2. **ADF Packet Splitter** (`pktsplit<1>`):
+   - Built-in ADF packet switching primitive
+   - Automatically routes packets based on ID
+   - No custom routing logic required
 
-3. **DSPLib Matrix-Vector Multiplication** (`dense8x128`):
+3. **Packet-to-Stream Kernel** (`pkt_to_stream`):
+   - Simple packet stream to float stream conversion
+   - No manual packet filtering needed
+   - ADF routing ensures correct packets arrive
+
+4. **DSPLib Matrix-Vector Multiplication** (`dense8x128`):
    - Performs 8×128 matrix-vector multiplication
    - Uses hardware MAC operations with TP_API=1 stream interface
    - Matrix weights loaded via RTP ports
@@ -113,42 +123,54 @@ make sim                  # uses `aiesimulator` under the hood
 
 ## Key Design Features
 
-### Packet-Based Architecture Benefits:
-1. **Routing Flexibility**: Packets can be routed to different processing cores
-2. **Multiplexing Support**: Multiple data streams can share packet infrastructure
-3. **Protocol Compatibility**: Enables integration with PL packet processing
-4. **Error Detection**: Packet headers provide data integrity checking
+### ADF Packet Switching Architecture Benefits:
+1. **Automatic Routing**: ADF handles packet ID assignment and routing automatically
+2. **Reliability**: Built-in ADF infrastructure eliminates manual routing errors
+3. **Scalability**: Easy to expand to multiple processing cores using pktsplit<N>
+4. **Protocol Compatibility**: Standard ADF packet format enables PL integration
+5. **Simplified Development**: No manual packet filtering or ID management needed
 
 ### Current Implementation Details:
 - **Packet Type**: 0 (configurable for different data types)
-- **Packet ID**: 0 (assigned by router, filtered by routing kernel)
+- **Packet ID**: Automatically assigned by ADF pktsplit infrastructure
 - **Payload Size**: 8 floats (EMBED_DENSE0_INPUT_SIZE)
 - **Matrix Dimensions**: 8×128 (INPUT_SIZE × HIDDEN_SIZE from nn_defs.h)
+- **ADF Components**: pktsplit<1> for automatic packet routing
 
 ### Expansion for Multi-Layer Networks:
-This packet-based approach can be extended for larger neural networks by:
+This ADF packet-switched approach can be extended for larger neural networks by:
 
 ```cpp
-// Example: Multi-layer with different packet IDs
-// Packet ID 0: Layer 1 input (8×128)
-// Packet ID 1: Layer 2 input (128×128)
-// Packet ID 2: Output layer input
+// Example: Multi-layer with ADF packet switching
+pktsplit<3> layer_splitter;    // Route to 3 different layers
+pktmerge<2> output_merger;     // Merge outputs from 2 layers
+
+// ADF automatically handles packet routing:
+// - No manual packet ID management
+// - Automatic load balancing across cores
+// - Built-in error handling and flow control
 ```
 
 ### Integration with PL Domain:
-The packet-based design enables seamless integration with the broader system:
+The ADF packet-switched design enables seamless integration with the broader system:
 
 1. **System-Level Data Flow**:
    - PL kernels can generate packets for AIE processing
    - AIE can output packets back to PL for post-processing
-   - Common packet format enables interoperability
+   - Standard ADF packet format ensures compatibility
 
 2. **Multi-Domain Processing**:
-   - Neural network inference in AIE domain
+   - Neural network inference in AIE domain using ADF packet switching
    - Pre/post-processing in PL domain
-   - Unified packet-based communication protocol
+   - Unified ADF packet-based communication protocol
+   - Automatic load balancing and fault tolerance
 
-This packet-based neural network architecture provides a foundation for scalable AI acceleration on Versal AI Engines, with efficient stream processing and flexible data routing capabilities.
+3. **ADF Infrastructure Benefits**:
+   - Built-in packet routing eliminates custom switching logic
+   - Automatic backpressure and flow control
+   - Hardware-optimized packet processing performance
+
+This ADF packet-switched neural network architecture provides a robust foundation for scalable AI acceleration on Versal AI Engines, with reliable packet routing and simplified development workflow.
 
 ## Files and Build Instructions
 
