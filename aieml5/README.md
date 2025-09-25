@@ -1,41 +1,45 @@
-# AI Engine-ML Graph: Matrix-Vector Multiplication with Stream Interface
+# AI Engine-ML Graph: Packet-Based Neural Network with Stream Processing
 
-This directory demonstrates a **128×8 matrix-vector multiplication** using Xilinx DSPLib
-with stream-based data flow (TP_API=1) and runtime parameter (RTP) weight loading.
+This directory demonstrates a **packet-based neural network processing pipeline** using Xilinx DSPLib
+with stream-based data flow, packet routing, and runtime parameter (RTP) weight loading.
 
 ## Architecture Overview
 
 **Current Configuration:**
-- **Matrix A**: 128×8 weights (1024 floats) loaded via RTP ports
-- **Vector B**: 8×1 input vector streamed through AIE core
+- **Neural Network**: Single dense layer (8×128 matrix-vector multiplication)
+- **Matrix A**: 8×128 weights (1024 floats) loaded via RTP ports
+- **Vector B**: 8×1 input vector processed through packet stream
 - **Output**: 128×1 result vector
+- **Packet Processing**: Custom packetization and routing kernels
 - **TP_API=1**: Stream interface for high-throughput data flow
 - **TP_USE_MATRIX_RELOAD=1**: Runtime parameter weight loading
 
 ## Directory Layout
 
 ```
-├── graph.cpp    # Instantiates `NeuralNetworkGraph` and runs it for simulation
-├── graph.h      # Graph definition and PLIO connections
-└── Makefile
+├── graph.cpp                        # Instantiates `NeuralNetworkGraph` and runs it for simulation
+├── graph.h                          # Graph definition with packet processing pipeline
+├── packetize.cpp/h                  # Converts float stream to packet stream
+├── pkt_to_stream_with_routing.cpp/h # Routes packets and converts back to float stream
+├── leaky_relu.cpp/h                 # Leaky ReLU activation function (unused in current flow)
+├── aie.cfg                          # AIE configuration file
+└── Makefile                         # Build configuration
 ```
 
 ## Build
 
-The supplied `Makefile` wraps the standard build flow (now using `v++` so the
-`aie.cfg` partition directives take effect). From the repository root, compile
-the graph with:
+The supplied `Makefile` wraps the standard build flow using `v++` with AIE configuration.
+From this directory, compile the graph with:
 
 ```bash
-cd aieml
-make graph TARGET=hw       # or TARGET=hw_emu
+make graph TARGET=hw       # or TARGET=hw_emu (default: hw)
+make all                   # same as 'make graph'
 ```
 
-To invoke the compiler directly without the wrapper:
+To invoke the compiler directly:
 
 ```bash
-cd aieml
-v++ -c --mode aie --target hw graph.cpp \
+v++ -c --mode aie --target hw graph.cpp leaky_relu.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
@@ -58,25 +62,25 @@ make sim                  # uses `aiesimulator` under the hood
 # aiesimulator --pkg-dir=Work --profile --dump-vcd=foo
 ```
 
-## Data Flow for 8×128 Matrix-Vector Multiplication
+## Data Flow for Packet-Based Neural Network Processing
 
-### Data Path:
+### Packet Processing Pipeline:
 
 1. **Input Vector (8 floats)**:
    - Arrives via PLIO from `layer0_in` → `EMBED_INPUT_DATA` file
-   - Streams directly into AIE core via `dense1.inB[0]` (TP_API=1)
-   - No buffering - processed as stream
+   - **Float Stream** → `packetize_kernel` → **Packet Stream**
+   - Packet header includes ID, type, and payload length
 
-2. **Matrix Weights (1024 floats)**:
-   - **NOT** from PLIO (removed `layer0_weights`)
-   - Loaded via **RTP (Runtime Parameter)** ports due to `TP_USE_MATRIX_RELOAD=1`
-   - Stored in AIE core's local memory banks
-   - Can be updated at runtime without recompiling
+2. **Packet Routing and Conversion**:
+   - **Packet Stream** → `pkt_to_stream_with_routing` → **Float Stream**
+   - Kernel checks packet ID (only processes ID=0 for dense1)
+   - Converts packet data back to float stream for neural network
 
-3. **Computation**:
-   - AIE core performs 128×8 matrix-vector multiplication
+3. **Matrix-Vector Multiplication**:
+   - **Matrix A (8×128 weights)**: Loaded via **RTP (Runtime Parameter)** ports
+   - **Vector B (8×1 input)**: Processed through packet → stream conversion
+   - AIE core performs 8×128 matrix-vector multiplication using DSPLib
    - Uses hardware MAC (Multiply-Accumulate) units
-   - Single iteration processes entire vector
 
 4. **Output (128 floats)**:
    - Streams out via `dense1.out[0]`
@@ -84,88 +88,67 @@ make sim                  # uses `aiesimulator` under the hood
 
 ## Hardware Components Involved
 
+### AIE Kernels in Pipeline:
+1. **Packetize Kernel** (`packetize_kernel`):
+   - Converts float stream to packet stream
+   - Adds packet header with ID and type information
+   - Uses `getPacketid()` for router-assigned packet IDs
+
+2. **Packet-to-Stream Routing Kernel** (`pkt_to_stream_with_routing`):
+   - Routes packets based on ID (only processes ID=0)
+   - Converts packet data back to float stream
+   - Discards non-matching packets
+
+3. **DSPLib Matrix-Vector Multiplication** (`dense8x128`):
+   - Performs 8×128 matrix-vector multiplication
+   - Uses hardware MAC operations with TP_API=1 stream interface
+   - Matrix weights loaded via RTP ports
+
 ### AIE Core Architecture:
-1. **Vector Engine**: Handles float32 MAC operations
-2. **Local Memory**: 32KB data memory stores matrix weights
-3. **Stream Interfaces**: High-throughput data movement
-4. **RTP Ports**: Runtime parameter loading for weights
+- **Vector Engine**: Handles float32 MAC operations
+- **Local Memory**: 32KB data memory stores matrix weights
+- **Stream Interfaces**: High-throughput data movement between kernels
+- **Packet Streams**: Support for packetized data with routing
+- **RTP Ports**: Runtime parameter loading for neural network weights
 
-### With TP_API=1 Configuration:
-- **Stream Input**: Vector B flows through without buffering
-- **RTP Matrix Loading**: Weights loaded once, reused for multiple vectors
-- **Stream Output**: Results flow directly to next stage
-- **No Window Buffers**: More memory available for weights/intermediate data
+## Key Design Features
 
-## Cascading Strategy for Larger Matrices (128×128)
+### Packet-Based Architecture Benefits:
+1. **Routing Flexibility**: Packets can be routed to different processing cores
+2. **Multiplexing Support**: Multiple data streams can share packet infrastructure
+3. **Protocol Compatibility**: Enables integration with PL packet processing
+4. **Error Detection**: Packet headers provide data integrity checking
 
-For larger matrices that don't fit in a single AIE core, use cascading:
+### Current Implementation Details:
+- **Packet Type**: 0 (configurable for different data types)
+- **Packet ID**: 0 (assigned by router, filtered by routing kernel)
+- **Payload Size**: 8 floats (EMBED_DENSE0_INPUT_SIZE)
+- **Matrix Dimensions**: 8×128 (INPUT_SIZE × HIDDEN_SIZE from nn_defs.h)
 
-### Example: 128×128 Matrix-Vector Multiplication
+### Expansion for Multi-Layer Networks:
+This packet-based approach can be extended for larger neural networks by:
 
 ```cpp
-using dense128x128 = matrix_vector_mul_graph<
-    float,      // TT_DATA_A
-    float,      // TT_DATA_B
-    128,        // TP_DIM_A (128 rows)
-    128,        // TP_DIM_B (128 cols)
-    0,          // TP_SHIFT
-    TP_RND,     // TP_RND
-    1,          // TP_NUM_FRAMES
-    2,          // TP_CASC_LEN = 2 (use 2 AIE cores)
-    0,          // TP_SAT
-    1,          // TP_SSR
-    1,          // TP_DIM_A_LEADING
-    1,          // TP_USE_MATRIX_RELOAD=1
-    1,          // TP_API=1
-    0,          // TP_DUAL_IP
-    1>;         // TP_NUM_OUTPUTS
+// Example: Multi-layer with different packet IDs
+// Packet ID 0: Layer 1 input (8×128)
+// Packet ID 1: Layer 2 input (128×128)
+// Packet ID 2: Output layer input
 ```
 
-### Cascading Architecture:
+### Integration with PL Domain:
+The packet-based design enables seamless integration with the broader system:
 
-1. **Core 0**: Handles columns 0-63 (TP_DIM_B/TP_CASC_LEN = 128/2 = 64)
-   - Input: 128×1 vector (full)
-   - Matrix: 128×64 (first half of columns)
-   - Output: 64 partial dot products
+1. **System-Level Data Flow**:
+   - PL kernels can generate packets for AIE processing
+   - AIE can output packets back to PL for post-processing
+   - Common packet format enables interoperability
 
-2. **Core 1**: Handles columns 64-127
-   - Input: 128×1 vector (full)
-   - Matrix: 128×64 (second half of columns)
-   - Output: 64 partial dot products
+2. **Multi-Domain Processing**:
+   - Neural network inference in AIE domain
+   - Pre/post-processing in PL domain
+   - Unified packet-based communication protocol
 
-3. **Cascade Connection**: Core 0 → Core 1
-   - Core 0's partial results cascade to Core 1
-   - Core 1 accumulates both results
-   - Final 128×1 output from Core 1
-
-### Memory Distribution:
-- **Each Core**: Stores 64×128 = 8,192 floats (32KB)
-- **Total Weight Storage**: 128×128 = 16,384 floats across both cores
-- **Cascade Stream**: Carries partial accumulation results
-
-### Performance Benefits of TP_API=1 with Cascading:
-
-1. **Higher Throughput**: Stream interfaces eliminate buffer copy overhead
-2. **Lower Latency**: Data flows through pipeline without waiting
-3. **Efficient Memory Usage**: RTP allows runtime weight updates
-4. **Scalable Architecture**: Add more cascade stages for larger matrices
-
-### For Even Larger Matrices:
-
-**TP_SSR (Super Sample Rate)**: Use parallel AIE cores
-```cpp
-// Example: 256×256 matrix with TP_SSR=2, TP_CASC_LEN=2
-// Total: 4 AIE cores (2 SSR ranks × 2 cascade stages)
-```
-
-**Multi-Layer Cascading**: Chain multiple graph instances
-```cpp
-// Layer 1: 128×128 → 128×1
-// Layer 2: 128×128 → 128×1
-// Connected via streams for multi-layer neural networks
-```
-
-This architecture provides excellent scalability for neural network acceleration on Versal AI Engines, with stream-based data flow optimized for high-throughput inference.
+This packet-based neural network architecture provides a foundation for scalable AI acceleration on Versal AI Engines, with efficient stream processing and flexible data routing capabilities.
 
 ## Files and Build Instructions
 
