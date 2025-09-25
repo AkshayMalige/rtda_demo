@@ -68,6 +68,9 @@ public:
         // connect<>(dense1.out[0], layer0_out.in[0]);
 
         k_lrelu0 = kernel::create(leaky_relu_kernel);
+        source(k_lrelu0) = "leaky_relu.cpp";
+        headers(k_lrelu0) = {"leaky_relu.h"};
+
         runtime<ratio>(k_lrelu0) = 0.8;
         connect<>(dense1.out[0], k_lrelu0.in[0]);
         connect<>(k_lrelu0.out[0], layer0_out.in[0]);
