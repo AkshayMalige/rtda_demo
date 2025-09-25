@@ -7,28 +7,56 @@
 #include "stream_to_packet.h"
 #include "packet_to_stream.h"
 #include "leaky_relu.h"
+#include "split_stream.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
 static constexpr unsigned int TP_RND = rnd_floor;
 
+static constexpr unsigned int TP_SHIFT = 0;
+static constexpr unsigned int TP_NUM_FRAMES = 1;
+static constexpr unsigned int TP_SAT = 0;
+static constexpr unsigned int TP_SSR = 1;
+static constexpr unsigned int TP_DIM_A_LEADING = 1;
+static constexpr unsigned int TP_USE_MATRIX_RELOAD = 1;
+static constexpr unsigned int TP_API = 1;
+static constexpr unsigned int TP_DUAL_IP = 0;
+static constexpr unsigned int TP_NUM_OUTPUTS = 1;
+
 using dense8x128 = matrix_vector_mul_graph<
-    float,      // TT_DATA_A
-    float,      // TT_DATA_B
-    128,        // TP_DIM_A
-    8,          // TP_DIM_B
-    0,          // TP_SHIFT
-    TP_RND,     // TP_RND
-    1,          // TP_NUM_FRAMES
-    1,          // TP_CASC_LEN
-    0,          // TP_SAT
-    1,          // TP_SSR
-    1,          // TP_DIM_A_LEADING
-    1,          // TP_USE_MATRIX_RELOAD (required for TP_API=1)
-    1,          // TP_API (stream interface for vector B)
-    0,          // TP_DUAL_IP (default = 0)
-    1>;
+    float,
+    float,
+    HIDDEN_SIZE,
+    INPUT_SIZE,
+    TP_SHIFT,
+    TP_RND,
+    TP_NUM_FRAMES,
+    1,
+    TP_SAT,
+    TP_SSR,
+    TP_DIM_A_LEADING,
+    TP_USE_MATRIX_RELOAD,
+    TP_API,
+    TP_DUAL_IP,
+    TP_NUM_OUTPUTS>;
+
+using dense128x128 = matrix_vector_mul_graph<
+    float,
+    float,
+    OUTPUT_SIZE,
+    HIDDEN_SIZE,
+    TP_SHIFT,
+    TP_RND,
+    TP_NUM_FRAMES,
+    CASCADE_LENGTH,
+    TP_SAT,
+    TP_SSR,
+    TP_DIM_A_LEADING,
+    TP_USE_MATRIX_RELOAD,
+    TP_API,
+    TP_DUAL_IP,
+    TP_NUM_OUTPUTS>;
 
 
 class NeuralNetworkGraph : public graph {
@@ -36,11 +64,14 @@ public:
     input_plio  input_data;
     output_plio output_data;
     dense8x128   dense1;
-    input_port matrixA_rtp;
+    dense128x128 dense2;
+    input_port matrixA_dense0_rtp;
+    input_port matrixA_dense1_rtp[CASCADE_LENGTH];
 
     kernel      k_stream_to_packet;
     kernel      k_packet_to_stream;
     kernel      k_lrelu0;
+    kernel      k_split_stream;
 
     // ADF packet switching components
     pktsplit<1> splitter;
@@ -48,7 +79,7 @@ public:
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
         input_data     = input_plio::create("input_data", plio_32_bits, (base_path + "/" + EMBED_INPUT_DATA).c_str());
-        output_data    = output_plio::create("output_data", plio_32_bits, (base_path + "/" + EMBED_DENSE0_OUTPUT).c_str());
+        output_data    = output_plio::create("output_data", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
 
         k_stream_to_packet = kernel::create(stream_to_packet_kernel);
         source(k_stream_to_packet) = "stream_to_packet.cpp";
@@ -65,13 +96,20 @@ public:
         headers(k_lrelu0) = {"leaky_relu.h"};
         runtime<ratio>(k_lrelu0) = 1.0;
 
+        k_split_stream = kernel::create(split_stream_kernel);
+        source(k_split_stream) = "split_stream.cpp";
+        headers(k_split_stream) = {"split_stream.h"};
+        runtime<ratio>(k_split_stream) = 1.0;
 
         // Create ADF packet switching infrastructure
         splitter = pktsplit<1>::create();
 
         // Matrix A is provided via RTP (runtime parameter) - no PLIO connection needed
         // Vector B uses stream interface with TP_API=1
-        adf::connect<adf::parameter>(matrixA_rtp, dense1.matrixA[0]);
+        adf::connect<adf::parameter>(matrixA_dense0_rtp, dense1.matrixA[0]);
+        for (int i = 0; i < CASCADE_LENGTH; ++i) {
+            adf::connect<adf::parameter>(matrixA_dense1_rtp[i], dense2.matrixA[i]);
+        }
 
         // ADF packet switching data flow:
         // input_data -> k_stream_to_packet -> splitter -> k_packet_to_stream -> dense1 -> output_data
@@ -79,13 +117,14 @@ public:
         connect<pktstream>(k_stream_to_packet.out[0], splitter.in[0]);          // packet stream → splitter
         connect<pktstream>(splitter.out[0], k_packet_to_stream.in[0]);          // splitter → packet_to_stream
         connect<stream>(k_packet_to_stream.out[0], dense1.inB[0]);              // float stream → dense
-        // connect<stream>(dense1.out[0], output_data.in[0]);                      // dense output → output
 
+        connect<stream>(dense1.out[0], k_lrelu0.in[0]);
+        connect<stream>(k_lrelu0.out[0], k_split_stream.in[0]);
 
+        for (int i = 0; i < CASCADE_LENGTH; ++i) {
+            connect<stream>(k_split_stream.out[i], dense2.inB[i]);
+        }
 
-        connect<>(dense1.out[0], k_lrelu0.in[0]);
-        connect<>(k_lrelu0.out[0], output_data.in[0]);
-        dimensions(k_lrelu0.in[0])  = { HIDDEN_SIZE };
-        dimensions(k_lrelu0.out[0]) = { HIDDEN_SIZE };
+        connect<stream>(dense2.out[0], output_data.in[0]);
     }
 };

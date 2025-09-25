@@ -1,4 +1,6 @@
 #include "graph.h"
+#include "data_paths.h"
+#include "nn_defs.h"
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -8,31 +10,48 @@ NeuralNetworkGraph g;
 
 #if defined(__AIESIM__) || defined(__X86SIM__)
 int main() {
+  auto loadWeights = [](const std::string& path, std::size_t expectedCount) -> std::vector<float> {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+      std::cerr << "Error: Could not open weight file '" << path << "'" << std::endl;
+      return {};
+    }
+
+    std::vector<float> weights;
+    weights.reserve(expectedCount);
+    float value = 0.0f;
+    while (file >> value) {
+      weights.push_back(value);
+    }
+
+    if (weights.size() != expectedCount) {
+      std::cerr << "Error: Expected " << expectedCount << " weights from '" << path
+                << "', got " << weights.size() << std::endl;
+      return {};
+    }
+    return weights;
+  };
+
   g.init();
 
-  // Load weights from file for RTP
-  // std::string weight_file = std::string(DATA_DIR) + "/" + EMBED_DENSE0_WEIGHTS;
-  std::ifstream file("/home/synthara/VersalPrjs/LDRD/rtda_demo/data/embed_dense_0_weights.txt");
-  std::vector<float> weights;
-  float weight;
+  const std::string basePath = std::string(DATA_DIR) + "/";
 
-  if (!file.is_open()) {
-    std::cerr << "\n\n!!!!!!Error: Could not open weight file " << "!!!!!!!!\\n" << std::endl;
-    return -1;
+  {
+    const auto dense0Weights = loadWeights(basePath + EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_SIZE);
+    if (dense0Weights.empty()) {
+      return -1;
+    }
+    g.update(g.matrixA_dense0_rtp, dense0Weights.data(), EMBED_DENSE0_WEIGHTS_SIZE);
   }
 
-  while (file >> weight && weights.size() < EMBED_DENSE0_WEIGHTS_SIZE) {
-    weights.push_back(weight);
+  for (int cascIdx = 0; cascIdx < CASCADE_LENGTH; ++cascIdx) {
+    const std::string weightPath = basePath + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
+    const auto dense1Weights = loadWeights(weightPath, EMBED_DENSE1_WEIGHTS_PART_SIZE);
+    if (dense1Weights.empty()) {
+      return -1;
+    }
+    g.update(g.matrixA_dense1_rtp[cascIdx], dense1Weights.data(), EMBED_DENSE1_WEIGHTS_PART_SIZE);
   }
-  file.close();
-
-  if (weights.size() != EMBED_DENSE0_WEIGHTS_SIZE) {
-    std::cerr << "Error: Expected " << EMBED_DENSE0_WEIGHTS_SIZE << " weights, got " << weights.size() << std::endl;
-    return -1;
-  }
-
-  // Update RTP with weight data
-  g.update(g.matrixA_rtp, weights.data(), EMBED_DENSE0_WEIGHTS_SIZE);
 
   g.run(1);
   g.wait();

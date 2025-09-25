@@ -73,19 +73,19 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
-$(GRAPH_LIB): $(GRAPH_SRC) stream_to_packet.cpp packet_to_stream.cpp graph.h leaky_relu.h leaky_relu.cpp stream_to_packet.h packet_to_stream.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
+$(GRAPH_LIB): $(GRAPH_SRC) stream_to_packet.cpp packet_to_stream.cpp split_stream.cpp graph.h leaky_relu.h leaky_relu.cpp split_stream.h stream_to_packet.h packet_to_stream.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
 	@if [ ! -d "$(DSPLIB_PATH)" ]; then \
-	        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	        echo "!!! ERROR: Directory not found: '$(DSPLIB_PATH)'"; \
-	        echo "!!! Please set the DSPLIB_PATH variable in your Makefile correctly."; \
-	        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	        exit 1; \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+		echo "!!! ERROR: Directory not found: '$(DSPLIB_PATH)'"; \
+		echo "!!! Please set the DSPLIB_PATH variable in your Makefile correctly."; \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+		exit 1; \
 	fi
 	@set -o pipefail; \
-	$(VPP) $(VPP_FLAGS) $(GRAPH_SRC) stream_to_packet.cpp packet_to_stream.cpp 2>&1 | tee $(WORK_DIR)/vpp_aie.log
+	$(VPP) $(VPP_FLAGS) $(GRAPH_SRC) stream_to_packet.cpp packet_to_stream.cpp split_stream.cpp 2>&1 | tee $(WORK_DIR)/vpp_aie.log
 	@echo "COMPLETE: AIE graph compiled."
 
 # --- Simulation ---
