@@ -6,13 +6,14 @@
 #include "aie_api/aie_adf.hpp"
 #include "stream_to_packet.h"
 #include "packet_to_stream.h"
+#include "leaky_relu.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
 static constexpr unsigned int TP_RND = rnd_floor;
 
-    using dense8x128 = matrix_vector_mul_graph<
+using dense8x128 = matrix_vector_mul_graph<
     float,      // TT_DATA_A
     float,      // TT_DATA_B
     128,        // TP_DIM_A
@@ -29,6 +30,7 @@ static constexpr unsigned int TP_RND = rnd_floor;
     0,          // TP_DUAL_IP (default = 0)
     1>;  
 
+
 class NeuralNetworkGraph : public graph {
 public:
     input_plio  input_data;
@@ -36,8 +38,9 @@ public:
     dense8x128   dense1;
     input_port matrixA_rtp;
 
-    kernel            k_stream_to_packet;
-    kernel            k_packet_to_stream;
+    kernel      k_stream_to_packet;
+    kernel      k_packet_to_stream;
+    kernel      k_lrelu0;
 
     // ADF packet switching components
     pktsplit<1> splitter;
@@ -57,6 +60,12 @@ public:
         headers(k_packet_to_stream) = {"packet_to_stream.h"};
         runtime<ratio>(k_packet_to_stream) = 1.0;
 
+        k_lrelu0 = kernel::create(leaky_relu_kernel);
+        source(k_lrelu0) = "leaky_relu.cpp";
+        headers(k_lrelu0) = {"leaky_relu.h"};
+        runtime<ratio>(k_lrelu0) = 1.0;
+
+
         // Create ADF packet switching infrastructure
         splitter = pktsplit<1>::create();
 
@@ -70,7 +79,13 @@ public:
         connect<pktstream>(k_stream_to_packet.out[0], splitter.in[0]);          // packet stream → splitter
         connect<pktstream>(splitter.out[0], k_packet_to_stream.in[0]);          // splitter → packet_to_stream
         connect<stream>(k_packet_to_stream.out[0], dense1.inB[0]);              // float stream → dense
-        connect<stream>(dense1.out[0], output_data.in[0]);                      // dense output → output
+        // connect<stream>(dense1.out[0], output_data.in[0]);                      // dense output → output
 
+
+
+        connect<>(dense1.out[0], k_lrelu0.in[0]);
+        connect<>(k_lrelu0.out[0], output_data.in[0]);
+        dimensions(k_lrelu0.in[0])  = { HIDDEN_SIZE };
+        dimensions(k_lrelu0.out[0]) = { HIDDEN_SIZE };
     }
 };
