@@ -11,13 +11,13 @@ int main() {
   g.init();
 
   // Load weights from file for RTP
-  std::string weight_file = std::string(DATA_DIR) + "/" + EMBED_DENSE0_WEIGHTS;
-  std::ifstream file(weight_file);
+  // std::string weight_file = std::string(DATA_DIR) + "/" + EMBED_DENSE0_WEIGHTS;
+  std::ifstream file("/home/synthara/VersalPrjs/LDRD/rtda_demo/data/embed_dense_0_weights.txt");
   std::vector<float> weights;
   float weight;
 
   if (!file.is_open()) {
-    std::cerr << "\n\n!!!!!!Error: Could not open weight file " << weight_file << "!!!!!!!!\\n" << std::endl;
+    std::cerr << "\n\n!!!!!!Error: Could not open weight file " << "!!!!!!!!\\n" << std::endl;
     return -1;
   }
 
