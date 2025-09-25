@@ -4,6 +4,7 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
+#include "pkt_to_stream.h"
 #include "leaky_relu.h"
 
 
@@ -35,20 +36,30 @@ class NeuralNetworkGraph : public graph {
 public:
     input_plio  layer0_in;
     output_plio layer0_out;
+    pktsplit<1> ingress_split;
+    kernel      ingress_unpack;
     dense8x128   dense1;
-    adf::port<adf::direction::in> value;
+    input_port matrixA_rtp;
 
 
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
-        layer0_in      = input_plio::create("layer0_in", plio_32_bits, (base_path + "/" + EMBED_INPUT_DATA).c_str());
+        layer0_in      = input_plio::create("layer0_in", plio_32_bits, (base_path + "/embed_input_pkt.txt").c_str());
         layer0_out     = output_plio::create("layer0_out", plio_32_bits, (base_path + "/" + EMBED_DENSE0_OUTPUT).c_str());
 
         // Matrix A is provided via RTP (runtime parameter) - no PLIO connection needed
         // Vector B uses stream interface with TP_API=1
-        adf::connect<adf::parameter>(value, adf::async(dense1.inA[0]));
+        adf::connect<adf::parameter>(matrixA_rtp, dense1.mtxA[0]);
 
-        connect<stream>(layer0_in.out[0], dense1.inB[0]);
+        ingress_split = adf::pktsplit<1>::create();
+        ingress_unpack = adf::kernel::create(pkt_to_stream);
+        adf::source(ingress_unpack) = "pkt_to_stream.cpp";
+        adf::headers(ingress_unpack) = {"pkt_to_stream.h"};
+        adf::runtime<adf::ratio>(ingress_unpack) = 0.5;
+
+        adf::connect<adf::pktstream>(layer0_in.out[0], ingress_split.in[0]);
+        adf::connect<adf::pktstream>(ingress_split.out[0], ingress_unpack.in[0]);
+        adf::connect<adf::stream>(ingress_unpack.out[0], dense1.inB[0]);
         connect<stream>(dense1.out[0], layer0_out.in[0]);
 
     }

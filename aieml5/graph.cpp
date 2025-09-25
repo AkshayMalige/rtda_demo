@@ -30,8 +30,8 @@ int main() {
     return -1;
   }
 
-  // Update RTP with weight data
-  g.dense1.update(g.dense1.matrixA[0], weights.data(), EMBED_DENSE0_WEIGHTS_SIZE);
+  // Update RTP with weight data using exposed graph-level parameter port
+  g.update(g.matrixA_rtp, weights.data(), EMBED_DENSE0_WEIGHTS_SIZE);
 
   g.run(1);
   g.wait();
