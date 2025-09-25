@@ -1,9 +1,9 @@
 
-#include "pkt_to_stream.h"
+#include "packet_to_stream.h"
 #include <aie_api/aie.hpp>
 #include <cstdint>
 
-void pkt_to_stream(input_pktstream *in, output_stream<float> *out) {
+void packet_to_stream_kernel(input_pktstream *in, output_stream<float> *out) {
   constexpr int frame_elems = EMBED_DENSE0_INPUT_SIZE;
 
   bool tlast = false;

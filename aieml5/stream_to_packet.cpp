@@ -1,4 +1,4 @@
-#include "packetize.h"
+#include "stream_to_packet.h"
 #include "nn_defs.h"
 
 
@@ -10,8 +10,8 @@ using namespace adf;
 constexpr unsigned PKT_TYPE = 0;                 // your tag
 constexpr unsigned LEN      = EMBED_DENSE0_INPUT_SIZE;
 
-void packetize_kernel(input_stream<float>*  in_stream,
-                      output_pktstream*     out_pkt) {
+void stream_to_packet_kernel(input_stream<float>*  in_stream,
+                              output_pktstream*     out_pkt) {
   // Discover the router-assigned packet ID for this output branch
   uint32_t id = getPacketid(out_pkt, /*index*/ 0);
 

@@ -19,9 +19,8 @@ with stream-based data flow, ADF packet switching infrastructure, and runtime pa
 ```
 ├── graph.cpp                        # Instantiates `NeuralNetworkGraph` and runs it for simulation
 ├── graph.h                          # Graph definition with packet processing pipeline
-├── packetize.cpp/h                  # Converts float stream to packet stream
-├── pkt_to_stream.cpp/h               # Converts packet stream back to float stream
-├── leaky_relu.cpp/h                 # Leaky ReLU activation function (unused in current flow)
+├── stream_to_packet.cpp/h           # Converts float stream to packet stream
+├── packet_to_stream.cpp/h           # Converts packet stream back to float stream
 ├── aie.cfg                          # AIE configuration file
 └── Makefile                         # Build configuration
 ```
@@ -39,7 +38,7 @@ make all                   # same as 'make graph'
 To invoke the compiler directly:
 
 ```bash
-v++ -c --mode aie --target hw graph.cpp leaky_relu.cpp packetize.cpp pkt_to_stream.cpp \
+v++ -c --mode aie --target hw graph.cpp stream_to_packet.cpp packet_to_stream.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
@@ -67,8 +66,8 @@ make sim                  # uses `aiesimulator` under the hood
 ### ADF Packet Switching Pipeline:
 
 1. **Input Vector (8 floats)**:
-   - Arrives via PLIO from `layer0_in` → `EMBED_INPUT_DATA` file
-   - **Float Stream** → `packetize_kernel` → **Packet Stream**
+   - Arrives via PLIO from `input_data` → `EMBED_INPUT_DATA` file
+   - **Float Stream** → `stream_to_packet_kernel` → **Packet Stream**
    - Packet header automatically managed by ADF infrastructure
 
 2. **ADF Packet Routing**:
@@ -77,7 +76,7 @@ make sim                  # uses `aiesimulator` under the hood
    - No manual packet ID checking required
 
 3. **Packet-to-Stream Conversion**:
-   - **Routed Packet Stream** → `pkt_to_stream` → **Float Stream**
+   - **Routed Packet Stream** → `packet_to_stream_kernel` → **Float Stream**
    - Simple conversion without manual routing logic
    - ADF ensures packets reach the correct destination
 
@@ -89,12 +88,12 @@ make sim                  # uses `aiesimulator` under the hood
 
 5. **Output (128 floats)**:
    - Streams out via `dense1.out[0]`
-   - Goes to PLIO `layer0_out` → `EMBED_DENSE0_OUTPUT` file
+   - Goes to PLIO `output_data` → `EMBED_DENSE0_OUTPUT` file
 
 ## Hardware Components Involved
 
 ### AIE Kernels in Pipeline:
-1. **Packetize Kernel** (`packetize_kernel`):
+1. **Stream-to-Packet Kernel** (`stream_to_packet_kernel`):
    - Converts float stream to packet stream
    - Uses `getPacketid()` for ADF-assigned packet IDs
    - Automatic packet header generation with ADF infrastructure
@@ -104,7 +103,7 @@ make sim                  # uses `aiesimulator` under the hood
    - Automatically routes packets based on ID
    - No custom routing logic required
 
-3. **Packet-to-Stream Kernel** (`pkt_to_stream`):
+3. **Packet-to-Stream Kernel** (`packet_to_stream_kernel`):
    - Simple packet stream to float stream conversion
    - No manual packet filtering needed
    - ADF routing ensures correct packets arrive
