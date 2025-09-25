@@ -29,8 +29,6 @@ static constexpr unsigned int TP_RND = rnd_floor;
     0,          // TP_DUAL_IP (default = 0)
     1>;  
 
-
-
 class NeuralNetworkGraph : public graph {
 public:
     input_plio  layer0_in;
@@ -46,7 +44,7 @@ public:
 
         // Matrix A is provided via RTP (runtime parameter) - no PLIO connection needed
         // Vector B uses stream interface with TP_API=1
-        adf::connect<adf::parameter>(matrixA_rtp, adf::async(dense1.inA[0]));
+        adf::connect<adf::parameter>(matrixA_rtp, dense1.matrixA[0]);
 
         connect<stream>(layer0_in.out[0], dense1.inB[0]);
         connect<stream>(dense1.out[0], layer0_out.in[0]);
