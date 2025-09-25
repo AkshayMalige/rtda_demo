@@ -11,6 +11,7 @@
 #define EMBED_DENSE0_WEIGHTS        "embed_dense_0_weights.txt"
 #define EMBED_DENSE0_OUTPUT         "embed_dense_0_output_aie.txt"
 #define EMBED_LEAKYRELU0_OUTPUT_PREFIX "embed_leakyrelu_0_output_part"
+#define EMBED_DENSE1_WEIGHTS        "embed_dense_1_weights.txt"
 #define EMBED_DENSE1_WEIGHTS_PREFIX "embed_dense_1_weights_part"
 #define EMBED_DENSE1_OUTPUT         "embed_dense_1_output_aie.txt"
 #define EMBED_DENSE0_BIAS           "embed_dense_0_bias.txt"
