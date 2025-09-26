@@ -66,6 +66,7 @@ class NeuralNetworkGraph : public graph {
 public:
     input_plio  input_data;
     output_plio output_data;
+    output_plio dummy_output;
     dense8x128   dense1;
     dense128x128 dense2;
     input_port matrixA_dense0_rtp;
@@ -86,6 +87,7 @@ public:
         std::string base_path = DATA_DIR;
         input_data     = input_plio::create("input_data", plio_32_bits, (base_path + "/" + EMBED_INPUT_DATA).c_str());
         output_data    = output_plio::create("output_data", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
+        dummy_output    = output_plio::create("dummy_output", plio_32_bits, (base_path + "/" + DUMMY_OUTPUT).c_str());
 
         k_stream_to_packet = kernel::create(stream_to_packet_kernel);
         source(k_stream_to_packet) = "kernels/stream_to_packet.cpp";
