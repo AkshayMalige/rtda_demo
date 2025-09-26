@@ -4,7 +4,7 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
-#include "roll_concat.h"
+#include "kernels/roll_concat.h"
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 static constexpr unsigned int TP_SHIFT = 0;
@@ -82,7 +82,7 @@ public:
         layer1_out = output_plio::create("layer1_out", plio_32_bits,
                                          (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
         roll_concat = kernel::create(roll_concat_kernel);
-        source(roll_concat) = "roll_concat.cpp";
+        source(roll_concat) = "kernels/roll_concat.cpp";
         runtime<ratio>(roll_concat) = 0.9;
         dimensions(roll_concat.in[0]) = {HIDDEN_SIZE};
         dimensions(roll_concat.out[0]) = {HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE};

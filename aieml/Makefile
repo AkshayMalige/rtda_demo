@@ -32,7 +32,10 @@ DSPLIB_PATH  ?= ../dsp_lib
 
 
 # ==== PROJECT FILES & DIRECTORIES ====
-GRAPH_SRC     := graph.cpp roll_concat.cpp
+GRAPH_SRC     := graph.cpp
+KERNEL_SRC_DIR := kernels
+KERNEL_SRCS   := $(wildcard $(KERNEL_SRC_DIR)/*.cpp)
+VPP_INPUTS    := $(GRAPH_SRC) $(KERNEL_SRCS)
 WORK_DIR      := Work
 GRAPH_LIB     := $(WORK_DIR)/libadf.a
 AIE_CFG       := aie.cfg
@@ -46,11 +49,12 @@ AIESIM       := aiesimulator
 # ==== COMPILER FLAGS ====
 # Include paths for the AIE compiler.
 AIE_INCLUDE_FLAGS := \
-	--include="./" \
-	--include="../common" \
-	--include="$(DSPLIB_PATH)/L1/src/aie" \
-	--include="$(DSPLIB_PATH)/L1/include/aie" \
-	--include="$(DSPLIB_PATH)/L2/include/aie"
+        --include="./" \
+        --include="./$(KERNEL_SRC_DIR)" \
+        --include="../common" \
+        --include="$(DSPLIB_PATH)/L1/src/aie" \
+        --include="$(DSPLIB_PATH)/L1/include/aie" \
+        --include="$(DSPLIB_PATH)/L2/include/aie"
 
 # Full v++ command flags, assembled from variables above.
 VPP_FLAGS := \
@@ -73,7 +77,7 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
-$(GRAPH_LIB): $(GRAPH_SRC) graph.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
+$(GRAPH_LIB): $(VPP_INPUTS) graph.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
@@ -85,7 +89,7 @@ $(GRAPH_LIB): $(GRAPH_SRC) graph.h ../common/nn_defs.h ../common/data_paths.h $(
 	        exit 1; \
 	fi
 	@set -o pipefail; \
-	$(VPP) $(VPP_FLAGS) $(GRAPH_SRC) 2>&1 | tee $(WORK_DIR)/vpp_aie.log
+        $(VPP) $(VPP_FLAGS) $(VPP_INPUTS) 2>&1 | tee $(WORK_DIR)/vpp_aie.log
 	@echo "COMPLETE: AIE graph compiled."
 
 # --- Simulation ---
