@@ -1,6 +1,4 @@
 #include "graph.h"
-#include "data_paths.h"
-#include "nn_defs.h"
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -36,21 +34,36 @@ int main() {
 
   const std::string basePath = std::string(DATA_DIR) + "/";
 
-  {
-    const auto dense0Weights = loadWeights(basePath + EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_SIZE);
-    if (dense0Weights.empty()) {
-      return -1;
+  for (const auto& layer : g.dense_layers()) {
+    if (layer.port_count == 0) {
+      continue;
     }
-    g.update(g.matrixA_dense0_rtp, dense0Weights.data(), EMBED_DENSE0_WEIGHTS_SIZE);
-  }
 
-  for (int cascIdx = 0; cascIdx < CASCADE_LENGTH; ++cascIdx) {
-    const std::string weightPath = basePath + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
-    const auto dense1Weights = loadWeights(weightPath, EMBED_DENSE1_WEIGHTS_PART_SIZE);
-    if (dense1Weights.empty()) {
-      return -1;
+    if (!layer.weight_file.empty()) {
+      const std::string weightPath = basePath + std::string(layer.weight_file);
+      const auto        weights = loadWeights(weightPath, layer.weights_per_port);
+      if (weights.empty()) {
+        return -1;
+      }
+      g.update(layer.ports[0], weights.data(), layer.weights_per_port);
+      continue;
     }
-    g.update(g.matrixA_dense1_rtp[cascIdx], dense1Weights.data(), EMBED_DENSE1_WEIGHTS_PART_SIZE);
+
+    if (!layer.weight_prefix.empty()) {
+      for (std::size_t portIdx = 0; portIdx < layer.port_count; ++portIdx) {
+        const std::string weightPath = basePath + std::string(layer.weight_prefix) +
+                                       std::to_string(portIdx) + ".txt";
+        const auto weights = loadWeights(weightPath, layer.weights_per_port);
+        if (weights.empty()) {
+          return -1;
+        }
+        g.update(layer.ports[portIdx], weights.data(), layer.weights_per_port);
+      }
+      continue;
+    }
+
+    std::cerr << "Warning: dense layer '" << layer.name
+              << "' has no weight source configured" << std::endl;
   }
 
   g.run(1);

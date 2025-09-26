@@ -1,21 +1,23 @@
 #pragma once
-#include <adf.h>
-#include <array>
 
-#include "nn_defs.h"
+#include <adf.h>
+
+#include <array>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
+
 #include "data_paths.h"
-#include "matrix_vector_mul_graph.hpp"
-#include "aie_api/aie_adf.hpp"
-#include "stream_to_packet.h"
-#include "packet_to_stream.h"
-#include "leaky_relu.h"
-#include "hidden_stream_to_packet.h"
+#include "graph/config.hpp"
+#include "graph/layers.hpp"
+#include "kernels/dense/all.hpp"
+#include "nn_defs.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
 static constexpr unsigned int TP_RND = rnd_floor;
-
 static constexpr unsigned int TP_SHIFT = 0;
 static constexpr unsigned int TP_NUM_FRAMES = 1;
 static constexpr unsigned int TP_SAT = 0;
@@ -60,85 +62,170 @@ using dense128x128 = matrix_vector_mul_graph<
     TP_DUAL_IP,
     TP_NUM_OUTPUTS>;
 
+namespace aieml5::graph::detail {
+
+using IngressPacketStage = PacketFanoutStage<stream_to_packet_kernel, packet_to_stream_kernel, 1>;
+using Dense0Stage = DenseLayer<dense8x128, 1>;
+using Activation0Stage = ActivationLayer<leaky_relu_kernel>;
+using HiddenFanoutStage = PacketFanoutStage<hidden_stream_to_packet_kernel, packet_to_stream_hidden_kernel, CASCADE_LENGTH>;
+using Dense1Stage = DenseLayer<dense128x128, CASCADE_LENGTH>;
+
+using StagePipeline = std::tuple<IngressPacketStage, Dense0Stage, Activation0Stage, HiddenFanoutStage, Dense1Stage>;
+
+template <std::size_t Index>
+using StageType = std::tuple_element_t<Index, StagePipeline>;
+
+template <typename Func, std::size_t... Indices>
+constexpr void for_each_index_impl(std::index_sequence<Indices...>, Func&& func) {
+  (func(std::integral_constant<std::size_t, Indices>{}), ...);
+}
+
+template <std::size_t Count, typename Func>
+constexpr void for_each_index(Func&& func) {
+  for_each_index_impl(std::make_index_sequence<Count>{}, std::forward<Func>(func));
+}
+
+template <std::size_t Index>
+constexpr void validate_stage_descriptor() {
+  using Stage = StageType<Index>;
+  constexpr auto descriptor = config::kStageDescriptors[Index];
+  static_assert(StageTraits<Stage>::kind == descriptor.kind, "Stage type mismatch");
+  if constexpr (descriptor.kind == StageKind::PacketFanout) {
+    static_assert(StageTraits<Stage>::outputs == static_cast<std::size_t>(descriptor.fanout),
+                  "Packet fan-out mismatch");
+  } else if constexpr (descriptor.kind == StageKind::Dense) {
+    static_assert(StageTraits<Stage>::inputs == static_cast<std::size_t>(descriptor.cascade),
+                  "Dense cascade length mismatch");
+    static_assert(StageTraits<Stage>::rtp_ports == static_cast<std::size_t>(descriptor.rtp_ports),
+                  "Dense RTP port count mismatch");
+  }
+}
+
+constexpr bool ValidateStages() {
+  for_each_index<std::tuple_size_v<StagePipeline>>([](auto index_const) {
+    validate_stage_descriptor<index_const>();
+  });
+  return true;
+}
+
+}  // namespace aieml5::graph::detail
+
+static_assert(aieml5::graph::detail::ValidateStages(), "Stage configuration must match descriptors");
+
+struct DenseStageRuntimeInfo {
+  std::string_view name;
+  input_port*      ports;
+  std::size_t      port_count;
+  std::string_view weight_file;
+  std::string_view weight_prefix;
+  std::size_t      weights_per_port;
+};
 
 class NeuralNetworkGraph : public graph {
-public:
-    input_plio  input_data;
-    output_plio output_data;
-    dense8x128   dense1;
-    dense128x128 dense2;
-    input_port matrixA_dense0_rtp;
-    input_port matrixA_dense1_rtp[CASCADE_LENGTH];
+ public:
+  NeuralNetworkGraph();
 
-    kernel      k_stream_to_packet;
-    kernel      k_packet_to_stream;
-    kernel      k_lrelu0;
-    kernel      k_hidden_stream_to_packet;
-    std::array<kernel, CASCADE_LENGTH> k_packet_to_stream_hidden;
+  const std::array<DenseStageRuntimeInfo, aieml5::graph::config::DenseStageCount>& dense_layers() const {
+    return dense_layers_;
+  }
 
-    // ADF packet switching components
-    pktsplit<1>                 splitter;
-    pktsplit<CASCADE_LENGTH>    layer_splitter;
+  input_plio  input_data;
+  output_plio output_data;
 
-    NeuralNetworkGraph() {
-        std::string base_path = DATA_DIR;
-        input_data     = input_plio::create("input_data", plio_32_bits, (base_path + "/" + EMBED_INPUT_DATA).c_str());
-        output_data    = output_plio::create("output_data", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
+ private:
+  using StagePipeline = aieml5::graph::detail::StagePipeline;
+  static constexpr std::size_t StageCount = std::tuple_size_v<StagePipeline>;
 
-        k_stream_to_packet = kernel::create(stream_to_packet_kernel);
-        source(k_stream_to_packet) = "stream_to_packet.cpp";
-        headers(k_stream_to_packet) = {"stream_to_packet.h"};
-        runtime<ratio>(k_stream_to_packet) = 1.0;
+  template <std::size_t Index>
+  auto& stage() {
+    return std::get<Index>(stages_);
+  }
 
-        k_packet_to_stream = kernel::create(packet_to_stream_kernel);
-        source(k_packet_to_stream) = "packet_to_stream.cpp";
-        headers(k_packet_to_stream) = {"packet_to_stream.h"};
-        runtime<ratio>(k_packet_to_stream) = 1.0;
+  template <std::size_t Index>
+  const auto& stage() const {
+    return std::get<Index>(stages_);
+  }
 
-        k_lrelu0 = kernel::create(leaky_relu_kernel);
-        source(k_lrelu0) = "leaky_relu.cpp";
-        headers(k_lrelu0) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu0) = 1.0;
+  template <std::size_t Index>
+  void connect_stage_pair();
 
-        k_hidden_stream_to_packet = kernel::create(hidden_stream_to_packet_kernel);
-        source(k_hidden_stream_to_packet) = "hidden_stream_to_packet.cpp";
-        headers(k_hidden_stream_to_packet) = {"hidden_stream_to_packet.h"};
-        runtime<ratio>(k_hidden_stream_to_packet) = 1.0;
+  void connect_pipeline();
+  void initialise_dense_info();
 
-        for (int i = 0; i < CASCADE_LENGTH; ++i) {
-            k_packet_to_stream_hidden[i] = kernel::create(packet_to_stream_hidden_kernel);
-            source(k_packet_to_stream_hidden[i]) = "packet_to_stream.cpp";
-            headers(k_packet_to_stream_hidden[i]) = {"packet_to_stream.h"};
-            runtime<ratio>(k_packet_to_stream_hidden[i]) = 1.0;
-        }
-
-        // Create ADF packet switching infrastructure
-        splitter = pktsplit<1>::create();
-        layer_splitter = pktsplit<CASCADE_LENGTH>::create();
-
-        // Matrix A is provided via RTP (runtime parameter) - no PLIO connection needed
-        // Vector B uses stream interface with TP_API=1
-        adf::connect<adf::parameter>(matrixA_dense0_rtp, dense1.matrixA[0]);
-        for (int i = 0; i < CASCADE_LENGTH; ++i) {
-            adf::connect<adf::parameter>(matrixA_dense1_rtp[i], dense2.matrixA[i]);
-        }
-
-        // ADF packet switching data flow:
-        // input_data -> k_stream_to_packet -> splitter -> k_packet_to_stream -> dense1 -> output_data
-        connect<stream>(input_data.out[0], k_stream_to_packet.in[0]);           // float stream → packet kernel
-        connect<pktstream>(k_stream_to_packet.out[0], splitter.in[0]);          // packet stream → splitter
-        connect<pktstream>(splitter.out[0], k_packet_to_stream.in[0]);          // splitter → packet_to_stream
-        connect<stream>(k_packet_to_stream.out[0], dense1.inB[0]);              // float stream → dense
-
-        connect<stream>(dense1.out[0], k_lrelu0.in[0]);
-        connect<stream>(k_lrelu0.out[0], k_hidden_stream_to_packet.in[0]);
-        connect<pktstream>(k_hidden_stream_to_packet.out[0], layer_splitter.in[0]);
-
-        for (int i = 0; i < CASCADE_LENGTH; ++i) {
-            connect<pktstream>(layer_splitter.out[i], k_packet_to_stream_hidden[i].in[0]);
-            connect<stream>(k_packet_to_stream_hidden[i].out[0], dense2.inB[i]);
-        }
-
-        connect<stream>(dense2.out[0], output_data.in[0]);
-    }
+  StagePipeline stages_{};
+  std::array<DenseStageRuntimeInfo, aieml5::graph::config::DenseStageCount> dense_layers_{};
 };
+
+inline NeuralNetworkGraph::NeuralNetworkGraph() {
+  std::string base_path = DATA_DIR;
+  input_data = input_plio::create(
+      "input_data", plio_32_bits, (base_path + "/" + EMBED_INPUT_DATA).c_str());
+  output_data = output_plio::create(
+      "output_data", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
+
+  using FirstStage = aieml5::graph::detail::StageType<0>;
+  connect<stream>(input_data.out[0],
+                  aieml5::graph::StageTraits<FirstStage>::input(stage<0>(), 0));
+
+  connect_pipeline();
+
+  using LastStage = aieml5::graph::detail::StageType<StageCount - 1>;
+  connect<stream>(
+      aieml5::graph::StageTraits<LastStage>::output(stage<StageCount - 1>(), 0),
+      output_data.in[0]);
+
+  initialise_dense_info();
+}
+
+template <std::size_t Index>
+inline void NeuralNetworkGraph::connect_stage_pair() {
+  using CurrentStage = aieml5::graph::detail::StageType<Index>;
+  using NextStage = aieml5::graph::detail::StageType<Index + 1>;
+  auto& current = stage<Index>();
+  auto& next = stage<Index + 1>();
+
+  constexpr std::size_t output_count = aieml5::graph::StageTraits<CurrentStage>::outputs;
+  constexpr std::size_t input_count = aieml5::graph::StageTraits<NextStage>::inputs;
+  static_assert(output_count == input_count, "Adjacent stage interface mismatch");
+
+  for (std::size_t i = 0; i < output_count; ++i) {
+    connect<stream>(aieml5::graph::StageTraits<CurrentStage>::output(current, i),
+                    aieml5::graph::StageTraits<NextStage>::input(next, i));
+  }
+}
+
+inline void NeuralNetworkGraph::connect_pipeline() {
+  aieml5::graph::detail::for_each_index<StageCount - 1>([this](auto index_const) {
+    connect_stage_pair<index_const>();
+  });
+}
+
+inline void NeuralNetworkGraph::initialise_dense_info() {
+  std::size_t dense_index = 0;
+  aieml5::graph::detail::for_each_index<StageCount>([&](auto index_const) {
+    constexpr std::size_t index = index_const;
+    using Stage = aieml5::graph::detail::StageType<index>;
+    constexpr auto descriptor = aieml5::graph::config::kStageDescriptors[index];
+
+    if constexpr (aieml5::graph::StageTraits<Stage>::kind == aieml5::graph::StageKind::Dense) {
+      auto& stage_instance = stage<index>();
+      DenseStageRuntimeInfo info{};
+      info.name = descriptor.name;
+      info.ports = &aieml5::graph::StageTraits<Stage>::matrix_port(stage_instance, 0);
+      info.port_count = aieml5::graph::StageTraits<Stage>::rtp_ports;
+
+      if (const auto* weights = aieml5::graph::config::find_dense_weight(index)) {
+        if (weights->single_file != nullptr) {
+          info.weight_file = weights->single_file;
+        }
+        if (weights->file_prefix != nullptr) {
+          info.weight_prefix = weights->file_prefix;
+        }
+        info.weights_per_port = weights->weights_per_port;
+      }
+
+      dense_layers_[dense_index++] = info;
+    }
+  });
+}
+

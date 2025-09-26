@@ -7,32 +7,62 @@ pure streaming interfaces.
 
 ## Architecture Overview
 
-- **Input Layer**: 8-element float vector input via `input_data` PLIO
-- **Dense 0 ("dense1")**: 8×128 matrix-vector multiplication using DSPLib (`dense8x128`)
-- **Activation**: Leaky ReLU kernel (`k_lrelu0`) processes the 128-element hidden layer
-- **Hidden Packetization**: `hidden_stream_to_packet_kernel` splits the activation
-  stream into `CASCADE_LENGTH` packets (currently 4), with each packet containing
-  32 elements (128/4 = 32 elements per cascade branch)
-- **Cascade Fan-out**: `pktsplit<CASCADE_LENGTH>` distributes packets to cascade branches
-- **Dense 1 ("dense2")**: 4 parallel 128×128 DSPLib matrix-vector kernels (CASCADE_LENGTH=4),
-  each processing their portion of the hidden vector to produce final logits
-- **Runtime Parameter Loading**: All dense kernels receive weights via RTP ports,
-  enabling dynamic weight updates without graph recompilation
+The graph is assembled from the stage descriptors listed in
+[`graph/config.hpp`](graph/config.hpp). Each descriptor instantiates one of the
+lightweight subgraphs implemented in [`graph/layers.hpp`](graph/layers.hpp):
 
-The packet-based hop between the Leaky ReLU and the cascade ensures each branch
-receives only the portion of the hidden vector it needs while avoiding wide
-fan-out stream connections.
+- **`PacketFanoutStage`** wraps the transport kernels, using the templated
+  helpers in [`kernels/transport/packet_helpers.hpp`](kernels/transport/packet_helpers.hpp)
+  to emit and consume packet headers while managing TLAST for every branch.
+- **`DenseLayer`** embeds the DSPLib matrix-vector graphs, exposes their RTP
+  ports, and surfaces metadata (fan-in width, cascade length, weight sources)
+  to the host through `DenseStageRuntimeInfo`.
+- **`ActivationLayer`** encapsulates activation kernels such as the Leaky ReLU
+  implementation in [`kernels/activations/leaky_relu.cpp`](kernels/activations/leaky_relu.cpp).
+
+The dense kernel wrappers live alongside the transport and activation code in
+[`kernels/dense`](kernels/dense), which exposes an umbrella
+[`all.hpp`](kernels/dense/all.hpp) for graphs that need to include every dense
+implementation.
+
+The default configuration builds the following pipeline:
+
+1. **Packet ingress** – a single-branch `PacketFanoutStage` converts the input
+   PLIO stream into packets via `packetize_stream<8, 1>()`, then immediately
+   depacketizes it for the first dense layer.
+2. **Dense 0** – a `DenseLayer` wrapping an 8×128 DSPLib graph consumes the
+   depacketized stream.
+3. **Activation** – `ActivationLayer<leaky_relu_kernel>` applies the Leaky ReLU.
+4. **Hidden fan-out** – `packetize_stream<128, CASCADE_LENGTH>()` slices the
+   hidden activations into cascade packets which are depacketized into
+   `CASCADE_LENGTH` independent streams.
+5. **Dense 1** – another `DenseLayer` feeds the cascaded DSPLib kernels and
+   drives the output PLIO.
+
+Because the connections are generated from metadata, adding or reordering
+layers only requires updating the configuration table and recompiling.
 
 ## Directory Layout
 
 ```
-├── graph.cpp                        # Instantiates `NeuralNetworkGraph` with RTP weight loading
-├── graph.h                          # Graph definition with 4-way cascade packet workflow
-├── stream_to_packet.cpp/h           # Converts input float stream to packets
-├── hidden_stream_to_packet.cpp/h    # Splits hidden activations into cascade packets
-├── packet_to_stream.cpp/h           # Converts packets back to streams for dense layers
-├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel (slope=0.1)
-├── split_stream.cpp/h               # Stream splitting utilities (deprecated)
+├── graph.cpp                        # Instantiates `NeuralNetworkGraph` and loads weights via metadata
+├── graph.h                          # Config-driven graph definition and dense-layer inventory
+├── graph/                           # Subgraph definitions and configuration tables
+│   ├── config.hpp                   # Stage descriptors and dense weight sources
+│   ├── layers.hpp                   # Packet/Dense/Activation subgraphs + traits
+│   └── types.hpp                    # Shared enum definitions
+├── kernels/
+│   ├── activations/
+│   │   ├── all.hpp
+│   │   └── leaky_relu.cpp/h         # Leaky ReLU activation kernel (slope=0.1)
+│   ├── dense/
+│   │   └── all.hpp                  # Umbrella include for DSPLib dense wrappers
+│   └── transport/
+│       ├── all.hpp
+│       ├── packet_helpers.hpp       # `packetize_stream` / `depacketize_stream` templates
+│       ├── stream_to_packet.cpp/h   # Converts input float stream to packets
+│       ├── hidden_stream_to_packet.cpp/h
+│       └── packet_to_stream.cpp/h   # Converts packets back to streams
 ├── aie.cfg                          # AI Engine compiler configuration
 └── Makefile                         # Build rules with corrected DATA_DIR path
 ```
@@ -55,8 +85,10 @@ To invoke the compiler directly:
 
 ```bash
 v++ -c --mode aie --target hw graph.cpp \
-    stream_to_packet.cpp hidden_stream_to_packet.cpp packet_to_stream.cpp \
-    leaky_relu.cpp \
+    kernels/transport/stream_to_packet.cpp \
+    kernels/transport/hidden_stream_to_packet.cpp \
+    kernels/transport/packet_to_stream.cpp \
+    kernels/activations/leaky_relu.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
@@ -72,20 +104,17 @@ Both commands produce `Work/libadf.a` inside this directory.
 ## Data Flow Walkthrough
 
 1. **Input embedding**: `input_data` PLIO feeds an 8-element float vector into
-   `stream_to_packet_kernel`, which tags the samples with an ADF packet header.
-2. **Packet routing**: A single-input `pktsplit` forwards the dense0 packet to
-   `packet_to_stream_kernel`, where it becomes a float stream and enters the
-   first dense layer (`dense1`).
-3. **Hidden activation**: The DSPLib dense kernel produces a 128-element vector
-   which flows through `k_lrelu0` for Leaky ReLU activation.
-4. **Hidden-layer packet hop**: `hidden_stream_to_packet_kernel` consumes the
-   Leaky ReLU output, builds 4 packets (one per cascade lane), and marks TLAST
-   on the final element.
-5. **Cascade fan-out**: `pktsplit<4>` inspects each packet's ID and forwards it
-   to the matching `packet_to_stream_hidden_kernel` instance, which converts the
-   payload back into a float stream for the downstream dense kernel (`dense2.inB[i]`).
-6. **Output logits**: The cascade of dense kernels write their partial outputs
-   into the shared output PLIO `output_data`, producing the inference result.
+   the ingress `PacketFanoutStage`, which tags the samples with an ADF packet
+   header before immediately depacketizing them for the first dense layer.
+2. **Dense 0 → Activation**: The DSPLib dense graph produces a 128-element
+   vector that flows through the Leaky ReLU activation subgraph.
+3. **Hidden-layer packet hop**: `packetize_stream<128, CASCADE_LENGTH>()`
+   consumes the Leaky ReLU output, builds one packet per cascade lane, and marks
+   TLAST on the final element in each payload.
+4. **Cascade fan-out**: `depacketize_stream<32>()` (32 = 128 / 4) converts each
+   packet back into a float stream for the downstream dense cascade.
+5. **Output logits**: The cascade of dense kernels writes its accumulated output
+   to the shared PLIO `output_data`, producing the inference result.
 
 Throughout the flow the packets exist only on the inter-kernel hop where fan-out
 is required, allowing the dense compute kernels to stay on standard stream
@@ -96,3 +125,45 @@ interfaces.
 The PLIO files consumed by the graph reside in the project-parent
 [`../data/`](../../data) directory. They are generated by
 [`data/generate_test_data.py`](../data/generate_test_data.py).
+
+## Extending the graph
+
+The descriptors in [`graph/config.hpp`](graph/config.hpp) drive both the graph
+construction and the runtime weight loading logic. To add another layer or swap
+in a custom kernel:
+
+1. **Create or reuse a kernel/subgraph** – place the implementation under
+   `kernels/` (adding to the relevant `all.hpp`) or add a new subgraph class to
+   `graph/layers.hpp` if a different composition is required. The transport
+   helpers in `kernels/transport/packet_helpers.hpp` can be instantiated with a
+   single `packetize_stream<FrameElems, Branches>()` or
+   `depacketize_stream<FrameElems>()` call to handle packet headers, payload
+   loops, and TLAST propagation for you.
+2. **Update the stage table** – append or reorder entries in
+   `config::kStageDescriptors`, specifying the stage kind, fan-out/cascade
+   width, and RTP port count. The compile-time checks in `graph.h` ensure the
+   descriptors agree with the instantiated types.
+3. **Describe weight sources** – for dense layers, add an entry to
+   `config::kDenseWeights` with either a single weight file name or a prefix
+   that is expanded per cascade branch. `graph.cpp` will automatically iterate
+   the resulting `DenseStageRuntimeInfo` array when loading weights.
+
+### Stage descriptor reference
+
+Each entry in `config::kStageDescriptors` contains:
+
+| Field           | Meaning                                                                 |
+| --------------- | ----------------------------------------------------------------------- |
+| `kind`          | One of `PacketFanout`, `Dense`, or `Activation`, selecting the subgraph. |
+| `name`          | String identifier used when tracing the AI Engine graph build.          |
+| `fanout`        | Branch count for packet stages (e.g. hidden-layer fan-out).             |
+| `cascade`       | Number of cascaded DSPLib kernels in a dense stage.                     |
+| `rtp_ports`     | Count of RTP inputs exposed by the dense layer.                         |
+| `frame_elems`   | Payload width for packetization helpers (ignored by dense/activations). |
+
+Only the fields relevant to a particular stage kind are consumed at runtime, but
+the compile-time checks expect the metadata to be well-formed so downstream
+layers can reason about their fan-in and weight layout.
+
+After editing the configuration, rebuild the graph (`make graph`) to regenerate
+the wiring and ensure the metadata stays in sync.
