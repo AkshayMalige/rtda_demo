@@ -3,5 +3,6 @@
 #include "nn_defs.h"
 using namespace adf;
 
-void leaky_relu_kernel(adf::input_stream<float>* __restrict in,
-                       adf::output_stream<float>* __restrict out);
+void leaky_relu_kernel(input_stream<float>* __restrict in,
+                       output_stream<float>* __restrict out);
+

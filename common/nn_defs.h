@@ -4,7 +4,7 @@ constexpr int INPUT_SIZE = 8;
 constexpr int HIDDEN_SIZE = 128;
 constexpr int OUTPUT_SIZE = 128;
 constexpr float LEAKY_SLOPE = 0.1f;
-constexpr int CASCADE_LENGTH = 2;
+constexpr int CASCADE_LENGTH = 4;
 constexpr int ROLL_CONC_SUBSET_SIZE = 6;
 
 
