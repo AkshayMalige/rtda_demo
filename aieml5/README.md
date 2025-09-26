@@ -28,10 +28,12 @@ fan-out stream connections.
 ```
 ├── graph.cpp                        # Instantiates `NeuralNetworkGraph` with RTP weight loading
 ├── graph.h                          # Graph definition with 4-way cascade packet workflow
-├── stream_to_packet.cpp/h           # Converts input float stream to packets
-├── hidden_stream_to_packet.cpp/h    # Splits hidden activations into cascade packets
-├── packet_to_stream.cpp/h           # Converts packets back to streams for dense layers
-├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel (slope=0.1)
+├── kernels/
+│   ├── stream_to_packet.cpp/h           # Converts input float stream to packets
+│   ├── hidden_stream_to_packet.cpp/h    # Splits hidden activations into cascade packets
+│   ├── packet_to_stream.cpp/h           # Converts packets back to streams for dense layers
+│   ├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel (slope=0.1)
+│   └── roll_concat.cpp/h                # Produces 6 cyclic shifts of the dense output
 ├── split_stream.cpp/h               # Stream splitting utilities (deprecated)
 ├── aie.cfg                          # AI Engine compiler configuration
 └── Makefile                         # Build rules with corrected DATA_DIR path
@@ -55,8 +57,8 @@ To invoke the compiler directly:
 
 ```bash
 v++ -c --mode aie --target hw graph.cpp \
-    stream_to_packet.cpp hidden_stream_to_packet.cpp packet_to_stream.cpp \
-    leaky_relu.cpp \
+    kernels/stream_to_packet.cpp kernels/hidden_stream_to_packet.cpp \
+    kernels/packet_to_stream.cpp kernels/leaky_relu.cpp kernels/roll_concat.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
@@ -84,8 +86,9 @@ Both commands produce `Work/libadf.a` inside this directory.
 5. **Cascade fan-out**: `pktsplit<4>` inspects each packet's ID and forwards it
    to the matching `packet_to_stream_hidden_kernel` instance, which converts the
    payload back into a float stream for the downstream dense kernel (`dense2.inB[i]`).
-6. **Output logits**: The cascade of dense kernels write their partial outputs
-   into the shared output PLIO `output_data`, producing the inference result.
+6. **Roll-and-concatenate**: The cascade of dense kernels feeds `roll_concat_kernel`,
+   which emits six cyclically shifted copies (6 × 128 = 768 values) onto the
+   `output_data` PLIO for downstream processing.
 
 Throughout the flow the packets exist only on the inter-kernel hop where fan-out
 is required, allowing the dense compute kernels to stay on standard stream
