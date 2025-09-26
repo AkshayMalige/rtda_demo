@@ -17,6 +17,23 @@ using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
 static constexpr unsigned int TP_RND = rnd_floor;
 
+enum class DebugTap : int {
+    None = 0,
+    Dense8x128,
+    LeakyRelu,
+    Dense128x128,
+    RollConcat
+};
+
+#ifndef AIEML5_DEBUG_TAP
+#define AIEML5_DEBUG_TAP static_cast<int>(DebugTap::None)
+#endif
+
+static constexpr DebugTap kSelectedDebugTap = static_cast<DebugTap>(AIEML5_DEBUG_TAP);
+static_assert(static_cast<int>(DebugTap::None) <= static_cast<int>(kSelectedDebugTap) &&
+                  static_cast<int>(kSelectedDebugTap) <= static_cast<int>(DebugTap::RollConcat),
+              "AIEML5_DEBUG_TAP must map to a valid DebugTap enumerator");
+
 static constexpr unsigned int TP_SHIFT = 0;
 static constexpr unsigned int TP_NUM_FRAMES = 1;
 static constexpr unsigned int TP_SAT = 0;
@@ -139,16 +156,34 @@ public:
         connect<pktstream>(splitter.out[0], k_packet_to_stream.in[0]);          // splitter → packet_to_stream
         connect<stream>(k_packet_to_stream.out[0], dense1.inB[0]);              // float stream → dense
 
-        connect<stream>(dense1.out[0], k_lrelu0.in[0]);
-        connect<stream>(k_lrelu0.out[0], k_hidden_stream_to_packet.in[0]);
-        connect<pktstream>(k_hidden_stream_to_packet.out[0], layer_splitter.in[0]);
+        if constexpr (kSelectedDebugTap == DebugTap::Dense8x128) {
+            connect<stream>(dense1.out[0], dummy_output.in[0]);
+        } else {
+            connect<stream>(dense1.out[0], k_lrelu0.in[0]);
 
-        for (int i = 0; i < CASCADE_LENGTH; ++i) {
-            connect<pktstream>(layer_splitter.out[i], k_packet_to_stream_hidden[i].in[0]);
-            connect<stream>(k_packet_to_stream_hidden[i].out[0], dense2.inB[i]);
+            if constexpr (kSelectedDebugTap == DebugTap::LeakyRelu) {
+                connect<stream>(k_lrelu0.out[0], dummy_output.in[0]);
+            } else {
+                connect<stream>(k_lrelu0.out[0], k_hidden_stream_to_packet.in[0]);
+                connect<pktstream>(k_hidden_stream_to_packet.out[0], layer_splitter.in[0]);
+
+                for (int i = 0; i < CASCADE_LENGTH; ++i) {
+                    connect<pktstream>(layer_splitter.out[i], k_packet_to_stream_hidden[i].in[0]);
+                    connect<stream>(k_packet_to_stream_hidden[i].out[0], dense2.inB[i]);
+                }
+
+                if constexpr (kSelectedDebugTap == DebugTap::Dense128x128) {
+                    connect<stream>(dense2.out[0], dummy_output.in[0]);
+                } else {
+                    connect<stream>(dense2.out[0], k_roll_concat.in[0]);
+
+                    if constexpr (kSelectedDebugTap == DebugTap::RollConcat) {
+                        connect<stream>(k_roll_concat.out[0], dummy_output.in[0]);
+                    } else {
+                        connect<stream>(k_roll_concat.out[0], output_data.in[0]);
+                    }
+                }
+            }
         }
-
-        connect<stream>(dense2.out[0], k_roll_concat.in[0]);
-        connect<stream>(k_roll_concat.out[0], output_data.in[0]);
     }
 };

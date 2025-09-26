@@ -94,6 +94,32 @@ Throughout the flow the packets exist only on the inter-kernel hop where fan-out
 is required, allowing the dense compute kernels to stay on standard stream
 interfaces.
 
+## Layer Tap Debugging
+
+`graph.h` exposes a compile-time switch that routes an intermediate layer to the
+`dummy_output` PLIO so you can inspect activations without rewiring the graph by
+hand. Select the tap by defining `AIEML5_DEBUG_TAP` when compiling the graph:
+
+| Value | Layer routed to `dummy_output`  |
+| ----- | ------------------------------- |
+| `0`   | Disabled (default behaviour)    |
+| `1`   | Dense 0 (`dense8x128`) output   |
+| `2`   | Leaky ReLU output               |
+| `3`   | Dense 1 (`dense128x128`) output |
+| `4`   | Roll-concat output              |
+
+For example, to capture the Leaky ReLU activations during simulation:
+
+```bash
+v++ -c --mode aie --target hw graph.cpp \
+    -DAIEML5_DEBUG_TAP=2 \
+    …
+```
+
+When a tap is enabled, downstream layers are bypassed so that the selected
+activation reaches `dummy_output` directly. Revert the macro to `0` (or omit it)
+to restore the full forward pass.
+
 ## Files and Build Instructions
 
 The PLIO files consumed by the graph reside in the project-parent
