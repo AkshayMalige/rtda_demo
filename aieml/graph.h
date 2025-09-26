@@ -4,6 +4,7 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
+#include "roll_concat.h"
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 static constexpr unsigned int TP_SHIFT = 0;
@@ -45,6 +46,7 @@ public:
     output_plio layer0_out;
     dense8x128   dense1;
     dense128x128 dense2;
+    kernel       roll_concat;
     input_plio  layer1_in[TP_CASC_LEN_LAYER2];
     input_plio  layer1_weights[TP_CASC_LEN_LAYER2];
     // Final dense layer output directly drives a PLIO
@@ -79,7 +81,15 @@ public:
         }
         layer1_out = output_plio::create("layer1_out", plio_32_bits,
                                          (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
-        connect<>(dense2.out[0], layer1_out.in[0]);
+        roll_concat = kernel::create(roll_concat_kernel);
+        source(roll_concat) = "roll_concat.cpp";
+        runtime<ratio>(roll_concat) = 0.9;
+        dimensions(roll_concat.in[0]) = {HIDDEN_SIZE};
+        dimensions(roll_concat.out[0]) = {HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE};
+
+        connect<>(dense2.out[0], roll_concat.in[0]);
+        connect<>(roll_concat.out[0], layer1_out.in[0]);
+        dimensions(layer1_out.in[0]) = {HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE};
         
         constexpr unsigned dense2_base_col = 2;
         constexpr unsigned dense2_row = 0;
