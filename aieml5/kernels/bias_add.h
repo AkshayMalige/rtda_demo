@@ -6,5 +6,5 @@
 using namespace aie;
 
 void bias_add_kernel(input_stream<float>* restrict dense_output,
-                     input_stream<float>* restrict bias_stream,
+                     const float* bias_values,
                      output_stream<float>* restrict biased_output);
