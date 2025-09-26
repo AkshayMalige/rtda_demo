@@ -12,8 +12,10 @@ namespace {
  * kernel, forwards @p frame_elems payload samples, and drains any unexpected
  * residual data until TLAST is observed to keep the interface aligned.
  */
-inline void packet_payload_to_stream(adf::input_pktstream* in,
-                                     adf::output_stream<float>* out,
+using namespace adf;
+
+inline void packet_payload_to_stream(input_pktstream* in,
+                                     output_stream<float>* out,
                                      int frame_elems) {
   bool tlast = false;
 
@@ -42,11 +44,11 @@ inline void packet_payload_to_stream(adf::input_pktstream* in,
 
 }  // namespace
 
-void packet_to_stream_kernel(adf::input_pktstream* in, adf::output_stream<float>* out) {
+void packet_to_stream_kernel(input_pktstream* in, output_stream<float>* out) {
   packet_payload_to_stream(in, out, EMBED_DENSE0_INPUT_SIZE);
 }
 
-void packet_to_stream_hidden_kernel(adf::input_pktstream* in,
-                                    adf::output_stream<float>* out) {
+void packet_to_stream_hidden_kernel(input_pktstream* in,
+                                    output_stream<float>* out) {
   packet_payload_to_stream(in, out, HIDDEN_SIZE / CASCADE_LENGTH);
 }

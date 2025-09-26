@@ -30,10 +30,9 @@ void hidden_stream_to_packet_kernel(input_stream<float>* in_stream,
         int32_t i;
       } converter{value};
 
-      // Only the final word of the final packet asserts TLAST so the downstream
-      // pktsplitter and consumers know the frame has completed.
-      const bool is_last = (branch == branch_count - 1) &&
-                           (i == samples_per_part - 1);
+      // Assert TLAST on the final word of every packet so that the downstream
+      // splitter exposes a complete packet to each cascade branch.
+      const bool is_last = (i == samples_per_part - 1);
       writeincr(out_pkt, converter.i, is_last);
     }
   }
