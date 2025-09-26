@@ -44,6 +44,14 @@ int main() {
     g.update(g.matrixA_dense0_rtp, dense0Weights.data(), EMBED_DENSE0_WEIGHTS_SIZE);
   }
 
+  {
+    const auto dense0Bias = loadWeights(basePath + EMBED_DENSE0_BIAS, EMBED_DENSE0_BIAS_SIZE);
+    if (dense0Bias.empty()) {
+      return -1;
+    }
+    g.update(g.bias_dense0_rtp, dense0Bias.data(), EMBED_DENSE0_BIAS_SIZE);
+  }
+
   for (int cascIdx = 0; cascIdx < CASCADE_LENGTH; ++cascIdx) {
     const std::string weightPath = basePath + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
     const auto dense1Weights = loadWeights(weightPath, EMBED_DENSE1_WEIGHTS_PART_SIZE);

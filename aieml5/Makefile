@@ -40,6 +40,7 @@ KERNEL_SRCS   := $(addprefix $(KERNEL_DIR)/, \
         stream_to_packet.cpp \
         hidden_stream_to_packet.cpp \
         packet_to_stream.cpp \
+        bias_add.cpp \
         leaky_relu.cpp \
         roll_concat.cpp)
 KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)

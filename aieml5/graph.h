@@ -8,6 +8,7 @@
 #include "aie_api/aie_adf.hpp"
 #include "kernels/stream_to_packet.h"
 #include "kernels/packet_to_stream.h"
+#include "kernels/bias_add.h"
 #include "kernels/leaky_relu.h"
 #include "kernels/hidden_stream_to_packet.h"
 #include "kernels/roll_concat.h"
@@ -70,9 +71,11 @@ public:
     dense128x128 dense2;
     input_port matrixA_dense0_rtp;
     input_port matrixA_dense1_rtp[CASCADE_LENGTH];
+    input_port bias_dense0_rtp;
 
     kernel      k_stream_to_packet;
     kernel      k_packet_to_stream;
+    kernel      k_bias_add;
     kernel      k_lrelu0;
     kernel      k_hidden_stream_to_packet;
     kernel      k_roll_concat;
@@ -96,6 +99,11 @@ public:
         source(k_packet_to_stream) = "kernels/packet_to_stream.cpp";
         headers(k_packet_to_stream) = {"kernels/packet_to_stream.h"};
         runtime<ratio>(k_packet_to_stream) = 1.0;
+
+        k_bias_add = kernel::create(bias_add_kernel);
+        source(k_bias_add) = "kernels/bias_add.cpp";
+        headers(k_bias_add) = {"kernels/bias_add.h"};
+        runtime<ratio>(k_bias_add) = 1.0;
 
         k_lrelu0 = kernel::create(leaky_relu_kernel);
         source(k_lrelu0) = "kernels/leaky_relu.cpp";
@@ -129,6 +137,7 @@ public:
         for (int i = 0; i < CASCADE_LENGTH; ++i) {
             adf::connect<adf::parameter>(matrixA_dense1_rtp[i], dense2.matrixA[i]);
         }
+        adf::connect<adf::parameter>(bias_dense0_rtp, async(k_bias_add.in[1]));
 
         // ADF packet switching data flow:
         // input_data -> k_stream_to_packet -> splitter -> k_packet_to_stream -> dense1 -> output_data
@@ -137,7 +146,8 @@ public:
         connect<pktstream>(splitter.out[0], k_packet_to_stream.in[0]);          // splitter → packet_to_stream
         connect<stream>(k_packet_to_stream.out[0], dense1.inB[0]);              // float stream → dense
 
-        connect<stream>(dense1.out[0], k_lrelu0.in[0]);
+        connect<stream>(dense1.out[0], k_bias_add.in[0]);
+        connect<stream>(k_bias_add.out[0], k_lrelu0.in[0]);
         connect<stream>(k_lrelu0.out[0], k_hidden_stream_to_packet.in[0]);
         connect<pktstream>(k_hidden_stream_to_packet.out[0], layer_splitter.in[0]);
 
