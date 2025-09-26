@@ -12,9 +12,8 @@ PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202
 TARGET       ?= hw
 
 # Location of input/weight files used by PLIO connections (override from top-level)
-# Defaults two levels up so data lives outside the source tree when building
-# this subproject directly.
-DATA_DIR    ?= ../../data
+# Defaults to the data directory in the parent rtda_demo directory
+DATA_DIR    ?= ../data
 DATA_DIR := $(abspath $(DATA_DIR))
 
 # Path to your Vitis installation.
@@ -91,7 +90,7 @@ $(GRAPH_LIB): $(GRAPH_SRC) stream_to_packet.cpp hidden_stream_to_packet.cpp pack
 # --- Simulation ---
 sim: graph
 	@echo "--- Starting AI Engine simulation (aiesimulator) ---"
-	DATA_DIR=$(DATA_DIR) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --dump-vcd=foo --output-time-stamp=no
+	DATA_DIR=$(abspath $(DATA_DIR)) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --dump-vcd=foo --output-time-stamp=no
 	@echo "COMPLETE: AI Engine simulation finished."
 
 # --- Clean Target ---

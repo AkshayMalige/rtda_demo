@@ -7,17 +7,17 @@ pure streaming interfaces.
 
 ## Architecture Overview
 
-- **Dense 0 ("dense1")**: 128-wide hidden layer fed from an 8-element embedding
-  vector.
-- **Activation**: Leaky ReLU converts the hidden activations in-place.
-- **Hidden Packetisation**: `hidden_stream_to_packet_kernel` converts the
-  activation stream into packets, one per cascade branch.
-- **Cascade fan-out**: `pktsplit<CASCADE_LENGTH>` replicates the packets and
-  delivers them to each branch in the output cascade.
-- **Dense 1 ("dense2")**: `CASCADE_LENGTH` DSPLib matrix-vector kernels consume
-  their portion of the hidden vector and produce the final logits.
-- **Runtime parameter loading**: All dense kernels receive weights via RTP
-  ports, allowing the host to swap matrices without recompiling the graph.
+- **Input Layer**: 8-element float vector input via `input_data` PLIO
+- **Dense 0 ("dense1")**: 8×128 matrix-vector multiplication using DSPLib (`dense8x128`)
+- **Activation**: Leaky ReLU kernel (`k_lrelu0`) processes the 128-element hidden layer
+- **Hidden Packetization**: `hidden_stream_to_packet_kernel` splits the activation
+  stream into `CASCADE_LENGTH` packets (currently 4), with each packet containing
+  32 elements (128/4 = 32 elements per cascade branch)
+- **Cascade Fan-out**: `pktsplit<CASCADE_LENGTH>` distributes packets to cascade branches
+- **Dense 1 ("dense2")**: 4 parallel 128×128 DSPLib matrix-vector kernels (CASCADE_LENGTH=4),
+  each processing their portion of the hidden vector to produce final logits
+- **Runtime Parameter Loading**: All dense kernels receive weights via RTP ports,
+  enabling dynamic weight updates without graph recompilation
 
 The packet-based hop between the Leaky ReLU and the cascade ensures each branch
 receives only the portion of the hidden vector it needs while avoiding wide
@@ -26,25 +26,30 @@ fan-out stream connections.
 ## Directory Layout
 
 ```
-├── graph.cpp                        # Instantiates `NeuralNetworkGraph`
-├── graph.h                          # Graph definition with packet workflow
-├── stream_to_packet.cpp/h           # Converts float stream to packets for dense0
-├── hidden_stream_to_packet.cpp/h    # Packetises hidden-layer activations
-├── packet_to_stream.cpp/h           # Converts packets back into float streams
-├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel
+├── graph.cpp                        # Instantiates `NeuralNetworkGraph` with RTP weight loading
+├── graph.h                          # Graph definition with 4-way cascade packet workflow
+├── stream_to_packet.cpp/h           # Converts input float stream to packets
+├── hidden_stream_to_packet.cpp/h    # Splits hidden activations into cascade packets
+├── packet_to_stream.cpp/h           # Converts packets back to streams for dense layers
+├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel (slope=0.1)
+├── split_stream.cpp/h               # Stream splitting utilities (deprecated)
 ├── aie.cfg                          # AI Engine compiler configuration
-└── Makefile                         # Build rules wrapping v++
+└── Makefile                         # Build rules with corrected DATA_DIR path
 ```
 
 ## Build
 
 The supplied `Makefile` wraps the standard build flow using `v++` with AI Engine
-configuration. From this directory, compile the graph with:
+configuration. From this directory, compile and simulate the graph with:
 
 ```bash
-make graph TARGET=hw       # or TARGET=hw_emu (default: hw)
-make all                   # same as 'make graph'
+make graph TARGET=hw       # Compile AIE graph (default: hw)
+make sim                   # Run AI Engine simulation with weight loading
+make clean                 # Clean all build artifacts
 ```
+
+**Note**: The Makefile has been updated to use absolute paths for `DATA_DIR` to fix
+weight file resolution issues when `aiesimulator` runs from the `Work/temp/` directory.
 
 To invoke the compiler directly:
 
@@ -74,12 +79,11 @@ Both commands produce `Work/libadf.a` inside this directory.
 3. **Hidden activation**: The DSPLib dense kernel produces a 128-element vector
    which flows through `k_lrelu0` for Leaky ReLU activation.
 4. **Hidden-layer packet hop**: `hidden_stream_to_packet_kernel` consumes the
-   Leaky ReLU output, builds `CASCADE_LENGTH` packets (one per cascade lane), and
-   marks TLAST on the final element.
-5. **Cascade fan-out**: `pktsplit<CASCADE_LENGTH>` inspects each packet's ID and
-   forwards it to the matching `packet_to_stream_hidden_kernel` instance, which
-   converts the payload back into a float stream for the downstream dense kernel
-   (`dense2.inB[i]`).
+   Leaky ReLU output, builds 4 packets (one per cascade lane), and marks TLAST
+   on the final element.
+5. **Cascade fan-out**: `pktsplit<4>` inspects each packet's ID and forwards it
+   to the matching `packet_to_stream_hidden_kernel` instance, which converts the
+   payload back into a float stream for the downstream dense kernel (`dense2.inB[i]`).
 6. **Output logits**: The cascade of dense kernels write their partial outputs
    into the shared output PLIO `output_data`, producing the inference result.
 
