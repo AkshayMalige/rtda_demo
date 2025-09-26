@@ -1,36 +1,45 @@
-# AI Engine-ML Graph: ADF Packet-Switched Neural Network with Stream Processing
+# AI Engine-ML Graph: Packet-Switched Two-Layer Neural Network
 
-This directory demonstrates a **ADF packet-switched neural network processing pipeline** using Xilinx DSPLib
-with stream-based data flow, ADF packet switching infrastructure, and runtime parameter (RTP) weight loading.
+This directory implements the AI Engine graph that underpins the RTDA demo's
+hidden-layer cascade. It showcases how ADF packet infrastructure can be used to
+move activations between kernels while keeping the dense-layer compute blocks on
+pure streaming interfaces.
 
 ## Architecture Overview
 
-**Current Configuration:**
-- **Neural Network**: Single dense layer (8×128 matrix-vector multiplication) with Leaky ReLU activation
-- **Matrix A**: 8×128 weights (1024 floats) loaded via RTP ports
-- **Vector B**: 8×1 input vector processed through packet stream
-- **Activation**: Leaky ReLU applied to 128×1 dense layer output
-- **Output**: 128×1 result vector after activation
-- **Packet Processing**: ADF packet switching with pktsplit/pktmerge infrastructure
-- **TP_API=1**: Stream interface for high-throughput data flow
-- **TP_USE_MATRIX_RELOAD=1**: Runtime parameter weight loading
+- **Dense 0 ("dense1")**: 128-wide hidden layer fed from an 8-element embedding
+  vector.
+- **Activation**: Leaky ReLU converts the hidden activations in-place.
+- **Hidden Packetisation**: `hidden_stream_to_packet_kernel` converts the
+  activation stream into packets, one per cascade branch.
+- **Cascade fan-out**: `pktsplit<CASCADE_LENGTH>` replicates the packets and
+  delivers them to each branch in the output cascade.
+- **Dense 1 ("dense2")**: `CASCADE_LENGTH` DSPLib matrix-vector kernels consume
+  their portion of the hidden vector and produce the final logits.
+- **Runtime parameter loading**: All dense kernels receive weights via RTP
+  ports, allowing the host to swap matrices without recompiling the graph.
+
+The packet-based hop between the Leaky ReLU and the cascade ensures each branch
+receives only the portion of the hidden vector it needs while avoiding wide
+fan-out stream connections.
 
 ## Directory Layout
 
 ```
-├── graph.cpp                        # Instantiates `NeuralNetworkGraph` and runs it for simulation
-├── graph.h                          # Graph definition with packet processing pipeline
-├── stream_to_packet.cpp/h           # Converts float stream to packet stream
-├── packet_to_stream.cpp/h           # Converts packet stream back to float stream
-├── leaky_relu.cpp/h                 # Leaky ReLU activation function kernel
-├── aie.cfg                          # AIE configuration file
-└── Makefile                         # Build configuration
+├── graph.cpp                        # Instantiates `NeuralNetworkGraph`
+├── graph.h                          # Graph definition with packet workflow
+├── stream_to_packet.cpp/h           # Converts float stream to packets for dense0
+├── hidden_stream_to_packet.cpp/h    # Packetises hidden-layer activations
+├── packet_to_stream.cpp/h           # Converts packets back into float streams
+├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel
+├── aie.cfg                          # AI Engine compiler configuration
+└── Makefile                         # Build rules wrapping v++
 ```
 
 ## Build
 
-The supplied `Makefile` wraps the standard build flow using `v++` with AIE configuration.
-From this directory, compile the graph with:
+The supplied `Makefile` wraps the standard build flow using `v++` with AI Engine
+configuration. From this directory, compile the graph with:
 
 ```bash
 make graph TARGET=hw       # or TARGET=hw_emu (default: hw)
@@ -40,7 +49,9 @@ make all                   # same as 'make graph'
 To invoke the compiler directly:
 
 ```bash
-v++ -c --mode aie --target hw graph.cpp stream_to_packet.cpp packet_to_stream.cpp leaky_relu.cpp \
+v++ -c --mode aie --target hw graph.cpp \
+    stream_to_packet.cpp hidden_stream_to_packet.cpp packet_to_stream.cpp \
+    leaky_relu.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
@@ -53,149 +64,31 @@ v++ -c --mode aie --target hw graph.cpp stream_to_packet.cpp packet_to_stream.cp
 
 Both commands produce `Work/libadf.a` inside this directory.
 
-## Simulation
+## Data Flow Walkthrough
 
-After a successful build, run cycle-approximate simulation:
+1. **Input embedding**: `input_data` PLIO feeds an 8-element float vector into
+   `stream_to_packet_kernel`, which tags the samples with an ADF packet header.
+2. **Packet routing**: A single-input `pktsplit` forwards the dense0 packet to
+   `packet_to_stream_kernel`, where it becomes a float stream and enters the
+   first dense layer (`dense1`).
+3. **Hidden activation**: The DSPLib dense kernel produces a 128-element vector
+   which flows through `k_lrelu0` for Leaky ReLU activation.
+4. **Hidden-layer packet hop**: `hidden_stream_to_packet_kernel` consumes the
+   Leaky ReLU output, builds `CASCADE_LENGTH` packets (one per cascade lane), and
+   marks TLAST on the final element.
+5. **Cascade fan-out**: `pktsplit<CASCADE_LENGTH>` inspects each packet's ID and
+   forwards it to the matching `packet_to_stream_hidden_kernel` instance, which
+   converts the payload back into a float stream for the downstream dense kernel
+   (`dense2.inB[i]`).
+6. **Output logits**: The cascade of dense kernels write their partial outputs
+   into the shared output PLIO `output_data`, producing the inference result.
 
-```bash
-make sim                  # uses `aiesimulator` under the hood
-# or run manually
-# aiesimulator --pkg-dir=Work --profile --dump-vcd=foo
-```
-
-## Data Flow for ADF Packet-Switched Neural Network Processing
-
-### ADF Packet Switching Pipeline:
-
-1. **Input Vector (8 floats)**:
-   - Arrives via PLIO from `input_data` → `EMBED_INPUT_DATA` file
-   - **Float Stream** → `stream_to_packet_kernel` → **Packet Stream**
-   - Packet header automatically managed by ADF infrastructure
-
-2. **ADF Packet Routing**:
-   - **Packet Stream** → `pktsplit<1>` → **Routed Packet Stream**
-   - ADF automatically handles packet ID assignment and routing
-   - No manual packet ID checking required
-
-3. **Packet-to-Stream Conversion**:
-   - **Routed Packet Stream** → `packet_to_stream_kernel` → **Float Stream**
-   - Simple conversion without manual routing logic
-   - ADF ensures packets reach the correct destination
-
-4. **Matrix-Vector Multiplication**:
-   - **Matrix A (8×128 weights)**: Loaded via **RTP (Runtime Parameter)** ports
-   - **Vector B (8×1 input)**: Processed through ADF packet switching
-   - AIE core performs 8×128 matrix-vector multiplication using DSPLib
-   - Uses hardware MAC (Multiply-Accumulate) units
-
-5. **Leaky ReLU Activation**:
-   - **Input**: 128 float values from dense layer output
-   - **Function**: f(x) = max(αx, x) where α is the leaky slope (typically 0.01-0.1)
-   - **AIE Implementation**: Custom kernel using buffer-based processing
-   - **Output**: 128 activated float values
-
-6. **Output (128 floats)**:
-   - Streams out via `k_lrelu0.out[0]` after activation
-   - Goes to PLIO `output_data` → `EMBED_DENSE0_OUTPUT` file
-
-## Hardware Components Involved
-
-### AIE Kernels in Pipeline:
-1. **Stream-to-Packet Kernel** (`stream_to_packet_kernel`):
-   - Converts float stream to packet stream
-   - Uses `getPacketid()` for ADF-assigned packet IDs
-   - Automatic packet header generation with ADF infrastructure
-
-2. **ADF Packet Splitter** (`pktsplit<1>`):
-   - Built-in ADF packet switching primitive
-   - Automatically routes packets based on ID
-   - No custom routing logic required
-
-3. **Packet-to-Stream Kernel** (`packet_to_stream_kernel`):
-   - Simple packet stream to float stream conversion
-   - No manual packet filtering needed
-   - ADF routing ensures correct packets arrive
-
-4. **DSPLib Matrix-Vector Multiplication** (`dense8x128`):
-   - Performs 8×128 matrix-vector multiplication
-   - Uses hardware MAC operations with TP_API=1 stream interface
-   - Matrix weights loaded via RTP ports
-
-5. **Leaky ReLU Activation Kernel** (`k_lrelu0`):
-   - Applies Leaky ReLU activation function to 128 float values
-   - Uses buffer-based input/output for efficient memory access
-   - Custom AIE kernel implementation with optimized vectorized operations
-
-### AIE Core Architecture:
-- **Vector Engine**: Handles float32 MAC operations
-- **Local Memory**: 32KB data memory stores matrix weights
-- **Stream Interfaces**: High-throughput data movement between kernels
-- **Packet Streams**: Support for packetized data with routing
-- **RTP Ports**: Runtime parameter loading for neural network weights
-
-## Key Design Features
-
-### ADF Packet Switching Architecture Benefits:
-1. **Automatic Routing**: ADF handles packet ID assignment and routing automatically
-2. **Reliability**: Built-in ADF infrastructure eliminates manual routing errors
-3. **Scalability**: Easy to expand to multiple processing cores using pktsplit<N>
-4. **Protocol Compatibility**: Standard ADF packet format enables PL integration
-5. **Simplified Development**: No manual packet filtering or ID management needed
-
-### Current Implementation Details:
-- **Packet Type**: 0 (configurable for different data types)
-- **Packet ID**: Automatically assigned by ADF pktsplit infrastructure
-- **Payload Size**: 8 floats (EMBED_DENSE0_INPUT_SIZE)
-- **Matrix Dimensions**: 8×128 (INPUT_SIZE × HIDDEN_SIZE from nn_defs.h)
-- **ADF Components**: pktsplit<1> for automatic packet routing
-
-### Expansion for Multi-Layer Networks:
-This ADF packet-switched approach can be extended for larger neural networks by:
-
-```cpp
-// Example: Multi-layer with ADF packet switching
-pktsplit<3> layer_splitter;    // Route to 3 different layers
-pktmerge<2> output_merger;     // Merge outputs from 2 layers
-
-// ADF automatically handles packet routing:
-// - No manual packet ID management
-// - Automatic load balancing across cores
-// - Built-in error handling and flow control
-```
-
-### Integration with PL Domain:
-The ADF packet-switched design enables seamless integration with the broader system:
-
-1. **System-Level Data Flow**:
-   - PL kernels can generate packets for AIE processing
-   - AIE can output packets back to PL for post-processing
-   - Standard ADF packet format ensures compatibility
-
-2. **Multi-Domain Processing**:
-   - Neural network inference in AIE domain using ADF packet switching
-   - Pre/post-processing in PL domain
-   - Unified ADF packet-based communication protocol
-   - Automatic load balancing and fault tolerance
-
-3. **ADF Infrastructure Benefits**:
-   - Built-in packet routing eliminates custom switching logic
-   - Automatic backpressure and flow control
-   - Hardware-optimized packet processing performance
-
-This ADF packet-switched neural network architecture provides a robust foundation for scalable AI acceleration on Versal AI Engines, with reliable packet routing and simplified development workflow.
+Throughout the flow the packets exist only on the inter-kernel hop where fan-out
+is required, allowing the dense compute kernels to stay on standard stream
+interfaces.
 
 ## Files and Build Instructions
 
 The PLIO files consumed by the graph reside in the project-parent
 [`../data/`](../../data) directory. They are generated by
 [`data/generate_test_data.py`](../data/generate_test_data.py).
-
-
-<!-- -0.250920
-0.901429
-0.463988
-0.197317
--0.687963
--0.688011
--0.883833
-0.732352 -->
