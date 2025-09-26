@@ -9,8 +9,8 @@ namespace {
 constexpr unsigned kPacketType = 0;
 }
 
-void hidden_stream_to_packet_kernel(adf::input_stream<float>* in_stream,
-                                    adf::output_pktstream* out_pkt) {
+void hidden_stream_to_packet_kernel(input_stream<float>* in_stream,
+                                    output_pktstream* out_pkt) {
   constexpr int total_samples    = HIDDEN_SIZE;
   constexpr int branch_count     = CASCADE_LENGTH;
   constexpr int samples_per_part = total_samples / branch_count;

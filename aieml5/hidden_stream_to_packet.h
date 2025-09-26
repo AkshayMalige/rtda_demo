@@ -12,5 +12,5 @@
  * them on a packet stream such that each cascade branch receives
  * @c HIDDEN_SIZE / CASCADE_LENGTH samples.
  */
-void hidden_stream_to_packet_kernel(adf::input_stream<float>* in_stream,
-                                    adf::output_pktstream* out_pkt);
+void hidden_stream_to_packet_kernel(input_stream<float>* in_stream,
+                                    output_pktstream* out_pkt);
