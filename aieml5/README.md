@@ -20,6 +20,8 @@ activation flow between dense layers. The implementation uses a **hardcoded appr
 
 - **Input Layer**: 8-element float vector input via `input_data` PLIO
 - **Dense 0 ("dense1")**: 8×128 matrix-vector multiplication using DSPLib (`dense8x128`)
+- **Bias Add**: Custom `BiasAddKernel` adds the pre-loaded bias vector (sourced via RTP from
+  `embed_dense_0_bias.txt`) to the dense output before activation
 - **Activation**: Leaky ReLU kernel (`k_lrelu0`) processes the 128-element hidden layer
 - **Hidden Packetization**: `hidden_stream_to_packet_kernel` splits the activation
   stream into `CASCADE_LENGTH` packets (currently 4), with each packet containing
@@ -94,8 +96,9 @@ Both commands produce `Work/libadf.a` inside this directory.
 2. **Packet routing**: A single-input `pktsplit` forwards the dense0 packet to
    `packet_to_stream_kernel`, where it becomes a float stream and enters the
    first dense layer (`dense1`).
-3. **Hidden activation**: The DSPLib dense kernel produces a 128-element vector
-   which flows through `k_lrelu0` for Leaky ReLU activation.
+3. **Bias add + activation**: The DSPLib dense kernel produces a 128-element
+   vector. `BiasAddKernel` adds the RTP-supplied bias values and forwards the
+   result to `k_lrelu0` for Leaky ReLU activation.
 4. **Hidden-layer packet hop**: `hidden_stream_to_packet_kernel` consumes the
    Leaky ReLU output, builds 4 packets (one per cascade lane), and marks TLAST
    on the final element.
