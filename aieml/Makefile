@@ -32,7 +32,7 @@ DSPLIB_PATH  ?= ../dsp_lib
 
 
 # ==== PROJECT FILES & DIRECTORIES ====
-GRAPH_SRC     := graph.cpp
+GRAPH_SRC     := graph.cpp roll_concat.cpp
 WORK_DIR      := Work
 GRAPH_LIB     := $(WORK_DIR)/libadf.a
 AIE_CFG       := aie.cfg
