@@ -1,5 +1,7 @@
 #pragma once
 #include <adf.h>
+#include <array>
+
 #include "nn_defs.h"
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
@@ -7,7 +9,7 @@
 #include "stream_to_packet.h"
 #include "packet_to_stream.h"
 #include "leaky_relu.h"
-#include "split_stream.h"
+#include "hidden_stream_to_packet.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -71,10 +73,12 @@ public:
     kernel      k_stream_to_packet;
     kernel      k_packet_to_stream;
     kernel      k_lrelu0;
-    kernel      k_split_stream;
+    kernel      k_hidden_stream_to_packet;
+    std::array<kernel, CASCADE_LENGTH> k_packet_to_stream_hidden;
 
     // ADF packet switching components
-    pktsplit<1> splitter;
+    pktsplit<1>                 splitter;
+    pktsplit<CASCADE_LENGTH>    layer_splitter;
 
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
@@ -96,13 +100,21 @@ public:
         headers(k_lrelu0) = {"leaky_relu.h"};
         runtime<ratio>(k_lrelu0) = 1.0;
 
-        k_split_stream = kernel::create(split_stream_kernel);
-        source(k_split_stream) = "split_stream.cpp";
-        headers(k_split_stream) = {"split_stream.h"};
-        runtime<ratio>(k_split_stream) = 1.0;
+        k_hidden_stream_to_packet = kernel::create(hidden_stream_to_packet_kernel);
+        source(k_hidden_stream_to_packet) = "hidden_stream_to_packet.cpp";
+        headers(k_hidden_stream_to_packet) = {"hidden_stream_to_packet.h"};
+        runtime<ratio>(k_hidden_stream_to_packet) = 1.0;
+
+        for (int i = 0; i < CASCADE_LENGTH; ++i) {
+            k_packet_to_stream_hidden[i] = kernel::create(packet_to_stream_hidden_kernel);
+            source(k_packet_to_stream_hidden[i]) = "packet_to_stream.cpp";
+            headers(k_packet_to_stream_hidden[i]) = {"packet_to_stream.h"};
+            runtime<ratio>(k_packet_to_stream_hidden[i]) = 1.0;
+        }
 
         // Create ADF packet switching infrastructure
         splitter = pktsplit<1>::create();
+        layer_splitter = pktsplit<CASCADE_LENGTH>::create();
 
         // Matrix A is provided via RTP (runtime parameter) - no PLIO connection needed
         // Vector B uses stream interface with TP_API=1
@@ -119,10 +131,12 @@ public:
         connect<stream>(k_packet_to_stream.out[0], dense1.inB[0]);              // float stream → dense
 
         connect<stream>(dense1.out[0], k_lrelu0.in[0]);
-        connect<stream>(k_lrelu0.out[0], k_split_stream.in[0]);
+        connect<stream>(k_lrelu0.out[0], k_hidden_stream_to_packet.in[0]);
+        connect<pktstream>(k_hidden_stream_to_packet.out[0], layer_splitter.in[0]);
 
         for (int i = 0; i < CASCADE_LENGTH; ++i) {
-            connect<stream>(k_split_stream.out[i], dense2.inB[i]);
+            connect<pktstream>(layer_splitter.out[i], k_packet_to_stream_hidden[i].in[0]);
+            connect<stream>(k_packet_to_stream_hidden[i].out[0], dense2.inB[i]);
         }
 
         connect<stream>(dense2.out[0], output_data.in[0]);
