@@ -5,6 +5,17 @@ hidden-layer cascade. It showcases how ADF packet infrastructure can be used to
 move activations between kernels while keeping the dense-layer compute blocks on
 pure streaming interfaces.
 
+## Current Status
+
+**Working Implementation**: The neural network graph is fully functional with packet-based
+activation flow between dense layers. The implementation uses a **hardcoded approach** in
+`graph.h` with direct DSPLib instantiation for maximum stability and performance.
+
+**Recent Changes**:
+- Removed unused template-based configuration system (config.hpp, types.hpp, layers.hpp)
+- Simplified to single hardcoded graph implementation for reliability
+- All neural network stages work correctly with RTP weight loading
+
 ## Architecture Overview
 
 - **Input Layer**: 8-element float vector input via `input_data` PLIO
@@ -27,13 +38,17 @@ fan-out stream connections.
 
 ```
 ├── graph.cpp                        # Instantiates `NeuralNetworkGraph` with RTP weight loading
-├── graph.h                          # Graph definition with 4-way cascade packet workflow
-├── kernels/
+├── graph.h                          # Main graph definition with hardcoded 4-way cascade workflow
+├── kernels/                         # All kernel implementations in single directory
 │   ├── stream_to_packet.cpp/h           # Converts input float stream to packets
 │   ├── hidden_stream_to_packet.cpp/h    # Splits hidden activations into cascade packets
 │   ├── packet_to_stream.cpp/h           # Converts packets back to streams for dense layers
 │   ├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel (slope=0.1)
-│   └── roll_concat.cpp/h                # Produces 6 cyclic shifts of the dense output
+│   ├── roll_concat.cpp/h                # Produces 6 cyclic shifts of the dense output
+│   ├── bias_add.cpp/h                   # Bias addition kernel
+│   ├── all.hpp                          # Dense layer includes
+│   ├── activations_all.hpp              # Activation layer includes
+│   └── transport_all.hpp                # Transport layer includes
 ├── split_stream.cpp/h               # Stream splitting utilities (deprecated)
 ├── aie.cfg                          # AI Engine compiler configuration
 └── Makefile                         # Build rules with corrected DATA_DIR path
@@ -59,6 +74,7 @@ To invoke the compiler directly:
 v++ -c --mode aie --target hw graph.cpp \
     kernels/stream_to_packet.cpp kernels/hidden_stream_to_packet.cpp \
     kernels/packet_to_stream.cpp kernels/leaky_relu.cpp kernels/roll_concat.cpp \
+    kernels/bias_add.cpp \
     --platform=${PLATFORM} \
     --work_dir=Work \
     --config=aie.cfg \
