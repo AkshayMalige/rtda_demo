@@ -6,10 +6,11 @@
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
-#include "stream_to_packet.h"
-#include "packet_to_stream.h"
-#include "leaky_relu.h"
-#include "hidden_stream_to_packet.h"
+#include "kernels/stream_to_packet.h"
+#include "kernels/packet_to_stream.h"
+#include "kernels/leaky_relu.h"
+#include "kernels/hidden_stream_to_packet.h"
+#include "kernels/roll_concat.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -74,6 +75,7 @@ public:
     kernel      k_packet_to_stream;
     kernel      k_lrelu0;
     kernel      k_hidden_stream_to_packet;
+    kernel      k_roll_concat;
     std::array<kernel, CASCADE_LENGTH> k_packet_to_stream_hidden;
 
     // ADF packet switching components
@@ -86,29 +88,34 @@ public:
         output_data    = output_plio::create("output_data", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
 
         k_stream_to_packet = kernel::create(stream_to_packet_kernel);
-        source(k_stream_to_packet) = "stream_to_packet.cpp";
-        headers(k_stream_to_packet) = {"stream_to_packet.h"};
+        source(k_stream_to_packet) = "kernels/stream_to_packet.cpp";
+        headers(k_stream_to_packet) = {"kernels/stream_to_packet.h"};
         runtime<ratio>(k_stream_to_packet) = 1.0;
 
         k_packet_to_stream = kernel::create(packet_to_stream_kernel);
-        source(k_packet_to_stream) = "packet_to_stream.cpp";
-        headers(k_packet_to_stream) = {"packet_to_stream.h"};
+        source(k_packet_to_stream) = "kernels/packet_to_stream.cpp";
+        headers(k_packet_to_stream) = {"kernels/packet_to_stream.h"};
         runtime<ratio>(k_packet_to_stream) = 1.0;
 
         k_lrelu0 = kernel::create(leaky_relu_kernel);
-        source(k_lrelu0) = "leaky_relu.cpp";
-        headers(k_lrelu0) = {"leaky_relu.h"};
+        source(k_lrelu0) = "kernels/leaky_relu.cpp";
+        headers(k_lrelu0) = {"kernels/leaky_relu.h"};
         runtime<ratio>(k_lrelu0) = 1.0;
 
         k_hidden_stream_to_packet = kernel::create(hidden_stream_to_packet_kernel);
-        source(k_hidden_stream_to_packet) = "hidden_stream_to_packet.cpp";
-        headers(k_hidden_stream_to_packet) = {"hidden_stream_to_packet.h"};
+        source(k_hidden_stream_to_packet) = "kernels/hidden_stream_to_packet.cpp";
+        headers(k_hidden_stream_to_packet) = {"kernels/hidden_stream_to_packet.h"};
         runtime<ratio>(k_hidden_stream_to_packet) = 1.0;
+
+        k_roll_concat = kernel::create(roll_concat_kernel);
+        source(k_roll_concat) = "kernels/roll_concat.cpp";
+        headers(k_roll_concat) = {"kernels/roll_concat.h"};
+        runtime<ratio>(k_roll_concat) = 1.0;
 
         for (int i = 0; i < CASCADE_LENGTH; ++i) {
             k_packet_to_stream_hidden[i] = kernel::create(packet_to_stream_hidden_kernel);
-            source(k_packet_to_stream_hidden[i]) = "packet_to_stream.cpp";
-            headers(k_packet_to_stream_hidden[i]) = {"packet_to_stream.h"};
+            source(k_packet_to_stream_hidden[i]) = "kernels/packet_to_stream.cpp";
+            headers(k_packet_to_stream_hidden[i]) = {"kernels/packet_to_stream.h"};
             runtime<ratio>(k_packet_to_stream_hidden[i]) = 1.0;
         }
 
@@ -139,6 +146,7 @@ public:
             connect<stream>(k_packet_to_stream_hidden[i].out[0], dense2.inB[i]);
         }
 
-        connect<stream>(dense2.out[0], output_data.in[0]);
+        connect<stream>(dense2.out[0], k_roll_concat.in[0]);
+        connect<stream>(k_roll_concat.out[0], output_data.in[0]);
     }
 };

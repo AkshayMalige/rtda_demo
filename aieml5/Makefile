@@ -35,6 +35,14 @@ GRAPH_SRC     := graph.cpp
 WORK_DIR      := Work
 GRAPH_LIB     := $(WORK_DIR)/libadf.a
 AIE_CFG       := aie.cfg
+KERNEL_DIR    := kernels
+KERNEL_SRCS   := $(addprefix $(KERNEL_DIR)/, \
+        stream_to_packet.cpp \
+        hidden_stream_to_packet.cpp \
+        packet_to_stream.cpp \
+        leaky_relu.cpp \
+        roll_concat.cpp)
+KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 
 
 # ==== TOOLS ====
@@ -72,7 +80,7 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
-$(GRAPH_LIB): $(GRAPH_SRC) stream_to_packet.cpp hidden_stream_to_packet.cpp packet_to_stream.cpp graph.h leaky_relu.h leaky_relu.cpp hidden_stream_to_packet.h stream_to_packet.h packet_to_stream.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
+$(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
@@ -84,7 +92,7 @@ $(GRAPH_LIB): $(GRAPH_SRC) stream_to_packet.cpp hidden_stream_to_packet.cpp pack
 		exit 1; \
 	fi
 	@set -o pipefail; \
-        $(VPP) $(VPP_FLAGS) $(GRAPH_SRC) stream_to_packet.cpp hidden_stream_to_packet.cpp packet_to_stream.cpp 2>&1 | tee $(WORK_DIR)/vpp_aie.log
+        $(VPP) $(VPP_FLAGS) $(GRAPH_SRC) $(KERNEL_SRCS) 2>&1 | tee $(WORK_DIR)/vpp_aie.log
 	@echo "COMPLETE: AIE graph compiled."
 
 # --- Simulation ---
