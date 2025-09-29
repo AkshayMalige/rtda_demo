@@ -41,7 +41,9 @@ int main() {
     if (dense0Weights.empty()) {
       return -1;
     }
-    g.update(g.matrixA_dense0_rtp, dense0Weights.data(), EMBED_DENSE0_WEIGHTS_SIZE);
+    g.update(g.matrixA_dense0_rtp,
+             dense0Weights.data(),
+             EMBED_DENSE0_WEIGHTS_SIZE * sizeof(float));
   }
 
   {
@@ -49,7 +51,9 @@ int main() {
     if (bias.empty()) {
       return -1;
     }
-    g.update(g.bias_dense0_rtp, bias.data(), EMBED_DENSE0_BIAS_SIZE);
+    g.update(g.bias_dense0_rtp,
+             bias.data(),
+             EMBED_DENSE0_BIAS_SIZE * sizeof(float));
   }
 
   for (int cascIdx = 0; cascIdx < CASCADE_LENGTH; ++cascIdx) {
@@ -58,7 +62,9 @@ int main() {
     if (dense1Weights.empty()) {
       return -1;
     }
-    g.update(g.matrixA_dense1_rtp[cascIdx], dense1Weights.data(), EMBED_DENSE1_WEIGHTS_PART_SIZE);
+    g.update(g.matrixA_dense1_rtp[cascIdx],
+             dense1Weights.data(),
+             EMBED_DENSE1_WEIGHTS_PART_SIZE * sizeof(float));
   }
 
   g.run(1);
