@@ -134,7 +134,7 @@ public:
         // Matrix A is provided via RTP (runtime parameter) - no PLIO connection needed
         // Vector B uses stream interface with TP_API=1
         adf::connect<adf::parameter>(matrixA_dense0_rtp, dense1.matrixA[0]);
-        adf::connect<adf::parameter>(bias_dense0_rtp, k_bias_add.param[0]);
+        adf::connect<adf::parameter>(bias_dense0_rtp, k_bias_add.in[1]);
         for (int i = 0; i < CASCADE_LENGTH; ++i) {
             adf::connect<adf::parameter>(matrixA_dense1_rtp[i], dense2.matrixA[i]);
         }

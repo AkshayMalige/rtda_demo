@@ -20,6 +20,7 @@ activation flow between dense layers. The implementation uses a **hardcoded appr
 
 - **Input Layer**: 8-element float vector input via `input_data` PLIO
 - **Dense 0 ("dense1")**: 8×128 matrix-vector multiplication using DSPLib (`dense8x128`)
+- **Bias Addition**: Bias add kernel (`k_bias_add`) adds learned bias values from RTP to dense layer output
 - **Activation**: Leaky ReLU kernel (`k_lrelu0`) processes the 128-element hidden layer
 - **Hidden Packetization**: `hidden_stream_to_packet_kernel` splits the activation
   stream into `CASCADE_LENGTH` packets (currently 4), with each packet containing
@@ -27,8 +28,9 @@ activation flow between dense layers. The implementation uses a **hardcoded appr
 - **Cascade Fan-out**: `pktsplit<CASCADE_LENGTH>` distributes packets to cascade branches
 - **Dense 1 ("dense2")**: 4 parallel 128×128 DSPLib matrix-vector kernels (CASCADE_LENGTH=4),
   each processing their portion of the hidden vector to produce final logits
-- **Runtime Parameter Loading**: All dense kernels receive weights via RTP ports,
-  enabling dynamic weight updates without graph recompilation
+- **Runtime Parameter Loading**: All dense kernels and the bias add kernel receive
+  weights/bias values via RTP ports, enabling dynamic parameter updates without
+  graph recompilation
 
 The packet-based hop between the Leaky ReLU and the cascade ensures each branch
 receives only the portion of the hidden vector it needs while avoiding wide
@@ -43,9 +45,9 @@ fan-out stream connections.
 │   ├── stream_to_packet.cpp/h           # Converts input float stream to packets
 │   ├── hidden_stream_to_packet.cpp/h    # Splits hidden activations into cascade packets
 │   ├── packet_to_stream.cpp/h           # Converts packets back to streams for dense layers
+│   ├── bias_add.cpp/h                   # Bias addition kernel (adds RTP bias values to dense layer output)
 │   ├── leaky_relu.cpp/h                 # Leaky ReLU activation kernel (slope=0.1)
 │   ├── roll_concat.cpp/h                # Produces 6 cyclic shifts of the dense output
-│   ├── bias_add.cpp/h                   # Bias addition kernel
 │   ├── all.hpp                          # Dense layer includes
 │   ├── activations_all.hpp              # Activation layer includes
 │   └── transport_all.hpp                # Transport layer includes
@@ -94,21 +96,39 @@ Both commands produce `Work/libadf.a` inside this directory.
 2. **Packet routing**: A single-input `pktsplit` forwards the dense0 packet to
    `packet_to_stream_kernel`, where it becomes a float stream and enters the
    first dense layer (`dense1`).
-3. **Hidden activation**: The DSPLib dense kernel produces a 128-element vector
-   which flows through `k_lrelu0` for Leaky ReLU activation.
-4. **Hidden-layer packet hop**: `hidden_stream_to_packet_kernel` consumes the
+3. **Bias addition**: The DSPLib dense kernel output flows through `k_bias_add`,
+   which adds learned bias values loaded via RTP from `data/embed_dense_0_bias.txt`.
+4. **Hidden activation**: The biased 128-element vector flows through `k_lrelu0`
+   for Leaky ReLU activation.
+5. **Hidden-layer packet hop**: `hidden_stream_to_packet_kernel` consumes the
    Leaky ReLU output, builds 4 packets (one per cascade lane), and marks TLAST
    on the final element.
-5. **Cascade fan-out**: `pktsplit<4>` inspects each packet's ID and forwards it
+6. **Cascade fan-out**: `pktsplit<4>` inspects each packet's ID and forwards it
    to the matching `packet_to_stream_hidden_kernel` instance, which converts the
    payload back into a float stream for the downstream dense kernel (`dense2.inB[i]`).
-6. **Roll-and-concatenate**: The cascade of dense kernels feeds `roll_concat_kernel`,
+7. **Roll-and-concatenate**: The cascade of dense kernels feeds `roll_concat_kernel`,
    which emits six cyclically shifted copies (6 × 128 = 768 values) onto the
    `output_data` PLIO for downstream processing.
 
 Throughout the flow the packets exist only on the inter-kernel hop where fan-out
 is required, allowing the dense compute kernels to stay on standard stream
 interfaces.
+
+## Bias Addition Kernel Details
+
+The `bias_add` kernel implements element-wise addition of learned bias values to the
+dense layer output before activation. Key implementation details:
+
+- **Interface**: Takes input stream from `dense1.out[0]`, bias values via RTP parameter,
+  and outputs biased results to `k_lrelu0.in[0]`
+- **RTP Parameter**: Receives 128 float bias values via `bias_dense0_rtp` port using
+  array parameter signature `const float (&bias)[HIDDEN_SIZE]`
+- **Data Loading**: Bias values loaded from `data/embed_dense_0_bias.txt` in `graph.cpp`
+- **Vectorization**: Processes data in 16-element chunks using `v16float` vectors
+- **Stream Flow**: `dense1 → k_bias_add → k_lrelu0 → hidden_stream_to_packet`
+
+The kernel enables runtime bias updates without graph recompilation, supporting
+dynamic neural network parameter adjustment during execution.
 
 ## Files and Build Instructions
 
