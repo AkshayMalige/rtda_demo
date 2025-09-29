@@ -43,7 +43,7 @@ int main() {
     }
     g.update(g.matrixA_dense0_rtp,
              dense0Weights.data(),
-             EMBED_DENSE0_WEIGHTS_SIZE * sizeof(float));
+             EMBED_DENSE0_WEIGHTS_SIZE);
   }
 
   {
@@ -53,7 +53,7 @@ int main() {
     }
     g.update(g.bias_dense0_rtp,
              bias.data(),
-             EMBED_DENSE0_BIAS_SIZE * sizeof(float));
+             EMBED_DENSE0_BIAS_SIZE);
   }
 
   for (int cascIdx = 0; cascIdx < CASCADE_LENGTH; ++cascIdx) {
@@ -64,7 +64,7 @@ int main() {
     }
     g.update(g.matrixA_dense1_rtp[cascIdx],
              dense1Weights.data(),
-             EMBED_DENSE1_WEIGHTS_PART_SIZE * sizeof(float));
+             EMBED_DENSE1_WEIGHTS_PART_SIZE);
   }
 
   g.run(1);
