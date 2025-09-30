@@ -1,5 +1,8 @@
 #pragma once
 #include <adf.h>
+#include <array>
+#include <stdexcept>
+
 #include "nn_defs.h"
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
@@ -11,6 +14,8 @@
 #include "window_split_256_to_128x2.h"
 #include "roll_concat.h"
 #include "bias_add.h"
+#include "stream_to_packet.h"
+#include "packet_to_window.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -49,7 +54,7 @@ using dense768x128 = matrix_vector_mul_graph<
 // Graph connects dense1 and dense2; leaky ReLU is handled in PL
 class NeuralNetworkGraph : public graph {
 public:
-    input_plio  layer0_in[TP_CASC_LEN_LAYER3];
+    input_plio  layer0_in;
 
     dense768x128 dense3;
     // Final dense layer output directly drives a PLIO
@@ -59,17 +64,43 @@ public:
 
     input_port matrixA_dense2_rtp[TP_CASC_LEN_LAYER3];
 
+    kernel k_stream_to_packet;
+    std::array<kernel, TP_CASC_LEN_LAYER3> k_packet_to_window;
+    pktsplit<TP_CASC_LEN_LAYER3> splitter;
 
 
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
         layer1_out = output_plio::create("layer1_out", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
 
+        layer0_in = input_plio::create("layer0_in", plio_32_bits, (base_path + "/solver_0_input.txt").c_str());
+
+        k_stream_to_packet = kernel::create(stream_to_packet_kernel);
+        source(k_stream_to_packet) = "stream_to_packet.cpp";
+        headers(k_stream_to_packet) = {"stream_to_packet.h"};
+        runtime<ratio>(k_stream_to_packet) = 1.0;
+
+        splitter = pktsplit<TP_CASC_LEN_LAYER3>::create();
+
         for (int i = 0; i < (int)TP_CASC_LEN_LAYER3; ++i) {
-            std::string in_file = base_path + "/" + SUBSOLVER0_INPUT_DATA_PREFIX        + std::to_string(i) + ".txt";
-            layer0_in[i]      = input_plio::create( ("layer0_in_"      + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str() );
-            connect<>(layer0_in[i].out[0], dense3.inB[i]);
-          }
+            auto kernel_fn = select_packet_to_window_kernel(i);
+            if (kernel_fn == nullptr) {
+                throw std::runtime_error("Invalid packet_to_window kernel index");
+            }
+
+            k_packet_to_window[i] = kernel::create(kernel_fn);
+            source(k_packet_to_window[i]) = "packet_to_window.cpp";
+            headers(k_packet_to_window[i]) = {"packet_to_window.h"};
+            runtime<ratio>(k_packet_to_window[i]) = 1.0;
+        }
+
+        connect<stream>(layer0_in.out[0], k_stream_to_packet.in[0]);
+        connect<pktstream>(k_stream_to_packet.out[0], splitter.in[0]);
+
+        for (int i = 0; i < (int)TP_CASC_LEN_LAYER3; ++i) {
+            connect<pktstream>(splitter.out[i], k_packet_to_window[i].in[0]);
+            connect<window<4 * SUBSOLVER0_INPUT_PART_SIZE>>(k_packet_to_window[i].out[0], dense3.inB[i]);
+        }
 
 
 
