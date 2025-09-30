@@ -12,9 +12,8 @@ PLATFORM     ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202
 TARGET       ?= hw
 
 # Location of input/weight files used by PLIO connections (override from top-level)
-# Defaults two levels up so data lives outside the source tree when building
-# this subproject directly.
-DATA_DIR    ?= ../../data
+# Defaults to the data directory in the parent rtda_demo directory
+DATA_DIR    ?= ../data
 DATA_DIR := $(abspath $(DATA_DIR))
 
 # Path to your Vitis installation.
@@ -36,6 +35,12 @@ GRAPH_SRC     := graph.cpp
 WORK_DIR      := Work
 GRAPH_LIB     := $(WORK_DIR)/libadf.a
 AIE_CFG       := aie.cfg
+KERNEL_SRCS   := \
+	leaky_relu.cpp \
+	window_split_128_to_64x2.cpp \
+	roll_concat.cpp \
+	bias_add.cpp
+KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 
 
 # ==== TOOLS ====
@@ -73,25 +78,25 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
-$(GRAPH_LIB): $(GRAPH_SRC) graph.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
+$(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
 	@if [ ! -d "$(DSPLIB_PATH)" ]; then \
-	        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	        echo "!!! ERROR: Directory not found: '$(DSPLIB_PATH)'"; \
-	        echo "!!! Please set the DSPLIB_PATH variable in your Makefile correctly."; \
-	        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	        exit 1; \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+		echo "!!! ERROR: Directory not found: '$(DSPLIB_PATH)'"; \
+		echo "!!! Please set the DSPLIB_PATH variable in your Makefile correctly."; \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+		exit 1; \
 	fi
 	@set -o pipefail; \
-	$(VPP) $(VPP_FLAGS) $(GRAPH_SRC) 2>&1 | tee $(WORK_DIR)/vpp_aie.log
+        $(VPP) $(VPP_FLAGS) $(GRAPH_SRC) $(KERNEL_SRCS) 2>&1 | tee $(WORK_DIR)/vpp_aie.log
 	@echo "COMPLETE: AIE graph compiled."
 
 # --- Simulation ---
 sim: graph
 	@echo "--- Starting AI Engine simulation (aiesimulator) ---"
-	DATA_DIR=$(DATA_DIR) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --dump-vcd=foo --output-time-stamp=no
+	DATA_DIR=$(abspath $(DATA_DIR)) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --dump-vcd=foo --output-time-stamp=no
 	@echo "COMPLETE: AI Engine simulation finished."
 
 # --- Clean Target ---

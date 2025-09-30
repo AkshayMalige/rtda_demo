@@ -140,7 +140,7 @@ public:
         headers(k_biasadd0) = {"bias_add.h"};
         runtime<ratio>(k_biasadd0) = 1.0;
 
-        
+
         connect<window<512>>(dense1.out[0], k_biasadd0.in[0]);
         connect<adf::parameter>(bias_dense0_rtp, k_biasadd0.in[1]);
         connect<window<512>>(k_biasadd0.out[0], k_lrelu0.in[0]);
