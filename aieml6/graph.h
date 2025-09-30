@@ -6,7 +6,9 @@
 #include "aie_api/aie_adf.hpp"
 #include "leaky_relu.h"
 #include "window_split_128_to_64x2.h"
-#include "window_split_768_to_128x6.h"
+#include "window_split_768_to_512_256.h"
+#include "window_split_512_to_256x2.h"
+#include "window_split_256_to_128x2.h"
 #include "roll_concat.h"
 #include "bias_add.h"
 
@@ -24,6 +26,7 @@ static constexpr unsigned int TP_DUAL_IP = 0;
 static constexpr unsigned int TP_NUM_OUTPUTS = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER1 = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
+static constexpr unsigned int TP_CASC_LEN_LAYER3 = 6;
 using dense8x128 = matrix_vector_mul_graph<
     float, float,
     HIDDEN_SIZE,
@@ -62,7 +65,7 @@ using dense768x128 = matrix_vector_mul_graph<
     TP_SHIFT,
     TP_RND,
     TP_NUM_FRAMES,
-    6,
+    TP_CASC_LEN_LAYER3,
     TP_SAT,
     TP_SSR,
     TP_DIM_A_LEADING,
@@ -88,12 +91,15 @@ public:
     kernel      k_wsplit0;
     kernel      k_rollconcat0;
     kernel      k_biasadd0;
-    kernel      k_wsplit1;
+    kernel      k_split_768_512_256;
+    kernel      k_split_512_256x2;
+    kernel      k_split_256_128x2[3];
 
     // RTP ports for weights
     input_port matrixA_dense0_rtp;
     input_port bias_dense0_rtp;
     input_port matrixA_dense1_rtp[TP_CASC_LEN_LAYER2];
+    input_port matrixA_dense2_rtp[TP_CASC_LEN_LAYER3];
 
 
 
@@ -133,10 +139,22 @@ public:
         headers(k_wsplit0) = {"window_split_128_to_64x2.h"};
         runtime<ratio>(k_wsplit0) = 1.0;
 
-        k_wsplit1 = kernel::create(window_split_768_to_128x6);
-        source(k_wsplit1) = "window_split_768_to_128x6.cpp";
-        headers(k_wsplit1) = {"window_split_768_to_128x6.h"};
-        runtime<ratio>(k_wsplit1) = 1.0;
+        k_split_768_512_256 = kernel::create(window_split_768_to_512_256);
+        source(k_split_768_512_256) = "window_split_768_to_512_256.cpp";
+        headers(k_split_768_512_256) = {"window_split_768_to_512_256.h"};
+        runtime<ratio>(k_split_768_512_256) = 1.0;
+
+        k_split_512_256x2 = kernel::create(window_split_512_to_256x2);
+        source(k_split_512_256x2) = "window_split_512_to_256x2.cpp";
+        headers(k_split_512_256x2) = {"window_split_512_to_256x2.h"};
+        runtime<ratio>(k_split_512_256x2) = 1.0;
+
+        for (int i = 0; i < 3; ++i) {
+            k_split_256_128x2[i] = kernel::create(window_split_256_to_128x2);
+            source(k_split_256_128x2[i]) = "window_split_256_to_128x2.cpp";
+            headers(k_split_256_128x2[i]) = {"window_split_256_to_128x2.h"};
+            runtime<ratio>(k_split_256_128x2[i]) = 1.0;
+        }
 
         k_rollconcat0 = kernel::create(roll_concat_kernel);
         source(k_rollconcat0) = "roll_concat.cpp";
@@ -163,6 +181,9 @@ public:
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             adf::connect<adf::parameter>(matrixA_dense1_rtp[i], dense2.matrixA[i]);
         }
+        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
+            adf::connect<adf::parameter>(matrixA_dense2_rtp[i], dense3.matrixA[i]);
+        }
         layer1_out = output_plio::create("layer1_out", plio_32_bits,
                                          (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
 
@@ -170,15 +191,21 @@ public:
 
         connect< window<512> >(k_lrelu1.out[0], k_rollconcat0.in[0]);
 
-        connect<window<3072> >(k_rollconcat0.out[0], k_wsplit1.in[0]);
-        connect< window<512> >(k_wsplit1.out[0], dense3.inB[0]);
-        connect< window<512> >(k_wsplit1.out[1], dense3.inB[1]);
-        connect< window<512> >(k_wsplit1.out[2], dense3.inB[2]);
-        connect< window<512> >(k_wsplit1.out[3], dense3.inB[3]);
-        connect< window<512> >(k_wsplit1.out[4], dense3.inB[4]);
-        connect< window<512> >(k_wsplit1.out[5], dense3.inB[5]);
+        connect<window<3072> >(k_rollconcat0.out[0], k_split_768_512_256.in[0]);
+        connect<window<2048> >(k_split_768_512_256.out[0], k_split_512_256x2.in[0]);
+        connect<window<1024> >(k_split_768_512_256.out[1], k_split_256_128x2[2].in[0]);
 
-        connect<window<3072> >(dense3.out[0], layer1_out.in[0]);
+        connect<window<1024> >(k_split_512_256x2.out[0], k_split_256_128x2[0].in[0]);
+        connect<window<1024> >(k_split_512_256x2.out[1], k_split_256_128x2[1].in[0]);
+
+        connect< window<512> >(k_split_256_128x2[0].out[0], dense3.inB[0]);
+        connect< window<512> >(k_split_256_128x2[0].out[1], dense3.inB[1]);
+        connect< window<512> >(k_split_256_128x2[1].out[0], dense3.inB[2]);
+        connect< window<512> >(k_split_256_128x2[1].out[1], dense3.inB[3]);
+        connect< window<512> >(k_split_256_128x2[2].out[0], dense3.inB[4]);
+        connect< window<512> >(k_split_256_128x2[2].out[1], dense3.inB[5]);
+
+        connect<window<512> >(dense3.out[0], layer1_out.in[0]);
 
 
         
