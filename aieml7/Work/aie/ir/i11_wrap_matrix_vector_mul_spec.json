@@ -1,0 +1,19 @@
+{
+    "KernelAnalysisSpec": {
+        "ModulePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/Work/aie/ir/i11_wrap_matrix_vector_mul.cpp",
+        "KernelSourcePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/dsp_lib/L1/src/aie/matrix_vector_mul.cpp",
+        "SpecFile": "i11_wrap_matrix_vector_mul_spec.json",
+        "ResultFile": "i11_wrap_matrix_vector_mul_results.json",
+        "UseCases": [
+            {
+                "Index": 0,
+                "KernelFunction": "xf::dsp::aie::blas::matrix_vector_mul::matrix_vector_mul<float, float, 128, 768, 0, 0, 0, 1, 12, 1, 0, 0, 1, 0, false, true>::matVecMulFirstRtp",
+                "InitializationFunction": "",
+                "KernelClassCtor": "xf::dsp::aie::blas::matrix_vector_mul::matrix_vector_mul<float, float, 128, 768, 0, 0, 0, 1, 12, 1, 0, 0, 1, 0, false, true>::matrix_vector_mul",
+                "Instances": [
+                    "i11"
+                ]
+            }
+        ]
+    }
+}

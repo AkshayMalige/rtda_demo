@@ -1,0 +1,76 @@
+{
+    "ModuleName": "i15_window_split_512_to_256x2",
+    "SourceFileName": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/window_split_512_to_256x2.cpp",
+    "StructTypes": [
+        {
+            "Name": "struct.output_window",
+            "Size": 52
+        },
+        {
+            "Name": "struct.input_window",
+            "Size": 52
+        },
+        {
+            "Name": "struct.ipd.custom_type.addr_t.addr_t",
+            "Size": 4
+        },
+        {
+            "Name": "struct.chessout___Pvoid_add_3d_byte_int___Pvoid___sint___sint___sint_addr_t_addr_t_addr_t_addr_t_addr_t_addr_t",
+            "Size": 12
+        }
+    ],
+    "Globals": [],
+    "UsesCmathStaticVars": false,
+    "Functions": [
+        {
+            "FunctionName": "window_split_512_to_256x2(input_window<float>*, output_window<float>*, output_window<float>*)",
+            "StackSize": 192,
+            "SoftFloat": true
+        },
+        {
+            "FunctionName": "float window_readincr<(aie_dm_resource)0>(input_window<float>*)",
+            "StackSize": 168,
+            "SoftFloat": true
+        },
+        {
+            "FunctionName": "void window_writeincr<(aie_dm_resource)0>(output_window<float>*, float)",
+            "StackSize": 160,
+            "SoftFloat": true
+        },
+        {
+            "FunctionName": "void window_readincr<(aie_dm_resource)0>(input_window<float>*, float&)",
+            "StackSize": 160,
+            "SoftFloat": true
+        },
+        {
+            "FunctionName": "window_incr(input_window<float>*, int)",
+            "StackSize": 152,
+            "SoftFloat": false
+        },
+        {
+            "FunctionName": "cyclic_add(signed char*, int, signed char*, unsigned int)",
+            "StackSize": 144,
+            "SoftFloat": false
+        },
+        {
+            "FunctionName": "addr_t::addr_t(int)",
+            "StackSize": 8,
+            "SoftFloat": false
+        },
+        {
+            "FunctionName": "signed char* add_3d_byte<signed char>(signed char*, int, int, addr_t&, int, int, addr_t&, int)",
+            "StackSize": 112,
+            "SoftFloat": false
+        },
+        {
+            "FunctionName": "chessEnableIf<chessIsCompatible<chessRemoveQual<addr_t>::type, addr_t>::value&&chessIsCompatible<chessRemoveQual<addr_t>::type, addr_t>::value, signed char*>::type add_3d_byte_int<signed char, addr_t, addr_t>(signed char*, int, int, int, addr_t, addr_t, addr_t&, addr_t, addr_t, addr_t&)",
+            "StackSize": 52,
+            "SoftFloat": false
+        },
+        {
+            "FunctionName": "window_incr(output_window<float>*, int)",
+            "StackSize": 152,
+            "SoftFloat": false
+        }
+    ]
+}

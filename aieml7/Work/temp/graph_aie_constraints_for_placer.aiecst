@@ -1,0 +1,14 @@
+{
+  "GlobalConstraints": {
+    "areaGroup": {
+      "name": "partition_area_group_0",
+      "contain_routing": true,
+      "exclusive_routing": true,
+      "exclusive_placement": true,
+      "nodeGroup": ["g.dense3.m_mat_vec_mulKernels[11]", "g.dense3.m_mat_vec_mulKernels[10]", "g.dense3.m_mat_vec_mulKernels[1]", "g.dense3.m_mat_vec_mulKernels[0]", "layer0_in", "layer1_out", "g.k_split_768_512_256", "g.k_split_512_256x2", "g.k_split_256_128x2[0]", "g.k_split_256_128x2[1]", "g.k_split_256_128x2[2]", "g.k_split_128_64x2[0]", "g.dense3.m_mat_vec_mulKernels[9]", "g.k_split_128_64x2[1]", "g.k_split_128_64x2[2]", "g.k_split_128_64x2[3]", "g.k_split_128_64x2[4]", "g.k_split_128_64x2[5]", "g.dense3.m_mat_vec_mulKernels[8]", "g.dense3.m_mat_vec_mulKernels[7]", "g.dense3.m_mat_vec_mulKernels[6]", "g.dense3.m_mat_vec_mulKernels[5]", "g.dense3.m_mat_vec_mulKernels[4]", "g.dense3.m_mat_vec_mulKernels[3]", "g.dense3.m_mat_vec_mulKernels[2]"],
+      "tileGroup": ["(0,0):(37,7)"],
+      "memGroup": ["(0,0):(37,1)"],
+      "shimGroup": ["0:37"]
+    }
+  }
+}

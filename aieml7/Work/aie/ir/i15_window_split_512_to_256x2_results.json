@@ -1,0 +1,110 @@
+{
+    "ModulePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/window_split_512_to_256x2.cpp",
+    "KernelSourcePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/window_split_512_to_256x2.cpp",
+    "UseCases": [
+        {
+            "Index": 0,
+            "KernelFunction": "window_split_512_to_256x2",
+            "InitializationFunction": "",
+            "KernelClassCtor": "",
+            "Instances": [
+                "i15"
+            ]
+        }
+    ],
+    "AccessRecords": [],
+    "ControlRegsUsage": {
+        "RndRecords": {
+            "window_split_512_to_256x2": {
+                "SetKind": 1,
+                "SetValue": -1,
+                "GetBeforeSet": 0
+            }
+        },
+        "SatRecords": {
+            "window_split_512_to_256x2": {
+                "SetKind": 1,
+                "SetValue": -1,
+                "GetBeforeSet": 0
+            }
+        },
+        "SymSatRecords": {
+            "window_split_512_to_256x2": {
+                "SetKind": 1,
+                "SetValue": -1,
+                "GetBeforeSet": 0
+            }
+        }
+    },
+    "ParameterLoads": {
+        "__regcall3__chessintr___Pvoid_add_3d_byte_int___Pvoid___sint___sint___sint_addr_t_addr_t_addr_t_addr_t_addr_t_addr_t": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_addr_t_addr_t___sint": [
+            "may"
+        ],
+        "add_3d_byte<signed char>": [
+            "may",
+            "may",
+            "may",
+            "sometimes",
+            "may",
+            "may",
+            "sometimes",
+            "may"
+        ],
+        "llvm.chess.init.customint.s_struct.ipd.custom_type.addr_t.addr_ts.i32.p1": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.dbg.declare": [
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.dbg.value": [
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.lifetime.end.p0": [
+            "may",
+            "may"
+        ],
+        "llvm.lifetime.start.p0": [
+            "may",
+            "may"
+        ],
+        "llvm.noalias.decl.p0.p0.i32": [
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.noalias.p0.p0.p0.i32": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "window_split_512_to_256x2": [
+            "sometimes",
+            "sometimes",
+            "sometimes"
+        ]
+    }
+}

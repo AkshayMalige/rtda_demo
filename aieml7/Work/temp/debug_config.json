@@ -1,0 +1,17 @@
+{
+	"Device": {
+		"ctrl_me_offset": "0x20000000000",
+		"ctrl_me_size": "0x100000000",
+		"MathEngine": {
+			"Array": {
+				"ctrl_tile_stride": "0x100000",
+				"hw_gen": "2",
+				"max_rows": "32",
+				"max_cols": "128",
+				"rows": "8",
+				"cols": "38",
+				"aie_tile_row_start": "3"
+			}
+		}
+	}
+}

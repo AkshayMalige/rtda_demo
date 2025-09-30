@@ -1,0 +1,55 @@
+<ENTRY>
+{
+ "thisFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/Work/Work.aiecompiler_summary",
+ "connectId": "",
+ "serverToken": "",
+ "timestamp": "0"
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_CmdStep",
+ "dateTimestamp": "Tue Sep 30 14:07:25 2025",
+ "timestampMillis": "1759255645512",
+ "buildStep": {
+  "cmdId": "88858b77-f98c-43d1-8f30-cb94dfb545ee",
+  "name": "v++",
+  "logFile": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/Work/logs/Work.steps.log",
+  "commandLine": "/tools/Xilinx/Vitis/2024.2/bin/unwrapped/lnx64.o/v++  -c --mode aie --target=hw --platform=/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm --work_dir=Work --include=./ --include=../common --include=../dsp_lib/L1/src/aie --include=../dsp_lib/L1/include/aie --include=../dsp_lib/L2/include/aie graph.cpp leaky_relu.cpp window_split_128_to_64x2.cpp window_split_768_to_512_256.cpp window_split_512_to_256x2.cpp window_split_256_to_128x2.cpp roll_concat.cpp bias_add.cpp ",
+  "args": [
+   "-c",
+   "--mode",
+   "aie",
+   "--target=hw",
+   "--platform=/tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm",
+   "--work_dir=Work",
+   "--include=./",
+   "--include=../common",
+   "--include=../dsp_lib/L1/src/aie",
+   "--include=../dsp_lib/L1/include/aie",
+   "--include=../dsp_lib/L2/include/aie",
+   "graph.cpp",
+   "leaky_relu.cpp",
+   "window_split_128_to_64x2.cpp",
+   "window_split_768_to_512_256.cpp",
+   "window_split_512_to_256x2.cpp",
+   "window_split_256_to_128x2.cpp",
+   "roll_concat.cpp",
+   "bias_add.cpp"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Tue Sep 30 14:07:25 2025",
+ "timestampMillis": "1759255645512",
+ "status": {
+  "cmdId": "88858b77-f98c-43d1-8f30-cb94dfb545ee",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>

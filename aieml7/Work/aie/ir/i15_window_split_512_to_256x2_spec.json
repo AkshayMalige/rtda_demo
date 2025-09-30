@@ -1,0 +1,19 @@
+{
+    "KernelAnalysisSpec": {
+        "ModulePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/window_split_512_to_256x2.cpp",
+        "KernelSourcePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/window_split_512_to_256x2.cpp",
+        "SpecFile": "i15_window_split_512_to_256x2_spec.json",
+        "ResultFile": "i15_window_split_512_to_256x2_results.json",
+        "UseCases": [
+            {
+                "Index": 0,
+                "KernelFunction": "window_split_512_to_256x2",
+                "InitializationFunction": "",
+                "KernelClassCtor": "",
+                "Instances": [
+                    "i15"
+                ]
+            }
+        ]
+    }
+}

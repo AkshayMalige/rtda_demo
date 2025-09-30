@@ -1,0 +1,246 @@
+{
+    "ModulePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml7/Work/aie/ir/i10_wrap_matrix_vector_mul.cpp",
+    "KernelSourcePath": "/home/synthara/VersalPrjs/LDRD/rtda_demo/dsp_lib/L1/src/aie/matrix_vector_mul.cpp",
+    "UseCases": [
+        {
+            "Index": 0,
+            "KernelFunction": "xf::dsp::aie::blas::matrix_vector_mul::matrix_vector_mul<float, float, 128, 768, 0, 0, 0, 1, 12, 1, 0, 0, 1, 1, true, true>::matVecMulMiddleRtp",
+            "InitializationFunction": "",
+            "KernelClassCtor": "xf::dsp::aie::blas::matrix_vector_mul::matrix_vector_mul<float, float, 128, 768, 0, 0, 0, 1, 12, 1, 0, 0, 1, 1, true, true>::matrix_vector_mul",
+            "Instances": [
+                "i10"
+            ]
+        }
+    ],
+    "AccessRecords": [],
+    "ControlRegsUsage": {
+        "RndRecords": {},
+        "SatRecords": {},
+        "SymSatRecords": {}
+    },
+    "ParameterLoads": {
+        "_GLOBAL__sub_I_i10_wrap_matrix_vector_mul.cpp": [],
+        "__regcall3__chessintr___ffloat_ext_elem__v16float___sint___sint": [
+            "may",
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr___uint___uint_uint5_t": [
+            "may"
+        ],
+        "__regcall3__chessintr_uint1_t_uint1_t___sint": [
+            "may"
+        ],
+        "__regcall3__chessintr_uint4_t_uint4_t___uint": [
+            "may"
+        ],
+        "__regcall3__chessintr_uint5_t_uint5_t___uint": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16acc32_mcd_write_v16acc32_uint1_t": [
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v16acc32_scd_read_v16acc32_uint1_t": [
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v16acc32_v16acc32_v16accfloat": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16accfloat_addmac16_conf_v32bfloat16_v32bfloat16_v16accfloat_v16accfloat___sint_uint1_t_uint5_t": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v16accfloat_concat_bm_am_v8accfloat_v8accfloat": [
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v16accfloat_mac16_conf_v32bfloat16_v32bfloat16_v16accfloat___sint_uint1_t_uint5_t": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v16accfloat_mul16_conf_v32bfloat16_v32bfloat16___sint_uint1_t_uint5_t": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v16accfloat_undef_v16accfloat": [],
+        "__regcall3__chessintr_v16accfloat_v16accfloat_v16acc32": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16accfloat_v16accfloat_v16float": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16bfloat16_srs_v16accfloat_uint4_t_uint5_t": [
+            "may",
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v16float_broadcast_to_v16float___ffloat": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16float_set_xh_v8float": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16float_set_xl_v8float": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16float_undef_v16float": [],
+        "__regcall3__chessintr_v16float_v16float_v16int32": [
+            "may"
+        ],
+        "__regcall3__chessintr_v16int32_broadcast_s32___sint": [
+            "may"
+        ],
+        "__regcall3__chessintr_v32bfloat16_upd_xh_v32bfloat16_v16bfloat16": [
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v32bfloat16_upd_xl_v32bfloat16_v16bfloat16": [
+            "may",
+            "may"
+        ],
+        "__regcall3__chessintr_v32bfloat16_v32bfloat16_v32uint16": [
+            "may"
+        ],
+        "__regcall3__chessintr_v32uint16_broadcast_u16___ushort": [
+            "may"
+        ],
+        "__regcall3__chessintr_v8accfloat_ext_bh_v16accfloat": [
+            "may"
+        ],
+        "__regcall3__chessintr_v8accfloat_ext_bl_v16accfloat": [
+            "may"
+        ],
+        "__regcall3__chessintr_v8accfloat_undef_v8accfloat": [],
+        "__regcall3__chessintr_v8float_ext_xh_v16float": [
+            "may"
+        ],
+        "__regcall3__chessintr_v8float_ext_xl_v16float": [
+            "may"
+        ],
+        "__regcall3__chessintr_v8float_undef_v8float": [],
+        "i10_user": [],
+        "llvm.assume": [
+            "may"
+        ],
+        "llvm.chess.convert.customint.i32.s_struct.ipd.custom_type.uint5_t.uint5_ts.p1": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.chess.copy.p0": [
+            "may"
+        ],
+        "llvm.chess.init.customint.s_struct.ipd.custom_type.uint1_t.uint1_ts.i32.p1": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.chess.init.customint.s_struct.ipd.custom_type.uint4_t.uint4_ts.i32.p1": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.chess.init.customint.s_struct.ipd.custom_type.uint5_t.uint5_ts.i32.p1": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.chess_error": [
+            "may"
+        ],
+        "llvm.chess_manifest": [
+            "may"
+        ],
+        "llvm.dbg.declare": [
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.dbg.value": [
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.is.constant.i1": [
+            "may"
+        ],
+        "llvm.lifetime.end.p0": [
+            "may",
+            "may"
+        ],
+        "llvm.lifetime.start.p0": [
+            "may",
+            "may"
+        ],
+        "llvm.memcpy.p0.p0.i32": [
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.noalias.copy.guard.p0.p0": [
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.noalias.decl.p0.p0.i32": [
+            "may",
+            "may",
+            "may"
+        ],
+        "llvm.noalias.p0.p0.p0.i32": [
+            "may",
+            "may",
+            "may",
+            "may",
+            "may"
+        ],
+        "matrix_vector_mul<float, float, 128U, 768U, 0U, 0U, 0U, 1U, 12U, 1U, 0U, 0U, 1U, 1U, true, true>::matVecMulMiddleRtp": [
+            "sometimes",
+            "may",
+            "sometimes",
+            "may",
+            "may"
+        ],
+        "run": [
+            "sometimes"
+        ],
+        "v16acc32 chess_keep_dead<v16acc32>(v16acc32)": [
+            "may"
+        ],
+        "vector_elem_const_ref<float, 8U>::get": [
+            "sometimes"
+        ]
+    }
+}
