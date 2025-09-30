@@ -82,7 +82,7 @@ public:
         splitter = pktsplit<TP_CASC_LEN_LAYER3>::create();
 
         for (int i = 0; i < (int)TP_CASC_LEN_LAYER3; ++i) {
-            k_packet_to_window[i] = kernel::create(packet_to_window_kernel);
+            k_packet_to_window[i] = kernel::create(select_packet_to_window_kernel(i));
             source(k_packet_to_window[i]) = "packet_to_window.cpp";
             headers(k_packet_to_window[i]) = {"packet_to_window.h"};
             runtime<ratio>(k_packet_to_window[i]) = 1.0;
