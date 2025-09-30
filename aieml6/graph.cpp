@@ -72,7 +72,7 @@ int main() {
 
   // Load and update dense2 weights for each cascade leg
   for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER3; ++cascIdx) {
-    const std::string weightPath = basePath + EMBED_DENSE2_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
+    const std::string weightPath = basePath + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
     const auto dense2Weights = loadWeights(weightPath, EMBED_DENSE2_WEIGHTS_PART_SIZE);
     if (dense2Weights.empty()) {
       return -1;

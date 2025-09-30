@@ -26,7 +26,7 @@ static constexpr unsigned int TP_DUAL_IP = 0;
 static constexpr unsigned int TP_NUM_OUTPUTS = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER1 = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
-static constexpr unsigned int TP_CASC_LEN_LAYER3 = 6;
+static constexpr unsigned int TP_CASC_LEN_LAYER3 = 12;
 using dense8x128 = matrix_vector_mul_graph<
     float, float,
     HIDDEN_SIZE,
@@ -94,6 +94,7 @@ public:
     kernel      k_split_768_512_256;
     kernel      k_split_512_256x2;
     kernel      k_split_256_128x2[3];
+    kernel      k_split_128_64x2[6];
 
     // RTP ports for weights
     input_port matrixA_dense0_rtp;
@@ -156,6 +157,13 @@ public:
             runtime<ratio>(k_split_256_128x2[i]) = 1.0;
         }
 
+        for (int i = 0; i < 6; ++i) {
+            k_split_128_64x2[i] = kernel::create(window_split_128_to_64x2);
+            source(k_split_128_64x2[i]) = "window_split_128_to_64x2.cpp";
+            headers(k_split_128_64x2[i]) = {"window_split_128_to_64x2.h"};
+            runtime<ratio>(k_split_128_64x2[i]) = 1.0;
+        }
+
         k_rollconcat0 = kernel::create(roll_concat_kernel);
         source(k_rollconcat0) = "roll_concat.cpp";
         headers(k_rollconcat0) = {"roll_concat.h"};
@@ -198,12 +206,29 @@ public:
         connect<window<1024> >(k_split_512_256x2.out[0], k_split_256_128x2[0].in[0]);
         connect<window<1024> >(k_split_512_256x2.out[1], k_split_256_128x2[1].in[0]);
 
-        connect< window<512> >(k_split_256_128x2[0].out[0], dense3.inB[0]);
-        connect< window<512> >(k_split_256_128x2[0].out[1], dense3.inB[1]);
-        connect< window<512> >(k_split_256_128x2[1].out[0], dense3.inB[2]);
-        connect< window<512> >(k_split_256_128x2[1].out[1], dense3.inB[3]);
-        connect< window<512> >(k_split_256_128x2[2].out[0], dense3.inB[4]);
-        connect< window<512> >(k_split_256_128x2[2].out[1], dense3.inB[5]);
+        // Split 256->128->64 tree for 512-float path (left branch)
+        connect< window<512> >(k_split_256_128x2[0].out[0], k_split_128_64x2[0].in[0]);
+        connect< window<512> >(k_split_256_128x2[0].out[1], k_split_128_64x2[1].in[0]);
+        connect< window<512> >(k_split_256_128x2[1].out[0], k_split_128_64x2[2].in[0]);
+        connect< window<512> >(k_split_256_128x2[1].out[1], k_split_128_64x2[3].in[0]);
+
+        // Split 256->128->64 tree for 256-float path (right branch)
+        connect< window<512> >(k_split_256_128x2[2].out[0], k_split_128_64x2[4].in[0]);
+        connect< window<512> >(k_split_256_128x2[2].out[1], k_split_128_64x2[5].in[0]);
+
+        // Connect 12 windows of 64 floats (256 bytes) to dense3 cascade inputs
+        connect< window<256> >(k_split_128_64x2[0].out[0], dense3.inB[0]);
+        connect< window<256> >(k_split_128_64x2[0].out[1], dense3.inB[1]);
+        connect< window<256> >(k_split_128_64x2[1].out[0], dense3.inB[2]);
+        connect< window<256> >(k_split_128_64x2[1].out[1], dense3.inB[3]);
+        connect< window<256> >(k_split_128_64x2[2].out[0], dense3.inB[4]);
+        connect< window<256> >(k_split_128_64x2[2].out[1], dense3.inB[5]);
+        connect< window<256> >(k_split_128_64x2[3].out[0], dense3.inB[6]);
+        connect< window<256> >(k_split_128_64x2[3].out[1], dense3.inB[7]);
+        connect< window<256> >(k_split_128_64x2[4].out[0], dense3.inB[8]);
+        connect< window<256> >(k_split_128_64x2[4].out[1], dense3.inB[9]);
+        connect< window<256> >(k_split_128_64x2[5].out[0], dense3.inB[10]);
+        connect< window<256> >(k_split_128_64x2[5].out[1], dense3.inB[11]);
 
         connect<window<512> >(dense3.out[0], layer1_out.in[0]);
 
