@@ -6,6 +6,7 @@
 #include "aie_api/aie_adf.hpp"
 #include "leaky_relu.h"
 #include "window_split_128_to_64x2.h"
+#include "window_split_768_to_128x6.h"
 #include "roll_concat.h"
 #include "bias_add.h"
 
@@ -54,21 +55,22 @@ using dense128x128 = matrix_vector_mul_graph<
     TP_DUAL_IP,
     TP_NUM_OUTPUTS>;
 
-// using dense128x128 = matrix_vector_mul_graph<
-//     float, float,
-//     128,
-//     768,
-//     TP_SHIFT,
-//     TP_RND,
-//     TP_NUM_FRAMES,
-//     TP_CASC_LEN_LAYER2,
-//     TP_SAT,
-//     TP_SSR,
-//     TP_DIM_A_LEADING,
-//     TP_USE_MATRIX_RELOAD,
-//     TP_API,
-//     TP_DUAL_IP,
-//     TP_NUM_OUTPUTS>;
+using dense768x128 = matrix_vector_mul_graph<
+    float, float,
+    128,
+    768,
+    TP_SHIFT,
+    TP_RND,
+    TP_NUM_FRAMES,
+    6,
+    TP_SAT,
+    TP_SSR,
+    TP_DIM_A_LEADING,
+    TP_USE_MATRIX_RELOAD,
+    TP_API,
+    TP_DUAL_IP,
+    TP_NUM_OUTPUTS>;
+
 
 // Graph connects dense1 and dense2; leaky ReLU is handled in PL
 class NeuralNetworkGraph : public graph {
@@ -78,7 +80,7 @@ public:
     // output_plio layer0_out;
     dense8x128   dense1;
     dense128x128 dense2;
-    // dense128x768 dense3;
+    dense768x128 dense3;
     // Final dense layer output directly drives a PLIO
     output_plio layer1_out;
     kernel      k_lrelu0;
@@ -86,6 +88,7 @@ public:
     kernel      k_wsplit0;
     kernel      k_rollconcat0;
     kernel      k_biasadd0;
+    kernel      k_wsplit1;
 
     // RTP ports for weights
     input_port matrixA_dense0_rtp;
@@ -130,6 +133,11 @@ public:
         headers(k_wsplit0) = {"window_split_128_to_64x2.h"};
         runtime<ratio>(k_wsplit0) = 1.0;
 
+        k_wsplit1 = kernel::create(window_split_768_to_128x6);
+        source(k_wsplit1) = "window_split_768_to_128x6.cpp";
+        headers(k_wsplit1) = {"window_split_768_to_128x6.h"};
+        runtime<ratio>(k_wsplit1) = 1.0;
+
         k_rollconcat0 = kernel::create(roll_concat_kernel);
         source(k_rollconcat0) = "roll_concat.cpp";
         headers(k_rollconcat0) = {"roll_concat.h"};
@@ -161,7 +169,17 @@ public:
         connect< window<512> >(dense2.out[0], k_lrelu1.in[0]);
 
         connect< window<512> >(k_lrelu1.out[0], k_rollconcat0.in[0]);
-        connect<window<3072> >(k_rollconcat0.out[0], layer1_out.in[0]);
+
+        connect<window<3072> >(k_rollconcat0.out[0], k_wsplit1.in[0]);
+        connect< window<512> >(k_wsplit1.out[0], dense3.inB[0]);
+        connect< window<512> >(k_wsplit1.out[1], dense3.inB[1]);
+        connect< window<512> >(k_wsplit1.out[2], dense3.inB[2]);
+        connect< window<512> >(k_wsplit1.out[3], dense3.inB[3]);
+        connect< window<512> >(k_wsplit1.out[4], dense3.inB[4]);
+        connect< window<512> >(k_wsplit1.out[5], dense3.inB[5]);
+
+        connect<window<3072> >(dense3.out[0], layer1_out.in[0]);
+
 
         
         // constexpr unsigned dense2_base_col = 2;

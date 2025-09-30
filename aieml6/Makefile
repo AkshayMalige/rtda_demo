@@ -38,6 +38,7 @@ AIE_CFG       := aie.cfg
 KERNEL_SRCS   := \
 	leaky_relu.cpp \
 	window_split_128_to_64x2.cpp \
+	window_split_768_to_128x6.cpp \
 	roll_concat.cpp \
 	bias_add.cpp
 KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
