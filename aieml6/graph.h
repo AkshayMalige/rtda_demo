@@ -6,7 +6,8 @@
 #include "aie_api/aie_adf.hpp"
 #include "leaky_relu.h"
 #include "window_split_128_to_64x2.h"
-
+#include "roll_concat.h"
+#include "bias_add.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -54,7 +55,11 @@ public:
     // Final dense layer output directly drives a PLIO
     output_plio layer1_out;
     kernel      k_lrelu0;
+    kernel      k_lrelu1;
     kernel      k_wsplit0;
+    kernel      k_rollconcat0;
+    kernel      k_biasadd0;
+    input_port bias_dense0_rtp;
 
 
 
@@ -81,8 +86,11 @@ public:
         source(k_lrelu0) = "leaky_relu.cpp";
         headers(k_lrelu0) = {"leaky_relu.h"};
         runtime<ratio>(k_lrelu0) = 1.0;
+        k_lrelu1 = kernel::create(leaky_relu_kernel);
+        source(k_lrelu1) = "leaky_relu.cpp";
+        headers(k_lrelu1) = {"leaky_relu.h"};
+        runtime<ratio>(k_lrelu1) = 1.0;
 
-        connect<window<512>>(dense1.out[0], k_lrelu0.in[0]);
         // connect<window<512>>(k_lrelu0.out[0], layer0_out.in[0]);
 
 
@@ -90,6 +98,21 @@ public:
         source(k_wsplit0) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit0) = {"window_split_128_to_64x2.h"};
         runtime<ratio>(k_wsplit0) = 1.0;
+
+        k_rollconcat0 = kernel::create(roll_concat_kernel);
+        source(k_rollconcat0) = "roll_concat.cpp";
+        headers(k_rollconcat0) = {"roll_concat.h"};
+        runtime<ratio>(k_rollconcat0) = 1.0;
+
+        k_biasadd0 = kernel::create(bias_add_kernel);
+        source(k_biasadd0) = "bias_add.cpp";
+        headers(k_biasadd0) = {"bias_add.h"};
+        runtime<ratio>(k_biasadd0) = 1.0;
+
+        
+        connect<window<512>>(dense1.out[0], k_biasadd0.in[0]);
+        connect<adf::parameter>(bias_dense0_rtp, k_biasadd0.in[1]);
+        connect<window<512>>(k_biasadd0.out[0], k_lrelu0.in[0]);
 
         connect< window<512> >(k_lrelu0.out[0], k_wsplit0.in[0]);
         connect< window<256> >(k_wsplit0.out[0], dense2.inB[0]);
@@ -109,10 +132,15 @@ public:
         }
         layer1_out = output_plio::create("layer1_out", plio_32_bits,
                                          (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
-        connect<>(dense2.out[0], layer1_out.in[0]);
+
+        connect< window<512> >(dense2.out[0], k_lrelu1.in[0]);
+
+        connect< window<512> >(k_lrelu1.out[0], k_rollconcat0.in[0]);
+        connect<window<3072> >(k_rollconcat0.out[0], layer1_out.in[0]);
+
         
-        constexpr unsigned dense2_base_col = 2;
-        constexpr unsigned dense2_row = 0;
+        // constexpr unsigned dense2_base_col = 2;
+        // constexpr unsigned dense2_row = 0;
         // auto dense2_kernels = dense2.getKernels();
         // for (unsigned i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
         //     adf::location<adf::kernel>(dense2_kernels[i]) =
