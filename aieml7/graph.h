@@ -89,7 +89,7 @@ public:
         dimensions(k_rollconcat0.out[0]) = {ROLL_CONCAT_TOTAL};
 
         roll_concat_buffer = adf::shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
-        connect<window<ROLL_CONCAT_TOTAL>>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
+        connect<window<ROLL_CONCAT_TOTAL * sizeof(float)>>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
         write_access(roll_concat_buffer.in[0]) = adf::tiling({
             .buffer_dimension = {ROLL_CONCAT_TOTAL},
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
@@ -102,7 +102,7 @@ public:
         }
 
         for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
-            connect<window<ROLL_CONCAT_TILE_SPAN>>(roll_concat_buffer.out[i], dense3.inB[i]);
+            connect<window<ROLL_CONCAT_TILE_SPAN * sizeof(float)>>(roll_concat_buffer.out[i], dense3.inB[i]);
             adf::read_access(roll_concat_buffer.out[i]) = adf::tiling({
                 .buffer_dimension = {ROLL_CONCAT_TOTAL},
                 .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
