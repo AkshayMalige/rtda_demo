@@ -29,6 +29,13 @@ static constexpr unsigned int TP_CASC_LEN_LAYER1 = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
 static constexpr unsigned int TP_CASC_LEN_LAYER3 = 12;
 
+static_assert((ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE) % TP_CASC_LEN_LAYER3 == 0,
+              "ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE must be divisible by TP_CASC_LEN_LAYER3");
+static constexpr unsigned int ROLL_CONCAT_TOTAL = ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE;
+static constexpr unsigned int ROLL_CONCAT_TILE_SPAN = ROLL_CONCAT_TOTAL / TP_CASC_LEN_LAYER3;
+static_assert(ROLL_CONCAT_TILE_SPAN * TP_CASC_LEN_LAYER3 == ROLL_CONCAT_TOTAL,
+              "Shared buffer tiling must cover the entire roll-concat frame");
+
 
 using dense768x128 = matrix_vector_mul_graph<
     float, float,
@@ -56,6 +63,7 @@ public:
     // Final dense layer output directly drives a PLIO
     output_plio layer1_out;
     kernel      k_rollconcat0;
+    adf::shared_buffer<float> roll_concat_buffer;
 
 
 
@@ -78,13 +86,29 @@ public:
         runtime<ratio>(k_rollconcat0) = 1.0;
 
         connect< window<512> >(layer0_in.out[0], k_rollconcat0.in[0]);
+        adf::dimensions(k_rollconcat0.out[0]) = {ROLL_CONCAT_TOTAL};
+
+        roll_concat_buffer = adf::shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
+        connect<window<ROLL_CONCAT_TOTAL>>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
+        adf::write_access(roll_concat_buffer.in[0]) = adf::tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}});
 
 
 
         for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
             adf::connect<adf::parameter>(matrixA_dense2_rtp[i], dense3.matrixA[i]);
         }
-    
+
+        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
+            connect<window<ROLL_CONCAT_TILE_SPAN>>(roll_concat_buffer.out[i], dense3.inB[i]);
+            adf::read_access(roll_concat_buffer.out[i]) = adf::tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}});
+        }
+
         connect<window<512> >(dense3.out[0], layer1_out.in[0]);
 
 
