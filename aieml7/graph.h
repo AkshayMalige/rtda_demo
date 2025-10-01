@@ -127,7 +127,8 @@ public:
         write_access(roll_concat_buffer.in[0]) = tiling({
             .buffer_dimension = {ROLL_CONCAT_TOTAL},
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
-            .offset = {0}});
+            .offset = {0}
+        });
 
 
 
@@ -240,6 +241,9 @@ public:
 
         connect<window<512>>(k_lrelu3.out[0], layer_out.in[0]);
 
+
+        auto d0_k = dense0.getKernels();
+        location<kernel>(d0_k[0]) = tile(20, 4);
 
 
         // constexpr unsigned dense2_base_col = 2;
