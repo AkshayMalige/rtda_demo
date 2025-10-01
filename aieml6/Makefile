@@ -61,15 +61,21 @@ AIE_INCLUDE_FLAGS := \
 	--include="$(DSPLIB_PATH)/L2/include/aie"
 
 # Full v++ command flags, assembled from variables above.
+# VPP_FLAGS := \
+# 	-c \
+# 	--mode aie \
+# 	--target=$(TARGET) \
+# 	--platform=$(PLATFORM) \
+# 	--work_dir=$(WORK_DIR) \
+# 	--config=$(AIE_CFG) \
+# 	$(AIE_INCLUDE_FLAGS)
 VPP_FLAGS := \
 	-c \
 	--mode aie \
 	--target=$(TARGET) \
 	--platform=$(PLATFORM) \
 	--work_dir=$(WORK_DIR) \
-	--config=$(AIE_CFG) \
 	$(AIE_INCLUDE_FLAGS)
-
 
 # ==== RULES ====
 

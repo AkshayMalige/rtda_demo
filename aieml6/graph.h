@@ -95,8 +95,6 @@ public:
     input_port matrixA_dense0_rtp;
     input_port bias_dense0_rtp;
     input_port matrixA_dense1_rtp[TP_CASC_LEN_LAYER2];
-    input_port matrixA_dense2_rtp[TP_CASC_LEN_LAYER3];
-
 
 
     NeuralNetworkGraph() {
