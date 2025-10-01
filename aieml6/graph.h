@@ -83,7 +83,6 @@ public:
     // output_plio layer0_out;
     dense8x128   dense1;
     dense128x128 dense2;
-    dense768x128 dense3;
     // Final dense layer output directly drives a PLIO
     output_plio layer1_out;
     kernel      k_lrelu0;
@@ -91,10 +90,6 @@ public:
     kernel      k_wsplit0;
     kernel      k_rollconcat0;
     kernel      k_biasadd0;
-    kernel      k_split_768_512_256;
-    kernel      k_split_512_256x2;
-    kernel      k_split_256_128x2[3];
-    kernel      k_split_128_64x2[6];
 
     // RTP ports for weights
     input_port matrixA_dense0_rtp;
@@ -140,34 +135,6 @@ public:
         headers(k_wsplit0) = {"window_split_128_to_64x2.h"};
         runtime<ratio>(k_wsplit0) = 1.0;
 
-        k_split_768_512_256 = kernel::create(window_split_768_to_512_256);
-        source(k_split_768_512_256) = "window_split_768_to_512_256.cpp";
-        headers(k_split_768_512_256) = {"window_split_768_to_512_256.h"};
-        runtime<ratio>(k_split_768_512_256) = 1.0;
-
-        k_split_512_256x2 = kernel::create(window_split_512_to_256x2);
-        source(k_split_512_256x2) = "window_split_512_to_256x2.cpp";
-        headers(k_split_512_256x2) = {"window_split_512_to_256x2.h"};
-        runtime<ratio>(k_split_512_256x2) = 1.0;
-
-        for (int i = 0; i < 3; ++i) {
-            k_split_256_128x2[i] = kernel::create(window_split_256_to_128x2);
-            source(k_split_256_128x2[i]) = "window_split_256_to_128x2.cpp";
-            headers(k_split_256_128x2[i]) = {"window_split_256_to_128x2.h"};
-            runtime<ratio>(k_split_256_128x2[i]) = 1.0;
-        }
-
-        for (int i = 0; i < 6; ++i) {
-            k_split_128_64x2[i] = kernel::create(window_split_128_to_64x2);
-            source(k_split_128_64x2[i]) = "window_split_128_to_64x2.cpp";
-            headers(k_split_128_64x2[i]) = {"window_split_128_to_64x2.h"};
-            runtime<ratio>(k_split_128_64x2[i]) = 1.0;
-        }
-
-        k_rollconcat0 = kernel::create(roll_concat_kernel);
-        source(k_rollconcat0) = "roll_concat.cpp";
-        headers(k_rollconcat0) = {"roll_concat.h"};
-        runtime<ratio>(k_rollconcat0) = 1.0;
 
         k_biasadd0 = kernel::create(bias_add_kernel);
         source(k_biasadd0) = "bias_add.cpp";
@@ -189,48 +156,14 @@ public:
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             adf::connect<adf::parameter>(matrixA_dense1_rtp[i], dense2.matrixA[i]);
         }
-        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
-            adf::connect<adf::parameter>(matrixA_dense2_rtp[i], dense3.matrixA[i]);
-        }
+
         layer1_out = output_plio::create("layer1_out", plio_32_bits,
                                          (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
 
         connect< window<512> >(dense2.out[0], k_lrelu1.in[0]);
 
-        connect< window<512> >(k_lrelu1.out[0], k_rollconcat0.in[0]);
 
-        connect<window<3072> >(k_rollconcat0.out[0], k_split_768_512_256.in[0]);
-        connect<window<2048> >(k_split_768_512_256.out[0], k_split_512_256x2.in[0]);
-        connect<window<1024> >(k_split_768_512_256.out[1], k_split_256_128x2[2].in[0]);
-
-        connect<window<1024> >(k_split_512_256x2.out[0], k_split_256_128x2[0].in[0]);
-        connect<window<1024> >(k_split_512_256x2.out[1], k_split_256_128x2[1].in[0]);
-
-        // Split 256->128->64 tree for 512-float path (left branch)
-        connect< window<512> >(k_split_256_128x2[0].out[0], k_split_128_64x2[0].in[0]);
-        connect< window<512> >(k_split_256_128x2[0].out[1], k_split_128_64x2[1].in[0]);
-        connect< window<512> >(k_split_256_128x2[1].out[0], k_split_128_64x2[2].in[0]);
-        connect< window<512> >(k_split_256_128x2[1].out[1], k_split_128_64x2[3].in[0]);
-
-        // Split 256->128->64 tree for 256-float path (right branch)
-        connect< window<512> >(k_split_256_128x2[2].out[0], k_split_128_64x2[4].in[0]);
-        connect< window<512> >(k_split_256_128x2[2].out[1], k_split_128_64x2[5].in[0]);
-
-        // Connect 12 windows of 64 floats (256 bytes) to dense3 cascade inputs
-        connect< window<256> >(k_split_128_64x2[0].out[0], dense3.inB[0]);
-        connect< window<256> >(k_split_128_64x2[0].out[1], dense3.inB[1]);
-        connect< window<256> >(k_split_128_64x2[1].out[0], dense3.inB[2]);
-        connect< window<256> >(k_split_128_64x2[1].out[1], dense3.inB[3]);
-        connect< window<256> >(k_split_128_64x2[2].out[0], dense3.inB[4]);
-        connect< window<256> >(k_split_128_64x2[2].out[1], dense3.inB[5]);
-        connect< window<256> >(k_split_128_64x2[3].out[0], dense3.inB[6]);
-        connect< window<256> >(k_split_128_64x2[3].out[1], dense3.inB[7]);
-        connect< window<256> >(k_split_128_64x2[4].out[0], dense3.inB[8]);
-        connect< window<256> >(k_split_128_64x2[4].out[1], dense3.inB[9]);
-        connect< window<256> >(k_split_128_64x2[5].out[0], dense3.inB[10]);
-        connect< window<256> >(k_split_128_64x2[5].out[1], dense3.inB[11]);
-
-        connect<window<512> >(dense3.out[0], layer1_out.in[0]);
+        connect<window<512> >(k_lrelu1.out[0], layer1_out.in[0]);
 
 
         
