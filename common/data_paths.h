@@ -41,6 +41,25 @@
 #define SUBSOLVER0_DENSE3_BIAS         "solver_0_dense_3_bias.txt"
 #define SUBSOLVER0_HOST_OUTPUT         "solver_0_host_output.txt"
 
+// SUBSOLVER1 graph files --------------------------------------------------
+#define SUBSOLVER1_INPUT_DATA_PREFIX      "solver_1_input_part"
+#define SUBSOLVER1_DENSE0_WEIGHTS_PREFIX  "solver_1_dense_0_weights_part"
+#define SUBSOLVER1_DENSE0_OUTPUT          "solver_1_dense_0_output_aie.txt"
+#define SUBSOLVER1_LEAKYRELU_0_PREFIX     "solver_1_leakyrelu_0_output_part"
+#define SUBSOLVER1_DENSE1_WEIGHTS_PREFIX  "solver_1_dense_1_weights_part"
+#define SUBSOLVER1_DENSE1_OUTPUT          "solver_1_dense_1_output_aie.txt"
+#define SUBSOLVER1_LEAKYRELU_1_PREFIX     "solver_1_leakyrelu_1_output_part"
+#define SUBSOLVER1_DENSE2_WEIGHTS_PREFIX  "solver_1_dense_2_weights_part"
+#define SUBSOLVER1_DENSE2_OUTPUT          "solver_1_dense_2_output_aie.txt"
+#define SUBSOLVER1_LEAKYRELU_2_PREFIX     "solver_1_leakyrelu_2_output_part"
+#define SUBSOLVER1_DENSE3_WEIGHTS_PREFIX  "solver_1_dense_3_weights_part"
+#define SUBSOLVER1_DENSE3_OUTPUT          "solver_1_dense_3_output_aie.txt"
+#define SUBSOLVER1_DENSE0_BIAS            "solver_1_dense_0_bias.txt"
+#define SUBSOLVER1_DENSE1_BIAS            "solver_1_dense_1_bias.txt"
+#define SUBSOLVER1_DENSE2_BIAS            "solver_1_dense_2_bias.txt"
+#define SUBSOLVER1_DENSE3_BIAS            "solver_1_dense_3_bias.txt"
+#define SUBSOLVER1_HOST_OUTPUT            "solver_1_host_output.txt"
+
 // OUTPUT graph files ------------------------------------------------------
 #define OUTPUT_INPUT_DATA           "output_input.txt"
 #define OUTPUT_DENSE0_WEIGHTS       "output_dense_0_weights.txt"

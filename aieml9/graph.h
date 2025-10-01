@@ -106,6 +106,10 @@ public:
     dense128x128 solver_dense1;
     dense128x128 solver_dense2;
     dense128x128 solver_dense3;
+    dense768x128 solver_dense4;
+    dense128x128 solver_dense5;
+    dense128x128 solver_dense6;
+    dense128x128 solver_dense7;
     dense128x32  output_dense0;
     output_plio layer_out;
 
@@ -115,6 +119,10 @@ public:
     kernel k_bias_solver1;
     kernel k_bias_solver2;
     kernel k_bias_solver3;
+    kernel k_bias_solver4;
+    kernel k_bias_solver5;
+    kernel k_bias_solver6;
+    kernel k_bias_solver7;
 
     kernel k_lrelu_embed0;
     kernel k_lrelu_embed1;
@@ -122,15 +130,24 @@ public:
     kernel k_lrelu_solver1;
     kernel k_lrelu_solver2;
     kernel k_lrelu_solver3;
+    kernel k_lrelu_solver4;
+    kernel k_lrelu_solver5;
+    kernel k_lrelu_solver6;
+    kernel k_lrelu_solver7;
 
     kernel k_wsplit_embed0;
     kernel k_wsplit_solver0;
     kernel k_wsplit_solver1;
     kernel k_wsplit_solver2;
+    kernel k_wsplit_solver3;
+    kernel k_wsplit_solver4;
+    kernel k_wsplit_solver5;
 
     kernel k_rollconcat;
+    kernel k_rollconcat1;
 
     shared_buffer<float> roll_concat_buffer;
+    shared_buffer<float> roll_concat_buffer1;
 
     input_port matrixA_embed0_rtp;
     input_port bias_embed0_rtp;
@@ -145,6 +162,14 @@ public:
     input_port bias_solver2_rtp;
     input_port matrixA_solver3_rtp[TP_CASC_LEN_LAYER2];
     input_port bias_solver3_rtp;
+    input_port matrixA_solver4_rtp[TP_CASC_LEN_LAYER3];
+    input_port bias_solver4_rtp;
+    input_port matrixA_solver5_rtp[TP_CASC_LEN_LAYER2];
+    input_port bias_solver5_rtp;
+    input_port matrixA_solver6_rtp[TP_CASC_LEN_LAYER2];
+    input_port bias_solver6_rtp;
+    input_port matrixA_solver7_rtp[TP_CASC_LEN_LAYER2];
+    input_port bias_solver7_rtp;
 
     input_port matrixA_output0_rtp;
 
@@ -188,6 +213,26 @@ public:
         headers(k_bias_solver3) = {"bias_add.h"};
         runtime<ratio>(k_bias_solver3) = 1.0;
 
+        k_bias_solver4 = kernel::create(bias_add_kernel);
+        source(k_bias_solver4) = "bias_add.cpp";
+        headers(k_bias_solver4) = {"bias_add.h"};
+        runtime<ratio>(k_bias_solver4) = 1.0;
+
+        k_bias_solver5 = kernel::create(bias_add_kernel);
+        source(k_bias_solver5) = "bias_add.cpp";
+        headers(k_bias_solver5) = {"bias_add.h"};
+        runtime<ratio>(k_bias_solver5) = 1.0;
+
+        k_bias_solver6 = kernel::create(bias_add_kernel);
+        source(k_bias_solver6) = "bias_add.cpp";
+        headers(k_bias_solver6) = {"bias_add.h"};
+        runtime<ratio>(k_bias_solver6) = 1.0;
+
+        k_bias_solver7 = kernel::create(bias_add_kernel);
+        source(k_bias_solver7) = "bias_add.cpp";
+        headers(k_bias_solver7) = {"bias_add.h"};
+        runtime<ratio>(k_bias_solver7) = 1.0;
+
         k_lrelu_embed0 = kernel::create(leaky_relu_kernel);
         source(k_lrelu_embed0) = "leaky_relu.cpp";
         headers(k_lrelu_embed0) = {"leaky_relu.h"};
@@ -218,6 +263,26 @@ public:
         headers(k_lrelu_solver3) = {"leaky_relu.h"};
         runtime<ratio>(k_lrelu_solver3) = 1.0;
 
+        k_lrelu_solver4 = kernel::create(leaky_relu_kernel);
+        source(k_lrelu_solver4) = "leaky_relu.cpp";
+        headers(k_lrelu_solver4) = {"leaky_relu.h"};
+        runtime<ratio>(k_lrelu_solver4) = 1.0;
+
+        k_lrelu_solver5 = kernel::create(leaky_relu_kernel);
+        source(k_lrelu_solver5) = "leaky_relu.cpp";
+        headers(k_lrelu_solver5) = {"leaky_relu.h"};
+        runtime<ratio>(k_lrelu_solver5) = 1.0;
+
+        k_lrelu_solver6 = kernel::create(leaky_relu_kernel);
+        source(k_lrelu_solver6) = "leaky_relu.cpp";
+        headers(k_lrelu_solver6) = {"leaky_relu.h"};
+        runtime<ratio>(k_lrelu_solver6) = 1.0;
+
+        k_lrelu_solver7 = kernel::create(leaky_relu_kernel);
+        source(k_lrelu_solver7) = "leaky_relu.cpp";
+        headers(k_lrelu_solver7) = {"leaky_relu.h"};
+        runtime<ratio>(k_lrelu_solver7) = 1.0;
+
         k_wsplit_embed0 = kernel::create(window_split_128_to_64x2);
         source(k_wsplit_embed0) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit_embed0) = {"window_split_128_to_64x2.h"};
@@ -242,6 +307,26 @@ public:
         source(k_rollconcat) = "roll_concat.cpp";
         headers(k_rollconcat) = {"roll_concat.h"};
         runtime<ratio>(k_rollconcat) = 1.0;
+
+        k_wsplit_solver3 = kernel::create(window_split_128_to_64x2);
+        source(k_wsplit_solver3) = "window_split_128_to_64x2.cpp";
+        headers(k_wsplit_solver3) = {"window_split_128_to_64x2.h"};
+        runtime<ratio>(k_wsplit_solver3) = 1.0;
+
+        k_wsplit_solver4 = kernel::create(window_split_128_to_64x2);
+        source(k_wsplit_solver4) = "window_split_128_to_64x2.cpp";
+        headers(k_wsplit_solver4) = {"window_split_128_to_64x2.h"};
+        runtime<ratio>(k_wsplit_solver4) = 1.0;
+
+        k_wsplit_solver5 = kernel::create(window_split_128_to_64x2);
+        source(k_wsplit_solver5) = "window_split_128_to_64x2.cpp";
+        headers(k_wsplit_solver5) = {"window_split_128_to_64x2.h"};
+        runtime<ratio>(k_wsplit_solver5) = 1.0;
+
+        k_rollconcat1 = kernel::create(roll_concat_kernel);
+        source(k_rollconcat1) = "roll_concat.cpp";
+        headers(k_rollconcat1) = {"roll_concat.h"};
+        runtime<ratio>(k_rollconcat1) = 1.0;
 
         connect<window<512>>(embed_dense0.out[0], k_bias_embed0.in[0]);
         connect<parameter>(bias_embed0_rtp, k_bias_embed0.in[1]);
@@ -322,8 +407,72 @@ public:
         connect<parameter>(bias_solver3_rtp, k_bias_solver3.in[1]);
         connect<window<512>>(k_bias_solver3.out[0], k_lrelu_solver3.in[0]);
 
+        connect<window<512>>(k_lrelu_solver3.out[0], k_rollconcat1.in[0]);
+
+        dimensions(k_rollconcat1.in[0]) = {HIDDEN_SIZE};
+        dimensions(k_rollconcat1.out[0]) = {ROLL_CONCAT_TOTAL};
+
+        roll_concat_buffer1 = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
+
+        connect<>(k_rollconcat1.out[0], roll_concat_buffer1.in[0]);
+        write_access(roll_concat_buffer1.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
+
+        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
+            connect<parameter>(matrixA_solver4_rtp[i], solver_dense4.matrixA[i]);
+        }
+
+        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
+            connect<>(roll_concat_buffer1.out[i], solver_dense4.inB[i]);
+            read_access(roll_concat_buffer1.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
+            });
+        }
+
+        connect<window<512>>(solver_dense4.out[0], k_bias_solver4.in[0]);
+        connect<parameter>(bias_solver4_rtp, k_bias_solver4.in[1]);
+        connect<window<512>>(k_bias_solver4.out[0], k_lrelu_solver4.in[0]);
+        connect<window<512>>(k_lrelu_solver4.out[0], k_wsplit_solver3.in[0]);
+
+        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
+            connect<parameter>(matrixA_solver5_rtp[i], solver_dense5.matrixA[i]);
+        }
+        connect<window<256>>(k_wsplit_solver3.out[0], solver_dense5.inB[0]);
+        connect<window<256>>(k_wsplit_solver3.out[1], solver_dense5.inB[1]);
+
+        connect<window<512>>(solver_dense5.out[0], k_bias_solver5.in[0]);
+        connect<parameter>(bias_solver5_rtp, k_bias_solver5.in[1]);
+        connect<window<512>>(k_bias_solver5.out[0], k_lrelu_solver5.in[0]);
+        connect<window<512>>(k_lrelu_solver5.out[0], k_wsplit_solver4.in[0]);
+
+        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
+            connect<parameter>(matrixA_solver6_rtp[i], solver_dense6.matrixA[i]);
+        }
+        connect<window<256>>(k_wsplit_solver4.out[0], solver_dense6.inB[0]);
+        connect<window<256>>(k_wsplit_solver4.out[1], solver_dense6.inB[1]);
+
+        connect<window<512>>(solver_dense6.out[0], k_bias_solver6.in[0]);
+        connect<parameter>(bias_solver6_rtp, k_bias_solver6.in[1]);
+        connect<window<512>>(k_bias_solver6.out[0], k_lrelu_solver6.in[0]);
+        connect<window<512>>(k_lrelu_solver6.out[0], k_wsplit_solver5.in[0]);
+
+        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
+            connect<parameter>(matrixA_solver7_rtp[i], solver_dense7.matrixA[i]);
+        }
+        connect<window<256>>(k_wsplit_solver5.out[0], solver_dense7.inB[0]);
+        connect<window<256>>(k_wsplit_solver5.out[1], solver_dense7.inB[1]);
+
+        connect<window<512>>(solver_dense7.out[0], k_bias_solver7.in[0]);
+        connect<parameter>(bias_solver7_rtp, k_bias_solver7.in[1]);
+        connect<window<512>>(k_bias_solver7.out[0], k_lrelu_solver7.in[0]);
+
         connect<parameter>(matrixA_output0_rtp, output_dense0.matrixA[0]);
-        connect<window<512>>(k_lrelu_solver3.out[0], output_dense0.inB[0]);
+        connect<window<512>>(k_lrelu_solver7.out[0], output_dense0.inB[0]);
         connect<window<128>>(output_dense0.out[0], layer_out.in[0]);
 
 
@@ -366,6 +515,23 @@ public:
 
         location<kernel>(k_bias_solver3)   = tile(23,3);
         location<kernel>(k_lrelu_solver3)  = tile(23,4);
+
+        location<kernel>(k_rollconcat1)     = tile(26,4);
+
+        location<kernel>(k_bias_solver4)   = tile(29,3);
+        location<kernel>(k_lrelu_solver4)  = tile(29,4);
+        location<kernel>(k_wsplit_solver3) = tile(29,5);
+
+        location<kernel>(k_bias_solver5)   = tile(33,3);
+        location<kernel>(k_lrelu_solver5)  = tile(33,4);
+        location<kernel>(k_wsplit_solver4) = tile(33,5);
+
+        location<kernel>(k_bias_solver6)   = tile(37,3);
+        location<kernel>(k_lrelu_solver6)  = tile(37,4);
+        location<kernel>(k_wsplit_solver5) = tile(37,5);
+
+        location<kernel>(k_bias_solver7)   = tile(41,3);
+        location<kernel>(k_lrelu_solver7)  = tile(41,4);
 
     }
 };

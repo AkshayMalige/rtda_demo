@@ -173,6 +173,98 @@ int main() {
              SUBSOLVER0_DENSE3_BIAS_SIZE);
   }
 
+  // Load and update solver1 dense0 weights for each cascade leg
+  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER3; ++cascIdx) {
+    const std::string weightPath = basePath + SUBSOLVER1_DENSE0_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
+    const auto dense0Weights = loadWeights(weightPath, SUBSOLVER1_DENSE0_WEIGHTS_PART_SIZE);
+    if (dense0Weights.empty()) {
+      return -1;
+    }
+    g.update(g.matrixA_solver4_rtp[cascIdx],
+             dense0Weights.data(),
+             SUBSOLVER1_DENSE0_WEIGHTS_PART_SIZE);
+  }
+
+  // Load and update solver1 dense0 bias
+  {
+    const auto bias = loadWeights(basePath + SUBSOLVER1_DENSE0_BIAS, SUBSOLVER1_DENSE0_BIAS_SIZE);
+    if (bias.empty()) {
+      return -1;
+    }
+    g.update(g.bias_solver4_rtp,
+             bias.data(),
+             SUBSOLVER1_DENSE0_BIAS_SIZE);
+  }
+
+  // Load and update solver1 dense1 weights for each cascade leg
+  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER2; ++cascIdx) {
+    const std::string weightPath = basePath + SUBSOLVER1_DENSE1_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
+    const auto dense1Weights = loadWeights(weightPath, SUBSOLVER1_DENSE1_WEIGHTS_PART_SIZE);
+    if (dense1Weights.empty()) {
+      return -1;
+    }
+    g.update(g.matrixA_solver5_rtp[cascIdx],
+             dense1Weights.data(),
+             SUBSOLVER1_DENSE1_WEIGHTS_PART_SIZE);
+  }
+
+  // Load and update solver1 dense1 bias
+  {
+    const auto bias = loadWeights(basePath + SUBSOLVER1_DENSE1_BIAS, SUBSOLVER1_DENSE1_BIAS_SIZE);
+    if (bias.empty()) {
+      return -1;
+    }
+    g.update(g.bias_solver5_rtp,
+             bias.data(),
+             SUBSOLVER1_DENSE1_BIAS_SIZE);
+  }
+
+  // Load and update solver1 dense2 weights for each cascade leg
+  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER2; ++cascIdx) {
+    const std::string weightPath = basePath + SUBSOLVER1_DENSE2_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
+    const auto dense2Weights = loadWeights(weightPath, SUBSOLVER1_DENSE2_WEIGHTS_PART_SIZE);
+    if (dense2Weights.empty()) {
+      return -1;
+    }
+    g.update(g.matrixA_solver6_rtp[cascIdx],
+             dense2Weights.data(),
+             SUBSOLVER1_DENSE2_WEIGHTS_PART_SIZE);
+  }
+
+  // Load and update solver1 dense2 bias
+  {
+    const auto bias = loadWeights(basePath + SUBSOLVER1_DENSE2_BIAS, SUBSOLVER1_DENSE2_BIAS_SIZE);
+    if (bias.empty()) {
+      return -1;
+    }
+    g.update(g.bias_solver6_rtp,
+             bias.data(),
+             SUBSOLVER1_DENSE2_BIAS_SIZE);
+  }
+
+  // Load and update solver1 dense3 weights for each cascade leg
+  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER2; ++cascIdx) {
+    const std::string weightPath = basePath + SUBSOLVER1_DENSE3_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
+    const auto dense3Weights = loadWeights(weightPath, SUBSOLVER1_DENSE3_WEIGHTS_PART_SIZE);
+    if (dense3Weights.empty()) {
+      return -1;
+    }
+    g.update(g.matrixA_solver7_rtp[cascIdx],
+             dense3Weights.data(),
+             SUBSOLVER1_DENSE3_WEIGHTS_PART_SIZE);
+  }
+
+  // Load and update solver1 dense3 bias
+  {
+    const auto bias = loadWeights(basePath + SUBSOLVER1_DENSE3_BIAS, SUBSOLVER1_DENSE3_BIAS_SIZE);
+    if (bias.empty()) {
+      return -1;
+    }
+    g.update(g.bias_solver7_rtp,
+             bias.data(),
+             SUBSOLVER1_DENSE3_BIAS_SIZE);
+  }
+
   // Load and update output dense weights
   {
     const auto denseWeights = loadWeights(basePath + OUTPUT_DENSE0_WEIGHTS, OUTPUT_DENSE0_WEIGHTS_SIZE);
