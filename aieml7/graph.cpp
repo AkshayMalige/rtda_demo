@@ -39,14 +39,14 @@ int main() {
 
   // Load and update dense2 weights for each cascade leg
   for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER3; ++cascIdx) {
-    const std::string weightPath = basePath + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
-    const auto dense2Weights = loadWeights(weightPath, EMBED_DENSE2_WEIGHTS_PART_SIZE);
+    const std::string weightPath = basePath + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
+    const auto dense2Weights = loadWeights(weightPath, SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE);
     if (dense2Weights.empty()) {
       return -1;
     }
     g.update(g.matrixA_dense2_rtp[cascIdx],
              dense2Weights.data(),
-             EMBED_DENSE2_WEIGHTS_PART_SIZE);
+             SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE);
   }
 
   g.run(1);
