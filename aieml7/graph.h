@@ -85,11 +85,14 @@ public:
         headers(k_rollconcat0) = {"roll_concat.h"};
         runtime<ratio>(k_rollconcat0) = 1.0;
 
-        connect< window<512> >(layer0_in.out[0], k_rollconcat0.in[0]);
+        connect(layer0_in.out[0], k_rollconcat0.in[0]);
+        dimensions(k_rollconcat0.in[0]) = {HIDDEN_SIZE};
         dimensions(k_rollconcat0.out[0]) = {ROLL_CONCAT_TOTAL};
 
         roll_concat_buffer = adf::shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
+
         connect<window<ROLL_CONCAT_TOTAL * sizeof(float)>>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
+
         write_access(roll_concat_buffer.in[0]) = adf::tiling({
             .buffer_dimension = {ROLL_CONCAT_TOTAL},
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
