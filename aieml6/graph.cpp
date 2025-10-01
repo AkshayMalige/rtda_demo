@@ -70,6 +70,17 @@ int main() {
              EMBED_DENSE1_WEIGHTS_PART_SIZE);
   }
 
+  // Load and update dense1 bias
+  {
+    const auto bias = loadWeights(basePath + EMBED_DENSE1_BIAS, EMBED_DENSE1_BIAS_SIZE);
+    if (bias.empty()) {
+      return -1;
+    }
+    g.update(g.bias_dense1_rtp,
+             bias.data(),
+             EMBED_DENSE1_BIAS_SIZE);
+  }
+
 
   g.run(1);
   g.wait();

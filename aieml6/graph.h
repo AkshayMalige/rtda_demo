@@ -90,10 +90,12 @@ public:
     kernel      k_wsplit0;
     kernel      k_rollconcat0;
     kernel      k_biasadd0;
+    kernel      k_biasadd1;
 
     // RTP ports for weights
     input_port matrixA_dense0_rtp;
     input_port bias_dense0_rtp;
+    input_port bias_dense1_rtp;
     input_port matrixA_dense1_rtp[TP_CASC_LEN_LAYER2];
 
 
@@ -139,6 +141,11 @@ public:
         headers(k_biasadd0) = {"bias_add.h"};
         runtime<ratio>(k_biasadd0) = 1.0;
 
+        k_biasadd1 = kernel::create(bias_add_kernel);
+        source(k_biasadd1) = "bias_add.cpp";
+        headers(k_biasadd1) = {"bias_add.h"};
+        runtime<ratio>(k_biasadd1) = 1.0;
+
 
         connect<window<512>>(dense1.out[0], k_biasadd0.in[0]);
         connect<adf::parameter>(bias_dense0_rtp, k_biasadd0.in[1]);
@@ -158,7 +165,9 @@ public:
         layer1_out = output_plio::create("layer1_out", plio_32_bits,
                                          (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
 
-        connect< window<512> >(dense2.out[0], k_lrelu1.in[0]);
+        connect<window<512>>(dense2.out[0], k_biasadd1.in[0]);
+        connect<adf::parameter>(bias_dense1_rtp, k_biasadd1.in[1]);
+        connect<window<512>>(k_biasadd1.out[0], k_lrelu1.in[0]);
 
 
         connect<window<512> >(k_lrelu1.out[0], layer1_out.in[0]);
