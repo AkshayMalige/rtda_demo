@@ -11,6 +11,7 @@
 #include "window_split_256_to_128x2.h"
 #include "roll_concat.h"
 #include "bias_add.h"
+#include "roll_concat.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -49,11 +50,12 @@ using dense768x128 = matrix_vector_mul_graph<
 // Graph connects dense1 and dense2; leaky ReLU is handled in PL
 class NeuralNetworkGraph : public graph {
 public:
-    input_plio  layer0_in[TP_CASC_LEN_LAYER3];
+    input_plio  layer0_in;
 
     dense768x128 dense3;
     // Final dense layer output directly drives a PLIO
     output_plio layer1_out;
+    kernel      k_rollconcat0;
 
 
 
@@ -65,11 +67,17 @@ public:
         std::string base_path = DATA_DIR;
         layer1_out = output_plio::create("layer1_out", plio_32_bits, (base_path + "/" + EMBED_DENSE1_OUTPUT).c_str());
 
-        for (int i = 0; i < (int)TP_CASC_LEN_LAYER3; ++i) {
-            std::string in_file = base_path + "/" + SUBSOLVER0_INPUT_DATA_PREFIX        + std::to_string(i) + ".txt";
-            layer0_in[i]      = input_plio::create( ("layer0_in_"      + std::to_string(i)).c_str(), plio_32_bits, in_file.c_str() );
-            connect<>(layer0_in[i].out[0], dense3.inB[i]);
-          }
+        layer0_in      = input_plio::create("layer0_in", plio_32_bits,
+            (base_path + "/" + TMP_INP768).c_str());
+
+
+
+        k_rollconcat0 = kernel::create(roll_concat_kernel);
+        source(k_rollconcat0) = "roll_concat.cpp";
+        headers(k_rollconcat0) = {"roll_concat.h"};
+        runtime<ratio>(k_rollconcat0) = 1.0;
+
+        connect< window<512> >(layer0_in.out[0], k_rollconcat0.in[0]);
 
 
 

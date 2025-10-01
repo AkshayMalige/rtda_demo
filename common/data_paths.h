@@ -20,6 +20,7 @@
 #define EMBED_DENSE1_BIAS           "embed_dense_1_bias.txt"
 #define EMBED_MODEL_OUTPUT           "embed_model_output.txt"
 
+#define TMP_INP768   "embed_dense_1_output.txt"
 
 // SUBSOLVER0 graph files --------------------------------------------------
 #define SUBSOLVER0_INPUT_DATA_PREFIX   "solver_0_input_part"
