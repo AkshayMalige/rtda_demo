@@ -1,47 +1,56 @@
-# AI Engine-ML Graph: `dense1 → leaky_relu → dense2 → leaky_relu → roll_concat → dense3`
+# AI Engine-ML Graph: Four-Layer Neural Network with Roll-Concat
 
-This directory implements a three-layer neural network graph with the following pipeline:
+This directory implements a four-layer neural network graph featuring a roll-concat operation and shared buffer tiling for efficient memory access across a large cascaded matrix multiply.
 
-1. **`dense1`** (8×128) – first matrix-vector multiply producing hidden activations
-2. **`bias_add`** – adds bias to dense1 output
-3. **`leaky_relu`** – activation function (AIE kernel)
-4. **`window_split_128_to_64x2`** – splits 128-element output into two 64-element windows for cascaded dense2
-5. **`dense2`** (128×128, cascade length=2) – second matrix-vector multiply
-6. **`leaky_relu`** – activation function on dense2 output
-7. **`roll_concat`** – repeats the 128-element output 6 times to create 768 elements
-8. **`window_split_768_to_128x6`** – splits 768 elements into six 128-element windows for cascaded dense3
-9. **`dense3`** (128×768, cascade length=6) – third matrix-vector multiply producing final 128-element output
+## Architecture
 
-All weights are loaded via RTP (runtime parameters) rather than PLIO files.
+### Pipeline
+1. **`roll_concat`** – Repeats input 128-element vector 6 times to create 768 elements
+2. **`dense0`** (768×128, cascade length=12) – Large matrix-vector multiply with shared buffer input
+3. **`bias_add`** → **`leaky_relu`** → **`window_split_128_to_64x2`**
+4. **`dense1`** (128×128, cascade length=2) – Second dense layer
+5. **`bias_add`** → **`leaky_relu`** → **`window_split_128_to_64x2`**
+6. **`dense2`** (128×128, cascade length=2) – Third dense layer
+7. **`bias_add`** → **`leaky_relu`** → **`window_split_128_to_64x2`**
+8. **`dense3`** (128×128, cascade length=2) – Fourth dense layer
+9. **`bias_add`** → **`leaky_relu`** – Final output
+
+### Key Features
+- **Shared Buffer**: 768-element buffer tiled across 12 cascade kernels for dense0
+- **Roll-Concat**: Efficiently replicates 128→768 elements for large matrix input
+- **4 Dense Layers**: Progressive transformation from 768 inputs to 128 outputs
+- All weights loaded via RTP (runtime parameters)
+
+### Layer Configurations
+- **Layer 0**: 768×128 dense layer with 12-way cascade (TP_CASC_LEN_LAYER3=12)
+- **Layers 1-3**: 128×128 dense layers with 2-way cascade (TP_CASC_LEN_LAYER2=2)
+- **Activation**: Leaky ReLU with slope 0.1
+- **Tiling**: `ROLL_CONCAT_TILE_SPAN = 768 / 12 = 64` elements per cascade tile
 
 ## Directory Layout
 
 ```
-├── graph.cpp                       # Instantiates `NeuralNetworkGraph` for simulation
-├── graph.h                         # Graph definition with RTP weight connections
+├── graph.cpp                       # Instantiates NeuralNetworkGraph
+├── graph.h                         # Graph definition with shared buffer and RTP connections
 ├── leaky_relu.cpp/.h               # Leaky ReLU activation kernel
 ├── bias_add.cpp/.h                 # Bias addition kernel
-├── window_split_128_to_64x2.cpp/.h # Window splitter for dense2 cascade
-├── window_split_768_to_128x6.cpp/.h # Window splitter for dense3 cascade
-├── roll_concat.cpp/.h              # Repeats 128→768 for dense3 input
-└── Makefile
+├── window_split_128_to_64x2.cpp/.h # Window splitter for cascade inputs
+├── roll_concat.cpp/.h              # Roll-concat kernel (128→768)
+├── window_split_768_to_*.h         # Additional window split utilities (unused)
+├── aie.cfg                         # AIE compiler configuration
+└── Makefile                        # Build targets
 ```
 
-## Build
+## Build & Simulation
 
-Compile the AI Engine graph using:
-
+### Compile AI Engine Graph
 ```bash
-cd aieml6
+cd aieml7
 make graph TARGET=hw       # or TARGET=hw_emu
 ```
+Produces `Work/libadf.a` containing the compiled graph.
 
-This produces `Work/libadf.a` containing the compiled graph.
-
-## Simulation
-
-Run AI Engine simulation:
-
+### Run AI Engine Simulation
 ```bash
 make sim
 ```
@@ -49,21 +58,40 @@ make sim
 ## Data Flow
 
 ### Input/Output PLIO
-- **Input**: `layer0_in` reads from `../data/embed_input_data.txt` (8 floats)
-- **Output**: `layer1_out` writes to `../data/embed_dense1_output.txt` (128 floats)
+- **Input**: `layer0_in` reads from `../data/tmp_inp768.txt` (128 floats)
+- **Output**: `layer_out` writes to `../data/subsolver_0_dense_3_output_aie.txt` (128 floats)
 
 ### Runtime Parameters (RTP)
-Weights are provided via RTP connections rather than PLIO files:
-- `matrixA_dense0_rtp`: 8×128 weights for dense1
-- `bias_dense0_rtp`: 128-element bias for dense1
-- `matrixA_dense1_rtp[2]`: Two 64×128 weight matrices for cascaded dense2
-- Dense3 weights (128×768, 6-way cascade) are connected but not shown in current RTP ports
+Weights provided via RTP connections:
+- `matrixA_dense0_rtp[12]`: Twelve weight matrices for 12-way cascaded dense0
+- `bias_dense0_rtp`: 128-element bias for dense0
+- `matrixA_dense1_rtp[2]`: Two weight matrices for 2-way cascaded dense1
+- `bias_dense1_rtp`: 128-element bias for dense1
+- `matrixA_dense2_rtp[2]`: Two weight matrices for 2-way cascaded dense2
+- `bias_dense2_rtp`: 128-element bias for dense2
+- `matrixA_dense3_rtp[2]`: Two weight matrices for 2-way cascaded dense3
+- `bias_dense3_rtp`: 128-element bias for dense3
 
 ### Processing Pipeline
 ```
-input(8) → dense1(8×128) → bias_add → leaky_relu → split(128→64×2) →
-dense2(128×128) → leaky_relu → roll_concat(128→768) → split(768→128×6) →
-dense3(128×768) → output(128)
+input(128) → roll_concat(128→768) → shared_buffer[768] →
+dense0(768×128, casc=12) → bias → leaky_relu → split →
+dense1(128×128, casc=2) → bias → leaky_relu → split →
+dense2(128×128, casc=2) → bias → leaky_relu → split →
+dense3(128×128, casc=2) → bias → leaky_relu → output(128)
 ```
 
-Test data is generated by `../data/generate_test_data.py`.
+## Shared Buffer Tiling
+
+The roll-concat output uses a shared buffer with tiled access:
+- **Buffer Size**: 768 floats
+- **Number of Consumers**: 12 (cascade kernels in dense0)
+- **Tile Size**: 64 floats per consumer
+- **Write Access**: Single writer (roll_concat kernel) writes entire 768-element buffer
+- **Read Access**: Each of 12 cascade kernels reads its own 64-element tile with stride offset
+
+## Notes
+- Test data is generated by `../data/generate_test_data.py`
+- This architecture demonstrates efficient shared buffer usage for large cascaded operations
+- Kernel placement can be manually specified via `location<kernel>` directives in graph.h
+- This graph serves as the "solver" component tested independently before integration into aieml9

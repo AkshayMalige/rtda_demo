@@ -130,7 +130,7 @@ public:
 
     kernel k_rollconcat;
 
-    adf::shared_buffer<float> roll_concat_buffer;
+    shared_buffer<float> roll_concat_buffer;
 
     input_port matrixA_embed0_rtp;
     input_port bias_embed0_rtp;
@@ -325,5 +325,47 @@ public:
         connect<parameter>(matrixA_output0_rtp, output_dense0.matrixA[0]);
         connect<window<512>>(k_lrelu_solver3.out[0], output_dense0.inB[0]);
         connect<window<128>>(output_dense0.out[0], layer_out.in[0]);
+
+
+
+
+        // ---- AIE-ML soft placement for aieml9  -------------------------------------
+
+        // 0) I/O: keep PLIO-near compute in the south band (rows 0–2) for short shims.
+        //    (Optional) If you know your PLIO shim row, keep the first band close.
+
+        // 1) EMBED block (dense8x128 → bias → LReLU → split → dense128x128)
+        location<kernel>(k_bias_embed0) = tile( 3,2);
+        location<kernel>(k_lrelu_embed0) = tile( 3,3);
+        location<kernel>(k_wsplit_embed0) = tile( 3,4);
+
+        // Put the second dense (TP_CASC_LEN_LAYER2=2) in its own column band
+        location<kernel>(k_bias_embed1) = tile( 6,5);
+        location<kernel>(k_lrelu_embed1) = tile( 6,6);
+
+        // 2) ROLL-CONCAT + SHARED BUFFER near the *start* of solver0 to minimize hops
+        location<kernel>(k_rollconcat) = tile( 8,3);
+
+
+        // 3) SOLVER0: dense768x128 (TP_CASC_LEN_LAYER3=12). Give it a **single-column**
+        // vertical runway with slack in rows. Anchoring the head helps the placer chain.
+        // Bias+LReLU + splitter right next door (same column or neighbor column)
+        location<kernel>(k_bias_solver0)   = tile(11,4);
+        location<kernel>(k_lrelu_solver0)  = tile(11,5);
+        location<kernel>(k_wsplit_solver0) = tile(11,6);
+
+        // 4) SOLVER1/2/3: each dense128x128 (TP_CASC_LEN_LAYER2=2). Give each a column
+        // band; keep their bias/LReLU + split neighbors co-located for short windows.
+        location<kernel>(k_bias_solver1)   = tile(15,3);
+        location<kernel>(k_lrelu_solver1)  = tile(15,4);
+        location<kernel>(k_wsplit_solver1) = tile(15,5);
+
+        location<kernel>(k_bias_solver2)   = tile(19,3);
+        location<kernel>(k_lrelu_solver2)  = tile(19,4);
+        location<kernel>(k_wsplit_solver2) = tile(19,5);
+
+        location<kernel>(k_bias_solver3)   = tile(23,3);
+        location<kernel>(k_lrelu_solver3)  = tile(23,4);
+
     }
 };
