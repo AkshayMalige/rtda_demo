@@ -19,8 +19,6 @@ static constexpr unsigned int TP_API = 0;
 static constexpr unsigned int TP_DUAL_IP = 0;
 static constexpr unsigned int TP_NUM_OUTPUTS = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER1 = 1;
-static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
-static constexpr unsigned int TP_CASC_LEN_LAYER3 = 1;
 
 
 
@@ -31,7 +29,7 @@ using dense128x32 = matrix_vector_mul_graph<
     TP_SHIFT,
     TP_RND,
     TP_NUM_FRAMES,
-    TP_CASC_LEN_LAYER2,
+    TP_CASC_LEN_LAYER1,
     TP_SAT,
     TP_SSR,
     TP_DIM_A_LEADING,
