@@ -61,12 +61,14 @@ AIE_INCLUDE_FLAGS := \
 	--include="$(DSPLIB_PATH)/L2/include/aie"
 
 # Full v++ command flags, assembled from variables above.
+
 VPP_FLAGS := \
 	-c \
 	--mode aie \
 	--target=$(TARGET) \
 	--platform=$(PLATFORM) \
 	--work_dir=$(WORK_DIR) \
+	--config=$(AIE_CFG) \
 	$(AIE_INCLUDE_FLAGS)
 
 
@@ -80,7 +82,7 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
-$(GRAPH_LIB): $(GRAPH_SRC) graph.h ../common/nn_defs.h ../common/data_paths.h
+$(GRAPH_LIB): $(GRAPH_SRC) graph.h ../common/nn_defs.h ../common/data_paths.h $(AIE_CFG)
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
