@@ -227,6 +227,7 @@ public:
         fifo_depth(wsplit0_leg1) = 384;
         location<fifo>(wsplit0_leg1) = dma_fifo(aie_tile, 7, 0, 0x0700, 384);
 
+
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             connect<parameter>(matrixA_dense1_rtp[i], dense1.matrixA[i]);
         }
@@ -244,6 +245,7 @@ public:
         fifo_depth(wsplit1_leg1) = 384;
         location<fifo>(wsplit1_leg1) = dma_fifo(aie_tile, 6, 1, 0x0700, 384);
 
+
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             connect<parameter>(matrixA_dense2_rtp[i], dense2.matrixA[i]);
         }
@@ -260,6 +262,7 @@ public:
         auto wsplit2_leg1 = connect<window<256>>(k_wsplit2.out[1], dense3.inB[1]);
         fifo_depth(wsplit2_leg1) = 384;
         location<fifo>(wsplit2_leg1) = dma_fifo(aie_tile, 7, 1, 0x0700, 384);
+
 
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             connect<parameter>(matrixA_dense3_rtp[i], dense3.matrixA[i]);
