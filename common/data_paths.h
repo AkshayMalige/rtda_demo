@@ -39,6 +39,8 @@
 #define SUBSOLVER0_DENSE1_BIAS         "solver_0_dense_1_bias.txt"
 #define SUBSOLVER0_DENSE2_BIAS         "solver_0_dense_2_bias.txt"
 #define SUBSOLVER0_DENSE3_BIAS         "solver_0_dense_3_bias.txt"
+#define SUBSOLVER0_WEIGHT_STREAM        "solver_0_weights_stream.txt"
+#define SUBSOLVER0_BIAS_STREAM          "solver_0_bias_stream.txt"
 #define SUBSOLVER0_HOST_OUTPUT         "solver_0_host_output.txt"
 
 // OUTPUT graph files ------------------------------------------------------

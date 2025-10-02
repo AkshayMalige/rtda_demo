@@ -58,19 +58,18 @@ make sim
 ## Data Flow
 
 ### Input/Output PLIO
-- **Input**: `layer0_in` reads from `../data/tmp_inp768.txt` (128 floats)
+- **Activation Input**: `layer0_in` reads from `../data/tmp_inp768.txt` (128 floats)
+- **Weights Stream**: `weights_in` ingests the concatenated weights file `../data/solver_0_weights_stream.txt`
+- **Bias Stream**: `biases_in` ingests the concatenated bias file `../data/solver_0_bias_stream.txt`
 - **Output**: `layer_out` writes to `../data/subsolver_0_dense_3_output_aie.txt` (128 floats)
 
-### Runtime Parameters (RTP)
-Weights provided via RTP connections:
-- `matrixA_dense0_rtp[12]`: Twelve weight matrices for 12-way cascaded dense0
-- `bias_dense0_rtp`: 128-element bias for dense0
-- `matrixA_dense1_rtp[2]`: Two weight matrices for 2-way cascaded dense1
-- `bias_dense1_rtp`: 128-element bias for dense1
-- `matrixA_dense2_rtp[2]`: Two weight matrices for 2-way cascaded dense2
-- `bias_dense2_rtp`: 128-element bias for dense2
-- `matrixA_dense3_rtp[2]`: Two weight matrices for 2-way cascaded dense3
-- `bias_dense3_rtp`: 128-element bias for dense3
+### Parameter Streaming
+- All dense-layer weights are appended into a single stream file in the order dense0 → dense1 → dense2 → dense3.
+- A single shared buffer (`weights_buffer`) holds every weight element; each cascade kernel reads its slice
+  via `read_access` offsets.
+- Bias vectors are concatenated into one bias stream and staged in `bias_buffer`, which exposes four window
+  views (one per layer).
+- The flow avoids packet headers and dedicated loader kernels—the PLIO stream writes directly into the shared buffers.
 
 ### Processing Pipeline
 ```

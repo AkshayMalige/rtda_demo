@@ -1,13 +1,14 @@
 #include "bias_add.h"
+#include <aie_api/aie.hpp>
 
 void bias_add_kernel(input_window<float>* __restrict dense_window,
-                    output_window<float>* __restrict biased_window,
-                    const float (&bias)[HIDDEN_SIZE])
+                    input_buffer<float>& __restrict bias_window,
+                    output_window<float>* __restrict biased_window)
 {
-    // Process one window of HIDDEN_SIZE floats
+    auto bias_ptr = aie::begin(bias_window);
     for (int i = 0; i < HIDDEN_SIZE; ++i) {
-        float x = window_readincr(dense_window);
-        float y = x + bias[i];
+        const float x = window_readincr(dense_window);
+        const float y = x + bias_ptr[i];
         window_writeincr(biased_window, y);
     }
 }
