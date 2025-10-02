@@ -35,23 +35,20 @@ static constexpr unsigned int ROLL_CONCAT_TILE_SPAN = ROLL_CONCAT_TOTAL / TP_CAS
 static_assert(ROLL_CONCAT_TILE_SPAN * TP_CASC_LEN_LAYER3 == ROLL_CONCAT_TOTAL,
               "Shared buffer tiling must cover the entire roll-concat frame");
 
-static constexpr unsigned int DENSE0_WEIGHTS_OFFSET = 0;
-static constexpr unsigned int DENSE1_WEIGHTS_OFFSET =
-    DENSE0_WEIGHTS_OFFSET + SUBSOLVER0_DENSE0_WEIGHTS_SIZE;
-static constexpr unsigned int DENSE2_WEIGHTS_OFFSET =
-    DENSE1_WEIGHTS_OFFSET + SUBSOLVER0_DENSE1_WEIGHTS_SIZE;
-static constexpr unsigned int DENSE3_WEIGHTS_OFFSET =
-    DENSE2_WEIGHTS_OFFSET + SUBSOLVER0_DENSE2_WEIGHTS_SIZE;
-static constexpr unsigned int TOTAL_WEIGHT_ELEMENTS =
-    DENSE3_WEIGHTS_OFFSET + SUBSOLVER0_DENSE3_WEIGHTS_SIZE;
-static constexpr unsigned int TOTAL_WEIGHT_BYTES = TOTAL_WEIGHT_ELEMENTS * sizeof(float);
-static_assert(TOTAL_WEIGHT_ELEMENTS == SUBSOLVER0_DENSE0_WEIGHTS_SIZE +
-                                          SUBSOLVER0_DENSE1_WEIGHTS_SIZE +
-                                          SUBSOLVER0_DENSE2_WEIGHTS_SIZE +
-                                          SUBSOLVER0_DENSE3_WEIGHTS_SIZE,
-              "Weight buffer size must cover all dense layers");
-static_assert(TOTAL_WEIGHT_BYTES > 32 * 1024,
-              "Total dense weights overflow a single shared buffer tile and require external memory");
+static constexpr unsigned int TOTAL_WEIGHT_ELEMENTS = SUBSOLVER0_DENSE0_WEIGHTS_SIZE +
+                                                      SUBSOLVER0_DENSE1_WEIGHTS_SIZE +
+                                                      SUBSOLVER0_DENSE2_WEIGHTS_SIZE +
+                                                      SUBSOLVER0_DENSE3_WEIGHTS_SIZE;
+
+static constexpr unsigned int WEIGHT_GROUP_ELEMENTS = SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE;
+static_assert(WEIGHT_GROUP_ELEMENTS == SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE,
+              "Weight part size must be uniform across cascaded dense layers");
+static_assert(WEIGHT_GROUP_ELEMENTS == SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE,
+              "Weight part size must be uniform across cascaded dense layers");
+static_assert(WEIGHT_GROUP_ELEMENTS == SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE,
+              "Weight part size must be uniform across cascaded dense layers");
+static_assert(WEIGHT_GROUP_ELEMENTS <= 12288,
+              "Each shared weight tile must stay within the 12,288-float cap");
 
 static constexpr unsigned int DENSE0_WEIGHT_PORT_BASE = 0;
 static constexpr unsigned int DENSE1_WEIGHT_PORT_BASE =
@@ -64,6 +61,9 @@ static constexpr unsigned int TOTAL_WEIGHT_PORTS =
     DENSE3_WEIGHT_PORT_BASE + TP_CASC_LEN_LAYER2;
 static_assert(TOTAL_WEIGHT_PORTS == TP_CASC_LEN_LAYER3 + 3 * TP_CASC_LEN_LAYER2,
               "Weight buffer must expose one port per cascade leg");
+static constexpr unsigned int TOTAL_WEIGHT_GROUPS = TOTAL_WEIGHT_PORTS;
+static_assert(TOTAL_WEIGHT_ELEMENTS == TOTAL_WEIGHT_GROUPS * WEIGHT_GROUP_ELEMENTS,
+              "Weight group tiling must span the aggregated weight stream");
 
 static constexpr unsigned int DENSE0_BIAS_OFFSET = 0;
 static constexpr unsigned int DENSE1_BIAS_OFFSET =
@@ -146,7 +146,7 @@ public:
     kernel      k_wsplit1;
     kernel      k_wsplit2;
     adf::shared_buffer<float> roll_concat_buffer;
-    adf::external_buffer<float> weights_buffer;
+    adf::shared_buffer<float>  weights_buffer;
     adf::shared_buffer<float> bias_buffer;
 
     NeuralNetworkGraph() {
@@ -180,13 +180,14 @@ public:
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
             .offset = {0}
         });
-        // TOTAL_WEIGHT_BYTES (~576 KiB) exceeds the 32 KiB on-tile memory footprint of a shared buffer,
-        // so stage all dense weights in external memory instead.
-        weights_buffer = external_buffer<float>::create({TOTAL_WEIGHT_ELEMENTS}, 1, TOTAL_WEIGHT_PORTS);
+        weights_buffer = shared_buffer<float>::create({WEIGHT_GROUP_ELEMENTS, TOTAL_WEIGHT_GROUPS}, 1, TOTAL_WEIGHT_PORTS);
         write_access(weights_buffer.in[0]) = tiling({
-            .buffer_dimension = {TOTAL_WEIGHT_ELEMENTS},
-            .tiling_dimension = {TOTAL_WEIGHT_ELEMENTS},
-            .offset = {0}
+            .buffer_dimension = {WEIGHT_GROUP_ELEMENTS, TOTAL_WEIGHT_GROUPS},
+            .tiling_dimension = {WEIGHT_GROUP_ELEMENTS, 1},
+            .offset = {0, 0},
+            .tile_traversal = {
+                {.dimension = 1, .stride = 1, .wrap = TOTAL_WEIGHT_GROUPS}
+            }
         });
 
         bias_buffer = shared_buffer<float>::create({TOTAL_BIAS_ELEMENTS}, 1, TOTAL_BIAS_PORTS);
@@ -203,9 +204,9 @@ public:
             const int port = DENSE0_WEIGHT_PORT_BASE + i;
             connect<>(weights_buffer.out[port], dense0.inA[i]);
             read_access(weights_buffer.out[port]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_ELEMENTS},
-                .tiling_dimension = {SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE},
-                .offset = {DENSE0_WEIGHTS_OFFSET + i * SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE}
+                .buffer_dimension = {WEIGHT_GROUP_ELEMENTS, TOTAL_WEIGHT_GROUPS},
+                .tiling_dimension = {SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE, 1},
+                .offset = {0, DENSE0_WEIGHT_PORT_BASE + i}
             });
             dimensions(dense0.inA[i]) = {SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE};
         }
@@ -290,9 +291,9 @@ public:
             const int port = DENSE1_WEIGHT_PORT_BASE + i;
             connect<>(weights_buffer.out[port], dense1.inA[i]);
             read_access(weights_buffer.out[port]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_ELEMENTS},
-                .tiling_dimension = {SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE},
-                .offset = {DENSE1_WEIGHTS_OFFSET + i * SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE}
+                .buffer_dimension = {WEIGHT_GROUP_ELEMENTS, TOTAL_WEIGHT_GROUPS},
+                .tiling_dimension = {SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE, 1},
+                .offset = {0, DENSE1_WEIGHT_PORT_BASE + i}
             });
             dimensions(dense1.inA[i]) = {SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE};
         }
@@ -314,9 +315,9 @@ public:
             const int port = DENSE2_WEIGHT_PORT_BASE + i;
             connect<>(weights_buffer.out[port], dense2.inA[i]);
             read_access(weights_buffer.out[port]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_ELEMENTS},
-                .tiling_dimension = {SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE},
-                .offset = {DENSE2_WEIGHTS_OFFSET + i * SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE}
+                .buffer_dimension = {WEIGHT_GROUP_ELEMENTS, TOTAL_WEIGHT_GROUPS},
+                .tiling_dimension = {SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE, 1},
+                .offset = {0, DENSE2_WEIGHT_PORT_BASE + i}
             });
             dimensions(dense2.inA[i]) = {SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE};
         }
@@ -338,9 +339,9 @@ public:
             const int port = DENSE3_WEIGHT_PORT_BASE + i;
             connect<>(weights_buffer.out[port], dense3.inA[i]);
             read_access(weights_buffer.out[port]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_ELEMENTS},
-                .tiling_dimension = {SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE},
-                .offset = {DENSE3_WEIGHTS_OFFSET + i * SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE}
+                .buffer_dimension = {WEIGHT_GROUP_ELEMENTS, TOTAL_WEIGHT_GROUPS},
+                .tiling_dimension = {SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE, 1},
+                .offset = {0, DENSE3_WEIGHT_PORT_BASE + i}
             });
             dimensions(dense3.inA[i]) = {SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE};
         }
