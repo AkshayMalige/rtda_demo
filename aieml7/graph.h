@@ -114,15 +114,19 @@ public:
         k_rollconcat0 = kernel::create(roll_concat_kernel);
         source(k_rollconcat0) = "roll_concat.cpp";
         headers(k_rollconcat0) = {"roll_concat.h"};
-        runtime<ratio>(k_rollconcat0) = 1.0;
+        runtime<ratio>(k_rollconcat0) = 0.60;
+        location<kernel>(k_rollconcat0) = tile(6, 0);
 
         connect(layer0_in.out[0], k_rollconcat0.in[0]);
         dimensions(k_rollconcat0.in[0]) = {HIDDEN_SIZE};
         dimensions(k_rollconcat0.out[0]) = {ROLL_CONCAT_TOTAL};
 
-        roll_concat_buffer = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
+        roll_concat_buffer = shared_buffer<float>::create(extents<window<ROLL_CONCAT_TOTAL>>(), 1, TP_CASC_LEN_LAYER3);
+        location<buffer>(roll_concat_buffer) = tile(6, 0);
 
-        connect<>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
+        auto rollconcat_to_buffer = connect<>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
+        fifo_depth(rollconcat_to_buffer) = 384;
+        location<fifo>(rollconcat_to_buffer) = dma_fifo(aie_tile, 6, 0, 0x0000, 384);
 
         write_access(roll_concat_buffer.in[0]) = tiling({
             .buffer_dimension = {ROLL_CONCAT_TOTAL},
@@ -147,65 +151,81 @@ public:
         k_biasadd0 = kernel::create(bias_add_kernel);
         source(k_biasadd0) = "bias_add.cpp";
         headers(k_biasadd0) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd0) = 1.0;
+        runtime<ratio>(k_biasadd0) = 0.45;
+        location<kernel>(k_biasadd0) = tile(10, 1);
 
         k_biasadd1 = kernel::create(bias_add_kernel);
         source(k_biasadd1) = "bias_add.cpp";
         headers(k_biasadd1) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd1) = 1.0;
+        runtime<ratio>(k_biasadd1) = 0.45;
+        location<kernel>(k_biasadd1) = tile(23, 1);
 
         k_biasadd2 = kernel::create(bias_add_kernel);
         source(k_biasadd2) = "bias_add.cpp";
         headers(k_biasadd2) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd2) = 1.0;
+        runtime<ratio>(k_biasadd2) = 0.45;
+        location<kernel>(k_biasadd2) = tile(26, 1);
 
         k_biasadd3 = kernel::create(bias_add_kernel);
         source(k_biasadd3) = "bias_add.cpp";
         headers(k_biasadd3) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd3) = 1.0;
+        runtime<ratio>(k_biasadd3) = 0.45;
+        location<kernel>(k_biasadd3) = tile(29, 1);
 
         k_lrelu0 = kernel::create(leaky_relu_kernel);
         source(k_lrelu0) = "leaky_relu.cpp";
         headers(k_lrelu0) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu0) = 1.0;
+        runtime<ratio>(k_lrelu0) = 0.50;
+        location<kernel>(k_lrelu0) = tile(10, 2);
 
         k_lrelu1 = kernel::create(leaky_relu_kernel);
         source(k_lrelu1) = "leaky_relu.cpp";
         headers(k_lrelu1) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu1) = 1.0;
+        runtime<ratio>(k_lrelu1) = 0.50;
+        location<kernel>(k_lrelu1) = tile(23, 2);
 
         k_lrelu2 = kernel::create(leaky_relu_kernel);
         source(k_lrelu2) = "leaky_relu.cpp";
         headers(k_lrelu2) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu2) = 1.0;
+        runtime<ratio>(k_lrelu2) = 0.50;
+        location<kernel>(k_lrelu2) = tile(26, 2);
 
         k_lrelu3 = kernel::create(leaky_relu_kernel);
         source(k_lrelu3) = "leaky_relu.cpp";
         headers(k_lrelu3) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu3) = 1.0;
+        runtime<ratio>(k_lrelu3) = 0.50;
+        location<kernel>(k_lrelu3) = tile(29, 2);
 
         k_wsplit0 = kernel::create(window_split_128_to_64x2);
         source(k_wsplit0) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit0) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(k_wsplit0) = 1.0;
+        runtime<ratio>(k_wsplit0) = 0.60;
+        location<kernel>(k_wsplit0) = tile(7, 0);
 
         k_wsplit1 = kernel::create(window_split_128_to_64x2);
         source(k_wsplit1) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit1) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(k_wsplit1) = 1.0;
+        runtime<ratio>(k_wsplit1) = 0.60;
+        location<kernel>(k_wsplit1) = tile(6, 1);
 
         k_wsplit2 = kernel::create(window_split_128_to_64x2);
         source(k_wsplit2) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit2) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(k_wsplit2) = 1.0;
+        runtime<ratio>(k_wsplit2) = 0.60;
+        location<kernel>(k_wsplit2) = tile(7, 1);
 
         connect<window<512>>(dense0.out[0], k_biasadd0.in[0]);
         connect<parameter>(bias_dense0_rtp, k_biasadd0.in[1]);
         connect<window<512>>(k_biasadd0.out[0], k_lrelu0.in[0]);
         connect<window<512>>(k_lrelu0.out[0], k_wsplit0.in[0]);
 
-        connect<window<256>>(k_wsplit0.out[0], dense1.inB[0]);
-        connect<window<256>>(k_wsplit0.out[1], dense1.inB[1]);
+        auto wsplit0_leg0 = connect<window<256>>(k_wsplit0.out[0], dense1.inB[0]);
+        fifo_depth(wsplit0_leg0) = 384;
+        location<fifo>(wsplit0_leg0) = dma_fifo(aie_tile, 7, 0, 0x0100, 384);
+
+        auto wsplit0_leg1 = connect<window<256>>(k_wsplit0.out[1], dense1.inB[1]);
+        fifo_depth(wsplit0_leg1) = 384;
+        location<fifo>(wsplit0_leg1) = dma_fifo(aie_tile, 7, 0, 0x0700, 384);
 
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             connect<parameter>(matrixA_dense1_rtp[i], dense1.matrixA[i]);
@@ -216,8 +236,13 @@ public:
         connect<window<512>>(k_biasadd1.out[0], k_lrelu1.in[0]);
         connect<window<512>>(k_lrelu1.out[0], k_wsplit1.in[0]);
 
-        connect<window<256>>(k_wsplit1.out[0], dense2.inB[0]);
-        connect<window<256>>(k_wsplit1.out[1], dense2.inB[1]);
+        auto wsplit1_leg0 = connect<window<256>>(k_wsplit1.out[0], dense2.inB[0]);
+        fifo_depth(wsplit1_leg0) = 384;
+        location<fifo>(wsplit1_leg0) = dma_fifo(aie_tile, 6, 1, 0x0100, 384);
+
+        auto wsplit1_leg1 = connect<window<256>>(k_wsplit1.out[1], dense2.inB[1]);
+        fifo_depth(wsplit1_leg1) = 384;
+        location<fifo>(wsplit1_leg1) = dma_fifo(aie_tile, 6, 1, 0x0700, 384);
 
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             connect<parameter>(matrixA_dense2_rtp[i], dense2.matrixA[i]);
@@ -228,8 +253,13 @@ public:
         connect<window<512>>(k_biasadd2.out[0], k_lrelu2.in[0]);
         connect<window<512>>(k_lrelu2.out[0], k_wsplit2.in[0]);
 
-        connect<window<256>>(k_wsplit2.out[0], dense3.inB[0]);
-        connect<window<256>>(k_wsplit2.out[1], dense3.inB[1]);
+        auto wsplit2_leg0 = connect<window<256>>(k_wsplit2.out[0], dense3.inB[0]);
+        fifo_depth(wsplit2_leg0) = 384;
+        location<fifo>(wsplit2_leg0) = dma_fifo(aie_tile, 7, 1, 0x0100, 384);
+
+        auto wsplit2_leg1 = connect<window<256>>(k_wsplit2.out[1], dense3.inB[1]);
+        fifo_depth(wsplit2_leg1) = 384;
+        location<fifo>(wsplit2_leg1) = dma_fifo(aie_tile, 7, 1, 0x0700, 384);
 
         for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
             connect<parameter>(matrixA_dense3_rtp[i], dense3.matrixA[i]);
@@ -239,19 +269,42 @@ public:
         connect<parameter>(bias_dense3_rtp, k_biasadd3.in[1]);
         connect<window<512>>(k_biasadd3.out[0], k_lrelu3.in[0]);
 
-        connect<window<512>>(k_lrelu3.out[0], layer_out.in[0]);
+        auto lrelu3_to_plio = connect<window<512>>(k_lrelu3.out[0], layer_out.in[0]);
+        fifo_depth(lrelu3_to_plio) = 512;
+        location<fifo>(lrelu3_to_plio) = {dma_fifo(aie_tile, 29, 2, 0x0400, 512),
+                                          ss_fifo(shim_tile, 29, 0, 0)};
 
 
-        auto d0_k = dense0.getKernels();
-        location<kernel>(d0_k[0]) = tile(20, 4);
+        auto dense0_kernels = dense0.getKernels();
+        for (auto& k : dense0_kernels) {
+            runtime<ratio>(k) = 0.90;
+        }
+        auto dense1_kernels = dense1.getKernels();
+        for (auto& k : dense1_kernels) {
+            runtime<ratio>(k) = 0.90;
+        }
+        auto dense2_kernels = dense2.getKernels();
+        for (auto& k : dense2_kernels) {
+            runtime<ratio>(k) = 0.90;
+        }
+        auto dense3_kernels = dense3.getKernels();
+        for (auto& k : dense3_kernels) {
+            runtime<ratio>(k) = 0.90;
+        }
 
+        auto dense0_group = node_group::create(dense0_kernels);
+        location<group>(dense0_group) = area_group({{aie_tile, 10, 1, 21, 6}}, true, false, true);
 
-        // constexpr unsigned dense2_base_col = 2;
-        // constexpr unsigned dense2_row = 0;
-        // auto dense2_kernels = dense2.getKernels();
-        // for (unsigned i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-        //     adf::location<adf::kernel>(dense2_kernels[i]) =
-        //         adf::tile(dense2_base_col + i, dense2_row);
-        // }
+        auto dense1_group = node_group::create(dense1_kernels);
+        location<group>(dense1_group) = area_group({{aie_tile, 23, 1, 24, 6}}, true, false, true);
+
+        auto dense2_group = node_group::create(dense2_kernels);
+        location<group>(dense2_group) = area_group({{aie_tile, 26, 1, 27, 6}}, true, false, true);
+
+        auto dense3_group = node_group::create(dense3_kernels);
+        location<group>(dense3_group) = area_group({{aie_tile, 29, 1, 30, 6}}, true, false, true);
+
+        auto router_group = node_group::create({k_rollconcat0, k_wsplit0, k_wsplit1, k_wsplit2});
+        location<group>(router_group) = area_group({{aie_tile, 6, 0, 8, 1}}, false, true, false);
     }
 };
