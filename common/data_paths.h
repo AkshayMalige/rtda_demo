@@ -35,10 +35,12 @@
 #define SUBSOLVER0_LEAKYRELU_2_PREFIX  "solver_0_leakyrelu_2_output_part"
 #define SUBSOLVER0_DENSE3_WEIGHTS_PREFIX "solver_0_dense_3_weights_part"
 #define SUBSOLVER0_DENSE3_OUTPUT       "solver_0_dense_3_output_aie.txt"
+#define SUBSOLVER0_DENSE_WEIGHTS_STREAM "solver_0_dense_weights_stream.txt"
 #define SUBSOLVER0_DENSE0_BIAS         "solver_0_dense_0_bias.txt"
 #define SUBSOLVER0_DENSE1_BIAS         "solver_0_dense_1_bias.txt"
 #define SUBSOLVER0_DENSE2_BIAS         "solver_0_dense_2_bias.txt"
 #define SUBSOLVER0_DENSE3_BIAS         "solver_0_dense_3_bias.txt"
+#define SUBSOLVER0_DENSE_BIASES_STREAM  "solver_0_dense_biases_stream.txt"
 #define SUBSOLVER0_HOST_OUTPUT         "solver_0_host_output.txt"
 
 // OUTPUT graph files ------------------------------------------------------

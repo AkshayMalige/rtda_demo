@@ -2,12 +2,13 @@
 
 void bias_add_kernel(input_window<float>* __restrict dense_window,
                     output_window<float>* __restrict biased_window,
-                    const float (&bias)[HIDDEN_SIZE])
+                    input_buffer<float>& __restrict bias_buffer)
 {
-    // Process one window of HIDDEN_SIZE floats
+    float* __restrict bias_ptr = bias_buffer.data();
+
     for (int i = 0; i < HIDDEN_SIZE; ++i) {
-        float x = window_readincr(dense_window);
-        float y = x + bias[i];
+        const float x = window_readincr(dense_window);
+        const float y = x + bias_ptr[i];
         window_writeincr(biased_window, y);
     }
 }

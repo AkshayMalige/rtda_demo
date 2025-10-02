@@ -16,10 +16,11 @@ This directory implements a four-layer neural network graph featuring a roll-con
 9. **`bias_add`** → **`leaky_relu`** – Final output
 
 ### Key Features
-- **Shared Buffer**: 768-element buffer tiled across 12 cascade kernels for dense0
+- **Shared Activation Buffer**: 768-element roll-concat buffer tiled across 12 cascade kernels for dense0 inputs
+- **Shared Weight/Bias Streams**: Concatenated dense weights and biases arrive over dedicated PLIOs and are staged in shared
+  buffers with 12,288-float-max tiles for every cascade leg
 - **Roll-Concat**: Efficiently replicates 128→768 elements for large matrix input
 - **4 Dense Layers**: Progressive transformation from 768 inputs to 128 outputs
-- All weights loaded via RTP (runtime parameters)
 
 ### Layer Configurations
 - **Layer 0**: 768×128 dense layer with 12-way cascade (TP_CASC_LEN_LAYER3=12)
@@ -31,7 +32,7 @@ This directory implements a four-layer neural network graph featuring a roll-con
 
 ```
 ├── graph.cpp                       # Instantiates NeuralNetworkGraph
-├── graph.h                         # Graph definition with shared buffer and RTP connections
+├── graph.h                         # Graph definition with shared buffers for activations, weights, and biases
 ├── leaky_relu.cpp/.h               # Leaky ReLU activation kernel
 ├── bias_add.cpp/.h                 # Bias addition kernel
 ├── window_split_128_to_64x2.cpp/.h # Window splitter for cascade inputs
@@ -59,18 +60,17 @@ make sim
 
 ### Input/Output PLIO
 - **Input**: `layer0_in` reads from `../data/tmp_inp768.txt` (128 floats)
+- **Weights**: `weights_in` ingests the concatenated stream `../data/solver_0_dense_weights_stream.txt`
+- **Biases**: `biases_in` ingests the concatenated stream `../data/solver_0_dense_biases_stream.txt`
 - **Output**: `layer_out` writes to `../data/subsolver_0_dense_3_output_aie.txt` (128 floats)
 
-### Runtime Parameters (RTP)
-Weights provided via RTP connections:
-- `matrixA_dense0_rtp[12]`: Twelve weight matrices for 12-way cascaded dense0
-- `bias_dense0_rtp`: 128-element bias for dense0
-- `matrixA_dense1_rtp[2]`: Two weight matrices for 2-way cascaded dense1
-- `bias_dense1_rtp`: 128-element bias for dense1
-- `matrixA_dense2_rtp[2]`: Two weight matrices for 2-way cascaded dense2
-- `bias_dense2_rtp`: 128-element bias for dense2
-- `matrixA_dense3_rtp[2]`: Two weight matrices for 2-way cascaded dense3
-- `bias_dense3_rtp`: 128-element bias for dense3
+### Shared Weight & Bias Staging
+- `graph.cpp` concatenates the per-cascade weight parts (`12 × 8,192` floats for dense0 and `3 × (2 × 8,192)` floats for dense1–3)
+  into a single 147,456-float stream before `g.init()`. Bias files (4 × 128 floats) are concatenated similarly.
+- `weights_in` writes directly into a shared buffer with 18 uniform tiles (each 8,192 floats ≤ the 12,288-float cap).
+  Dense cascades index their tile via explicit offsets so every leg receives its aligned slice.
+- `biases_in` stages four 128-float tiles inside a shared buffer. Each bias_add kernel consumes its tile through a
+  pointer view, matching the leaky-ReLU fan-out while keeping on-chip storage minimal (≈2 kB for biases).
 
 ### Processing Pipeline
 ```
