@@ -66,16 +66,11 @@ make sim
 
 ### Parameter Streaming
 - All dense-layer weights are appended into a single stream file in the order dense0 → dense1 → dense2 → dense3.
-- A matrix of shared buffer tiles (`weights_buffer`) holds every weight element; each cascade kernel reads its slice
+- A single shared buffer (`weights_buffer`) holds every weight element; each cascade kernel reads its slice
   via `read_access` offsets.
 - Bias vectors are concatenated into one bias stream and staged in `bias_buffer`, which exposes four window
   views (one per layer).
 - The flow avoids packet headers and dedicated loader kernels—the PLIO stream writes directly into the shared buffers.
-
-### Weight Buffer Sizing
-- Total dense-layer weight elements: 147,456 floats = 589,824 bytes.
-- AI Engine tile memory is 32 KiB, so a shared buffer cannot house the full concatenated weight stream.
-- The shared-buffer grid arranges the aggregated stream into 18 tiles (one per cascade leg) capped at 8,192 floats each, keeping every tile comfortably under the 12,288-float shared-memory guidance while still presenting simple offset-based reads.
 
 ### Processing Pipeline
 ```
