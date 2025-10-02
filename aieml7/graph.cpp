@@ -2,6 +2,7 @@
 #include "data_paths.h"
 #include "nn_defs.h"
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -32,103 +33,85 @@ int main() {
     return weights;
   };
 
-  g.init();
-
   const std::string basePath = std::string(DATA_DIR) + "/";
 
 
-  // Load and update dense0 weights for each cascade leg
-  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER3; ++cascIdx) {
-    const std::string weightPath = basePath + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
-    const auto dense0Weights = loadWeights(weightPath, SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE);
-    if (dense0Weights.empty()) {
-      return -1;
-    }
-    g.update(g.matrixA_dense0_rtp[cascIdx],
-             dense0Weights.data(),
-             SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE);
+  const std::string weightStreamPath = basePath + SUBSOLVER0_WEIGHT_STREAM;
+  const std::string biasStreamPath = basePath + SUBSOLVER0_BIAS_STREAM;
+
+  std::ofstream weightStream(weightStreamPath);
+  if (!weightStream.is_open()) {
+    std::cerr << "Error: Could not open weight stream file '" << weightStreamPath << "'" << std::endl;
+    return -1;
   }
 
-  // Load and update dense0 bias
-  {
-    const auto bias = loadWeights(basePath + SUBSOLVER0_DENSE0_BIAS, SUBSOLVER0_DENSE0_BIAS_SIZE);
+  std::ofstream biasStream(biasStreamPath);
+  if (!biasStream.is_open()) {
+    std::cerr << "Error: Could not open bias stream file '" << biasStreamPath << "'" << std::endl;
+    return -1;
+  }
+
+  weightStream << std::setprecision(10);
+  biasStream << std::setprecision(10);
+
+  auto appendValues = [](std::ofstream& stream, const std::vector<float>& payload) {
+    for (const float value : payload) {
+      stream << value << '\n';
+    }
+  };
+
+  auto appendWeightParts = [&](const std::string& prefix, int cascLen, std::size_t partSize) -> bool {
+    for (int cascIdx = 0; cascIdx < cascLen; ++cascIdx) {
+      const std::string weightPath = basePath + prefix + std::to_string(cascIdx) + ".txt";
+      const auto weights = loadWeights(weightPath, partSize);
+      if (weights.empty()) {
+        return false;
+      }
+      appendValues(weightStream, weights);
+    }
+    return true;
+  };
+
+  if (!appendWeightParts(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX, TP_CASC_LEN_LAYER3,
+                         SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE)) {
+    return -1;
+  }
+
+  if (!appendWeightParts(SUBSOLVER0_DENSE1_WEIGHTS_PREFIX, TP_CASC_LEN_LAYER2,
+                         SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE)) {
+    return -1;
+  }
+
+  if (!appendWeightParts(SUBSOLVER0_DENSE2_WEIGHTS_PREFIX, TP_CASC_LEN_LAYER2,
+                         SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE)) {
+    return -1;
+  }
+
+  if (!appendWeightParts(SUBSOLVER0_DENSE3_WEIGHTS_PREFIX, TP_CASC_LEN_LAYER2,
+                         SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE)) {
+    return -1;
+  }
+
+  auto appendBias = [&](const std::string& path, std::size_t expected) -> bool {
+    const auto bias = loadWeights(basePath + path, expected);
     if (bias.empty()) {
-      return -1;
+      return false;
     }
-    g.update(g.bias_dense0_rtp,
-             bias.data(),
-             SUBSOLVER0_DENSE0_BIAS_SIZE);
+    appendValues(biasStream, bias);
+    return true;
+  };
+
+  if (!appendBias(SUBSOLVER0_DENSE0_BIAS, SUBSOLVER0_DENSE0_BIAS_SIZE) ||
+      !appendBias(SUBSOLVER0_DENSE1_BIAS, SUBSOLVER0_DENSE1_BIAS_SIZE) ||
+      !appendBias(SUBSOLVER0_DENSE2_BIAS, SUBSOLVER0_DENSE2_BIAS_SIZE) ||
+      !appendBias(SUBSOLVER0_DENSE3_BIAS, SUBSOLVER0_DENSE3_BIAS_SIZE)) {
+    return -1;
   }
 
-  // Load and update dense1 weights for each cascade leg
-  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER2; ++cascIdx) {
-    const std::string weightPath = basePath + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
-    const auto dense1Weights = loadWeights(weightPath, SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE);
-    if (dense1Weights.empty()) {
-      return -1;
-    }
-    g.update(g.matrixA_dense1_rtp[cascIdx],
-             dense1Weights.data(),
-             SUBSOLVER0_DENSE1_WEIGHTS_PART_SIZE);
-  }
+  weightStream.close();
+  biasStream.close();
 
-  // Load and update dense1 bias
-  {
-    const auto bias = loadWeights(basePath + SUBSOLVER0_DENSE1_BIAS, SUBSOLVER0_DENSE1_BIAS_SIZE);
-    if (bias.empty()) {
-      return -1;
-    }
-    g.update(g.bias_dense1_rtp,
-             bias.data(),
-             SUBSOLVER0_DENSE1_BIAS_SIZE);
-  }
-
-  // Load and update dense2 weights for each cascade leg
-  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER2; ++cascIdx) {
-    const std::string weightPath = basePath + SUBSOLVER0_DENSE2_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
-    const auto dense2Weights = loadWeights(weightPath, SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE);
-    if (dense2Weights.empty()) {
-      return -1;
-    }
-    g.update(g.matrixA_dense2_rtp[cascIdx],
-             dense2Weights.data(),
-             SUBSOLVER0_DENSE2_WEIGHTS_PART_SIZE);
-  }
-
-  // Load and update dense2 bias
-  {
-    const auto bias = loadWeights(basePath + SUBSOLVER0_DENSE2_BIAS, SUBSOLVER0_DENSE2_BIAS_SIZE);
-    if (bias.empty()) {
-      return -1;
-    }
-    g.update(g.bias_dense2_rtp,
-             bias.data(),
-             SUBSOLVER0_DENSE2_BIAS_SIZE);
-  }
-
-  // Load and update dense3 weights for each cascade leg
-  for (int cascIdx = 0; cascIdx < TP_CASC_LEN_LAYER2; ++cascIdx) {
-    const std::string weightPath = basePath + SUBSOLVER0_DENSE3_WEIGHTS_PREFIX + std::to_string(cascIdx) + ".txt";
-    const auto dense3Weights = loadWeights(weightPath, SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE);
-    if (dense3Weights.empty()) {
-      return -1;
-    }
-    g.update(g.matrixA_dense3_rtp[cascIdx],
-             dense3Weights.data(),
-             SUBSOLVER0_DENSE3_WEIGHTS_PART_SIZE);
-  }
-
-  // Load and update dense3 bias
-  {
-    const auto bias = loadWeights(basePath + SUBSOLVER0_DENSE3_BIAS, SUBSOLVER0_DENSE3_BIAS_SIZE);
-    if (bias.empty()) {
-      return -1;
-    }
-    g.update(g.bias_dense3_rtp,
-             bias.data(),
-             SUBSOLVER0_DENSE3_BIAS_SIZE);
-  }
-
+  g.init();
   g.run(1);
   g.wait();
   g.end();
