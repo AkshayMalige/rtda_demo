@@ -47,3 +47,9 @@ constexpr int OUTPUT_DENSE0_OUT_PAD = 32;
 constexpr int OUTPUT_DENSE0_WEIGHTS_SIZE = OUTPUT_DENSE0_OUT_PAD * HIDDEN_SIZE;
 constexpr int OUTPUT_DENSE0_BIAS_SIZE = 32;
 constexpr int OUTPUT_FINAL_OUTPUT_SIZE = 32;
+
+
+static constexpr int FLOATS_PER_D768_LEG = 8192;      // 32 KB
+static constexpr int D768_LEGS_PER_BANK  = 6;         // fanout per memory tile
+static constexpr int FLOATS_PER_D128_PART= 8192;      // 32 KB (128x128 split into 2 parts)
+static constexpr int D128_TOTAL_PARTS    = 6;         // 3 layers × 2 parts

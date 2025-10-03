@@ -51,3 +51,6 @@
 // Miscellaneous -----------------------------------------------------------
 #define EMBED_HOST_OUTPUT           "host_output.txt"
 
+#define PRELOAD_w768_lo             "preload_w768_lo.txt"
+#define PRELOAD_w768_hi             "preload_w768_hi.txt" 
+#define PRELOAD_w128_all             "preload_w128_all.txt" 

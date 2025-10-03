@@ -42,6 +42,7 @@ KERNEL_SRCS   := \
         window_split_512_to_256x2.cpp \
         window_split_256_to_128x2.cpp \
         roll_concat.cpp \
+		copy_to_locals_6.cpp \
         bias_add.cpp
 KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 
