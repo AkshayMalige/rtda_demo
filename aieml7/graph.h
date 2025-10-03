@@ -15,7 +15,7 @@
 
 #include <adf/io_buffer/io_buffer.h>      // defines adf::buffer
 #include <adf/io_buffer/io_buffer_extents.h> // defines extents<...>
-#include <adf/window/window.h>   
+#include <adf/window/types.h>             // lightweight window<> definition
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
