@@ -1,5 +1,7 @@
 #pragma once
 #include <adf.h>
+#include <array>
+#include <string>
 #include "nn_defs.h"
 #include "data_paths.h"
 #include "matrix_vector_mul_graph.hpp"
@@ -11,7 +13,6 @@
 #include "window_split_256_to_128x2.h"
 #include "roll_concat.h"
 #include "bias_add.h"
-#include "copy_to_locals_6.h"
 
 #include <adf/io_buffer/io_buffer.h>      // defines adf::buffer
 #include <adf/io_buffer/io_buffer_extents.h> // defines extents<...>
@@ -97,24 +98,17 @@ public:
     kernel      k_wsplit1;
     kernel      k_wsplit2;
 
-    kernel      k_copy768_lo;
-    kernel      k_copy768_hi;
-    kernel      k_copy128_all;
-
     adf::shared_buffer<float> roll_concat_buffer;
 
-    // input_port matrixA_dense0_rtp[TP_CASC_LEN_LAYER3];
     input_port bias_dense0_rtp;
-    // input_port matrixA_dense1_rtp[TP_CASC_LEN_LAYER2];
     input_port bias_dense1_rtp;
-    // input_port matrixA_dense2_rtp[TP_CASC_LEN_LAYER2];
     input_port bias_dense2_rtp;
-    // input_port matrixA_dense3_rtp[TP_CASC_LEN_LAYER2];
     input_port bias_dense3_rtp;
 
-    buffer wbank_d768_lo;
-    buffer wbank_d768_hi;
-    buffer wbank_d128_all;
+    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>          dense0_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS>  dense1_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS>  dense2_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS>  dense3_weight_plios;
 
     NeuralNetworkGraph() {
         std::string base_path = DATA_DIR;
@@ -125,15 +119,7 @@ public:
 
 
             /////////change input file names////
-        input_plio preload_w768_lo  = input_plio::create("preload_w768_lo",  plio_32_bits,(base_path + "/" + PRELOAD_w768_lo).c_str()); // "data/preload_w768_lo.txt");
-        input_plio preload_w768_hi  = input_plio::create("preload_w768_hi",  plio_32_bits,(base_path + "/" + PRELOAD_w768_hi).c_str()); // "data/preload_w768_hi.txt");
-        input_plio preload_w128_all = input_plio::create("preload_w128_all", plio_32_bits, (base_path + "/" + PRELOAD_w128_all).c_str()); //"data/preload_w128_all.txt");
-        
-        wbank_d768_lo  = buffer::create(extents<window<FLOATS_PER_D768_LEG * D768_LEGS_PER_BANK>>());
-        wbank_d768_hi  = buffer::create(extents<window<FLOATS_PER_D768_LEG * D768_LEGS_PER_BANK>>());
-        wbank_d128_all = buffer::create(extents<window<FLOATS_PER_D128_PART * D128_TOTAL_PARTS>>());
-
-        buffer wbuf_d768_leg[12] = {
+        buffer wbuf_d768_leg[SUBSOLVER0_INPUT_PARTS] = {
             buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
             buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
             buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
@@ -147,7 +133,7 @@ public:
             buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
             buffer::create(extents<window<FLOATS_PER_D768_LEG>>())
             };
-        
+
 // Dense128x128 (3 layers × 2 parts)
         buffer wbuf_d128_l1_part[2] = {
             buffer::create(extents<window<FLOATS_PER_D128_PART>>()),
@@ -161,16 +147,6 @@ public:
             buffer::create(extents<window<FLOATS_PER_D128_PART>>()),
             buffer::create(extents<window<FLOATS_PER_D128_PART>>())
         };
-
-        k_copy768_lo = kernel::create(copy768_lo);
-        k_copy768_hi = kernel::create(copy768_hi);
-        k_copy128_all= kernel::create(copy128_all);
-        runtime<ratio>(k_copy768_lo)  = 0.15;
-        runtime<ratio>(k_copy768_hi)  = 0.15;
-        runtime<ratio>(k_copy128_all) = 0.15;
-
-
-
         k_rollconcat0 = kernel::create(roll_concat_kernel);
         source(k_rollconcat0) = "roll_concat.cpp";
         headers(k_rollconcat0) = {"roll_concat.h"};
@@ -189,39 +165,28 @@ public:
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
             .offset = {0}
         });
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            const std::string plio_name = "dense0_w_part" + std::to_string(part);
+            const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
+            dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
+            connect<window<FLOATS_PER_D768_LEG * sizeof(float)>>(dense0_weight_plios[part].out[0], wbuf_d768_leg[part].in[0]);
+        }
 
-        connect<window<FLOATS_PER_D768_LEG * D768_LEGS_PER_BANK * sizeof(float)>> (preload_w768_lo.out[0],  wbank_d768_lo.in[0]);
-        connect<window<FLOATS_PER_D768_LEG * D768_LEGS_PER_BANK * sizeof(float)>> (preload_w768_hi.out[0],  wbank_d768_hi.in[0]);
-        connect<window<FLOATS_PER_D128_PART * D128_TOTAL_PARTS * sizeof(float)>>  (preload_w128_all.out[0], wbank_d128_all.in[0]);
+        auto connect_layer_weights = [&](auto& plios,
+                                         const char* name_prefix,
+                                         const char* file_prefix,
+                                         buffer (&wbuf)[SUBSOLVER0_LAYER_WEIGHTS_PARTS]) {
+            for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+                const std::string plio_name = std::string(name_prefix) + std::to_string(part);
+                const std::string file_path = base_path + "/" + file_prefix + std::to_string(part) + ".txt";
+                plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
+                connect<window<FLOATS_PER_D128_PART * sizeof(float)>>(plios[part].out[0], wbuf[part].in[0]);
+            }
+        };
 
-        // ===== Bank -> copy kernels =====
-        connect<window<FLOATS_PER_D768_LEG * D768_LEGS_PER_BANK * sizeof(float)>> (wbank_d768_lo.out[0],  k_copy768_lo.in[0]);
-        connect<window<FLOATS_PER_D768_LEG * D768_LEGS_PER_BANK * sizeof(float)>> (wbank_d768_hi.out[0],  k_copy768_hi.in[0]);
-        connect<window<FLOATS_PER_D128_PART * D128_TOTAL_PARTS * sizeof(float)>>  (wbank_d128_all.out[0], k_copy128_all.in[0]);
-
-        // ===== copy768_lo -> locals (dense0 legs 0..5) =====
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_lo.out[0], wbuf_d768_leg[0].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_lo.out[1], wbuf_d768_leg[1].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_lo.out[2], wbuf_d768_leg[2].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_lo.out[3], wbuf_d768_leg[3].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_lo.out[4], wbuf_d768_leg[4].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_lo.out[5], wbuf_d768_leg[5].in[0]);
-        
-        // ===== copy768_hi -> locals (dense0 legs 6..11) =====
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_hi.out[0], wbuf_d768_leg[6].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_hi.out[1], wbuf_d768_leg[7].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_hi.out[2], wbuf_d768_leg[8].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_hi.out[3], wbuf_d768_leg[9].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_hi.out[4], wbuf_d768_leg[10].in[0]);
-        connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (k_copy768_hi.out[5], wbuf_d768_leg[11].in[0]);
-
-        // ===== copy128_all -> locals for dense1/2/3 (part 0..1) =====
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (k_copy128_all.out[0], wbuf_d128_l1_part[0].in[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (k_copy128_all.out[1], wbuf_d128_l1_part[1].in[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (k_copy128_all.out[2], wbuf_d128_l2_part[0].in[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (k_copy128_all.out[3], wbuf_d128_l2_part[1].in[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (k_copy128_all.out[4], wbuf_d128_l3_part[0].in[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (k_copy128_all.out[5], wbuf_d128_l3_part[1].in[0]);
+        connect_layer_weights(dense1_weight_plios, "dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX, wbuf_d128_l1_part);
+        connect_layer_weights(dense2_weight_plios, "dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX, wbuf_d128_l2_part);
+        connect_layer_weights(dense3_weight_plios, "dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX, wbuf_d128_l3_part);
 
         // ===== locals -> DSPLib MVM matrixA ports =====
         // dense0 (12 cascade legs)
@@ -333,10 +298,6 @@ public:
 
         connect<window<256>>(k_wsplit2.out[0], dense3.inB[0]);
         connect<window<256>>(k_wsplit2.out[1], dense3.inB[1]);
-
-        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i) {
-            connect<parameter>(matrixA_dense3_rtp[i], dense3.matrixA[i]);
-        }
 
         connect<window<512>>(dense3.out[0], k_biasadd3.in[0]);
         connect<parameter>(bias_dense3_rtp, k_biasadd3.in[1]);
