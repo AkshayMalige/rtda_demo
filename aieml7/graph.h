@@ -11,6 +11,7 @@
 #include "window_split_256_to_128x2.h"
 #include "roll_concat.h"
 #include "bias_add.h"
+#include "weights_split.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -64,24 +65,18 @@ static_assert(SUBSOLVER0_DENSE2_WEIGHTS_SIZE == DENSE2_WEIGHT_TILE_SIZE * DENSE2
 static_assert(SUBSOLVER0_DENSE3_WEIGHTS_SIZE == DENSE3_WEIGHT_TILE_SIZE * DENSE3_WEIGHT_TILE_COUNT,
               "Dense3 weights must map to uniform tiles");
 
-static constexpr unsigned int TOTAL_WEIGHT_FLOATS = SUBSOLVER0_DENSE0_WEIGHTS_SIZE +
-                                                    SUBSOLVER0_DENSE1_WEIGHTS_SIZE +
-                                                    SUBSOLVER0_DENSE2_WEIGHTS_SIZE +
-                                                    SUBSOLVER0_DENSE3_WEIGHTS_SIZE;
-static constexpr unsigned int TOTAL_WEIGHT_TILES = DENSE0_WEIGHT_TILE_COUNT +
-                                                   DENSE1_WEIGHT_TILE_COUNT +
-                                                   DENSE2_WEIGHT_TILE_COUNT +
-                                                   DENSE3_WEIGHT_TILE_COUNT;
+static constexpr unsigned int TOTAL_WEIGHT_FLOATS = SUBSOLVER0_DENSE_TOTAL_WEIGHTS_SIZE;
+static constexpr unsigned int TOTAL_WEIGHT_TILES = SUBSOLVER0_DENSE_TOTAL_WEIGHT_TILES;
+static constexpr unsigned int REMAINING_WEIGHT_FLOATS = SUBSOLVER0_DENSE_REMAINING_WEIGHTS_SIZE;
+static constexpr unsigned int REMAINING_WEIGHT_TILES = SUBSOLVER0_DENSE_REMAINING_WEIGHT_TILES;
 
 static constexpr unsigned int DENSE0_WEIGHT_OFFSET = 0;
 static constexpr unsigned int DENSE1_WEIGHT_OFFSET = DENSE0_WEIGHT_OFFSET + SUBSOLVER0_DENSE0_WEIGHTS_SIZE;
 static constexpr unsigned int DENSE2_WEIGHT_OFFSET = DENSE1_WEIGHT_OFFSET + SUBSOLVER0_DENSE1_WEIGHTS_SIZE;
 static constexpr unsigned int DENSE3_WEIGHT_OFFSET = DENSE2_WEIGHT_OFFSET + SUBSOLVER0_DENSE2_WEIGHTS_SIZE;
-
-static constexpr unsigned int DENSE0_WEIGHT_TILE_BASE = 0;
-static constexpr unsigned int DENSE1_WEIGHT_TILE_BASE = DENSE0_WEIGHT_TILE_BASE + DENSE0_WEIGHT_TILE_COUNT;
-static constexpr unsigned int DENSE2_WEIGHT_TILE_BASE = DENSE1_WEIGHT_TILE_BASE + DENSE1_WEIGHT_TILE_COUNT;
-static constexpr unsigned int DENSE3_WEIGHT_TILE_BASE = DENSE2_WEIGHT_TILE_BASE + DENSE2_WEIGHT_TILE_COUNT;
+static constexpr unsigned int DENSE1_LOCAL_WEIGHT_OFFSET = 0;
+static constexpr unsigned int DENSE2_LOCAL_WEIGHT_OFFSET = DENSE1_LOCAL_WEIGHT_OFFSET + SUBSOLVER0_DENSE1_WEIGHTS_SIZE;
+static constexpr unsigned int DENSE3_LOCAL_WEIGHT_OFFSET = DENSE2_LOCAL_WEIGHT_OFFSET + SUBSOLVER0_DENSE2_WEIGHTS_SIZE;
 
 static constexpr unsigned int BIAS_TILE_SIZE = SUBSOLVER0_DENSE0_BIAS_SIZE;
 static_assert(BIAS_TILE_SIZE == SUBSOLVER0_DENSE1_BIAS_SIZE, "Dense1 bias slice must match Dense0 size");
@@ -159,8 +154,10 @@ public:
     kernel      k_wsplit0;
     kernel      k_wsplit1;
     kernel      k_wsplit2;
+    kernel      k_weights_split;
     adf::shared_buffer<float> roll_concat_buffer;
-    adf::shared_buffer<float> weights_buffer;
+    adf::shared_buffer<float> dense0_weights_buffer;
+    adf::shared_buffer<float> remaining_weights_buffer;
     adf::shared_buffer<float> bias_buffer;
 
     NeuralNetworkGraph() {
@@ -194,11 +191,30 @@ public:
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
             .offset = {0}
         });
-        weights_buffer = shared_buffer<float>::create({TOTAL_WEIGHT_FLOATS}, 1, TOTAL_WEIGHT_TILES);
-        connect<>(weights_in.out[0], weights_buffer.in[0]);
-        write_access(weights_buffer.in[0]) = tiling({
-            .buffer_dimension = {TOTAL_WEIGHT_FLOATS},
-            .tiling_dimension = {TOTAL_WEIGHT_FLOATS},
+        k_weights_split = kernel::create(split_dense_weights);
+        source(k_weights_split) = "weights_split.cpp";
+        headers(k_weights_split) = {"weights_split.h"};
+        runtime<ratio>(k_weights_split) = 1.0;
+
+        dense0_weights_buffer = shared_buffer<float>::create({SUBSOLVER0_DENSE0_WEIGHTS_SIZE}, 1, DENSE0_WEIGHT_TILE_COUNT);
+        remaining_weights_buffer = shared_buffer<float>::create({REMAINING_WEIGHT_FLOATS}, 1, REMAINING_WEIGHT_TILES);
+
+        connect<window<TOTAL_WEIGHT_FLOATS * sizeof(float)>>(weights_in.out[0], k_weights_split.in[0]);
+        dimensions(k_weights_split.in[0]) = {TOTAL_WEIGHT_FLOATS};
+
+        connect<window<SUBSOLVER0_DENSE0_WEIGHTS_SIZE * sizeof(float)>>(k_weights_split.out[0],
+                                                                        dense0_weights_buffer.in[0]);
+        connect<window<REMAINING_WEIGHT_FLOATS * sizeof(float)>>(k_weights_split.out[1],
+                                                                 remaining_weights_buffer.in[0]);
+
+        write_access(dense0_weights_buffer.in[0]) = tiling({
+            .buffer_dimension = {SUBSOLVER0_DENSE0_WEIGHTS_SIZE},
+            .tiling_dimension = {SUBSOLVER0_DENSE0_WEIGHTS_SIZE},
+            .offset = {0}
+        });
+        write_access(remaining_weights_buffer.in[0]) = tiling({
+            .buffer_dimension = {REMAINING_WEIGHT_FLOATS},
+            .tiling_dimension = {REMAINING_WEIGHT_FLOATS},
             .offset = {0}
         });
 
@@ -210,40 +226,40 @@ public:
             .offset = {0}
         });
 
-        unsigned int weight_tile_idx = 0;
-        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i, ++weight_tile_idx) {
-            connect<>(weights_buffer.out[weight_tile_idx], dense0.matrixA[i]);
-            read_access(weights_buffer.out[weight_tile_idx]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_FLOATS},
+        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
+            connect<>(dense0_weights_buffer.out[i], dense0.matrixA[i]);
+            read_access(dense0_weights_buffer.out[i]) = tiling({
+                .buffer_dimension = {SUBSOLVER0_DENSE0_WEIGHTS_SIZE},
                 .tiling_dimension = {DENSE0_WEIGHT_TILE_SIZE},
                 .offset = {static_cast<int>(DENSE0_WEIGHT_OFFSET + i * DENSE0_WEIGHT_TILE_SIZE)}
             });
         }
 
-        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i, ++weight_tile_idx) {
-            connect<>(weights_buffer.out[weight_tile_idx], dense1.matrixA[i]);
-            read_access(weights_buffer.out[weight_tile_idx]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_FLOATS},
+        unsigned int remaining_tile_idx = 0;
+        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i, ++remaining_tile_idx) {
+            connect<>(remaining_weights_buffer.out[remaining_tile_idx], dense1.matrixA[i]);
+            read_access(remaining_weights_buffer.out[remaining_tile_idx]) = tiling({
+                .buffer_dimension = {REMAINING_WEIGHT_FLOATS},
                 .tiling_dimension = {DENSE1_WEIGHT_TILE_SIZE},
-                .offset = {static_cast<int>(DENSE1_WEIGHT_OFFSET + i * DENSE1_WEIGHT_TILE_SIZE)}
+                .offset = {static_cast<int>(DENSE1_LOCAL_WEIGHT_OFFSET + i * DENSE1_WEIGHT_TILE_SIZE)}
             });
         }
 
-        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i, ++weight_tile_idx) {
-            connect<>(weights_buffer.out[weight_tile_idx], dense2.matrixA[i]);
-            read_access(weights_buffer.out[weight_tile_idx]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_FLOATS},
+        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i, ++remaining_tile_idx) {
+            connect<>(remaining_weights_buffer.out[remaining_tile_idx], dense2.matrixA[i]);
+            read_access(remaining_weights_buffer.out[remaining_tile_idx]) = tiling({
+                .buffer_dimension = {REMAINING_WEIGHT_FLOATS},
                 .tiling_dimension = {DENSE2_WEIGHT_TILE_SIZE},
-                .offset = {static_cast<int>(DENSE2_WEIGHT_OFFSET + i * DENSE2_WEIGHT_TILE_SIZE)}
+                .offset = {static_cast<int>(DENSE2_LOCAL_WEIGHT_OFFSET + i * DENSE2_WEIGHT_TILE_SIZE)}
             });
         }
 
-        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i, ++weight_tile_idx) {
-            connect<>(weights_buffer.out[weight_tile_idx], dense3.matrixA[i]);
-            read_access(weights_buffer.out[weight_tile_idx]) = tiling({
-                .buffer_dimension = {TOTAL_WEIGHT_FLOATS},
+        for (int i = 0; i < TP_CASC_LEN_LAYER2; ++i, ++remaining_tile_idx) {
+            connect<>(remaining_weights_buffer.out[remaining_tile_idx], dense3.matrixA[i]);
+            read_access(remaining_weights_buffer.out[remaining_tile_idx]) = tiling({
+                .buffer_dimension = {REMAINING_WEIGHT_FLOATS},
                 .tiling_dimension = {DENSE3_WEIGHT_TILE_SIZE},
-                .offset = {static_cast<int>(DENSE3_WEIGHT_OFFSET + i * DENSE3_WEIGHT_TILE_SIZE)}
+                .offset = {static_cast<int>(DENSE3_LOCAL_WEIGHT_OFFSET + i * DENSE3_WEIGHT_TILE_SIZE)}
             });
         }
 
