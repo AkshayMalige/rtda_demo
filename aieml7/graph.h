@@ -30,6 +30,9 @@ static constexpr unsigned int TP_NUM_OUTPUTS = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER1 = 1;
 static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
 static constexpr unsigned int TP_CASC_LEN_LAYER3 = 12;
+static_assert(TP_CASC_LEN_LAYER3 % 2 == 0,
+              "TP_CASC_LEN_LAYER3 must be even to split across shared buffers");
+static constexpr unsigned int TP_CASC_LEN_LAYER3_PER_BUFFER = TP_CASC_LEN_LAYER3 / 2;
 
 static_assert((ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE) % TP_CASC_LEN_LAYER3 == 0,
               "ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE must be divisible by TP_CASC_LEN_LAYER3");
@@ -95,7 +98,8 @@ public:
     kernel      k_wsplit1;
     kernel      k_wsplit2;
 
-    adf::shared_buffer<float> roll_concat_buffer;
+    adf::shared_buffer<float> roll_concat_buffer_a;
+    adf::shared_buffer<float> roll_concat_buffer_b;
 
     input_port bias_dense0_rtp;
     input_port bias_dense1_rtp;
@@ -143,12 +147,21 @@ public:
         connect(layer0_in.out[0], k_rollconcat0.in[0]);
         dimensions(k_rollconcat0.in[0]) = {HIDDEN_SIZE};
         dimensions(k_rollconcat0.out[0]) = {ROLL_CONCAT_TOTAL};
+        dimensions(k_rollconcat0.out[1]) = {ROLL_CONCAT_TOTAL};
 
-        roll_concat_buffer = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
+        roll_concat_buffer_a = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3_PER_BUFFER);
+        roll_concat_buffer_b = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3_PER_BUFFER);
 
-        connect<>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
+        connect<>(k_rollconcat0.out[0], roll_concat_buffer_a.in[0]);
+        connect<>(k_rollconcat0.out[1], roll_concat_buffer_b.in[0]);
 
-        write_access(roll_concat_buffer.in[0]) = tiling({
+        write_access(roll_concat_buffer_a.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
+
+        write_access(roll_concat_buffer_b.in[0]) = tiling({
             .buffer_dimension = {ROLL_CONCAT_TOTAL},
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
             .offset = {0}
@@ -170,12 +183,21 @@ public:
         connect<>(dense3_weight_plios[1].out[0], dense3.inA[1]);
   
 
-        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
-            connect<>(roll_concat_buffer.out[i], dense0.inB[i]);
-            read_access(roll_concat_buffer.out[i]) = tiling({
+        for (int i = 0; i < TP_CASC_LEN_LAYER3_PER_BUFFER; ++i) {
+            connect<>(roll_concat_buffer_a.out[i], dense0.inB[i]);
+            read_access(roll_concat_buffer_a.out[i]) = tiling({
                 .buffer_dimension = {ROLL_CONCAT_TOTAL},
                 .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
                 .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}});
+        }
+
+        for (int i = 0; i < TP_CASC_LEN_LAYER3_PER_BUFFER; ++i) {
+            const int cascade_index = TP_CASC_LEN_LAYER3_PER_BUFFER + i;
+            connect<>(roll_concat_buffer_b.out[i], dense0.inB[cascade_index]);
+            read_access(roll_concat_buffer_b.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(cascade_index * ROLL_CONCAT_TILE_SPAN)}});
         }
 
         k_biasadd0 = kernel::create(bias_add_kernel);
