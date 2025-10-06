@@ -181,57 +181,57 @@ public:
         k_biasadd0 = kernel::create(bias_add_kernel);
         source(k_biasadd0) = "bias_add.cpp";
         headers(k_biasadd0) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd0) = 1.0;
+        runtime<ratio>(k_biasadd0) = 0.45;
 
         k_biasadd1 = kernel::create(bias_add_kernel);
         source(k_biasadd1) = "bias_add.cpp";
         headers(k_biasadd1) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd1) = 1.0;
+        runtime<ratio>(k_biasadd1) = 0.45;
 
         k_biasadd2 = kernel::create(bias_add_kernel);
         source(k_biasadd2) = "bias_add.cpp";
         headers(k_biasadd2) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd2) = 1.0;
+        runtime<ratio>(k_biasadd2) = 0.45;
 
         k_biasadd3 = kernel::create(bias_add_kernel);
         source(k_biasadd3) = "bias_add.cpp";
         headers(k_biasadd3) = {"bias_add.h"};
-        runtime<ratio>(k_biasadd3) = 1.0;
+        runtime<ratio>(k_biasadd3) = 0.45;
 
         k_lrelu0 = kernel::create(leaky_relu_kernel);
         source(k_lrelu0) = "leaky_relu.cpp";
         headers(k_lrelu0) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu0) = 1.0;
+        runtime<ratio>(k_lrelu0) = 0.5;
 
         k_lrelu1 = kernel::create(leaky_relu_kernel);
         source(k_lrelu1) = "leaky_relu.cpp";
         headers(k_lrelu1) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu1) = 1.0;
+        runtime<ratio>(k_lrelu1) = 0.5;
 
         k_lrelu2 = kernel::create(leaky_relu_kernel);
         source(k_lrelu2) = "leaky_relu.cpp";
         headers(k_lrelu2) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu2) = 1.0;
+        runtime<ratio>(k_lrelu2) = 0.5;
 
         k_lrelu3 = kernel::create(leaky_relu_kernel);
         source(k_lrelu3) = "leaky_relu.cpp";
         headers(k_lrelu3) = {"leaky_relu.h"};
-        runtime<ratio>(k_lrelu3) = 1.0;
+        runtime<ratio>(k_lrelu3) = 0.5;
 
         k_wsplit0 = kernel::create(window_split_128_to_64x2);
         source(k_wsplit0) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit0) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(k_wsplit0) = 1.0;
+        runtime<ratio>(k_wsplit0) = 0.65;
 
         k_wsplit1 = kernel::create(window_split_128_to_64x2);
         source(k_wsplit1) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit1) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(k_wsplit1) = 1.0;
+        runtime<ratio>(k_wsplit1) = 0.65;
 
         k_wsplit2 = kernel::create(window_split_128_to_64x2);
         source(k_wsplit2) = "window_split_128_to_64x2.cpp";
         headers(k_wsplit2) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(k_wsplit2) = 1.0;
+        runtime<ratio>(k_wsplit2) = 0.65;
 
         connect<window<512>>(dense0.out[0], k_biasadd0.in[0]);
         connect<parameter>(bias_dense0_rtp, k_biasadd0.in[1]);
