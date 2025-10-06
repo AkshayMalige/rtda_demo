@@ -38,6 +38,7 @@ AIE_CFG       := aie.cfg
 KERNEL_SRCS   := \
         leaky_relu.cpp \
         window_split_128_to_64x2.cpp \
+        window_split_768_to_64x12.cpp \
         window_split_768_to_512_256.cpp \
         window_split_512_to_256x2.cpp \
         window_split_256_to_128x2.cpp \

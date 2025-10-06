@@ -9,6 +9,7 @@
 #include "leaky_relu.h"
 #include "window_split_128_to_64x2.h"
 #include "window_split_768_to_512_256.h"
+#include "window_split_768_to_64x12.h"
 #include "window_split_512_to_256x2.h"
 #include "window_split_256_to_128x2.h"
 #include "roll_concat.h"
@@ -39,7 +40,7 @@ static_assert((ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE) % TP_CASC_LEN_LAYER3 == 0,
 static constexpr unsigned int ROLL_CONCAT_TOTAL = ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE;
 static constexpr unsigned int ROLL_CONCAT_TILE_SPAN = ROLL_CONCAT_TOTAL / TP_CASC_LEN_LAYER3;
 static_assert(ROLL_CONCAT_TILE_SPAN * TP_CASC_LEN_LAYER3 == ROLL_CONCAT_TOTAL,
-              "Shared buffer tiling must cover the entire roll-concat frame");
+              "Roll-concat slice sizing must cover the entire frame");
 
 
 using dense768x128 = matrix_vector_mul_graph<
@@ -97,8 +98,9 @@ public:
     kernel      k_wsplit0;
     kernel      k_wsplit1;
     kernel      k_wsplit2;
+    kernel      k_rollsplit;
 
-    adf::shared_buffer<float> roll_concat_buffer;
+    buffer      roll_concat_buffer;
 
     input_port bias_dense0_rtp;
     input_port bias_dense1_rtp;
@@ -156,15 +158,21 @@ public:
         dimensions(k_rollconcat0.in[0]) = {HIDDEN_SIZE};
         dimensions(k_rollconcat0.out[0]) = {ROLL_CONCAT_TOTAL};
 
-        roll_concat_buffer = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
+        roll_concat_buffer = buffer::create(extents<window<ROLL_CONCAT_TOTAL * sizeof(float)>>());
 
-        connect<>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
+        connect<window<ROLL_CONCAT_TOTAL * sizeof(float)>>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
 
-        write_access(roll_concat_buffer.in[0]) = tiling({
-            .buffer_dimension = {ROLL_CONCAT_TOTAL},
-            .tiling_dimension = {ROLL_CONCAT_TOTAL},
-            .offset = {0}
-        });
+        k_rollsplit = kernel::create(window_split_768_to_64x12);
+        source(k_rollsplit) = "window_split_768_to_64x12.cpp";
+        headers(k_rollsplit) = {"window_split_768_to_64x12.h"};
+        runtime<ratio>(k_rollsplit) = 1.0;
+
+        connect<window<ROLL_CONCAT_TOTAL * sizeof(float)>>(roll_concat_buffer.out[0], k_rollsplit.in[0]);
+
+        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
+            connect<window<ROLL_CONCAT_TILE_SPAN * sizeof(float)>>(k_rollsplit.out[i], dense0.inB[i]);
+        }
+
         for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
             const std::string plio_name = "dense0_w_part" + std::to_string(part);
             const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
@@ -203,14 +211,6 @@ public:
         connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l3_part[0].out[0], dense3.matrixA[0]);
         connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l3_part[1].out[0], dense3.matrixA[1]);
   
-
-        for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
-            connect<>(roll_concat_buffer.out[i], dense0.inB[i]);
-            read_access(roll_concat_buffer.out[i]) = tiling({
-                .buffer_dimension = {ROLL_CONCAT_TOTAL},
-                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
-                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}});
-        }
 
         k_biasadd0 = kernel::create(bias_add_kernel);
         source(k_biasadd0) = "bias_add.cpp";
