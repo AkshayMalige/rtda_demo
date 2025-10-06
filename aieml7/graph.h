@@ -14,9 +14,6 @@
 #include "roll_concat.h"
 #include "bias_add.h"
 
-#include <adf/io_buffer/io_buffer.h>      // defines adf::buffer
-#include <adf/io_buffer/io_buffer_extents.h> // defines extents<...>
-#include <adf/window/types.h>             // lightweight window<> definition
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -26,7 +23,7 @@ static constexpr unsigned int TP_NUM_FRAMES = 1;
 static constexpr unsigned int TP_SAT = 0;
 static constexpr unsigned int TP_SSR = 1;
 static constexpr unsigned int TP_DIM_A_LEADING = 1;
-static constexpr unsigned int TP_USE_MATRIX_RELOAD = 1;
+static constexpr unsigned int TP_USE_MATRIX_RELOAD = 0;
 static constexpr unsigned int TP_API = 0;
 static constexpr unsigned int TP_DUAL_IP = 0;
 static constexpr unsigned int TP_NUM_OUTPUTS = 1;
@@ -117,36 +114,27 @@ public:
         layer0_in      = input_plio::create("layer0_in", plio_32_bits,
             (base_path + "/" + TMP_INP768).c_str());
 
+        // Create PLIO inputs for weights - directly connected to cascade tiles
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            const std::string plio_name = "dense0_w_part" + std::to_string(part);
+            const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
+            dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
+        }
 
-            /////////change input file names////
-        buffer wbuf_d768_leg[SUBSOLVER0_INPUT_PARTS] = {
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>()),
-            buffer::create(extents<window<FLOATS_PER_D768_LEG>>())
-            };
+        auto connect_layer_weights = [&](auto& plios,
+                                         const char* name_prefix,
+                                         const char* file_prefix) {
+            for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+                const std::string plio_name = std::string(name_prefix) + std::to_string(part);
+                const std::string file_path = base_path + "/" + file_prefix + std::to_string(part) + ".txt";
+                plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
+            }
+        };
 
-// Dense128x128 (3 layers × 2 parts)
-        buffer wbuf_d128_l1_part[2] = {
-            buffer::create(extents<window<FLOATS_PER_D128_PART>>()),
-            buffer::create(extents<window<FLOATS_PER_D128_PART>>())
-        };
-        buffer wbuf_d128_l2_part[2] = {
-            buffer::create(extents<window<FLOATS_PER_D128_PART>>()),
-            buffer::create(extents<window<FLOATS_PER_D128_PART>>())
-        };
-        buffer wbuf_d128_l3_part[2] = {
-            buffer::create(extents<window<FLOATS_PER_D128_PART>>()),
-            buffer::create(extents<window<FLOATS_PER_D128_PART>>())
-        };
+        connect_layer_weights(dense1_weight_plios, "dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX);
+        connect_layer_weights(dense2_weight_plios, "dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
+        connect_layer_weights(dense3_weight_plios, "dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
+
         k_rollconcat0 = kernel::create(roll_concat_kernel);
         source(k_rollconcat0) = "roll_concat.cpp";
         headers(k_rollconcat0) = {"roll_concat.h"};
@@ -165,43 +153,21 @@ public:
             .tiling_dimension = {ROLL_CONCAT_TOTAL},
             .offset = {0}
         });
-        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
-            const std::string plio_name = "dense0_w_part" + std::to_string(part);
-            const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
-            dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
-            connect<window<FLOATS_PER_D768_LEG * sizeof(float)>>(dense0_weight_plios[part].out[0], wbuf_d768_leg[part].in[0]);
-        }
 
-        auto connect_layer_weights = [&](auto& plios,
-                                         const char* name_prefix,
-                                         const char* file_prefix,
-                                         buffer (&wbuf)[SUBSOLVER0_LAYER_WEIGHTS_PARTS]) {
-            for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
-                const std::string plio_name = std::string(name_prefix) + std::to_string(part);
-                const std::string file_path = base_path + "/" + file_prefix + std::to_string(part) + ".txt";
-                plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
-                connect<window<FLOATS_PER_D128_PART * sizeof(float)>>(plios[part].out[0], wbuf[part].in[0]);
-            }
-        };
-
-        connect_layer_weights(dense1_weight_plios, "dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX, wbuf_d128_l1_part);
-        connect_layer_weights(dense2_weight_plios, "dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX, wbuf_d128_l2_part);
-        connect_layer_weights(dense3_weight_plios, "dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX, wbuf_d128_l3_part);
-
-        // ===== locals -> DSPLib MVM matrixA ports =====
+        // Connect weights directly from PLIO to dense layer matrixA ports
         // dense0 (12 cascade legs)
-        for (int i = 0; i < 12; ++i) {
-            connect<window<FLOATS_PER_D768_LEG * sizeof(float)>> (wbuf_d768_leg[i].out[0], dense0.matrixA[i]);
+        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
+            connect<>(dense0_weight_plios[i].out[0], dense0.inA[i]);
         }
         // dense1/2/3 (each 2 parts)
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l1_part[0].out[0], dense1.matrixA[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l1_part[1].out[0], dense1.matrixA[1]);
-        
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l2_part[0].out[0], dense2.matrixA[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l2_part[1].out[0], dense2.matrixA[1]);
-        
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l3_part[0].out[0], dense3.matrixA[0]);
-        connect<window<FLOATS_PER_D128_PART * sizeof(float)>> (wbuf_d128_l3_part[1].out[0], dense3.matrixA[1]);
+        connect<>(dense1_weight_plios[0].out[0], dense1.inA[0]);
+        connect<>(dense1_weight_plios[1].out[0], dense1.inA[1]);
+
+        connect<>(dense2_weight_plios[0].out[0], dense2.inA[0]);
+        connect<>(dense2_weight_plios[1].out[0], dense2.inA[1]);
+
+        connect<>(dense3_weight_plios[0].out[0], dense3.inA[0]);
+        connect<>(dense3_weight_plios[1].out[0], dense3.inA[1]);
   
 
         for (int i = 0; i < TP_CASC_LEN_LAYER3; ++i) {
