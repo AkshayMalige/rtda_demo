@@ -36,7 +36,7 @@ static_assert((ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE) % TP_CASC_LEN_LAYER3 == 0,
 static constexpr unsigned int ROLL_CONCAT_TOTAL = ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE;
 static constexpr unsigned int ROLL_CONCAT_TILE_SPAN = ROLL_CONCAT_TOTAL / TP_CASC_LEN_LAYER3;
 static_assert(ROLL_CONCAT_TILE_SPAN * TP_CASC_LEN_LAYER3 == ROLL_CONCAT_TOTAL,
-              "Shared buffer tiling must cover the entire roll-concat frame");
+              "Roll-concat buffer tiling must cover the entire frame");
 
 
 using dense768x128 = matrix_vector_mul_graph<
@@ -95,7 +95,7 @@ public:
     kernel      k_wsplit1;
     kernel      k_wsplit2;
 
-    adf::shared_buffer<float> roll_concat_buffer;
+    adf::buffer<float> roll_concat_buffer;
 
     input_port bias_dense0_rtp;
     input_port bias_dense1_rtp;
@@ -144,7 +144,7 @@ public:
         dimensions(k_rollconcat0.in[0]) = {HIDDEN_SIZE};
         dimensions(k_rollconcat0.out[0]) = {ROLL_CONCAT_TOTAL};
 
-        roll_concat_buffer = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
+        roll_concat_buffer = buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_LEN_LAYER3);
 
         connect<>(k_rollconcat0.out[0], roll_concat_buffer.in[0]);
 
