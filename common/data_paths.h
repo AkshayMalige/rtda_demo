@@ -47,6 +47,7 @@
 #define OUTPUT_DENSE0_OUTPUT        "output_dense_0_output_aie.txt"
 #define OUTPUT_DENSE0_BIAS          "output_dense_0_bias.txt"
 #define OUTPUT_HOST_OUTPUT          "output_host_output.txt"
+#define AIEML9_OUTPUT_FILE          "aieml9_output_aie.txt"
 
 // Miscellaneous -----------------------------------------------------------
 #define EMBED_HOST_OUTPUT           "host_output.txt"
