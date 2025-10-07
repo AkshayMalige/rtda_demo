@@ -136,6 +136,5 @@ inline void NeuralNetworkGraph::apply_layout() {
     place_linear(solver2_dense1.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 2);
     place_linear(solver2_dense2.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 3);
     place_linear(solver2_dense3.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 4);
-
     place_linear(output_dense0.getKernels(), TP_CASC_LEN_STAGE3 * TP_SSR_STAGE3, 26, 2);
 }
