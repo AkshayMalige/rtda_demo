@@ -210,6 +210,8 @@ public:
                                          (base_path + "/" + EMBED_INPUT_DATA).c_str());
         pipeline_out = output_plio::create("aieml9_out", plio_32_bits,
                                            (base_path + "/" + AIEML9_OUTPUT_FILE).c_str());
+        adf::location<adf::PLIO>(pipeline_in) = adf::shim(6);
+        adf::location<adf::PLIO>(pipeline_out) = adf::shim(27);
 
         // ------------------------- Stage 1 ---------------------------------
         connect<parameter>(embed_matrixA_rtp, embed_dense0.matrixA[0]);
@@ -240,6 +242,17 @@ public:
         headers(embed_split0) = {"window_split_128_to_64x2.h"};
         runtime<ratio>(embed_split0) = 1.0;
 
+        auto embed_dense0_kernels = embed_dense0.getKernels();
+        adf::location<adf::kernel>(embed_dense0_kernels[0]) = adf::tile(7, 2);
+        auto embed_dense1_kernels = embed_dense1.getKernels();
+        adf::location<adf::kernel>(embed_dense1_kernels[0]) = adf::tile(8, 2);
+        adf::location<adf::kernel>(embed_dense1_kernels[1]) = adf::tile(9, 2);
+        adf::location<adf::kernel>(embed_bias0) = adf::tile(7, 3);
+        adf::location<adf::kernel>(embed_relu0) = adf::tile(7, 4);
+        adf::location<adf::kernel>(embed_split0) = adf::tile(7, 5);
+        adf::location<adf::kernel>(embed_bias1) = adf::tile(9, 3);
+        adf::location<adf::kernel>(embed_relu1) = adf::tile(9, 4);
+
         connect<window<512>>(embed_dense0.out[0], embed_bias0.in[0]);
         connect<parameter>(embed_bias0_rtp, embed_bias0.in[1]);
         connect<window<512>>(embed_bias0.out[0], embed_relu0.in[0]);
@@ -268,9 +281,12 @@ public:
         dimensions(solver_rollconcat.in[0])  = {HIDDEN_SIZE};
         dimensions(solver_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
         dimensions(solver_rollconcat.out[1]) = {ROLL_CONCAT_TOTAL};
+        adf::location<adf::kernel>(solver_rollconcat) = adf::tile(12, 2);
 
         solver_roll_buf_a = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_PER_BUFFER);
         solver_roll_buf_b = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_PER_BUFFER);
+        // adf::location<adf::buffer>(solver_roll_buf_a) = adf::bank(14, 1, 0);
+        // adf::location<adf::buffer>(solver_roll_buf_b) = adf::bank(16, 1, 0);
 
         connect<>(solver_rollconcat.out[0], solver_roll_buf_a.in[0]);
         connect<>(solver_rollconcat.out[1], solver_roll_buf_b.in[0]);
@@ -387,6 +403,32 @@ public:
         headers(solver_split2) = {"window_split_128_to_64x2.h"};
         runtime<ratio>(solver_split2) = 0.65;
 
+        auto solver_dense0_kernels = solver_dense0.getKernels();
+        for (int i = 0; i < TP_CASC_LEN_STAGE2_LAYER0; ++i) {
+            adf::location<adf::kernel>(solver_dense0_kernels[i]) = adf::tile(10 + i, 0);
+        }
+        auto solver_dense1_kernels = solver_dense1.getKernels();
+        adf::location<adf::kernel>(solver_dense1_kernels[0]) = adf::tile(23, 2);
+        adf::location<adf::kernel>(solver_dense1_kernels[1]) = adf::tile(24, 2);
+        auto solver_dense2_kernels = solver_dense2.getKernels();
+        adf::location<adf::kernel>(solver_dense2_kernels[0]) = adf::tile(23, 3);
+        adf::location<adf::kernel>(solver_dense2_kernels[1]) = adf::tile(24, 3);
+        auto solver_dense3_kernels = solver_dense3.getKernels();
+        adf::location<adf::kernel>(solver_dense3_kernels[0]) = adf::tile(23, 4);
+        adf::location<adf::kernel>(solver_dense3_kernels[1]) = adf::tile(24, 4);
+
+        adf::location<adf::kernel>(solver_bias0) = adf::tile(12, 3);
+        adf::location<adf::kernel>(solver_bias1) = adf::tile(13, 3);
+        adf::location<adf::kernel>(solver_bias2) = adf::tile(14, 3);
+        adf::location<adf::kernel>(solver_bias3) = adf::tile(15, 3);
+        adf::location<adf::kernel>(solver_relu0) = adf::tile(12, 4);
+        adf::location<adf::kernel>(solver_relu1) = adf::tile(13, 4);
+        adf::location<adf::kernel>(solver_relu2) = adf::tile(14, 4);
+        adf::location<adf::kernel>(solver_relu3) = adf::tile(15, 4);
+        adf::location<adf::kernel>(solver_split0) = adf::tile(22, 2);
+        adf::location<adf::kernel>(solver_split1) = adf::tile(22, 3);
+        adf::location<adf::kernel>(solver_split2) = adf::tile(22, 4);
+
         connect<window<512>>(solver_dense0.out[0], solver_bias0.in[0]);
         connect<parameter>(solver_bias0_rtp, solver_bias0.in[1]);
         connect<window<512>>(solver_bias0.out[0], solver_relu0.in[0]);
@@ -423,6 +465,8 @@ public:
 
         // ------------------------- Stage 3 ---------------------------------
         connect<parameter>(output_matrixA_rtp, output_dense0.matrixA[0]);
+        auto output_dense_kernels = output_dense0.getKernels();
+        adf::location<adf::kernel>(output_dense_kernels[0]) = adf::tile(26, 2);
 
         auto solver_to_output = connect<window<512>>(solver_relu3.out[0], output_dense0.inB[0]);
         adf::fifo_depth(solver_to_output) = 8;
