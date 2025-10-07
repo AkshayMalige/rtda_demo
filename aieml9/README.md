@@ -10,7 +10,7 @@ that `make graph` builds and simulates the whole network in one go.
 ### Stage 0 – Top-level shims
 - `pipeline_in` (`aieml9_in`) streams a single 8-float feature vector from `data/embed_input.txt` through shim tile 6.
 - `pipeline_out` (`aieml9_out`) captures the final 32-float projection at shim tile 27, writing `data/aieml9_output_aie.txt`.
-- All weight/bias files live under `DATA_DIR`; runtime parameter (`update`) calls in `graph.cpp` push them into the design before `g.run(1)`.
+- All weight/bias files live under `DATA_DIR`. `graph.cpp` reloads the Stage 1 and Stage 3 dense weights plus every bias vector via RTP before calling `g.run(1)`, while the large solver weight matrices stream in through PLIO connections.
 
 ### Stage 1 – Embedding front end (`aieml6` content)
 - `dense8x128` performs the 8×128 projection using a single matrix-vector kernel; weights come from `embed_dense_0_weights.txt` via RTP port `embed_matrixA_rtp`.
@@ -19,21 +19,22 @@ that `make graph` builds and simulates the whole network in one go.
 - `dense128x128_stage1` (cascade length = 2) consumes the split stream; each lane receives its own weight partition (`embed_dense_1_weights_part[0|1].txt`). The layer is followed by another bias+LeakyReLU pair (`embed_bias1`, `embed_relu1`).
 - The stage produces a 128-wide activation window every frame, which feeds Stage 2.
 
-### Stage 2 – Solver core (`aieml7` content)
-- `roll_concat_kernel` materialises six rolled copies of the 128-element vector and concatenates them, yielding 768 floats. Two identical outputs feed separate shared buffers so the downstream 12-wide cascade can read without contention.
-- `solver_roll_buf_a/b` expose tiling slices of the 768-vector to the 12 cascaded matrix-vector engines inside `dense768x128`. Each lane reads a 64-element stride (768 / 12) from the shared buffer.
+### Stage 2 – Solver cores (`aieml7` content, duplicated)
+- **Solver A** (columns 10–24, base rows): `roll_concat_kernel` materialises six rolled copies of the 128-element vector and concatenates them, yielding 768 floats. Two identical outputs feed separate shared buffers (`solver_roll_buf_[ab]`) so the downstream 12-wide cascade can read without contention.
 - `dense768x128` ingests 12 weight partitions (`solver_0_dense_0_weights_part*.txt`) via PLIOs. The result goes through bias (`solver_bias0`), leaky ReLU (`solver_relu0`), and a 128→64+64 splitter (`solver_split0`).
 - Three stacked residual-sized layers reuse the pattern:
-  - `dense128x128_stage2` ×3 operate with cascade length 2. Each layer consumes both legs of the previous splitter, loads two weight parts (`solver_0_dense_[1|2|3]_weights_part[0|1].txt`), then pushes through bias, leaky ReLU, and another splitter (`solver_split[1|2]`) to feed the next dense block.
-- After `solver_relu3`, the solver emits a refreshed 128-element activation window.
+  - `dense128x128_stage2` ×3 operate with cascade length 2. Each layer consumes both legs of the previous splitter, loads two weight parts (`solver_0_dense_[1|2|3]_weights_part[0|1].txt`), pushes through bias, applies LeakyReLU, and fans out through `solver_split[1|2]`.
+- **Solver B** occupies the upper rows of the same column band, repeating the identical structure (`solver2_*` kernels, shared buffers, and weight PLIOs) and reusing the same weight and bias files. An 8-entry FIFO decouples the hand-off from Solver A to Solver B so placement can stretch without back-pressure.
+- The output of `solver2_relu3` provides the 128-element activation that now feeds Stage 3.
 
 ### Stage 3 – Output projection (`aieml8` content)
-- `dense128x32` maps the solver output onto 32 logits (padded to match the AI Engine vector width). Its weights come from `output_dense_0_weights.txt` over RTP `output_matrixA_rtp`.
+- `dense128x32` maps the cascaded solver output onto 32 logits (padded to match the AI Engine vector width). Its weights come from `output_dense_0_weights.txt` over RTP `output_matrixA_rtp`.
 - The 32-float window is forwarded directly to `pipeline_out`, completing the graph.
 
 ## Data Movement & Connections
 - All dense layers operate on `window<512>` (128×4 byte) buffers between kernels, keeping scheduling simple and FIFO depths short (8 entries for cascaded legs).
-- Matrix weights for the embedding and output stages arrive over RTP ports so they can be updated at runtime without recompilation; solver weights stay memory-mapped PLIO streams to avoid large RTP transfers (12 + 6 + 6 + 6 files).
+- Matrix weights for the embedding and output stages arrive over RTP ports so they can be updated at runtime without recompilation; solver weights stay memory-mapped PLIO streams to avoid large RTP transfers (12 + 2 + 2 + 2 files per solver stack, reused verbatim by the duplicate cores).
+- A single 8-entry FIFO bridges Solver A→Solver B, giving the placer freedom to stretch the cascades further east without risking back-pressure.
 - The dedicated `roll_concat` shared buffers provide deterministic fan-out for the 12 cascaded solver lanes: the first buffer feeds lanes 0–5, the second feeds lanes 6–11, each with matching tiling offsets.
 - Every bias kernel reuses the same `bias_add.cpp` implementation; LeakyReLU kernels share `leaky_relu.cpp`, ensuring identical activation behaviour across stages.
 - The graph expects the same dataset as the decomposed projects; set `DATA_DIR` if the files live elsewhere (defaults to `../data`).

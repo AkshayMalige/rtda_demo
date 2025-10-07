@@ -5,13 +5,10 @@ using namespace adf;
 
 void leaky_relu_kernel(input_window<float>* __restrict in,
                        output_window<float>* __restrict out) {
-  constexpr float alpha      = 0.1f;
-  constexpr int   frame_size = 128;
-
-  // process one window of HIDDEN_SIZE elements
-  for (int i = 0; i < frame_size; ++i) {
-    float x = window_readincr(in);
-    float y = (x >= 0.0f) ? x : (alpha * x);
-    window_writeincr(out, y);
-  }
+    // Process one window of HIDDEN_SIZE elements using configured slope
+    for (int i = 0; i < HIDDEN_SIZE; ++i) {
+        float x = window_readincr(in);
+        float y = (x >= 0.0f) ? x : (LEAKY_SLOPE * x);
+        window_writeincr(out, y);
+    }
 }

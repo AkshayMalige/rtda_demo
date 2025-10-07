@@ -2,6 +2,7 @@
 #include <adf.h>
 #include <array>
 #include <string>
+#include <utility>
 
 #include "nn_defs.h"
 #include "data_paths.h"
@@ -16,7 +17,13 @@
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
-// Stage 1 (aieml6) configuration ------------------------------------------------
+constexpr unsigned WINDOW_BYTES_HIDDEN = bytes_per_vector(HIDDEN_SIZE);
+constexpr unsigned WINDOW_BYTES_HALF_HIDDEN = bytes_per_vector(HIDDEN_SPLIT_SIZE);
+constexpr unsigned WINDOW_BYTES_OUTPUT_PAD = bytes_per_vector(OUTPUT_DENSE0_OUT_PAD);
+
+constexpr unsigned DEFAULT_FIFO_DEPTH = 8U;
+
+// Stage 1 configuration ----------------------------------------------------
 static constexpr unsigned int TP_SHIFT_STAGE1 = 0;
 static constexpr unsigned int TP_RND_STAGE1 = rnd_floor;
 static constexpr unsigned int TP_NUM_FRAMES_STAGE1 = 1;
@@ -27,11 +34,12 @@ static constexpr unsigned int TP_USE_MATRIX_RELOAD_STAGE1 = 1;
 static constexpr unsigned int TP_API_STAGE1 = 0;
 static constexpr unsigned int TP_DUAL_IP_STAGE1 = 0;
 static constexpr unsigned int TP_NUM_OUTPUTS_STAGE1 = 1;
-static constexpr unsigned int TP_CASC_LEN_STAGE1_LAYER0 = 1;
-static constexpr unsigned int TP_CASC_LEN_STAGE1_LAYER1 = 2;
+static constexpr unsigned int TP_CASC_LEN_STAGE1_LAYER0 = EMBED_DENSE0_CASC_LEN;
+static constexpr unsigned int TP_CASC_LEN_STAGE1_LAYER1 = EMBED_DENSE1_CASC_LEN;
 
 using dense8x128 = matrix_vector_mul_graph<
-    float, float,
+    float,
+    float,
     HIDDEN_SIZE,
     INPUT_SIZE,
     TP_SHIFT_STAGE1,
@@ -47,7 +55,8 @@ using dense8x128 = matrix_vector_mul_graph<
     TP_NUM_OUTPUTS_STAGE1>;
 
 using dense128x128_stage1 = matrix_vector_mul_graph<
-    float, float,
+    float,
+    float,
     OUTPUT_SIZE,
     HIDDEN_SIZE,
     TP_SHIFT_STAGE1,
@@ -62,7 +71,7 @@ using dense128x128_stage1 = matrix_vector_mul_graph<
     TP_DUAL_IP_STAGE1,
     TP_NUM_OUTPUTS_STAGE1>;
 
-// Stage 2 (aieml7) configuration ------------------------------------------------
+// Stage 2 configuration ----------------------------------------------------
 static constexpr unsigned int TP_SHIFT_STAGE2 = 0;
 static constexpr unsigned int TP_RND_STAGE2 = rnd_floor;
 static constexpr unsigned int TP_NUM_FRAMES_STAGE2 = 1;
@@ -73,22 +82,14 @@ static constexpr unsigned int TP_USE_MATRIX_RELOAD_STAGE2 = 0;
 static constexpr unsigned int TP_API_STAGE2 = 0;
 static constexpr unsigned int TP_DUAL_IP_STAGE2 = 0;
 static constexpr unsigned int TP_NUM_OUTPUTS_STAGE2 = 1;
-static constexpr unsigned int TP_CASC_LEN_STAGE2_LAYER0 = 12;
-static constexpr unsigned int TP_CASC_LEN_STAGE2_LAYERX = 2;
-static_assert(TP_CASC_LEN_STAGE2_LAYER0 % 2 == 0,
-              "TP_CASC_LEN_STAGE2_LAYER0 must be even to split across shared buffers");
-static constexpr unsigned int TP_CASC_PER_BUFFER = TP_CASC_LEN_STAGE2_LAYER0 / 2;
-static_assert((ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE) % TP_CASC_LEN_STAGE2_LAYER0 == 0,
-              "ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE must be divisible by TP_CASC_LEN_STAGE2_LAYER0");
-static constexpr unsigned int ROLL_CONCAT_TOTAL = ROLL_CONC_SUBSET_SIZE * HIDDEN_SIZE;
-static constexpr unsigned int ROLL_CONCAT_TILE_SPAN = ROLL_CONCAT_TOTAL / TP_CASC_LEN_STAGE2_LAYER0;
-static_assert(ROLL_CONCAT_TILE_SPAN * TP_CASC_LEN_STAGE2_LAYER0 == ROLL_CONCAT_TOTAL,
-              "Shared buffer tiling must cover the entire roll-concat frame");
+static constexpr unsigned int TP_CASC_LEN_STAGE2_LAYER0 = SOLVER_DENSE0_CASC_LEN;
+static constexpr unsigned int TP_CASC_LEN_STAGE2_LAYERX = SOLVER_DENSEX_CASC_LEN;
 
 using dense768x128 = matrix_vector_mul_graph<
-    float, float,
-    128,
-    768,
+    float,
+    float,
+    HIDDEN_SIZE,
+    SUBSOLVER0_INPUT_SIZE,
     TP_SHIFT_STAGE2,
     TP_RND_STAGE2,
     TP_NUM_FRAMES_STAGE2,
@@ -102,7 +103,8 @@ using dense768x128 = matrix_vector_mul_graph<
     TP_NUM_OUTPUTS_STAGE2>;
 
 using dense128x128_stage2 = matrix_vector_mul_graph<
-    float, float,
+    float,
+    float,
     OUTPUT_SIZE,
     HIDDEN_SIZE,
     TP_SHIFT_STAGE2,
@@ -117,7 +119,7 @@ using dense128x128_stage2 = matrix_vector_mul_graph<
     TP_DUAL_IP_STAGE2,
     TP_NUM_OUTPUTS_STAGE2>;
 
-// Stage 3 (aieml8) configuration ------------------------------------------------
+// Stage 3 configuration ----------------------------------------------------
 static constexpr unsigned int TP_SHIFT_STAGE3 = 0;
 static constexpr unsigned int TP_RND_STAGE3 = rnd_floor;
 static constexpr unsigned int TP_NUM_FRAMES_STAGE3 = 1;
@@ -128,11 +130,12 @@ static constexpr unsigned int TP_USE_MATRIX_RELOAD_STAGE3 = 1;
 static constexpr unsigned int TP_API_STAGE3 = 0;
 static constexpr unsigned int TP_DUAL_IP_STAGE3 = 0;
 static constexpr unsigned int TP_NUM_OUTPUTS_STAGE3 = 1;
-static constexpr unsigned int TP_CASC_LEN_STAGE3 = 1;
+static constexpr unsigned int TP_CASC_LEN_STAGE3 = OUTPUT_DENSE0_CASC_LEN;
 
 using dense128x32 = matrix_vector_mul_graph<
-    float, float,
-    32,
+    float,
+    float,
+    OUTPUT_DENSE0_OUT_PAD,
     HIDDEN_SIZE,
     TP_SHIFT_STAGE3,
     TP_RND_STAGE3,
@@ -148,11 +151,9 @@ using dense128x32 = matrix_vector_mul_graph<
 
 class NeuralNetworkGraph : public graph {
 public:
-    // Top-level I/O
     input_plio  pipeline_in;
     output_plio pipeline_out;
 
-    // Stage 1 modules -------------------------------------------------------
     dense8x128            embed_dense0;
     dense128x128_stage1   embed_dense1;
     kernel                embed_bias0;
@@ -166,7 +167,6 @@ public:
     input_port            embed_bias1_rtp;
     input_port            embed_matrixA1_rtp[TP_CASC_LEN_STAGE1_LAYER1];
 
-    // Stage 2 modules -------------------------------------------------------
     dense768x128          solver_dense0;
     dense128x128_stage2   solver_dense1;
     dense128x128_stage2   solver_dense2;
@@ -198,95 +198,105 @@ public:
     std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver_dense2_weight_plios;
     std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver_dense3_weight_plios;
 
-    // Stage 3 modules -------------------------------------------------------
+    dense768x128          solver2_dense0;
+    dense128x128_stage2   solver2_dense1;
+    dense128x128_stage2   solver2_dense2;
+    dense128x128_stage2   solver2_dense3;
+
+    kernel                solver2_rollconcat;
+    kernel                solver2_bias0;
+    kernel                solver2_bias1;
+    kernel                solver2_bias2;
+    kernel                solver2_bias3;
+    kernel                solver2_relu0;
+    kernel                solver2_relu1;
+    kernel                solver2_relu2;
+    kernel                solver2_relu3;
+    kernel                solver2_split0;
+    kernel                solver2_split1;
+    kernel                solver2_split2;
+
+    adf::shared_buffer<float> solver2_roll_buf_a;
+    adf::shared_buffer<float> solver2_roll_buf_b;
+
+    input_port            solver2_bias0_rtp;
+    input_port            solver2_bias1_rtp;
+    input_port            solver2_bias2_rtp;
+    input_port            solver2_bias3_rtp;
+
+    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         solver2_dense0_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense1_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense2_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense3_weight_plios;
+
     dense128x32           output_dense0;
     input_port            output_matrixA_rtp;
 
     NeuralNetworkGraph() {
-        std::string base_path = DATA_DIR;
+        const std::string base_path = DATA_DIR;
 
-        // Create top level PLIO
+        const auto make_bias_kernel = []() {
+            kernel k = kernel::create(bias_add_kernel);
+            source(k)  = "bias_add.cpp";
+            headers(k) = {"bias_add.h"};
+            return k;
+        };
+        const auto make_relu_kernel = []() {
+            kernel k = kernel::create(leaky_relu_kernel);
+            source(k)  = "leaky_relu.cpp";
+            headers(k) = {"leaky_relu.h"};
+            return k;
+        };
+        const auto make_split_kernel = []() {
+            kernel k = kernel::create(window_split_128_to_64x2);
+            source(k)  = "window_split_128_to_64x2.cpp";
+            headers(k) = {"window_split_128_to_64x2.h"};
+            return k;
+        };
+
         pipeline_in = input_plio::create("aieml9_in", plio_32_bits,
                                          (base_path + "/" + EMBED_INPUT_DATA).c_str());
         pipeline_out = output_plio::create("aieml9_out", plio_32_bits,
                                            (base_path + "/" + AIEML9_OUTPUT_FILE).c_str());
-        adf::location<adf::PLIO>(pipeline_in) = adf::shim(6);
-        adf::location<adf::PLIO>(pipeline_out) = adf::shim(27);
 
-        // ------------------------- Stage 1 ---------------------------------
         connect<parameter>(embed_matrixA_rtp, embed_dense0.matrixA[0]);
         connect<>(pipeline_in.out[0], embed_dense0.inB[0]);
 
-        embed_bias0 = kernel::create(bias_add_kernel);
-        source(embed_bias0)  = "bias_add.cpp";
-        headers(embed_bias0) = {"bias_add.h"};
-        runtime<ratio>(embed_bias0) = 1.0;
+        embed_bias0 = make_bias_kernel();
+        embed_bias1 = make_bias_kernel();
+        embed_relu0 = make_relu_kernel();
+        embed_relu1 = make_relu_kernel();
+        embed_split0 = make_split_kernel();
 
-        embed_bias1 = kernel::create(bias_add_kernel);
-        source(embed_bias1)  = "bias_add.cpp";
-        headers(embed_bias1) = {"bias_add.h"};
-        runtime<ratio>(embed_bias1) = 1.0;
-
-        embed_relu0 = kernel::create(leaky_relu_kernel);
-        source(embed_relu0)  = "leaky_relu.cpp";
-        headers(embed_relu0) = {"leaky_relu.h"};
-        runtime<ratio>(embed_relu0) = 1.0;
-
-        embed_relu1 = kernel::create(leaky_relu_kernel);
-        source(embed_relu1)  = "leaky_relu.cpp";
-        headers(embed_relu1) = {"leaky_relu.h"};
-        runtime<ratio>(embed_relu1) = 1.0;
-
-        embed_split0 = kernel::create(window_split_128_to_64x2);
-        source(embed_split0)  = "window_split_128_to_64x2.cpp";
-        headers(embed_split0) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(embed_split0) = 1.0;
-
-        auto embed_dense0_kernels = embed_dense0.getKernels();
-        adf::location<adf::kernel>(embed_dense0_kernels[0]) = adf::tile(7, 2);
-        auto embed_dense1_kernels = embed_dense1.getKernels();
-        adf::location<adf::kernel>(embed_dense1_kernels[0]) = adf::tile(8, 2);
-        adf::location<adf::kernel>(embed_dense1_kernels[1]) = adf::tile(9, 2);
-        adf::location<adf::kernel>(embed_bias0) = adf::tile(7, 3);
-        adf::location<adf::kernel>(embed_relu0) = adf::tile(7, 4);
-        adf::location<adf::kernel>(embed_split0) = adf::tile(7, 5);
-        adf::location<adf::kernel>(embed_bias1) = adf::tile(9, 3);
-        adf::location<adf::kernel>(embed_relu1) = adf::tile(9, 4);
-
-        connect<window<512>>(embed_dense0.out[0], embed_bias0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense0.out[0], embed_bias0.in[0]);
         connect<parameter>(embed_bias0_rtp, embed_bias0.in[1]);
-        connect<window<512>>(embed_bias0.out[0], embed_relu0.in[0]);
-        connect<window<512>>(embed_relu0.out[0], embed_split0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias0.out[0], embed_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_relu0.out[0], embed_split0.in[0]);
 
-        auto embed_split_leg0 = connect<window<256>>(embed_split0.out[0], embed_dense1.inB[0]);
-        auto embed_split_leg1 = connect<window<256>>(embed_split0.out[1], embed_dense1.inB[1]);
-        adf::fifo_depth(embed_split_leg0) = 8;
-        adf::fifo_depth(embed_split_leg1) = 8;
+        auto embed_split_leg0 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(embed_split0.out[0], embed_dense1.inB[0]);
+        auto embed_split_leg1 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(embed_split0.out[1], embed_dense1.inB[1]);
+        adf::fifo_depth(embed_split_leg0) = DEFAULT_FIFO_DEPTH;
+        adf::fifo_depth(embed_split_leg1) = DEFAULT_FIFO_DEPTH;
 
         for (int i = 0; i < TP_CASC_LEN_STAGE1_LAYER1; ++i) {
             connect<parameter>(embed_matrixA1_rtp[i], embed_dense1.matrixA[i]);
         }
 
-        connect<window<512>>(embed_dense1.out[0], embed_bias1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_bias1.in[0]);
         connect<parameter>(embed_bias1_rtp, embed_bias1.in[1]);
-        connect<window<512>>(embed_bias1.out[0], embed_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias1.out[0], embed_relu1.in[0]);
 
-        // ------------------------- Stage 2 ---------------------------------
         solver_rollconcat = kernel::create(roll_concat_kernel);
         source(solver_rollconcat)  = "roll_concat.cpp";
         headers(solver_rollconcat) = {"roll_concat.h"};
-        runtime<ratio>(solver_rollconcat) = 1.0;
 
-        connect<window<512>>(embed_relu1.out[0], solver_rollconcat.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_relu1.out[0], solver_rollconcat.in[0]);
         dimensions(solver_rollconcat.in[0])  = {HIDDEN_SIZE};
         dimensions(solver_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
         dimensions(solver_rollconcat.out[1]) = {ROLL_CONCAT_TOTAL};
-        adf::location<adf::kernel>(solver_rollconcat) = adf::tile(12, 2);
 
-        solver_roll_buf_a = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_PER_BUFFER);
-        solver_roll_buf_b = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, TP_CASC_PER_BUFFER);
-        // adf::location<adf::buffer>(solver_roll_buf_a) = adf::bank(14, 1, 0);
-        // adf::location<adf::buffer>(solver_roll_buf_b) = adf::bank(16, 1, 0);
+        solver_roll_buf_a = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_CASC_PER_BUFFER);
+        solver_roll_buf_b = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_CASC_PER_BUFFER);
 
         connect<>(solver_rollconcat.out[0], solver_roll_buf_a.in[0]);
         connect<>(solver_rollconcat.out[1], solver_roll_buf_b.in[0]);
@@ -302,7 +312,7 @@ public:
             .offset = {0}
         });
 
-        for (int i = 0; i < TP_CASC_PER_BUFFER; ++i) {
+        for (int i = 0; i < SUBSOLVER0_CASC_PER_BUFFER; ++i) {
             connect<>(solver_roll_buf_a.out[i], solver_dense0.inB[i]);
             read_access(solver_roll_buf_a.out[i]) = tiling({
                 .buffer_dimension = {ROLL_CONCAT_TOTAL},
@@ -310,8 +320,8 @@ public:
                 .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
             });
         }
-        for (int i = 0; i < TP_CASC_PER_BUFFER; ++i) {
-            const int cascade_index = TP_CASC_PER_BUFFER + i;
+        for (int i = 0; i < SUBSOLVER0_CASC_PER_BUFFER; ++i) {
+            const int cascade_index = SUBSOLVER0_CASC_PER_BUFFER + i;
             connect<>(solver_roll_buf_b.out[i], solver_dense0.inB[cascade_index]);
             read_access(solver_roll_buf_b.out[i]) = tiling({
                 .buffer_dimension = {ROLL_CONCAT_TOTAL},
@@ -321,156 +331,169 @@ public:
         }
 
         auto connect_layer_weights = [&](auto& plios,
-                                         const char* name_prefix,
+                                         dense128x128_stage2& layer,
+                                         const char* plio_prefix,
                                          const char* file_prefix) {
-            for (int part = 0; part < static_cast<int>(plios.size()); ++part) {
-                const std::string plio_name = std::string(name_prefix) + std::to_string(part);
+            for (std::size_t part = 0; part < plios.size(); ++part) {
+                const std::string plio_name = std::string(plio_prefix) + std::to_string(part);
                 const std::string file_path = base_path + "/" + file_prefix + std::to_string(part) + ".txt";
                 plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
+                connect<>(plios[part].out[0], layer.inA[part]);
             }
         };
 
-        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+        for (std::size_t part = 0; part < solver_dense0_weight_plios.size(); ++part) {
             const std::string plio_name = "solver_dense0_w_part" + std::to_string(part);
             const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
             solver_dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
             connect<>(solver_dense0_weight_plios[part].out[0], solver_dense0.inA[part]);
         }
 
-        connect_layer_weights(solver_dense1_weight_plios, "solver_dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX);
-        connect_layer_weights(solver_dense2_weight_plios, "solver_dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
-        connect_layer_weights(solver_dense3_weight_plios, "solver_dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
+        connect_layer_weights(solver_dense1_weight_plios, solver_dense1, "solver_dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX);
+        connect_layer_weights(solver_dense2_weight_plios, solver_dense2, "solver_dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
+        connect_layer_weights(solver_dense3_weight_plios, solver_dense3, "solver_dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
 
-        connect<>(solver_dense1_weight_plios[0].out[0], solver_dense1.inA[0]);
-        connect<>(solver_dense1_weight_plios[1].out[0], solver_dense1.inA[1]);
-        connect<>(solver_dense2_weight_plios[0].out[0], solver_dense2.inA[0]);
-        connect<>(solver_dense2_weight_plios[1].out[0], solver_dense2.inA[1]);
-        connect<>(solver_dense3_weight_plios[0].out[0], solver_dense3.inA[0]);
-        connect<>(solver_dense3_weight_plios[1].out[0], solver_dense3.inA[1]);
-
-        solver_bias0 = kernel::create(bias_add_kernel);
-        source(solver_bias0)  = "bias_add.cpp";
-        headers(solver_bias0) = {"bias_add.h"};
-        runtime<ratio>(solver_bias0) = 0.45;
-
-        solver_bias1 = kernel::create(bias_add_kernel);
-        source(solver_bias1)  = "bias_add.cpp";
-        headers(solver_bias1) = {"bias_add.h"};
-        runtime<ratio>(solver_bias1) = 0.45;
-
-        solver_bias2 = kernel::create(bias_add_kernel);
-        source(solver_bias2)  = "bias_add.cpp";
-        headers(solver_bias2) = {"bias_add.h"};
-        runtime<ratio>(solver_bias2) = 0.45;
-
-        solver_bias3 = kernel::create(bias_add_kernel);
-        source(solver_bias3)  = "bias_add.cpp";
-        headers(solver_bias3) = {"bias_add.h"};
-        runtime<ratio>(solver_bias3) = 0.45;
-
-        solver_relu0 = kernel::create(leaky_relu_kernel);
-        source(solver_relu0)  = "leaky_relu.cpp";
-        headers(solver_relu0) = {"leaky_relu.h"};
-        runtime<ratio>(solver_relu0) = 0.5;
-
-        solver_relu1 = kernel::create(leaky_relu_kernel);
-        source(solver_relu1)  = "leaky_relu.cpp";
-        headers(solver_relu1) = {"leaky_relu.h"};
-        runtime<ratio>(solver_relu1) = 0.5;
-
-        solver_relu2 = kernel::create(leaky_relu_kernel);
-        source(solver_relu2)  = "leaky_relu.cpp";
-        headers(solver_relu2) = {"leaky_relu.h"};
-        runtime<ratio>(solver_relu2) = 0.5;
-
-        solver_relu3 = kernel::create(leaky_relu_kernel);
-        source(solver_relu3)  = "leaky_relu.cpp";
-        headers(solver_relu3) = {"leaky_relu.h"};
-        runtime<ratio>(solver_relu3) = 0.5;
-
-        solver_split0 = kernel::create(window_split_128_to_64x2);
-        source(solver_split0)  = "window_split_128_to_64x2.cpp";
-        headers(solver_split0) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(solver_split0) = 0.65;
-
-        solver_split1 = kernel::create(window_split_128_to_64x2);
-        source(solver_split1)  = "window_split_128_to_64x2.cpp";
-        headers(solver_split1) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(solver_split1) = 0.65;
-
-        solver_split2 = kernel::create(window_split_128_to_64x2);
-        source(solver_split2)  = "window_split_128_to_64x2.cpp";
-        headers(solver_split2) = {"window_split_128_to_64x2.h"};
-        runtime<ratio>(solver_split2) = 0.65;
-
-        auto solver_dense0_kernels = solver_dense0.getKernels();
-        for (int i = 0; i < TP_CASC_LEN_STAGE2_LAYER0; ++i) {
-            adf::location<adf::kernel>(solver_dense0_kernels[i]) = adf::tile(10 + i, 0);
+        for (kernel* bias : {&solver_bias0, &solver_bias1, &solver_bias2, &solver_bias3}) {
+            *bias = make_bias_kernel();
         }
-        auto solver_dense1_kernels = solver_dense1.getKernels();
-        adf::location<adf::kernel>(solver_dense1_kernels[0]) = adf::tile(23, 2);
-        adf::location<adf::kernel>(solver_dense1_kernels[1]) = adf::tile(24, 2);
-        auto solver_dense2_kernels = solver_dense2.getKernels();
-        adf::location<adf::kernel>(solver_dense2_kernels[0]) = adf::tile(23, 3);
-        adf::location<adf::kernel>(solver_dense2_kernels[1]) = adf::tile(24, 3);
-        auto solver_dense3_kernels = solver_dense3.getKernels();
-        adf::location<adf::kernel>(solver_dense3_kernels[0]) = adf::tile(23, 4);
-        adf::location<adf::kernel>(solver_dense3_kernels[1]) = adf::tile(24, 4);
+        for (kernel* relu : {&solver_relu0, &solver_relu1, &solver_relu2, &solver_relu3}) {
+            *relu = make_relu_kernel();
+        }
+        for (kernel* split : {&solver_split0, &solver_split1, &solver_split2}) {
+            *split = make_split_kernel();
+        }
 
-        adf::location<adf::kernel>(solver_bias0) = adf::tile(12, 3);
-        adf::location<adf::kernel>(solver_bias1) = adf::tile(13, 3);
-        adf::location<adf::kernel>(solver_bias2) = adf::tile(14, 3);
-        adf::location<adf::kernel>(solver_bias3) = adf::tile(15, 3);
-        adf::location<adf::kernel>(solver_relu0) = adf::tile(12, 4);
-        adf::location<adf::kernel>(solver_relu1) = adf::tile(13, 4);
-        adf::location<adf::kernel>(solver_relu2) = adf::tile(14, 4);
-        adf::location<adf::kernel>(solver_relu3) = adf::tile(15, 4);
-        adf::location<adf::kernel>(solver_split0) = adf::tile(22, 2);
-        adf::location<adf::kernel>(solver_split1) = adf::tile(22, 3);
-        adf::location<adf::kernel>(solver_split2) = adf::tile(22, 4);
-
-        connect<window<512>>(solver_dense0.out[0], solver_bias0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense0.out[0], solver_bias0.in[0]);
         connect<parameter>(solver_bias0_rtp, solver_bias0.in[1]);
-        connect<window<512>>(solver_bias0.out[0], solver_relu0.in[0]);
-        connect<window<512>>(solver_relu0.out[0], solver_split0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias0.out[0], solver_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu0.out[0], solver_split0.in[0]);
 
-        auto solver_split0_leg0 = connect<window<256>>(solver_split0.out[0], solver_dense1.inB[0]);
-        auto solver_split0_leg1 = connect<window<256>>(solver_split0.out[1], solver_dense1.inB[1]);
-        adf::fifo_depth(solver_split0_leg0) = 8;
-        adf::fifo_depth(solver_split0_leg1) = 8;
+        auto connect_split_to_dense = [&](kernel& split, dense128x128_stage2& dense) {
+            auto leg0 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(split.out[0], dense.inB[0]);
+            auto leg1 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(split.out[1], dense.inB[1]);
+            adf::fifo_depth(leg0) = DEFAULT_FIFO_DEPTH;
+            adf::fifo_depth(leg1) = DEFAULT_FIFO_DEPTH;
+        };
 
-        connect<window<512>>(solver_dense1.out[0], solver_bias1.in[0]);
+        connect_split_to_dense(solver_split0, solver_dense1);
+
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense1.out[0], solver_bias1.in[0]);
         connect<parameter>(solver_bias1_rtp, solver_bias1.in[1]);
-        connect<window<512>>(solver_bias1.out[0], solver_relu1.in[0]);
-        connect<window<512>>(solver_relu1.out[0], solver_split1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias1.out[0], solver_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu1.out[0], solver_split1.in[0]);
 
-        auto solver_split1_leg0 = connect<window<256>>(solver_split1.out[0], solver_dense2.inB[0]);
-        auto solver_split1_leg1 = connect<window<256>>(solver_split1.out[1], solver_dense2.inB[1]);
-        adf::fifo_depth(solver_split1_leg0) = 8;
-        adf::fifo_depth(solver_split1_leg1) = 8;
+        connect_split_to_dense(solver_split1, solver_dense2);
 
-        connect<window<512>>(solver_dense2.out[0], solver_bias2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense2.out[0], solver_bias2.in[0]);
         connect<parameter>(solver_bias2_rtp, solver_bias2.in[1]);
-        connect<window<512>>(solver_bias2.out[0], solver_relu2.in[0]);
-        connect<window<512>>(solver_relu2.out[0], solver_split2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias2.out[0], solver_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu2.out[0], solver_split2.in[0]);
 
-        auto solver_split2_leg0 = connect<window<256>>(solver_split2.out[0], solver_dense3.inB[0]);
-        auto solver_split2_leg1 = connect<window<256>>(solver_split2.out[1], solver_dense3.inB[1]);
-        adf::fifo_depth(solver_split2_leg0) = 8;
-        adf::fifo_depth(solver_split2_leg1) = 8;
+        connect_split_to_dense(solver_split2, solver_dense3);
 
-        connect<window<512>>(solver_dense3.out[0], solver_bias3.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense3.out[0], solver_bias3.in[0]);
         connect<parameter>(solver_bias3_rtp, solver_bias3.in[1]);
-        connect<window<512>>(solver_bias3.out[0], solver_relu3.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias3.out[0], solver_relu3.in[0]);
 
-        // ------------------------- Stage 3 ---------------------------------
+        solver2_rollconcat = kernel::create(roll_concat_kernel);
+        source(solver2_rollconcat)  = "roll_concat.cpp";
+        headers(solver2_rollconcat) = {"roll_concat.h"};
+
+        auto solver_to_solver2 = connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu3.out[0], solver2_rollconcat.in[0]);
+        adf::fifo_depth(solver_to_solver2) = DEFAULT_FIFO_DEPTH;
+        dimensions(solver2_rollconcat.in[0])  = {HIDDEN_SIZE};
+        dimensions(solver2_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
+        dimensions(solver2_rollconcat.out[1]) = {ROLL_CONCAT_TOTAL};
+
+        solver2_roll_buf_a = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_CASC_PER_BUFFER);
+        solver2_roll_buf_b = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_CASC_PER_BUFFER);
+
+        connect<>(solver2_rollconcat.out[0], solver2_roll_buf_a.in[0]);
+        connect<>(solver2_rollconcat.out[1], solver2_roll_buf_b.in[0]);
+
+        write_access(solver2_roll_buf_a.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
+        write_access(solver2_roll_buf_b.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
+
+        for (int i = 0; i < SUBSOLVER0_CASC_PER_BUFFER; ++i) {
+            connect<>(solver2_roll_buf_a.out[i], solver2_dense0.inB[i]);
+            read_access(solver2_roll_buf_a.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
+            });
+        }
+        for (int i = 0; i < SUBSOLVER0_CASC_PER_BUFFER; ++i) {
+            const int cascade_index = SUBSOLVER0_CASC_PER_BUFFER + i;
+            connect<>(solver2_roll_buf_b.out[i], solver2_dense0.inB[cascade_index]);
+            read_access(solver2_roll_buf_b.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(cascade_index * ROLL_CONCAT_TILE_SPAN)}
+            });
+        }
+
+        for (std::size_t part = 0; part < solver2_dense0_weight_plios.size(); ++part) {
+            const std::string plio_name = "solver2_dense0_w_part" + std::to_string(part);
+            const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
+            solver2_dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
+            connect<>(solver2_dense0_weight_plios[part].out[0], solver2_dense0.inA[part]);
+        }
+
+        connect_layer_weights(solver2_dense1_weight_plios, solver2_dense1, "solver2_dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX);
+        connect_layer_weights(solver2_dense2_weight_plios, solver2_dense2, "solver2_dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
+        connect_layer_weights(solver2_dense3_weight_plios, solver2_dense3, "solver2_dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
+
+        for (kernel* bias : {&solver2_bias0, &solver2_bias1, &solver2_bias2, &solver2_bias3}) {
+            *bias = make_bias_kernel();
+        }
+        for (kernel* relu : {&solver2_relu0, &solver2_relu1, &solver2_relu2, &solver2_relu3}) {
+            *relu = make_relu_kernel();
+        }
+        for (kernel* split : {&solver2_split0, &solver2_split1, &solver2_split2}) {
+            *split = make_split_kernel();
+        }
+
+        connect<parameter>(solver2_bias0_rtp, solver2_bias0.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense0.out[0], solver2_bias0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias0.out[0], solver2_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu0.out[0], solver2_split0.in[0]);
+        connect_split_to_dense(solver2_split0, solver2_dense1);
+
+        connect<parameter>(solver2_bias1_rtp, solver2_bias1.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense1.out[0], solver2_bias1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias1.out[0], solver2_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu1.out[0], solver2_split1.in[0]);
+        connect_split_to_dense(solver2_split1, solver2_dense2);
+
+        connect<parameter>(solver2_bias2_rtp, solver2_bias2.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense2.out[0], solver2_bias2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias2.out[0], solver2_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu2.out[0], solver2_split2.in[0]);
+        connect_split_to_dense(solver2_split2, solver2_dense3);
+
+        connect<parameter>(solver2_bias3_rtp, solver2_bias3.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense3.out[0], solver2_bias3.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias3.out[0], solver2_relu3.in[0]);
+
         connect<parameter>(output_matrixA_rtp, output_dense0.matrixA[0]);
-        auto output_dense_kernels = output_dense0.getKernels();
-        adf::location<adf::kernel>(output_dense_kernels[0]) = adf::tile(26, 2);
+        auto solver2_to_output = connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu3.out[0], output_dense0.inB[0]);
+        adf::fifo_depth(solver2_to_output) = DEFAULT_FIFO_DEPTH;
 
-        auto solver_to_output = connect<window<512>>(solver_relu3.out[0], output_dense0.inB[0]);
-        adf::fifo_depth(solver_to_output) = 8;
+        connect<window<WINDOW_BYTES_OUTPUT_PAD>>(output_dense0.out[0], pipeline_out.in[0]);
 
-        connect<window<128>>(output_dense0.out[0], pipeline_out.in[0]);
+        apply_layout();
     }
+
+private:
+    void apply_layout();
 };
+
+#include "graph_layout.hpp"
