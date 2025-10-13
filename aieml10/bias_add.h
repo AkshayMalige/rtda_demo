@@ -1,0 +1,9 @@
+#pragma once
+#include <adf.h>
+#include "nn_defs10.h"
+using namespace adf;
+
+void bias_add_kernel(input_window<float>* __restrict dense_window,
+                     output_window<float>* __restrict biased_window,
+                     const float (&bias)[HIDDEN_SIZE]);
+
