@@ -9,10 +9,9 @@
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
 
-#include "leaky_relu.h"
+#include "bias_relu_fused.h"
 #include "window_split_128_to_64x2.h"
 #include "roll_concat.h"
-#include "bias_add.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -187,127 +186,104 @@ using dense128x32 = matrix_vector_mul_graph<
 
 class NeuralNetworkGraph : public graph {
 public:
-    input_plio  pipeline_in;
-    output_plio pipeline_out;
 
-    dense8x128_plio      embed_dense0;
-    input_plio            embed_layer0_weights;
-    dense128x128_stage1_plio   embed_dense1;
+    input_plio                  pipeline_in;
+    output_plio                 pipeline_out;
 
-    kernel                embed_bias0;
-    kernel                embed_bias1;
-    kernel                embed_relu0;
-    kernel                embed_relu1;
-    kernel                embed_split0;
 
-    input_port            embed_bias0_rtp;
-    input_port            embed_bias1_rtp;
+    dense8x128_plio             embed_dense0;
+    kernel                      embed_bias_relu0;
+    kernel                      embed_split0;
+    dense128x128_stage1_plio    embed_dense1;
+    kernel                      embed_bias_relu1;
+    input_plio                  embed_layer0_weights;
+    input_port                  embed_bias0_rtp;
+    input_port                  embed_bias1_rtp;
     std::array<input_plio, EMBED_DENSE1_CASC_LEN> embed_dense1_weight_plios;
 
-    dense256x128          solver_dense0;
-    dense128x128_stage2   solver_dense1;
-    dense128x128_stage2   solver_dense2;
-    dense128x128_stage2   solver_dense3;
-
-    kernel                solver_rollconcat;
-    kernel                solver_bias0;
-    kernel                solver_bias1;
-    kernel                solver_bias2;
-    kernel                solver_bias3;
-    kernel                solver_relu0;
-    kernel                solver_relu1;
-    kernel                solver_relu2;
-    kernel                solver_relu3;
-    kernel                solver_split0;
-    kernel                solver_split1;
-    kernel                solver_split2;
-
-    adf::shared_buffer<float> solver_roll_buf;
-
-    input_port            solver_bias0_rtp;
-    input_port            solver_bias1_rtp;
-    input_port            solver_bias2_rtp;
-    input_port            solver_bias3_rtp;
-
-    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         solver_dense0_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver_dense1_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver_dense2_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver_dense3_weight_plios;
-
-    dense256x128          solver2_dense0;
-    dense256x128          solver3_dense0;
-    dense128x128_stage2   solver2_dense1;
-    dense128x128_stage2   solver3_dense1;
-    dense128x128_stage2   solver2_dense2;
-    dense128x128_stage2   solver3_dense2;
-    dense128x128_stage2   solver2_dense3;
-    dense128x128_stage2   solver3_dense3;
 
 
-    kernel                solver2_rollconcat;
-    kernel                solver3_rollconcat;
-    kernel                solver2_bias0;
-    kernel                solver2_bias1;
-    kernel                solver2_bias2;
-    kernel                solver2_bias3;
-    kernel                solver2_relu0;
-    kernel                solver2_relu1;
-    kernel                solver2_relu2;
-    kernel                solver2_relu3;
-    kernel                solver2_split0;
-    kernel                solver2_split1;
-    kernel                solver2_split2;
+    kernel                      	solver_rollconcat;
+    dense256x128                	solver_dense0;
+    kernel                      	solver_bias_relu0;
+    kernel                      	solver_split0;
+    dense128x128_stage2         	solver_dense1;
+    kernel                      	solver_bias_relu1;
+    kernel                      	solver_split1;
+    dense128x128_stage2        	    solver_dense2;
+    kernel                      	solver_bias_relu2;
+    kernel                      	solver_split2;
+    dense128x128_stage2         	solver_dense3;
+    kernel                      	solver_bias_relu3;
+    input_port                  	solver_bias0_rtp;
+    input_port                  	solver_bias1_rtp;
+    input_port                  	solver_bias2_rtp;
+    input_port                  	solver_bias3_rtp;
+    adf::shared_buffer<float>   	solver_roll_buf;
+    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         			solver_dense0_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver_dense1_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver_dense2_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver_dense3_weight_plios;
 
-    kernel                solver3_bias0;
-    kernel                solver3_bias1;
-    kernel                solver3_bias2;
-    kernel                solver3_bias3;
-    kernel                solver3_relu0;
-    kernel                solver3_relu1;
-    kernel                solver3_relu2;
-    kernel                solver3_relu3;
-    kernel                solver3_split0;
-    kernel                solver3_split1;
-    kernel                solver3_split2;
 
-    adf::shared_buffer<float> solver2_roll_buf;
-    adf::shared_buffer<float> solver3_roll_buf;
 
-    input_port            solver2_bias0_rtp;
-    input_port            solver2_bias1_rtp;
-    input_port            solver2_bias2_rtp;
-    input_port            solver2_bias3_rtp;
+    kernel                      	solver2_rollconcat;
+    dense256x128                    solver2_dense0;
+    kernel                      	solver2_bias_relu0;
+    kernel                      	solver2_split0;
+    dense128x128_stage2         	solver2_dense1;
+    kernel                      	solver2_bias_relu1;
+    kernel                      	solver2_split1;
+    dense128x128_stage2        	    solver2_dense2;
+    kernel                      	solver2_bias_relu2;
+    kernel                      	solver2_split2;
+    dense128x128_stage2         	solver2_dense3;
+    kernel                      	solver2_bias_relu3;
+    input_port                  	solver2_bias0_rtp;
+    input_port                  	solver2_bias1_rtp;
+    input_port                  	solver2_bias2_rtp;
+    input_port                  	solver2_bias3_rtp;
+    adf::shared_buffer<float>   	solver2_roll_buf;
+    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         			solver2_dense0_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver2_dense1_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver2_dense2_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver2_dense3_weight_plios;
 
-    input_port            solver3_bias0_rtp;
-    input_port            solver3_bias1_rtp;
-    input_port            solver3_bias2_rtp;
-    input_port            solver3_bias3_rtp;
 
-    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         solver2_dense0_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense1_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense2_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense3_weight_plios;
+    kernel                      	solver3_rollconcat;
+    dense256x128                	solver3_dense0;
+    kernel                      	solver3_bias_relu0;
+    kernel                      	solver3_split0;
+    dense128x128_stage2         	solver3_dense1;
+    kernel                      	solver3_bias_relu1;
+    kernel                      	solver3_split1;
+    dense128x128_stage2        	    solver3_dense2;
+    kernel                      	solver3_bias_relu2;
+    kernel                      	solver3_split2;
+    dense128x128_stage2         	solver3_dense3;
+    kernel                      	solver3_bias_relu3;
+    input_port                  	solver3_bias0_rtp;
+    input_port                  	solver3_bias1_rtp;
+    input_port                  	solver3_bias2_rtp;
+    input_port                  	solver3_bias3_rtp;
+    adf::shared_buffer<float>   	solver3_roll_buf;
+    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         			solver3_dense0_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver3_dense1_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver3_dense2_weight_plios;
+    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver3_dense3_weight_plios;
 
-    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         solver3_dense0_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver3_dense1_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver3_dense2_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver3_dense3_weight_plios;
-    dense128x32           output_dense0;
-    input_port            output_matrixA_rtp;
+
+    dense128x32                 	output_dense0;
+    input_port                  	output_matrixA_rtp;
+
 
     NeuralNetworkGraph() {
         const std::string base_path = DATA_DIR;
 
-        const auto make_bias_kernel = []() {
-            kernel k = kernel::create(bias_add_kernel);
-            source(k)  = "bias_add.cpp";
-            headers(k) = {"bias_add.h"};
-            return k;
-        };
-        const auto make_relu_kernel = []() {
-            kernel k = kernel::create(leaky_relu_kernel);
-            source(k)  = "leaky_relu.cpp";
-            headers(k) = {"leaky_relu.h"};
+        const auto make_bias_relu_kernel = []() {
+            kernel k = kernel::create(bias_add_leaky_relu_kernel);
+            source(k)  = "bias_relu_fused.cpp";
+            headers(k) = {"bias_relu_fused.h"};
             return k;
         };
         const auto make_split_kernel = []() {
@@ -327,16 +303,13 @@ public:
         connect<>(embed_layer0_weights.out[0], embed_dense0.inA[0]);
         connect<>(pipeline_in.out[0], embed_dense0.inB[0]);
 
-        embed_bias0 = make_bias_kernel();
-        embed_bias1 = make_bias_kernel();
-        embed_relu0 = make_relu_kernel();
-        embed_relu1 = make_relu_kernel();
+        embed_bias_relu0 = make_bias_relu_kernel();
+        embed_bias_relu1 = make_bias_relu_kernel();
         embed_split0 = make_split_kernel();
 
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense0.out[0], embed_bias0.in[0]);
-        connect<parameter>(embed_bias0_rtp, embed_bias0.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias0.out[0], embed_relu0.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_relu0.out[0], embed_split0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense0.out[0], embed_bias_relu0.in[0]);
+        connect<parameter>(embed_bias0_rtp, embed_bias_relu0.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu0.out[0], embed_split0.in[0]);
 
         auto embed_split_leg0 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(embed_split0.out[0], embed_dense1.inB[0]);
         auto embed_split_leg1 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(embed_split0.out[1], embed_dense1.inB[1]);
@@ -351,9 +324,8 @@ public:
             connect<>(embed_dense1_weight_plios[part].out[0], embed_dense1.inA[part]);
         }
 
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_bias1.in[0]);
-        connect<parameter>(embed_bias1_rtp, embed_bias1.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias1.out[0], embed_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_bias_relu1.in[0]);
+        connect<parameter>(embed_bias1_rtp, embed_bias_relu1.in[1]);
 
         // // Solver 1 -------------------------------------------------
 
@@ -361,7 +333,7 @@ public:
         source(solver_rollconcat)  = "roll_concat.cpp";
         headers(solver_rollconcat) = {"roll_concat.h"};
 
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_relu1.out[0], solver_rollconcat.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver_rollconcat.in[0]);
         dimensions(solver_rollconcat.in[0])  = {HIDDEN_SIZE};
         dimensions(solver_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
 
@@ -403,51 +375,42 @@ public:
         connect_layer_weights(solver_dense2_weight_plios, solver_dense2, "solver_dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
         connect_layer_weights(solver_dense3_weight_plios, solver_dense3, "solver_dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
 
-        for (kernel* bias : {&solver_bias0, &solver_bias1, &solver_bias2, &solver_bias3}) {
-            *bias = make_bias_kernel();
-        }
-        for (kernel* relu : {&solver_relu0, &solver_relu1, &solver_relu2, &solver_relu3}) {
-            *relu = make_relu_kernel();
+        for (kernel* br : {&solver_bias_relu0, &solver_bias_relu1, &solver_bias_relu2, &solver_bias_relu3}) {
+            *br = make_bias_relu_kernel();
         }
         for (kernel* split : {&solver_split0, &solver_split1, &solver_split2}) {
             *split = make_split_kernel();
         }
 
-        connect<parameter>(solver_bias0_rtp, solver_bias0.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense0.out[0], solver_bias0.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias0.out[0], solver_relu0.in[0]);
-
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu0.out[0], solver_split0.in[0]);
+        connect<parameter>(solver_bias0_rtp, solver_bias_relu0.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense0.out[0], solver_bias_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias_relu0.out[0], solver_split0.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver_split0.out[0], solver_dense1.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver_split0.out[1], solver_dense1.inB[1]);
 
 
-        connect<parameter>(solver_bias1_rtp, solver_bias1.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense1.out[0], solver_bias1.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias1.out[0], solver_relu1.in[0]);
-
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu1.out[0], solver_split1.in[0]);
+        connect<parameter>(solver_bias1_rtp, solver_bias_relu1.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense1.out[0], solver_bias_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias_relu1.out[0], solver_split1.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver_split1.out[0], solver_dense2.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver_split1.out[1], solver_dense2.inB[1]);
 
-        connect<parameter>(solver_bias2_rtp, solver_bias2.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense2.out[0], solver_bias2.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias2.out[0], solver_relu2.in[0]);
-
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu2.out[0], solver_split2.in[0]);
+        connect<parameter>(solver_bias2_rtp, solver_bias_relu2.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense2.out[0], solver_bias_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias_relu2.out[0], solver_split2.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver_split2.out[0], solver_dense3.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver_split2.out[1], solver_dense3.inB[1]);
 
-        connect<parameter>(solver_bias3_rtp, solver_bias3.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense3.out[0], solver_bias3.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias3.out[0], solver_relu3.in[0]);
+        connect<parameter>(solver_bias3_rtp, solver_bias_relu3.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_dense3.out[0], solver_bias_relu3.in[0]);
 
-        // // Solver 2 -------------------------------------------------
+        // // // Solver 2 -------------------------------------------------
         solver2_rollconcat = kernel::create(roll_concat_kernel);
         source(solver2_rollconcat)  = "roll_concat.cpp";
         headers(solver2_rollconcat) = {"roll_concat.h"};
 
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver_relu3.out[0], solver2_rollconcat.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver_bias_relu3.out[0], solver2_rollconcat.in[0]);
+        // connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver2_rollconcat.in[0]);
         dimensions(solver2_rollconcat.in[0])  = {HIDDEN_SIZE};
         dimensions(solver2_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
 
@@ -476,53 +439,45 @@ public:
             connect<>(solver2_dense0_weight_plios[part].out[0], solver2_dense0.inA[part]);
         }
 
-        connect_layer_weights(solver2_dense1_weight_plios, solver2_dense1, "solver2_dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX);
-        connect_layer_weights(solver2_dense2_weight_plios, solver2_dense2, "solver2_dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
-        connect_layer_weights(solver2_dense3_weight_plios, solver2_dense3, "solver2_dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
+        connect_layer_weights(solver2_dense1_weight_plios, solver2_dense1, "solver2_dense1_w_part", SUBSOLVER1_DENSE1_WEIGHTS_PREFIX);
+        connect_layer_weights(solver2_dense2_weight_plios, solver2_dense2, "solver2_dense2_w_part", SUBSOLVER1_DENSE2_WEIGHTS_PREFIX);
+        connect_layer_weights(solver2_dense3_weight_plios, solver2_dense3, "solver2_dense3_w_part", SUBSOLVER1_DENSE3_WEIGHTS_PREFIX);
 
-        for (kernel* bias : {&solver2_bias0, &solver2_bias1, &solver2_bias2, &solver2_bias3}) {
-            *bias = make_bias_kernel();
-        }
-        for (kernel* relu : {&solver2_relu0, &solver2_relu1, &solver2_relu2, &solver2_relu3}) {
-            *relu = make_relu_kernel();
+        for (kernel* br : {&solver2_bias_relu0, &solver2_bias_relu1, &solver2_bias_relu2, &solver2_bias_relu3}) {
+            *br = make_bias_relu_kernel();
         }
         for (kernel* split : {&solver2_split0, &solver2_split1, &solver2_split2}) {
             *split = make_split_kernel();
         }
 
-        connect<parameter>(solver2_bias0_rtp, solver2_bias0.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense0.out[0], solver2_bias0.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias0.out[0], solver2_relu0.in[0]);
-        
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu0.out[0], solver2_split0.in[0]);
+        connect<parameter>(solver2_bias0_rtp, solver2_bias_relu0.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense0.out[0], solver2_bias_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu0.out[0], solver2_split0.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split0.out[0], solver2_dense1.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split0.out[1], solver2_dense1.inB[1]);
 
-        connect<parameter>(solver2_bias1_rtp, solver2_bias1.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense1.out[0], solver2_bias1.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias1.out[0], solver2_relu1.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu1.out[0], solver2_split1.in[0]);
+        connect<parameter>(solver2_bias1_rtp, solver2_bias_relu1.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense1.out[0], solver2_bias_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu1.out[0], solver2_split1.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split1.out[0], solver2_dense2.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split1.out[1], solver2_dense2.inB[1]);
 
-        connect<parameter>(solver2_bias2_rtp, solver2_bias2.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense2.out[0], solver2_bias2.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias2.out[0], solver2_relu2.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu2.out[0], solver2_split2.in[0]);
+        connect<parameter>(solver2_bias2_rtp, solver2_bias_relu2.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense2.out[0], solver2_bias_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu2.out[0], solver2_split2.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split2.out[0], solver2_dense3.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split2.out[1], solver2_dense3.inB[1]);
 
-        connect<parameter>(solver2_bias3_rtp, solver2_bias3.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense3.out[0], solver2_bias3.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias3.out[0], solver2_relu3.in[0]);
+        connect<parameter>(solver2_bias3_rtp, solver2_bias_relu3.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense3.out[0], solver2_bias_relu3.in[0]);
 
 
-        // // Solver 2 -------------------------------------------------
+        // // // Solver 3 -------------------------------------------------
         solver3_rollconcat = kernel::create(roll_concat_kernel);
         source(solver3_rollconcat)  = "roll_concat.cpp";
         headers(solver3_rollconcat) = {"roll_concat.h"};
-
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_relu3.out[0], solver3_rollconcat.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu3.out[0], solver3_rollconcat.in[0]);
+        // connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver3_rollconcat.in[0]);
         dimensions(solver3_rollconcat.in[0])  = {HIDDEN_SIZE};
         dimensions(solver3_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
 
@@ -551,51 +506,47 @@ public:
             connect<>(solver3_dense0_weight_plios[part].out[0], solver3_dense0.inA[part]);
         }
 
-        connect_layer_weights(solver3_dense1_weight_plios, solver3_dense1, "solver3_dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX);
-        connect_layer_weights(solver3_dense2_weight_plios, solver3_dense2, "solver3_dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
-        connect_layer_weights(solver3_dense3_weight_plios, solver3_dense3, "solver3_dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
+        connect_layer_weights(solver3_dense1_weight_plios, solver3_dense1, "solver3_dense1_w_part", SUBSOLVER2_DENSE1_WEIGHTS_PREFIX);
+        connect_layer_weights(solver3_dense2_weight_plios, solver3_dense2, "solver3_dense2_w_part", SUBSOLVER2_DENSE2_WEIGHTS_PREFIX);
+        connect_layer_weights(solver3_dense3_weight_plios, solver3_dense3, "solver3_dense3_w_part", SUBSOLVER2_DENSE3_WEIGHTS_PREFIX);
 
-        for (kernel* bias : {&solver3_bias0, &solver3_bias1, &solver3_bias2, &solver3_bias3}) {
-            *bias = make_bias_kernel();
-        }
-        for (kernel* relu : {&solver3_relu0, &solver3_relu1, &solver3_relu2, &solver3_relu3}) {
-            *relu = make_relu_kernel();
+        for (kernel* br : {&solver3_bias_relu0, &solver3_bias_relu1, &solver3_bias_relu2, &solver3_bias_relu3}) {
+            *br = make_bias_relu_kernel();
         }
         for (kernel* split : {&solver3_split0, &solver3_split1, &solver3_split2}) {
             *split = make_split_kernel();
         }
 
-        connect<parameter>(solver3_bias0_rtp, solver3_bias0.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense0.out[0], solver3_bias0.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias0.out[0], solver3_relu0.in[0]);
-        
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_relu0.out[0], solver3_split0.in[0]);
+        connect<parameter>(solver3_bias0_rtp, solver3_bias_relu0.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense0.out[0], solver3_bias_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias_relu0.out[0], solver3_split0.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver3_split0.out[0], solver3_dense1.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver3_split0.out[1], solver3_dense1.inB[1]);
 
-        connect<parameter>(solver3_bias1_rtp, solver3_bias1.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense1.out[0], solver3_bias1.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias1.out[0], solver3_relu1.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_relu1.out[0], solver3_split1.in[0]);
+        connect<parameter>(solver3_bias1_rtp, solver3_bias_relu1.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense1.out[0], solver3_bias_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias_relu1.out[0], solver3_split1.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver3_split1.out[0], solver3_dense2.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver3_split1.out[1], solver3_dense2.inB[1]);
 
-        connect<parameter>(solver3_bias2_rtp, solver3_bias2.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense2.out[0], solver3_bias2.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias2.out[0], solver3_relu2.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_relu2.out[0], solver3_split2.in[0]);
+        connect<parameter>(solver3_bias2_rtp, solver3_bias_relu2.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense2.out[0], solver3_bias_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias_relu2.out[0], solver3_split2.in[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver3_split2.out[0], solver3_dense3.inB[0]);
         connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver3_split2.out[1], solver3_dense3.inB[1]);
 
-        connect<parameter>(solver3_bias3_rtp, solver3_bias3.in[1]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense3.out[0], solver3_bias3.in[0]);
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias3.out[0], solver3_relu3.in[0]);
+        connect<parameter>(solver3_bias3_rtp, solver3_bias_relu3.in[1]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver3_dense3.out[0], solver3_bias_relu3.in[0]);
 
+        
+ // // // Output  -------------------------------------------------
+     
         connect<parameter>(output_matrixA_rtp, output_dense0.matrixA[0]);
-        auto solver2_to_output = connect<window<WINDOW_BYTES_HIDDEN>>(solver3_relu3.out[0], output_dense0.inB[0]);
+        auto solver2_to_output = connect<window<WINDOW_BYTES_HIDDEN>>(solver3_bias_relu3.out[0], output_dense0.inB[0]);
         adf::fifo_depth(solver2_to_output) = DEFAULT_FIFO_DEPTH;
 
         connect<window<WINDOW_BYTES_OUTPUT_PAD>>(output_dense0.out[0], pipeline_out.in[0]);
+
 
         apply_layout();
     }

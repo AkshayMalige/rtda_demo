@@ -26,56 +26,55 @@ inline void NeuralNetworkGraph::apply_layout() {
     //     {&solver_split1, 0.65}
     // }};
 
-    const std::array<KernelRuntimeSpec, 16> runtime_specs = {{
-        {&embed_bias0, 1.0},
-        {&embed_bias1, 1.0},
-        {&embed_relu0, 1.0},
-        {&embed_relu1, 1.0},
-        {&embed_split0, 1.0},
-        {&solver_bias0, 0.45},
-        {&solver_bias1, 0.45},
-        {&solver_relu0, 0.5},
-        {&solver_relu1, 0.5},
-        {&solver_split0, 0.65},
-        {&solver_bias2, 0.45},
-        {&solver_relu2, 0.5},
-        {&solver_split1, 0.65},
-        {&solver_bias3, 0.45},
-        {&solver_relu3, 0.5},
-        {&solver_split2, 0.65}
-    }};
+    // const std::array<KernelRuntimeSpec, 10> runtime_specs = {{
+    //     {&embed_bias_relu0, 0.95},
+    //     {&embed_bias_relu1, 0.95},
+    //     {&embed_split0, 1.0},
+    //     {&solver_bias_relu0, 0.95},
+    //     {&solver_bias_relu1, 0.95},
+    //     {&solver_split0, 0.65},
+    //     {&solver_bias_relu2, 0.95},
+    //     {&solver_split1, 0.65},
+    //     {&solver_bias_relu3, 0.95},
+    //     {&solver_split2, 0.65}
+    // }};
 
-    for (const auto& spec : runtime_specs) {
-        runtime<ratio>(*spec.target) = spec.ratio;
-    }
+    // for (const auto& spec : runtime_specs) {
+    //     runtime<ratio>(*spec.target) = spec.ratio;
+    // }
+
+    runtime<ratio>(embed_bias_relu0) =  0.95;
+    runtime<ratio>(embed_split0) =  1.0;
+    runtime<ratio>(embed_bias_relu1) =  0.95;
 
     runtime<ratio>(solver_rollconcat) = 1.0;
+    runtime<ratio>(solver_bias_relu0) =  0.95;
+    runtime<ratio>(solver_split0) =  0.65;
+    runtime<ratio>(solver_bias_relu1) =  0.95;
+    runtime<ratio>(solver_split1) =  0.65;
+    runtime<ratio>(solver_bias_relu2) =  0.95;
+    runtime<ratio>(solver_split2) =  0.65;
+    runtime<ratio>(solver_bias_relu3) = 0.95;
 
-    runtime<ratio>(solver2_bias0) = 0.45;
-    runtime<ratio>(solver2_bias1) = 0.45;
-    runtime<ratio>(solver2_bias2) = 0.45;
-    runtime<ratio>(solver2_bias3) = 0.45;
-    runtime<ratio>(solver2_relu0) = 0.5;
-    runtime<ratio>(solver2_relu1) = 0.5;
-    runtime<ratio>(solver2_relu2) = 0.5;
-    runtime<ratio>(solver2_relu3) = 0.5;
-    runtime<ratio>(solver2_split0) = 0.65;
-    runtime<ratio>(solver2_split1) = 0.65;
-    runtime<ratio>(solver2_split2) = 0.65;
     runtime<ratio>(solver2_rollconcat) = 1.0;
+    runtime<ratio>(solver2_bias_relu0) =  0.95;
+    runtime<ratio>(solver2_split0) =  0.65;
+    runtime<ratio>(solver2_bias_relu1) =  0.95;
+    runtime<ratio>(solver2_split1) =  0.65;
+    runtime<ratio>(solver2_bias_relu2) =  0.95;
+    runtime<ratio>(solver2_split2) =  0.65;
+    runtime<ratio>(solver2_bias_relu3) = 0.95;
 
-    runtime<ratio>(solver3_bias0) = 0.45;
-    runtime<ratio>(solver3_bias1) = 0.45;
-    runtime<ratio>(solver3_bias2) = 0.45;
-    runtime<ratio>(solver3_bias3) = 0.45;
-    runtime<ratio>(solver3_relu0) = 0.5;
-    runtime<ratio>(solver3_relu1) = 0.5;
-    runtime<ratio>(solver3_relu2) = 0.5;
-    runtime<ratio>(solver3_relu3) = 0.5;
-    runtime<ratio>(solver3_split0) = 0.65;
-    runtime<ratio>(solver3_split1) = 0.65;
-    runtime<ratio>(solver3_split2) = 0.65;
     runtime<ratio>(solver3_rollconcat) = 1.0;
+    runtime<ratio>(solver3_bias_relu0) =  0.95;
+    runtime<ratio>(solver3_split0) =  0.65;
+    runtime<ratio>(solver3_bias_relu1) =  0.95;
+    runtime<ratio>(solver3_split1) =  0.65;
+    runtime<ratio>(solver3_bias_relu2) =  0.95;
+    runtime<ratio>(solver3_split2) =  0.65;
+    runtime<ratio>(solver3_bias_relu3) = 0.95;
+
+
 
 
 

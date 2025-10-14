@@ -1,2 +1,0 @@
-// Placeholder packet stream output file for AIE compilation
-// This file will contain output packet data from the neural network graph

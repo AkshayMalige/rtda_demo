@@ -24,8 +24,7 @@ WORK_DIR      := Work
 GRAPH_LIB     := $(WORK_DIR)/libadf.a
 AIE_CFG       := aie.cfg
 KERNEL_SRCS   := \
-	leaky_relu.cpp \
-	bias_add.cpp \
+	bias_relu_fused.cpp \
 	window_split_128_to_64x2.cpp \
 	roll_concat.cpp
 KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
@@ -80,8 +79,7 @@ sim: graph
 clean:
 	@echo "--- Cleaning Workspace ---"
 	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary \
-	       aiesimulator_output build_hw \
+	       aiesimulator_output build_hw trdata.aiesim function_wdb_dir\
 	       pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT \
-	       *.json *.vcd
+	       *.json *.vcd *.wcfg *.wdb
 	@echo "CLEANED: Build and work directories removed."
-
