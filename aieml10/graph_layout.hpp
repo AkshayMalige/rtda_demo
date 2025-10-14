@@ -26,7 +26,7 @@ inline void NeuralNetworkGraph::apply_layout() {
     //     {&solver_split1, 0.65}
     // }};
 
-    const std::array<KernelRuntimeSpec, 20> runtime_specs = {{
+    const std::array<KernelRuntimeSpec, 16> runtime_specs = {{
         {&embed_bias0, 1.0},
         {&embed_bias1, 1.0},
         {&embed_relu0, 1.0},
@@ -42,31 +42,42 @@ inline void NeuralNetworkGraph::apply_layout() {
         {&solver_split1, 0.65},
         {&solver_bias3, 0.45},
         {&solver_relu3, 0.5},
-        {&solver_split2, 0.65},
-        {&solver2_bias0, 0.45},
-        {&solver2_relu0, 0.5},
-        {&solver2_bias1, 0.45},
-        {&solver2_split0, 0.65}
+        {&solver_split2, 0.65}
     }};
 
     for (const auto& spec : runtime_specs) {
         runtime<ratio>(*spec.target) = spec.ratio;
     }
 
-    // runtime<ratio>(solver_split2) = 0.65;
-    // runtime<ratio>(solver2_bias0) = 0.45;
-    // runtime<ratio>(solver2_bias1) = 0.45;
-    // runtime<ratio>(solver2_bias2) = 0.45;
-    // runtime<ratio>(solver2_bias3) = 0.45;
-    // runtime<ratio>(solver2_relu0) = 0.5;
-    // runtime<ratio>(solver2_relu1) = 0.5;
-    // runtime<ratio>(solver2_relu2) = 0.5;
-    // runtime<ratio>(solver2_relu3) = 0.5;
-    // runtime<ratio>(solver2_split0) = 0.65;
-    // runtime<ratio>(solver2_split1) = 0.65;
-    // runtime<ratio>(solver2_split2) = 0.65;
     runtime<ratio>(solver_rollconcat) = 1.0;
+
+    runtime<ratio>(solver2_bias0) = 0.45;
+    runtime<ratio>(solver2_bias1) = 0.45;
+    runtime<ratio>(solver2_bias2) = 0.45;
+    runtime<ratio>(solver2_bias3) = 0.45;
+    runtime<ratio>(solver2_relu0) = 0.5;
+    runtime<ratio>(solver2_relu1) = 0.5;
+    runtime<ratio>(solver2_relu2) = 0.5;
+    runtime<ratio>(solver2_relu3) = 0.5;
+    runtime<ratio>(solver2_split0) = 0.65;
+    runtime<ratio>(solver2_split1) = 0.65;
+    runtime<ratio>(solver2_split2) = 0.65;
     runtime<ratio>(solver2_rollconcat) = 1.0;
+
+    runtime<ratio>(solver3_bias0) = 0.45;
+    runtime<ratio>(solver3_bias1) = 0.45;
+    runtime<ratio>(solver3_bias2) = 0.45;
+    runtime<ratio>(solver3_bias3) = 0.45;
+    runtime<ratio>(solver3_relu0) = 0.5;
+    runtime<ratio>(solver3_relu1) = 0.5;
+    runtime<ratio>(solver3_relu2) = 0.5;
+    runtime<ratio>(solver3_relu3) = 0.5;
+    runtime<ratio>(solver3_split0) = 0.65;
+    runtime<ratio>(solver3_split1) = 0.65;
+    runtime<ratio>(solver3_split2) = 0.65;
+    runtime<ratio>(solver3_rollconcat) = 1.0;
+
+
 
     adf::location<adf::PLIO>(pipeline_in) = adf::shim(AIEML10_INPUT_SHIM);
     adf::location<adf::PLIO>(pipeline_out) = adf::shim(AIEML10_OUTPUT_SHIM);
@@ -81,8 +92,16 @@ inline void NeuralNetworkGraph::apply_layout() {
         }
     };
 
-    place_linear(embed_dense0.getKernels(), TP_CASC_LEN_STAGE1_LAYER0 * TP_SSR_STAGE1, 7, 2);
-    place_linear(embed_dense1.getKernels(), TP_CASC_LEN_STAGE1_LAYER1 * TP_SSR_STAGE1, 8, 2);
+    // Keep early stage anchors modest to guide placement without over-constraining
+    // place_linear(embed_dense0.getKernels(), TP_CASC_LEN_STAGE1_LAYER0 * TP_SSR_STAGE1, 7, 2);
+    // place_linear(embed_dense1.getKernels(), TP_CASC_LEN_STAGE1_LAYER1 * TP_SSR_STAGE1, 8, 2);
+
+    // Distribute weight PLIOs near intended compute to avoid shim over-subscription
+    // Embed stage weights
+    // adf::location<adf::PLIO>(embed_layer0_weights) = adf::shim(7);
+    // for (std::size_t i = 0; i < embed_dense1_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(embed_dense1_weight_plios[i]) = adf::shim(8 + static_cast<int>(i));
+    // }
 
     // struct KernelPlacement {
     //     kernel* target;
@@ -122,10 +141,39 @@ inline void NeuralNetworkGraph::apply_layout() {
     //     adf::location<adf::kernel>(*placement.target) = adf::tile(placement.col, placement.row);
     // }
 
-    place_linear(solver_dense0.getKernels(), TP_CASC_LEN_STAGE2_LAYER0 * TP_SSR_STAGE2, 10, 0);
-    place_linear(solver_dense1.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 23, 2);
-    place_linear(solver_dense2.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 23, 3);
-    place_linear(solver_dense3.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 23, 4);
+    // // Let the placer choose solver placements to reduce congestion.
+    // // Hint with PLIO shims for weights to anchor proximity and spread traffic.
+    // for (std::size_t i = 0; i < solver_dense0_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver_dense0_weight_plios[i]) = adf::shim(10 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver_dense1_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver_dense1_weight_plios[i]) = adf::shim(23 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver_dense2_weight_plios.size(); ++i) {
+    //     // Nudge one column away to avoid overload on a single shim
+    //     adf::location<adf::PLIO>(solver_dense2_weight_plios[i]) = adf::shim(25 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver_dense3_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver_dense3_weight_plios[i]) = adf::shim(27 + static_cast<int>(i));
+    // }
+
+    // for (std::size_t i = 0; i < solver2_dense0_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver2_dense0_weight_plios[i]) = adf::shim(30 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver2_dense1_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver2_dense1_weight_plios[i]) = adf::shim(32 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver2_dense2_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver2_dense2_weight_plios[i]) = adf::shim(34 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver2_dense3_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver2_dense3_weight_plios[i]) = adf::shim(36 + static_cast<int>(i));
+    // }
+
+    // for (std::size_t i = 0; i < solver3_dense0_weight_plios.size(); ++i) {
+    //     // Place close to final output at shim 27, but spread across columns
+    //     adf::location<adf::PLIO>(solver3_dense0_weight_plios[i]) = adf::shim(24 + static_cast<int>(i));
+    // }
 
     // const std::array<KernelPlacement, 9> solver2_kernels = {{
     //     {&solver2_bias0, 32, 3},
@@ -158,4 +206,3 @@ inline void NeuralNetworkGraph::apply_layout() {
     // place_linear(solver2_dense3.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 4);
     // place_linear(output_dense0.getKernels(), TP_CASC_LEN_STAGE3 * TP_SSR_STAGE3, 26, 2);
 }
-
