@@ -51,6 +51,9 @@ int main() {
         return true;
     };
 
+    // // Embed bias updates ------------------------------------------------
+
+
     if (!load_and_update_ports(EMBED_DENSE0_BIAS,
                                EMBED_DENSE0_BIAS_SIZE,
                                {&g.embed_bias0_rtp})) {
@@ -62,73 +65,76 @@ int main() {
         return -1;
     }
 
-    // // Stage 2 bias updates ------------------------------------------------
+    // // Solver0 bias updates ------------------------------------------------
+   
     if (!load_and_update_ports(SUBSOLVER0_DENSE0_BIAS,
                                SUBSOLVER0_DENSE0_BIAS_SIZE,
-                               {&g.solver_bias0_rtp})) {
+                               {&g.solver0_bias0_rtp})) {
         return -1;
     }
-    if (!load_and_update_ports(SUBSOLVER1_DENSE0_BIAS,
-        SUBSOLVER0_DENSE0_BIAS_SIZE,
-        {&g.solver2_bias0_rtp})) {
-    return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER2_DENSE0_BIAS,
-        SUBSOLVER0_DENSE0_BIAS_SIZE,
-        {&g.solver3_bias0_rtp})) {
-    return -1;
-    }
-
     if (!load_and_update_ports(SUBSOLVER0_DENSE1_BIAS,
         SUBSOLVER0_DENSE1_BIAS_SIZE,
-        {&g.solver_bias1_rtp})) {
+        {&g.solver0_bias1_rtp})) {
+        return -1;
+    }
+    if (!load_and_update_ports(SUBSOLVER0_DENSE2_BIAS,
+        SUBSOLVER0_DENSE2_BIAS_SIZE,
+        {&g.solver0_bias2_rtp})) {
+        return -1;
+    }
+    if (!load_and_update_ports(SUBSOLVER0_DENSE3_BIAS,
+        SUBSOLVER0_DENSE3_BIAS_SIZE,
+        {&g.solver0_bias3_rtp})) {
+        return -1;
+    }
+
+    // // Solver1 bias updates ------------------------------------------------
+    if (!load_and_update_ports(SUBSOLVER1_DENSE0_BIAS,
+        SUBSOLVER0_DENSE0_BIAS_SIZE,
+        {&g.solver1_bias0_rtp})) {
         return -1;
     }
     if (!load_and_update_ports(SUBSOLVER1_DENSE1_BIAS,
         SUBSOLVER0_DENSE1_BIAS_SIZE,
-        {&g.solver2_bias1_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER2_DENSE1_BIAS,
-        SUBSOLVER0_DENSE1_BIAS_SIZE,
-        {&g.solver3_bias1_rtp})) {
-        return -1;
-    }
-
-
-    if (!load_and_update_ports(SUBSOLVER0_DENSE2_BIAS,
-        SUBSOLVER0_DENSE2_BIAS_SIZE,
-        {&g.solver_bias2_rtp})) {
+        {&g.solver1_bias1_rtp})) {
         return -1;
     }
     if (!load_and_update_ports(SUBSOLVER1_DENSE2_BIAS,
         SUBSOLVER0_DENSE2_BIAS_SIZE,
-        {&g.solver2_bias2_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER2_DENSE2_BIAS,
-        SUBSOLVER0_DENSE2_BIAS_SIZE,
-        {&g.solver3_bias2_rtp})) {
-        return -1;
-    }
-
-    if (!load_and_update_ports(SUBSOLVER0_DENSE3_BIAS,
-        SUBSOLVER0_DENSE3_BIAS_SIZE,
-        {&g.solver_bias3_rtp})) {
+        {&g.solver1_bias2_rtp})) {
         return -1;
     }
     if (!load_and_update_ports(SUBSOLVER1_DENSE3_BIAS,
         SUBSOLVER0_DENSE3_BIAS_SIZE,
-        {&g.solver2_bias3_rtp})) {
+        {&g.solver1_bias3_rtp})) {
+        return -1;
+    }
+
+
+    // // Solver2 bias updates ------------------------------------------------
+
+    if (!load_and_update_ports(SUBSOLVER2_DENSE0_BIAS,
+        SUBSOLVER0_DENSE0_BIAS_SIZE,
+        {&g.solver2_bias0_rtp})) {
+    return -1;
+    }
+    if (!load_and_update_ports(SUBSOLVER2_DENSE1_BIAS,
+        SUBSOLVER0_DENSE1_BIAS_SIZE,
+        {&g.solver2_bias1_rtp})) {
+        return -1;
+    }
+    if (!load_and_update_ports(SUBSOLVER2_DENSE2_BIAS,
+        SUBSOLVER0_DENSE2_BIAS_SIZE,
+        {&g.solver2_bias2_rtp})) {
         return -1;
     }
     if (!load_and_update_ports(SUBSOLVER2_DENSE3_BIAS,
         SUBSOLVER0_DENSE3_BIAS_SIZE,
-        {&g.solver3_bias3_rtp})) {
+        {&g.solver2_bias3_rtp})) {
         return -1;
     }
 
-    // // Stage 3 weight updates ---------------------------------------------
+// // // Output block updates ---------------------------------------------
     if (!load_and_update_ports(OUTPUT_DENSE0_WEIGHTS,
                                OUTPUT_DENSE0_WEIGHTS_SIZE,
                                {&g.output_matrixA_rtp})) {
@@ -141,4 +147,3 @@ int main() {
     return 0;
 }
 #endif
-

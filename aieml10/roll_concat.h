@@ -9,4 +9,3 @@ using namespace adf;
 // on a single output buffer. Total output = HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE (256).
 void roll_concat_kernel(adf::input_buffer<float>& __restrict in,
                         adf::output_buffer<float>& __restrict out0);
-

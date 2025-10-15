@@ -8,35 +8,17 @@ inline void NeuralNetworkGraph::apply_layout() {
         double ratio;
     };
 
-    // const std::array<KernelRuntimeSpec, 15> runtime_specs = {{
-    //     {&embed_bias0, 1.0},
-    //     {&embed_bias1, 1.0},
-    //     {&embed_relu0, 1.0},
-    //     {&embed_relu1, 1.0},
-    //     {&embed_split0, 1.0},
-    //     {&solver_bias0, 0.45},
-    //     {&solver_bias1, 0.45},
-    //     {&solver_bias2, 0.45},
-    //     {&solver_bias3, 0.45},
-    //     {&solver_relu0, 0.5},
-    //     {&solver_relu1, 0.5},
-    //     {&solver_relu2, 0.5},
-    //     {&solver_relu3, 0.5},
-    //     {&solver_split0, 0.65},
-    //     {&solver_split1, 0.65}
-    // }};
-
     // const std::array<KernelRuntimeSpec, 10> runtime_specs = {{
     //     {&embed_bias_relu0, 0.95},
     //     {&embed_bias_relu1, 0.95},
     //     {&embed_split0, 1.0},
-    //     {&solver_bias_relu0, 0.95},
-    //     {&solver_bias_relu1, 0.95},
-    //     {&solver_split0, 0.65},
-    //     {&solver_bias_relu2, 0.95},
-    //     {&solver_split1, 0.65},
-    //     {&solver_bias_relu3, 0.95},
-    //     {&solver_split2, 0.65}
+    //     {&solver0_bias_relu0, 0.95},
+    //     {&solver0_bias_relu1, 0.95},
+    //     {&solver0_split0, 0.65},
+    //     {&solver0_bias_relu2, 0.95},
+    //     {&solver0_split1, 0.65},
+    //     {&solver0_bias_relu3, 0.95},
+    //     {&solver0_split2, 0.65}
     // }};
 
     // for (const auto& spec : runtime_specs) {
@@ -47,14 +29,23 @@ inline void NeuralNetworkGraph::apply_layout() {
     runtime<ratio>(embed_split0) =  1.0;
     runtime<ratio>(embed_bias_relu1) =  0.95;
 
-    runtime<ratio>(solver_rollconcat) = 1.0;
-    runtime<ratio>(solver_bias_relu0) =  0.95;
-    runtime<ratio>(solver_split0) =  0.65;
-    runtime<ratio>(solver_bias_relu1) =  0.95;
-    runtime<ratio>(solver_split1) =  0.65;
-    runtime<ratio>(solver_bias_relu2) =  0.95;
-    runtime<ratio>(solver_split2) =  0.65;
-    runtime<ratio>(solver_bias_relu3) = 0.95;
+    runtime<ratio>(solver0_rollconcat) = 1.0;
+    runtime<ratio>(solver0_bias_relu0) =  0.95;
+    runtime<ratio>(solver0_split0) =  0.65;
+    runtime<ratio>(solver0_bias_relu1) =  0.95;
+    runtime<ratio>(solver0_split1) =  0.65;
+    runtime<ratio>(solver0_bias_relu2) =  0.95;
+    runtime<ratio>(solver0_split2) =  0.65;
+    runtime<ratio>(solver0_bias_relu3) = 0.95;
+
+    runtime<ratio>(solver1_rollconcat) = 1.0;
+    runtime<ratio>(solver1_bias_relu0) =  0.95;
+    runtime<ratio>(solver1_split0) =  0.65;
+    runtime<ratio>(solver1_bias_relu1) =  0.95;
+    runtime<ratio>(solver1_split1) =  0.65;
+    runtime<ratio>(solver1_bias_relu2) =  0.95;
+    runtime<ratio>(solver1_split2) =  0.65;
+    runtime<ratio>(solver1_bias_relu3) = 0.95;
 
     runtime<ratio>(solver2_rollconcat) = 1.0;
     runtime<ratio>(solver2_bias_relu0) =  0.95;
@@ -64,18 +55,6 @@ inline void NeuralNetworkGraph::apply_layout() {
     runtime<ratio>(solver2_bias_relu2) =  0.95;
     runtime<ratio>(solver2_split2) =  0.65;
     runtime<ratio>(solver2_bias_relu3) = 0.95;
-
-    runtime<ratio>(solver3_rollconcat) = 1.0;
-    runtime<ratio>(solver3_bias_relu0) =  0.95;
-    runtime<ratio>(solver3_split0) =  0.65;
-    runtime<ratio>(solver3_bias_relu1) =  0.95;
-    runtime<ratio>(solver3_split1) =  0.65;
-    runtime<ratio>(solver3_bias_relu2) =  0.95;
-    runtime<ratio>(solver3_split2) =  0.65;
-    runtime<ratio>(solver3_bias_relu3) = 0.95;
-
-
-
 
 
     adf::location<adf::PLIO>(pipeline_in) = adf::shim(AIEML10_INPUT_SHIM);
@@ -114,11 +93,11 @@ inline void NeuralNetworkGraph::apply_layout() {
     //     {&embed_split0, 7, 5},
     //     {&embed_bias1, 9, 3},
     //     {&embed_relu1, 9, 4},
-    //     {&solver_rollconcat, 12, 2},
-    //     {&solver_bias0, 12, 3},
-    //     {&solver_bias1, 13, 3},
-    //     {&solver_bias2, 14, 3},
-    //     {&solver_bias3, 15, 3}
+    //     {&solver0_rollconcat, 12, 2},
+    //     {&solver0_bias_relu0, 12, 3},
+    //     {&solver0_bias_relu1, 13, 3},
+    //     {&solver0_bias_relu2, 14, 3},
+    //     {&solver0_bias_relu3, 15, 3}
     // }};
 
     // for (const auto& placement : stage1_kernels) {
@@ -126,14 +105,14 @@ inline void NeuralNetworkGraph::apply_layout() {
     // }
 
     // const std::array<KernelPlacement, 8> stage1_activation_tiles = {{
-    //     {&solver_relu0, 12, 4},
-    //     {&solver_relu1, 13, 4},
-    //     {&solver_relu2, 14, 4},
-    //     {&solver_relu3, 15, 4},
-    //     {&solver_split0, 22, 2},
-    //     {&solver_split1, 22, 3},
-    //     {&solver_split2, 22, 4},
-    //     {&solver2_rollconcat, 32, 2}
+    //     {&solver0_bias_relu0, 12, 4},
+    //     {&solver0_bias_relu1, 13, 4},
+    //     {&solver0_bias_relu2, 14, 4},
+    //     {&solver0_bias_relu3, 15, 4},
+    //     {&solver0_split0, 22, 2},
+    //     {&solver0_split1, 22, 3},
+    //     {&solver0_split2, 22, 4},
+    //     {&solver1_rollconcat, 32, 2}
     // }};
 
     // for (const auto& placement : stage1_activation_tiles) {
@@ -142,36 +121,36 @@ inline void NeuralNetworkGraph::apply_layout() {
 
     // // Let the placer choose solver placements to reduce congestion.
     // // Hint with PLIO shims for weights to anchor proximity and spread traffic.
-    // for (std::size_t i = 0; i < solver_dense0_weight_plios.size(); ++i) {
-    //     adf::location<adf::PLIO>(solver_dense0_weight_plios[i]) = adf::shim(10 + static_cast<int>(i));
+    // for (std::size_t i = 0; i < solver0_dense0_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver0_dense0_weight_plios[i]) = adf::shim(10 + static_cast<int>(i));
     // }
-    // for (std::size_t i = 0; i < solver_dense1_weight_plios.size(); ++i) {
-    //     adf::location<adf::PLIO>(solver_dense1_weight_plios[i]) = adf::shim(23 + static_cast<int>(i));
+    // for (std::size_t i = 0; i < solver0_dense1_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver0_dense1_weight_plios[i]) = adf::shim(23 + static_cast<int>(i));
     // }
-    // for (std::size_t i = 0; i < solver_dense2_weight_plios.size(); ++i) {
+    // for (std::size_t i = 0; i < solver0_dense2_weight_plios.size(); ++i) {
     //     // Nudge one column away to avoid overload on a single shim
-    //     adf::location<adf::PLIO>(solver_dense2_weight_plios[i]) = adf::shim(25 + static_cast<int>(i));
+    //     adf::location<adf::PLIO>(solver0_dense2_weight_plios[i]) = adf::shim(25 + static_cast<int>(i));
     // }
-    // for (std::size_t i = 0; i < solver_dense3_weight_plios.size(); ++i) {
-    //     adf::location<adf::PLIO>(solver_dense3_weight_plios[i]) = adf::shim(27 + static_cast<int>(i));
+    // for (std::size_t i = 0; i < solver0_dense3_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver0_dense3_weight_plios[i]) = adf::shim(27 + static_cast<int>(i));
+    // }
+
+    // for (std::size_t i = 0; i < solver1_dense0_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver1_dense0_weight_plios[i]) = adf::shim(30 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver1_dense1_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver1_dense1_weight_plios[i]) = adf::shim(32 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver1_dense2_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver1_dense2_weight_plios[i]) = adf::shim(34 + static_cast<int>(i));
+    // }
+    // for (std::size_t i = 0; i < solver1_dense3_weight_plios.size(); ++i) {
+    //     adf::location<adf::PLIO>(solver1_dense3_weight_plios[i]) = adf::shim(36 + static_cast<int>(i));
     // }
 
     // for (std::size_t i = 0; i < solver2_dense0_weight_plios.size(); ++i) {
-    //     adf::location<adf::PLIO>(solver2_dense0_weight_plios[i]) = adf::shim(30 + static_cast<int>(i));
-    // }
-    // for (std::size_t i = 0; i < solver2_dense1_weight_plios.size(); ++i) {
-    //     adf::location<adf::PLIO>(solver2_dense1_weight_plios[i]) = adf::shim(32 + static_cast<int>(i));
-    // }
-    // for (std::size_t i = 0; i < solver2_dense2_weight_plios.size(); ++i) {
-    //     adf::location<adf::PLIO>(solver2_dense2_weight_plios[i]) = adf::shim(34 + static_cast<int>(i));
-    // }
-    // for (std::size_t i = 0; i < solver2_dense3_weight_plios.size(); ++i) {
-    //     adf::location<adf::PLIO>(solver2_dense3_weight_plios[i]) = adf::shim(36 + static_cast<int>(i));
-    // }
-
-    // for (std::size_t i = 0; i < solver3_dense0_weight_plios.size(); ++i) {
     //     // Place close to final output at shim 27, but spread across columns
-    //     adf::location<adf::PLIO>(solver3_dense0_weight_plios[i]) = adf::shim(24 + static_cast<int>(i));
+    //     adf::location<adf::PLIO>(solver2_dense0_weight_plios[i]) = adf::shim(24 + static_cast<int>(i));
     // }
 
     // const std::array<KernelPlacement, 9> solver2_kernels = {{
@@ -199,9 +178,9 @@ inline void NeuralNetworkGraph::apply_layout() {
     //     adf::location<adf::kernel>(*placement.target) = adf::tile(placement.col, placement.row);
     // }
 
-    // place_linear(solver2_dense0.getKernels(), TP_CASC_LEN_STAGE2_LAYER0 * TP_SSR_STAGE2, 24, 0);
-    // place_linear(solver2_dense1.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 2);
-    // place_linear(solver2_dense2.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 3);
-    // place_linear(solver2_dense3.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 4);
+    // place_linear(solver1_dense0.getKernels(), TP_CASC_LEN_STAGE2_LAYER0 * TP_SSR_STAGE2, 24, 0);
+    // place_linear(solver1_dense1.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 2);
+    // place_linear(solver1_dense2.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 3);
+    // place_linear(solver1_dense3.getKernels(), TP_CASC_LEN_STAGE2_LAYERX * TP_SSR_STAGE2, 36, 4);
     // place_linear(output_dense0.getKernels(), TP_CASC_LEN_STAGE3 * TP_SSR_STAGE3, 26, 2);
 }
