@@ -32,6 +32,9 @@ KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 # ==== TOOLS ====
 VPP          := v++
 AIESIM       := aiesimulator
+ 
+# Extra args for aiesimulator (e.g., --trace)
+AIESIM_ARGS  ?=
 
 # ==== COMPILER FLAGS ====
 AIE_INCLUDE_FLAGS := \
@@ -73,8 +76,26 @@ $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_
 
 sim: graph
 	@echo "--- Starting AIEML10 AI Engine simulation (aiesimulator) ---"
-	DATA_DIR=$(abspath $(DATA_DIR)) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --online -wdb -text --output-time-stamp=no
+	DATA_DIR=$(abspath $(DATA_DIR)) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --online -wdb -text --output-time-stamp=no $(AIESIM_ARGS)
 	@echo "COMPLETE: AI Engine simulation finished."
+
+.PHONY: sim-trace vcd
+
+# Enable timeline trace in aiesimulator
+sim-trace:
+	$(MAKE) sim AIESIM_ARGS="--trace"
+
+# Convert the latest WDB to a VCD using wdb2vcd (Vivado/XSIM tool)
+vcd:
+	@WDB=$$(ls -1t function_wdb_dir/*.wdb 2>/dev/null | head -n1); \
+	 if [ -z "$$WDB" ]; then \
+	   echo "No WDB found. Run 'make sim' first."; exit 1; \
+	 fi; \
+	 if command -v wdb2vcd >/dev/null 2>&1; then \
+	   OUT=aiesim.vcd; echo "Converting $$WDB -> $$OUT"; wdb2vcd "$$WDB" "$$OUT"; \
+	 else \
+	   echo "wdb2vcd not found on PATH. Try Vivado's bin or open WDB in Vivado Wave."; exit 1; \
+	 fi
 
 clean:
 	@echo "--- Cleaning Workspace ---"
