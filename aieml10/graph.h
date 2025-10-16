@@ -21,6 +21,28 @@ constexpr unsigned WINDOW_BYTES_HALF_HIDDEN = bytes_per_vector(HIDDEN_SPLIT_SIZE
 constexpr unsigned WINDOW_BYTES_OUTPUT_PAD = bytes_per_vector(OUTPUT_DENSE0_OUT_PAD);
 
 constexpr unsigned DEFAULT_FIFO_DEPTH = 8U;
+constexpr unsigned GMIO_WEIGHT_WIDTH_BITS = 64U;
+constexpr unsigned GMIO_WEIGHT_BURST = 256U;
+
+constexpr unsigned EMBED_DENSE0_WEIGHTS_TOTAL = HIDDEN_SIZE * INPUT_SIZE;
+constexpr unsigned EMBED_DENSE1_WEIGHTS_TOTAL = OUTPUT_SIZE * HIDDEN_SIZE;
+constexpr unsigned EMBED_DENSE1_WEIGHTS_PER_PART = EMBED_DENSE1_WEIGHTS_TOTAL / EMBED_DENSE1_CASC_LEN;
+static_assert(EMBED_DENSE1_WEIGHTS_PER_PART * EMBED_DENSE1_CASC_LEN == EMBED_DENSE1_WEIGHTS_TOTAL,
+              "EMBED_DENSE1 weights must divide evenly across cascades");
+constexpr unsigned EMBED_VAULT_TOTAL = EMBED_DENSE0_WEIGHTS_TOTAL + EMBED_DENSE1_WEIGHTS_TOTAL;
+constexpr unsigned EMBED_VAULT_CONSUMERS = 3U;
+
+constexpr unsigned SOLVER_DENSE0_WEIGHTS_TOTAL = HIDDEN_SIZE * SUBSOLVER0_INPUT_SIZE;
+constexpr unsigned SOLVER_DENSE0_WEIGHTS_PER_PART = SOLVER_DENSE0_WEIGHTS_TOTAL / SUBSOLVER0_INPUT_PARTS;
+static_assert(SOLVER_DENSE0_WEIGHTS_PER_PART * SUBSOLVER0_INPUT_PARTS == SOLVER_DENSE0_WEIGHTS_TOTAL,
+              "Solver dense0 weights must divide evenly across cascades");
+
+constexpr unsigned SOLVER_DENSEX_WEIGHTS_TOTAL = OUTPUT_SIZE * HIDDEN_SIZE;
+constexpr unsigned SOLVER_DENSEX_WEIGHTS_PER_PART = SOLVER_DENSEX_WEIGHTS_TOTAL / SUBSOLVER0_LAYER_WEIGHTS_PARTS;
+static_assert(SOLVER_DENSEX_WEIGHTS_PER_PART * SUBSOLVER0_LAYER_WEIGHTS_PARTS == SOLVER_DENSEX_WEIGHTS_TOTAL,
+              "Solver denseX weights must divide evenly across cascades");
+constexpr unsigned SOLVER_VAULT_TOTAL = SOLVER_DENSE0_WEIGHTS_TOTAL + (3U * SOLVER_DENSEX_WEIGHTS_TOTAL);
+constexpr unsigned SOLVER_VAULT_CONSUMERS = 10U;
 
 template<
     unsigned Rows,
@@ -71,10 +93,10 @@ public:
     kernel                      embed_split0;
     embed_dense1_graph          embed_dense1;
     kernel                      embed_bias_relu1;
-    input_plio                  embed_layer0_weights;
+    input_gmio                  embed_weights_gmio;
     input_port                  embed_bias0_rtp;
     input_port                  embed_bias1_rtp;
-    std::array<input_plio, EMBED_DENSE1_CASC_LEN> embed_dense1_weight_plios;
+    adf::shared_buffer<float>   embed_weights_vault;
 
 
 
@@ -95,10 +117,8 @@ public:
     input_port                  	solver0_bias2_rtp;
     input_port                  	solver0_bias3_rtp;
     adf::shared_buffer<float>   	solver0_roll_buf;
-    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         			solver0_dense0_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver0_dense1_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver0_dense2_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver0_dense3_weight_plios;
+    input_gmio                   solver0_weights_gmio;
+    adf::shared_buffer<float>    solver0_weights_vault;
 
 
 
@@ -119,10 +139,8 @@ public:
     input_port                  	solver1_bias2_rtp;
     input_port                  	solver1_bias3_rtp;
     adf::shared_buffer<float>   	solver1_roll_buf;
-    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         			solver1_dense0_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver1_dense1_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver1_dense2_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver1_dense3_weight_plios;
+    input_gmio                   solver1_weights_gmio;
+    adf::shared_buffer<float>    solver1_weights_vault;
 
 
     kernel                      	solver2_rollconcat;
@@ -142,10 +160,8 @@ public:
     input_port                  	solver2_bias2_rtp;
     input_port                  	solver2_bias3_rtp;
     adf::shared_buffer<float>   	solver2_roll_buf;
-    std::array<input_plio, SUBSOLVER0_INPUT_PARTS>         			solver2_dense0_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver2_dense1_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver2_dense2_weight_plios;
-    std::array<input_plio, SUBSOLVER0_LAYER_WEIGHTS_PARTS> 	solver2_dense3_weight_plios;
+    input_gmio                   solver2_weights_gmio;
+    adf::shared_buffer<float>    solver2_weights_vault;
 
 
     output_dense0_graph         output_dense0;
@@ -167,15 +183,96 @@ public:
             headers(k) = {"window_split_128_to_64x2.h"};
             return k;
         };
+        const auto make_weight_vault = [&](input_gmio& gmio,
+                                           adf::shared_buffer<float>& buffer,
+                                           const std::string& gmio_name,
+                                           unsigned total_elements,
+                                           unsigned consumers) {
+            gmio = input_gmio::create(gmio_name.c_str(), GMIO_WEIGHT_WIDTH_BITS, GMIO_WEIGHT_BURST);
+            buffer = shared_buffer<float>::create({static_cast<unsigned>(total_elements)}, 1, consumers);
+            connect<>(gmio.out[0], buffer.in[0]);
+            write_access(buffer.in[0]) = tiling({
+                .buffer_dimension = {static_cast<unsigned>(total_elements)},
+                .tiling_dimension = {static_cast<unsigned>(total_elements)},
+                .offset = {0}
+            });
+        };
+        const auto connect_vault_slice = [&](adf::shared_buffer<float>& buffer,
+                                             unsigned total_elements,
+                                             unsigned out_index,
+                                             auto& destination_port,
+                                             unsigned offset,
+                                             unsigned length) {
+            connect<>(buffer.out[out_index], destination_port);
+            read_access(buffer.out[out_index]) = tiling({
+                .buffer_dimension = {static_cast<unsigned>(total_elements)},
+                .tiling_dimension = {static_cast<unsigned>(length)},
+                .offset = {static_cast<int>(offset)}
+            });
+        };
+        const auto setup_solver_vault = [&](input_gmio& gmio,
+                                            adf::shared_buffer<float>& buffer,
+                                            const std::string& gmio_name,
+                                            auto& dense0,
+                                            auto& dense1,
+                                            auto& dense2,
+                                            auto& dense3) {
+            make_weight_vault(gmio, buffer, gmio_name, SOLVER_VAULT_TOTAL, SOLVER_VAULT_CONSUMERS);
+            unsigned out_index = 0;
+            unsigned offset = 0;
+            for (unsigned part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+                connect_vault_slice(buffer,
+                                    SOLVER_VAULT_TOTAL,
+                                    out_index++,
+                                    dense0.inA[part],
+                                    offset + (part * SOLVER_DENSE0_WEIGHTS_PER_PART),
+                                    SOLVER_DENSE0_WEIGHTS_PER_PART);
+            }
+            offset += SOLVER_DENSE0_WEIGHTS_TOTAL;
+            for (unsigned part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+                connect_vault_slice(buffer,
+                                    SOLVER_VAULT_TOTAL,
+                                    out_index++,
+                                    dense1.inA[part],
+                                    offset + (part * SOLVER_DENSEX_WEIGHTS_PER_PART),
+                                    SOLVER_DENSEX_WEIGHTS_PER_PART);
+            }
+            offset += SOLVER_DENSEX_WEIGHTS_TOTAL;
+            for (unsigned part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+                connect_vault_slice(buffer,
+                                    SOLVER_VAULT_TOTAL,
+                                    out_index++,
+                                    dense2.inA[part],
+                                    offset + (part * SOLVER_DENSEX_WEIGHTS_PER_PART),
+                                    SOLVER_DENSEX_WEIGHTS_PER_PART);
+            }
+            offset += SOLVER_DENSEX_WEIGHTS_TOTAL;
+            for (unsigned part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+                connect_vault_slice(buffer,
+                                    SOLVER_VAULT_TOTAL,
+                                    out_index++,
+                                    dense3.inA[part],
+                                    offset + (part * SOLVER_DENSEX_WEIGHTS_PER_PART),
+                                    SOLVER_DENSEX_WEIGHTS_PER_PART);
+            }
+        };
 
         pipeline_in = input_plio::create("aieml10_in", plio_32_bits,
                                          (base_path + "/" + EMBED_INPUT_DATA).c_str());
         pipeline_out = output_plio::create("aieml10_out", plio_32_bits,
                                            (base_path + "/" + AIEML10_OUTPUT_FILE).c_str());
 
-        embed_layer0_weights = input_plio::create("embed_layer0_weights", plio_32_bits, (base_path + "/" + EMBED_DENSE0_WEIGHTS).c_str());
-
-        connect<>(embed_layer0_weights.out[0], embed_dense0.inA[0]);
+        make_weight_vault(embed_weights_gmio,
+                          embed_weights_vault,
+                          "embed_weights_gmio",
+                          EMBED_VAULT_TOTAL,
+                          EMBED_VAULT_CONSUMERS);
+        connect_vault_slice(embed_weights_vault,
+                            EMBED_VAULT_TOTAL,
+                            0U,
+                            embed_dense0.inA[0],
+                            0U,
+                            EMBED_DENSE0_WEIGHTS_TOTAL);
         connect<>(pipeline_in.out[0], embed_dense0.inB[0]);
 
         embed_bias_relu0 = make_bias_relu_kernel();
@@ -191,13 +288,18 @@ public:
         adf::fifo_depth(embed_split_leg0) = DEFAULT_FIFO_DEPTH;
         adf::fifo_depth(embed_split_leg1) = DEFAULT_FIFO_DEPTH;
 
-        // Feed embed_dense1 weights via PLIOs instead of RTP
-        for (std::size_t part = 0; part < embed_dense1_weight_plios.size(); ++part) {
-            const std::string plio_name = "embed_dense1_w_part" + std::to_string(part);
-            const std::string file_path = base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
-            embed_dense1_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
-            connect<>(embed_dense1_weight_plios[part].out[0], embed_dense1.inA[part]);
-        }
+        connect_vault_slice(embed_weights_vault,
+                            EMBED_VAULT_TOTAL,
+                            1U,
+                            embed_dense1.inA[0],
+                            EMBED_DENSE0_WEIGHTS_TOTAL,
+                            EMBED_DENSE1_WEIGHTS_PER_PART);
+        connect_vault_slice(embed_weights_vault,
+                            EMBED_VAULT_TOTAL,
+                            2U,
+                            embed_dense1.inA[1],
+                            EMBED_DENSE0_WEIGHTS_TOTAL + EMBED_DENSE1_WEIGHTS_PER_PART,
+                            EMBED_DENSE1_WEIGHTS_PER_PART);
 
         connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_bias_relu1.in[0]);
         connect<parameter>(embed_bias1_rtp, embed_bias_relu1.in[1]);
@@ -230,25 +332,13 @@ public:
             });
         }
 
-        for (std::size_t part = 0; part < solver0_dense0_weight_plios.size(); ++part) {
-            const std::string plio_name = "solver0_dense0_w_part" + std::to_string(part);
-            const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
-            solver0_dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
-            connect<>(solver0_dense0_weight_plios[part].out[0], solver0_dense0.inA[part]);
-        }
-
-        const auto connect_layer_weights = [&](auto& plios, auto& dense, const std::string& name_prefix, const std::string& file_prefix) {
-            for (std::size_t part = 0; part < plios.size(); ++part) {
-                const std::string plio_name = name_prefix + std::to_string(part);
-                const std::string file_path = base_path + "/" + file_prefix + std::to_string(part) + ".txt";
-                plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
-                connect<>(plios[part].out[0], dense.inA[part]);
-            }
-        };
-
-        connect_layer_weights(solver0_dense1_weight_plios, solver0_dense1, "solver0_dense1_w_part", SUBSOLVER0_DENSE1_WEIGHTS_PREFIX);
-        connect_layer_weights(solver0_dense2_weight_plios, solver0_dense2, "solver0_dense2_w_part", SUBSOLVER0_DENSE2_WEIGHTS_PREFIX);
-        connect_layer_weights(solver0_dense3_weight_plios, solver0_dense3, "solver0_dense3_w_part", SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
+        setup_solver_vault(solver0_weights_gmio,
+                           solver0_weights_vault,
+                           "solver0_weights_gmio",
+                           solver0_dense0,
+                           solver0_dense1,
+                           solver0_dense2,
+                           solver0_dense3);
 
         for (kernel* br : {&solver0_bias_relu0, &solver0_bias_relu1, &solver0_bias_relu2, &solver0_bias_relu3}) {
             *br = make_bias_relu_kernel();
@@ -308,16 +398,13 @@ public:
             });
         }
 
-        for (std::size_t part = 0; part < solver1_dense0_weight_plios.size(); ++part) {
-            const std::string plio_name = "solver1_dense0_w_part" + std::to_string(part);
-            const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
-            solver1_dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
-            connect<>(solver1_dense0_weight_plios[part].out[0], solver1_dense0.inA[part]);
-        }
-
-        connect_layer_weights(solver1_dense1_weight_plios, solver1_dense1, "solver1_dense1_w_part", SUBSOLVER1_DENSE1_WEIGHTS_PREFIX);
-        connect_layer_weights(solver1_dense2_weight_plios, solver1_dense2, "solver1_dense2_w_part", SUBSOLVER1_DENSE2_WEIGHTS_PREFIX);
-        connect_layer_weights(solver1_dense3_weight_plios, solver1_dense3, "solver1_dense3_w_part", SUBSOLVER1_DENSE3_WEIGHTS_PREFIX);
+        setup_solver_vault(solver1_weights_gmio,
+                           solver1_weights_vault,
+                           "solver1_weights_gmio",
+                           solver1_dense0,
+                           solver1_dense1,
+                           solver1_dense2,
+                           solver1_dense3);
 
         for (kernel* br : {&solver1_bias_relu0, &solver1_bias_relu1, &solver1_bias_relu2, &solver1_bias_relu3}) {
             *br = make_bias_relu_kernel();
@@ -376,16 +463,13 @@ public:
             });
         }
 
-        for (std::size_t part = 0; part < solver2_dense0_weight_plios.size(); ++part) {
-            const std::string plio_name = "solver2_dense0_w_part" + std::to_string(part);
-            const std::string file_path = base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
-            solver2_dense0_weight_plios[part] = input_plio::create(plio_name.c_str(), plio_32_bits, file_path.c_str());
-            connect<>(solver2_dense0_weight_plios[part].out[0], solver2_dense0.inA[part]);
-        }
-
-        connect_layer_weights(solver2_dense1_weight_plios, solver2_dense1, "solver2_dense1_w_part", SUBSOLVER2_DENSE1_WEIGHTS_PREFIX);
-        connect_layer_weights(solver2_dense2_weight_plios, solver2_dense2, "solver2_dense2_w_part", SUBSOLVER2_DENSE2_WEIGHTS_PREFIX);
-        connect_layer_weights(solver2_dense3_weight_plios, solver2_dense3, "solver2_dense3_w_part", SUBSOLVER2_DENSE3_WEIGHTS_PREFIX);
+        setup_solver_vault(solver2_weights_gmio,
+                           solver2_weights_vault,
+                           "solver2_weights_gmio",
+                           solver2_dense0,
+                           solver2_dense1,
+                           solver2_dense2,
+                           solver2_dense3);
 
         for (kernel* br : {&solver2_bias_relu0, &solver2_bias_relu1, &solver2_bias_relu2, &solver2_bias_relu3}) {
             *br = make_bias_relu_kernel();
