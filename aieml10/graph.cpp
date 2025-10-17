@@ -19,6 +19,7 @@ constexpr std::size_t EMBED_DENSE0_WEIGHTS_COUNT = static_cast<std::size_t>(EMBE
 constexpr std::size_t EMBED_DENSE1_PART_COUNT = static_cast<std::size_t>(EMBED_DENSE1_CASC_LEN);
 constexpr std::size_t EMBED_DENSE1_WEIGHTS_PER_PART_HOST =
     static_cast<std::size_t>(EMBED_DENSE1_WEIGHTS_PER_PART);
+constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(INPUT_SIZE);
 
 constexpr std::size_t SOLVER_DENSE0_PART_COUNT = static_cast<std::size_t>(SUBSOLVER0_INPUT_PARTS);
 constexpr std::size_t SOLVER_DENSE0_WEIGHTS_PER_PART_HOST =
@@ -45,7 +46,7 @@ int main() {
             values.push_back(value);
         }
 
-        if (values.size() != expected_count) {
+        if (expected_count != 0U && values.size() != expected_count) {
             std::cerr << "Error: Expected " << expected_count << " values from '" << path
                       << "', got " << values.size() << std::endl;
             return {};
@@ -262,7 +263,26 @@ int main() {
         return -1;
     }
 
-    g.run(1);
+    const auto embed_inputs = load_vector(EMBED_INPUT_DATA, 0U);
+    if (embed_inputs.empty()) {
+        std::cerr << "Error: embed input data is empty" << std::endl;
+        return -1;
+    }
+    if ((embed_inputs.size() % EMBED_INPUT_VECTOR_LENGTH) != 0U) {
+        std::cerr << "Error: embed input size (" << embed_inputs.size()
+                  << ") is not a multiple of " << EMBED_INPUT_VECTOR_LENGTH << std::endl;
+        return -1;
+    }
+    const auto run_count = static_cast<std::size_t>(embed_inputs.size() / EMBED_INPUT_VECTOR_LENGTH);
+    if (run_count == 0U) {
+        std::cerr << "Error: run_count evaluated to zero" << std::endl;
+        return -1;
+    }
+    if (!send_vector_via_gmio(embed_inputs, g.embed_input_gmio, "embed_input")) {
+        return -1;
+    }
+
+    g.run(static_cast<int>(run_count));
     g.wait();
     g.end();
     return 0;

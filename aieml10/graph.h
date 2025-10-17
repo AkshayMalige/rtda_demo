@@ -21,8 +21,11 @@ constexpr unsigned WINDOW_BYTES_HALF_HIDDEN = bytes_per_vector(HIDDEN_SPLIT_SIZE
 constexpr unsigned WINDOW_BYTES_OUTPUT_PAD = bytes_per_vector(OUTPUT_DENSE0_OUT_PAD);
 
 constexpr unsigned DEFAULT_FIFO_DEPTH = 8U;
-constexpr unsigned GMIO_WEIGHT_WIDTH_BITS = 64U;
-constexpr unsigned GMIO_WEIGHT_BURST = 256U;
+// GMIO configuration: first is burst length in bytes, second is bandwidth in MB/s
+constexpr unsigned GMIO_WEIGHT_BURST_BYTES = 64U;
+constexpr unsigned GMIO_WEIGHT_BANDWIDTH_MBPS = 256U;
+constexpr unsigned GMIO_ACTIVATION_BURST_BYTES = 64U;
+constexpr unsigned GMIO_ACTIVATION_BANDWIDTH_MBPS = 256U;
 
 constexpr unsigned EMBED_DENSE0_WEIGHTS_TOTAL = HIDDEN_SIZE * INPUT_SIZE;
 constexpr unsigned EMBED_DENSE1_WEIGHTS_TOTAL = OUTPUT_SIZE * HIDDEN_SIZE;
@@ -84,7 +87,7 @@ using output_dense0_graph = dense_matrix_graph<OUTPUT_DENSE0_OUT_PAD, HIDDEN_SIZ
 class NeuralNetworkGraph : public graph {
 public:
 
-    input_plio                  pipeline_in;
+    input_gmio                  embed_input_gmio;
     output_plio                 pipeline_out;
 
 
@@ -188,7 +191,7 @@ public:
                                            const std::string& gmio_name,
                                            unsigned total_elements,
                                            unsigned consumers) {
-            gmio = input_gmio::create(gmio_name.c_str(), GMIO_WEIGHT_WIDTH_BITS, GMIO_WEIGHT_BURST);
+            gmio = input_gmio::create(gmio_name.c_str(), GMIO_WEIGHT_BURST_BYTES, GMIO_WEIGHT_BANDWIDTH_MBPS);
             buffer = shared_buffer<float>::create({static_cast<unsigned>(total_elements)}, 1, consumers);
             connect<>(gmio.out[0], buffer.in[0]);
             write_access(buffer.in[0]) = tiling({
@@ -257,8 +260,9 @@ public:
             }
         };
 
-        pipeline_in = input_plio::create("aieml10_in", plio_32_bits,
-                                         (base_path + "/" + EMBED_INPUT_DATA).c_str());
+        embed_input_gmio = input_gmio::create("embed_input_gmio",
+                                              GMIO_ACTIVATION_BURST_BYTES,
+                                              GMIO_ACTIVATION_BANDWIDTH_MBPS);
         pipeline_out = output_plio::create("aieml10_out", plio_32_bits,
                                            (base_path + "/" + AIEML10_OUTPUT_FILE).c_str());
 
@@ -273,7 +277,7 @@ public:
                             embed_dense0.inA[0],
                             0U,
                             EMBED_DENSE0_WEIGHTS_TOTAL);
-        connect<>(pipeline_in.out[0], embed_dense0.inB[0]);
+        connect<>(embed_input_gmio.out[0], embed_dense0.inB[0]);
 
         embed_bias_relu0 = make_bias_relu_kernel();
         embed_bias_relu1 = make_bias_relu_kernel();

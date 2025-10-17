@@ -57,7 +57,7 @@ inline void NeuralNetworkGraph::apply_layout() {
     runtime<ratio>(solver2_bias_relu3) = 0.95;
 
 
-    adf::location<adf::PLIO>(pipeline_in) = adf::shim(AIEML10_INPUT_SHIM);
+    adf::location<adf::GMIO>(embed_input_gmio) = adf::shim(AIEML10_INPUT_SHIM);
     adf::location<adf::PLIO>(pipeline_out) = adf::shim(AIEML10_OUTPUT_SHIM);
 
     const auto place_linear = [](kernel* kernels,

@@ -76,7 +76,10 @@ $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_
 
 sim: graph
 	@echo "--- Starting AIEML10 AI Engine simulation (aiesimulator) ---"
-	DATA_DIR=$(abspath $(DATA_DIR)) $(AIESIM) --pkg-dir=$(WORK_DIR) --profile --online -wdb -text --output-time-stamp=no $(AIESIM_ARGS)
+	# Write simulator outputs under Work/ to keep artifacts together
+	DATA_DIR=$(abspath $(DATA_DIR)) $(AIESIM) --pkg-dir=$(WORK_DIR) \
+		--output-dir=$(WORK_DIR)/aiesimulator_output \
+		--profile --online -wdb -text --output-time-stamp=no $(AIESIM_ARGS)
 	@echo "COMPLETE: AI Engine simulation finished."
 
 .PHONY: sim-trace vcd
@@ -88,19 +91,23 @@ sim-trace:
 # Convert the latest WDB to a VCD using wdb2vcd (Vivado/XSIM tool)
 vcd:
 	@WDB=$$(ls -1t function_wdb_dir/*.wdb 2>/dev/null | head -n1); \
-	 if [ -z "$$WDB" ]; then \
-	   echo "No WDB found. Run 'make sim' first."; exit 1; \
-	 fi; \
-	 if command -v wdb2vcd >/dev/null 2>&1; then \
-	   OUT=aiesim.vcd; echo "Converting $$WDB -> $$OUT"; wdb2vcd "$$WDB" "$$OUT"; \
-	 else \
-	   echo "wdb2vcd not found on PATH. Try Vivado's bin or open WDB in Vivado Wave."; exit 1; \
-	 fi
+	if [ -z "$$WDB" ]; then \
+	  WDB=$$(ls -1t $(WORK_DIR)/function_wdb_dir/*.wdb 2>/dev/null | head -n1); \
+	fi; \
+	if [ -z "$$WDB" ]; then \
+	  echo "No WDB found. Run 'make sim' first."; exit 1; \
+	fi; \
+	if command -v wdb2vcd >/dev/null 2>&1; then \
+	  OUT=aiesim.vcd; echo "Converting $$WDB -> $$OUT"; wdb2vcd "$$WDB" "$$OUT"; \
+	else \
+	  echo "wdb2vcd not found on PATH. Try Vivado's bin or open WDB in Vivado Wave."; exit 1; \
+	fi
 
 clean:
 	@echo "--- Cleaning Workspace ---"
 	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary \
-	       aiesimulator_output build_hw trdata.aiesim function_wdb_dir\
-	       pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT \
-	       *.json *.vcd *.wcfg *.wdb
+		aiesimulator_output $(WORK_DIR)/aiesimulator_output \
+		build_hw trdata.aiesim function_wdb_dir $(WORK_DIR)/function_wdb_dir\
+		pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT \
+		*.json *.vcd *.wcfg *.wdb
 	@echo "CLEANED: Build and work directories removed."

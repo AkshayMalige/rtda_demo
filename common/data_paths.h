@@ -57,3 +57,8 @@
 #define EMBED_HOST_OUTPUT           "host_output.txt"
 
 #define AIEML10_OUTPUT_FILE         "aieml10_output_aie.txt"
+
+
+#define EMBED_DENSE0_OUTPUT "embed_dense_0_output_aie.txt"
+#define EMBED_LEAKYRELU0_OUTPUT_PREFIX "embed_leakyrelu_0_output_part"
+#define EMBED_DENSE1_OUTPUT "embed_dense_1_output_aie.txt"
