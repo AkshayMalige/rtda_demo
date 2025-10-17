@@ -5,7 +5,8 @@
 ############################################################################
 
 ######################## ▶ User-specific paths ◀ ###########################
-XILINX_VITIS   ?= /tools/Xilinx/Vitis/2024.2
+# XILINX_VITIS   ?= /tools/Xilinx/Vitis/2024.2
+XILINX_VITIS   ?= /tools/Xilinx/2025.1/Vitis
 EDGE_COMMON_SW ?= /home/synthara/versal_common/xilinx-versal-common-v2024.2
 IMAGE          ?= $(EDGE_COMMON_SW)/Image
 ROOTFS         ?= $(EDGE_COMMON_SW)/rootfs.ext4
@@ -16,7 +17,8 @@ TARGET    ?= hw_emu
 # sw_emu | hw_emu | hw
 EMU_PS    ?= QEMU
 # x86sim | QEMU
-PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
+# PLATFORM  ?= /tools/Xilinx/Vitis/2024.2/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
+PLATFORM  ?=/tools/Xilinx/2025.1/Vitis/base_platforms/xilinx_vek280_base_202510_1/xilinx_vek280_base_202510_1.xpfm
 PACK_CFG  := ./pack.cfg
 
 # Select which AI Engine-ML graph to build

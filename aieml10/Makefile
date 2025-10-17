@@ -71,7 +71,10 @@ $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_
 		exit 1; \
 	fi
 	@set -o pipefail; \
-	$(VPP) $(VPP_FLAGS) $(GRAPH_SRC) $(KERNEL_SRCS) 2>&1 | tee $(WORK_DIR)/vpp_aie.log
+	$(VPP) $(VPP_FLAGS) -o $(GRAPH_LIB) $(GRAPH_SRC) $(KERNEL_SRCS) 2>&1 | tee $(WORK_DIR)/vpp_aie.log; \
+	if [ -f "libadf.a" ] && [ ! -f "$(GRAPH_LIB)" ]; then \
+		mv libadf.a $(GRAPH_LIB); \
+	fi
 	@echo "COMPLETE: AIE graph compiled."
 
 sim: graph
