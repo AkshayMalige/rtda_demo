@@ -29,46 +29,46 @@ inline void NeuralNetworkGraph::apply_layout() {
     runtime<ratio>(embed_split0) =  1.0;
     runtime<ratio>(embed_bias_relu1) =  0.95;
 
-    runtime<ratio>(solver0_rollconcat) = 1.0;
-    runtime<ratio>(solver0_bias_relu0) =  0.95;
-    runtime<ratio>(solver0_split0) =  0.65;
-    runtime<ratio>(solver0_bias_relu1) =  0.95;
-    runtime<ratio>(solver0_split1) =  0.65;
-    runtime<ratio>(solver0_bias_relu2) =  0.95;
-    runtime<ratio>(solver0_split2) =  0.65;
-    runtime<ratio>(solver0_bias_relu3) = 0.95;
+    // runtime<ratio>(solver0_rollconcat) = 1.0;
+    // runtime<ratio>(solver0_bias_relu0) =  0.95;
+    // runtime<ratio>(solver0_split0) =  0.65;
+    // runtime<ratio>(solver0_bias_relu1) =  0.95;
+    // runtime<ratio>(solver0_split1) =  0.65;
+    // runtime<ratio>(solver0_bias_relu2) =  0.95;
+    // runtime<ratio>(solver0_split2) =  0.65;
+    // runtime<ratio>(solver0_bias_relu3) = 0.95;
 
-    runtime<ratio>(solver1_rollconcat) = 1.0;
-    runtime<ratio>(solver1_bias_relu0) =  0.95;
-    runtime<ratio>(solver1_split0) =  0.65;
-    runtime<ratio>(solver1_bias_relu1) =  0.95;
-    runtime<ratio>(solver1_split1) =  0.65;
-    runtime<ratio>(solver1_bias_relu2) =  0.95;
-    runtime<ratio>(solver1_split2) =  0.65;
-    runtime<ratio>(solver1_bias_relu3) = 0.95;
+    // runtime<ratio>(solver1_rollconcat) = 1.0;
+    // runtime<ratio>(solver1_bias_relu0) =  0.95;
+    // runtime<ratio>(solver1_split0) =  0.65;
+    // runtime<ratio>(solver1_bias_relu1) =  0.95;
+    // runtime<ratio>(solver1_split1) =  0.65;
+    // runtime<ratio>(solver1_bias_relu2) =  0.95;
+    // runtime<ratio>(solver1_split2) =  0.65;
+    // runtime<ratio>(solver1_bias_relu3) = 0.95;
 
-    runtime<ratio>(solver2_rollconcat) = 1.0;
-    runtime<ratio>(solver2_bias_relu0) =  0.95;
-    runtime<ratio>(solver2_split0) =  0.65;
-    runtime<ratio>(solver2_bias_relu1) =  0.95;
-    runtime<ratio>(solver2_split1) =  0.65;
-    runtime<ratio>(solver2_bias_relu2) =  0.95;
-    runtime<ratio>(solver2_split2) =  0.65;
-    runtime<ratio>(solver2_bias_relu3) = 0.95;
+    // runtime<ratio>(solver2_rollconcat) = 1.0;
+    // runtime<ratio>(solver2_bias_relu0) =  0.95;
+    // runtime<ratio>(solver2_split0) =  0.65;
+    // runtime<ratio>(solver2_bias_relu1) =  0.95;
+    // runtime<ratio>(solver2_split1) =  0.65;
+    // runtime<ratio>(solver2_bias_relu2) =  0.95;
+    // runtime<ratio>(solver2_split2) =  0.65;
+    // runtime<ratio>(solver2_bias_relu3) = 0.95;
 
 
-    adf::location<adf::GMIO>(embed_input_gmio) = adf::shim(AIEML10_INPUT_SHIM);
-    adf::location<adf::PLIO>(pipeline_out) = adf::shim(AIEML10_OUTPUT_SHIM);
+    // adf::location<adf::GMIO>(embed_input_gmio) = adf::shim(AIEML10_INPUT_SHIM);
+    // adf::location<adf::GMIO>(embed_output_gmio) = adf::shim(AIEML10_OUTPUT_SHIM);
 
-    const auto place_linear = [](kernel* kernels,
-                                 std::size_t count,
-                                 int base_col,
-                                 int row,
-                                 int stride = 1) {
-        for (std::size_t idx = 0; idx < count; ++idx) {
-            adf::location<adf::kernel>(kernels[idx]) = adf::tile(base_col + static_cast<int>(idx * stride), row);
-        }
-    };
+    // const auto place_linear = [](kernel* kernels,
+    //                              std::size_t count,
+    //                              int base_col,
+    //                              int row,
+    //                              int stride = 1) {
+    //     for (std::size_t idx = 0; idx < count; ++idx) {
+    //         adf::location<adf::kernel>(kernels[idx]) = adf::tile(base_col + static_cast<int>(idx * stride), row);
+    //     }
+    // };
 
     // Keep early stage anchors modest to guide placement without over-constraining
     // place_linear(embed_dense0.getKernels(), TP_CASC_LEN_STAGE1_LAYER0 * TP_SSR_STAGE1, 7, 2);

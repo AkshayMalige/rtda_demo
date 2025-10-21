@@ -10,7 +10,7 @@
 
 NeuralNetworkGraph g;
 
-constexpr int ITERATION = 4;
+constexpr int ITERATION = 2;
 constexpr std::size_t INPUT_ELEMENTS_PER_ITERATION = static_cast<std::size_t>(INPUT_SIZE);
 constexpr std::size_t OUTPUT_ELEMENTS_PER_ITERATION = static_cast<std::size_t>(HIDDEN_SIZE);
 constexpr std::size_t TOTAL_INPUT_ELEMENT_COUNT =
@@ -57,8 +57,18 @@ int main() {
     g.init();
 
     const std::string base_path = std::string(DATA_DIR) + "/";
+    const std::string weights_path = base_path + EMBED_DENSE0_WEIGHTS;
     const std::string input_path = base_path + EMBED_INPUT_DATA;
     const std::string output_path = base_path + "aieml11_output_aie.txt";
+
+    const auto weight_values = load_values(weights_path);
+    if (weight_values.size() != static_cast<std::size_t>(EMBED_DENSE0_WEIGHTS_SIZE)) {
+        std::cerr << "Error: Expected " << EMBED_DENSE0_WEIGHTS_SIZE << " values from '" << weights_path
+                  << "', got " << weight_values.size() << std::endl;
+        g.end();
+        return 1;
+    }
+    g.update(g.embed_matrixA0_rtp, weight_values.data(), weight_values.size());
 
     const auto input_values = load_values(input_path);
     if (input_values.size() != TOTAL_INPUT_ELEMENT_COUNT) {

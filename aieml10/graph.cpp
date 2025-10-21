@@ -4,7 +4,9 @@
 #include <cstring>
 #include <fstream>
 #include <initializer_list>
+#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,6 +21,7 @@ constexpr std::size_t EMBED_DENSE0_WEIGHTS_COUNT = static_cast<std::size_t>(EMBE
 constexpr std::size_t EMBED_DENSE1_WEIGHTS_PER_PART_HOST =
     static_cast<std::size_t>(EMBED_DENSE1_WEIGHTS_PER_PART);
 constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(INPUT_SIZE);
+constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(OUTPUT_DENSE0_OUT_PAD);
 
 constexpr std::size_t SOLVER_DENSE0_PART_COUNT = static_cast<std::size_t>(SUBSOLVER0_INPUT_PARTS);
 constexpr std::size_t SOLVER_DENSE0_WEIGHTS_PER_PART_HOST =
@@ -58,25 +61,17 @@ int main() {
     auto load_vector = [&](const std::string& relative_path, std::size_t expected_count) {
         return load_values(basePath + relative_path, expected_count);
     };
-    auto send_vector_via_gmio = [&](const std::vector<float>& values,
-                                    input_gmio& gmio_port,
-                                    const std::string& context) -> bool {
-        if (values.empty()) {
-            std::cerr << "Error: No data available for '" << context << "'" << std::endl;
+    auto write_vector = [&](const std::string& relative_path,
+                            const float* values,
+                            std::size_t count) -> bool {
+        std::ofstream file(basePath + relative_path);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open output file '" << basePath + relative_path << "'" << std::endl;
             return false;
         }
-        const std::size_t transaction_bytes = values.size() * sizeof(float);
-        float* gmio_buffer = static_cast<float*>(adf::GMIO::malloc(transaction_bytes));
-        if (gmio_buffer == nullptr) {
-            std::cerr << "Error: GMIO::malloc failed for '" << context << "'" << std::endl;
-            return false;
-        }
-        std::memcpy(gmio_buffer, values.data(), transaction_bytes);
-        const auto status = gmio_port.gm2aie(gmio_buffer, transaction_bytes);
-        adf::GMIO::free(gmio_buffer);
-        if (status != adf::return_code::ok) {
-            std::cerr << "Error: gm2aie failed for '" << context << "'" << std::endl;
-            return false;
+        file << std::setprecision(std::numeric_limits<float>::max_digits10);
+        for (std::size_t index = 0; index < count; ++index) {
+            file << values[index] << '\n';
         }
         return true;
     };
@@ -206,76 +201,76 @@ int main() {
         return -1;
     }
 
-    if (!load_solver_weights(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
-                             SUBSOLVER0_DENSE1_WEIGHTS_PREFIX,
-                             SUBSOLVER0_DENSE2_WEIGHTS_PREFIX,
-                             SUBSOLVER0_DENSE3_WEIGHTS_PREFIX,
-                             g.solver0_dense0_matrixA_rtp,
-                             g.solver0_dense1_matrixA_rtp,
-                             g.solver0_dense2_matrixA_rtp,
-                             g.solver0_dense3_matrixA_rtp)) {
-        return -1;
-    }
-    if (!load_solver_weights(SUBSOLVER1_DENSE0_WEIGHTS_PREFIX,
-                             SUBSOLVER1_DENSE1_WEIGHTS_PREFIX,
-                             SUBSOLVER1_DENSE2_WEIGHTS_PREFIX,
-                             SUBSOLVER1_DENSE3_WEIGHTS_PREFIX,
-                             g.solver1_dense0_matrixA_rtp,
-                             g.solver1_dense1_matrixA_rtp,
-                             g.solver1_dense2_matrixA_rtp,
-                             g.solver1_dense3_matrixA_rtp)) {
-        return -1;
-    }
-    if (!load_solver_weights(SUBSOLVER2_DENSE0_WEIGHTS_PREFIX,
-                             SUBSOLVER2_DENSE1_WEIGHTS_PREFIX,
-                             SUBSOLVER2_DENSE2_WEIGHTS_PREFIX,
-                             SUBSOLVER2_DENSE3_WEIGHTS_PREFIX,
-                             g.solver2_dense0_matrixA_rtp,
-                             g.solver2_dense1_matrixA_rtp,
-                             g.solver2_dense2_matrixA_rtp,
-                             g.solver2_dense3_matrixA_rtp)) {
-        return -1;
-    }
+    // if (!load_solver_weights(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
+    //                          SUBSOLVER0_DENSE1_WEIGHTS_PREFIX,
+    //                          SUBSOLVER0_DENSE2_WEIGHTS_PREFIX,
+    //                          SUBSOLVER0_DENSE3_WEIGHTS_PREFIX,
+    //                          g.solver0_dense0_matrixA_rtp,
+    //                          g.solver0_dense1_matrixA_rtp,
+    //                          g.solver0_dense2_matrixA_rtp,
+    //                          g.solver0_dense3_matrixA_rtp)) {
+    //     return -1;
+    // }
+    // if (!load_solver_weights(SUBSOLVER1_DENSE0_WEIGHTS_PREFIX,
+    //                          SUBSOLVER1_DENSE1_WEIGHTS_PREFIX,
+    //                          SUBSOLVER1_DENSE2_WEIGHTS_PREFIX,
+    //                          SUBSOLVER1_DENSE3_WEIGHTS_PREFIX,
+    //                          g.solver1_dense0_matrixA_rtp,
+    //                          g.solver1_dense1_matrixA_rtp,
+    //                          g.solver1_dense2_matrixA_rtp,
+    //                          g.solver1_dense3_matrixA_rtp)) {
+    //     return -1;
+    // }
+    // if (!load_solver_weights(SUBSOLVER2_DENSE0_WEIGHTS_PREFIX,
+    //                          SUBSOLVER2_DENSE1_WEIGHTS_PREFIX,
+    //                          SUBSOLVER2_DENSE2_WEIGHTS_PREFIX,
+    //                          SUBSOLVER2_DENSE3_WEIGHTS_PREFIX,
+    //                          g.solver2_dense0_matrixA_rtp,
+    //                          g.solver2_dense1_matrixA_rtp,
+    //                          g.solver2_dense2_matrixA_rtp,
+    //                          g.solver2_dense3_matrixA_rtp)) {
+    //     return -1;
+    // }
 
     // // Solver0 bias updates ------------------------------------------------
    
-    if (!load_solver_biases(SUBSOLVER0_DENSE0_BIAS,
-                            SUBSOLVER0_DENSE1_BIAS,
-                            SUBSOLVER0_DENSE2_BIAS,
-                            SUBSOLVER0_DENSE3_BIAS,
-                            g.solver0_bias0_rtp,
-                            g.solver0_bias1_rtp,
-                            g.solver0_bias2_rtp,
-                            g.solver0_bias3_rtp)) {
-        return -1;
-    }
-    if (!load_solver_biases(SUBSOLVER1_DENSE0_BIAS,
-                            SUBSOLVER1_DENSE1_BIAS,
-                            SUBSOLVER1_DENSE2_BIAS,
-                            SUBSOLVER1_DENSE3_BIAS,
-                            g.solver1_bias0_rtp,
-                            g.solver1_bias1_rtp,
-                            g.solver1_bias2_rtp,
-                            g.solver1_bias3_rtp)) {
-        return -1;
-    }
-    if (!load_solver_biases(SUBSOLVER2_DENSE0_BIAS,
-                            SUBSOLVER2_DENSE1_BIAS,
-                            SUBSOLVER2_DENSE2_BIAS,
-                            SUBSOLVER2_DENSE3_BIAS,
-                            g.solver2_bias0_rtp,
-                            g.solver2_bias1_rtp,
-                            g.solver2_bias2_rtp,
-                            g.solver2_bias3_rtp)) {
-        return -1;
-    }
+    // if (!load_solver_biases(SUBSOLVER0_DENSE0_BIAS,
+    //                         SUBSOLVER0_DENSE1_BIAS,
+    //                         SUBSOLVER0_DENSE2_BIAS,
+    //                         SUBSOLVER0_DENSE3_BIAS,
+    //                         g.solver0_bias0_rtp,
+    //                         g.solver0_bias1_rtp,
+    //                         g.solver0_bias2_rtp,
+    //                         g.solver0_bias3_rtp)) {
+    //     return -1;
+    // }
+    // if (!load_solver_biases(SUBSOLVER1_DENSE0_BIAS,
+    //                         SUBSOLVER1_DENSE1_BIAS,
+    //                         SUBSOLVER1_DENSE2_BIAS,
+    //                         SUBSOLVER1_DENSE3_BIAS,
+    //                         g.solver1_bias0_rtp,
+    //                         g.solver1_bias1_rtp,
+    //                         g.solver1_bias2_rtp,
+    //                         g.solver1_bias3_rtp)) {
+    //     return -1;
+    // }
+    // if (!load_solver_biases(SUBSOLVER2_DENSE0_BIAS,
+    //                         SUBSOLVER2_DENSE1_BIAS,
+    //                         SUBSOLVER2_DENSE2_BIAS,
+    //                         SUBSOLVER2_DENSE3_BIAS,
+    //                         g.solver2_bias0_rtp,
+    //                         g.solver2_bias1_rtp,
+    //                         g.solver2_bias2_rtp,
+    //                         g.solver2_bias3_rtp)) {
+    //     return -1;
+    // }
 
 // // // Output block updates ---------------------------------------------
-    if (!load_and_update_ports(OUTPUT_DENSE0_WEIGHTS,
-                               OUTPUT_DENSE0_WEIGHTS_SIZE,
-                               {&g.output_matrixA_rtp})) {
-        return -1;
-    }
+    // if (!load_and_update_ports(OUTPUT_DENSE0_WEIGHTS,
+    //                            OUTPUT_DENSE0_WEIGHTS_SIZE,
+    //                            {&g.output_matrixA_rtp})) {
+    //     return -1;
+    // }
 
     const auto embed_inputs = load_vector(EMBED_INPUT_DATA, 0U);
     if (embed_inputs.empty()) {
@@ -292,13 +287,52 @@ int main() {
         std::cerr << "Error: run_count evaluated to zero" << std::endl;
         return -1;
     }
-    if (!send_vector_via_gmio(embed_inputs, g.embed_input_gmio, "embed_input")) {
+    if (run_count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        std::cerr << "Error: run_count exceeds supported iteration range" << std::endl;
+        return -1;
+    }
+
+    const std::size_t total_input_elements = run_count * EMBED_INPUT_VECTOR_LENGTH;
+    const std::size_t total_output_elements = run_count * OUTPUT_VECTOR_LENGTH;
+    const std::size_t input_transaction_bytes = total_input_elements * sizeof(float);
+    const std::size_t output_transaction_bytes = total_output_elements * sizeof(float);
+
+    float* gmio_input_buffer = static_cast<float*>(adf::GMIO::malloc(input_transaction_bytes));
+    float* gmio_output_buffer = static_cast<float*>(adf::GMIO::malloc(output_transaction_bytes));
+    if (gmio_input_buffer == nullptr || gmio_output_buffer == nullptr) {
+        std::cerr << "Error: GMIO::malloc failed" << std::endl;
+        if (gmio_input_buffer != nullptr) {
+            adf::GMIO::free(gmio_input_buffer);
+        }
+        if (gmio_output_buffer != nullptr) {
+            adf::GMIO::free(gmio_output_buffer);
+        }
+        g.end();
+        return -1;
+    }
+
+    std::memcpy(gmio_input_buffer, embed_inputs.data(), input_transaction_bytes);
+
+    const auto gm2aie_status = g.embed_input_gmio.gm2aie_nb(gmio_input_buffer, input_transaction_bytes);
+    const auto aie2gm_status = g.embed_output_gmio.aie2gm_nb(gmio_output_buffer, output_transaction_bytes);
+    if (gm2aie_status != adf::return_code::ok || aie2gm_status != adf::return_code::ok) {
+        std::cerr << "Error: GMIO transaction setup failed" << std::endl;
+        adf::GMIO::free(gmio_input_buffer);
+        adf::GMIO::free(gmio_output_buffer);
+        g.end();
         return -1;
     }
 
     g.run(static_cast<int>(run_count));
     g.wait();
+    g.embed_input_gmio.wait();
+    g.embed_output_gmio.wait();
+
+    const bool write_status = write_vector(AIEML10_OUTPUT_FILE, gmio_output_buffer, total_output_elements);
+
+    adf::GMIO::free(gmio_input_buffer);
+    adf::GMIO::free(gmio_output_buffer);
     g.end();
-    return 0;
+    return write_status ? 0 : -1;
 }
 #endif
