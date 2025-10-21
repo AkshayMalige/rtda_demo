@@ -78,10 +78,10 @@ using dense_matrix_graph = matrix_vector_mul_graph<
     DualIp,
     NumOutputs>;
 
-using embed_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, INPUT_SIZE, EMBED_DENSE0_CASC_LEN, 0>;
-using embed_dense1_graph = dense_matrix_graph<OUTPUT_SIZE, HIDDEN_SIZE, EMBED_DENSE1_CASC_LEN, 0>;
-using solver_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, SUBSOLVER0_INPUT_SIZE, SOLVER_DENSE0_CASC_LEN, 0>;
-using solver_dense_graph = dense_matrix_graph<OUTPUT_SIZE, HIDDEN_SIZE, SOLVER_DENSEX_CASC_LEN, 0>;
+using embed_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, INPUT_SIZE, EMBED_DENSE0_CASC_LEN, 1>;
+using embed_dense1_graph = dense_matrix_graph<OUTPUT_SIZE, HIDDEN_SIZE, EMBED_DENSE1_CASC_LEN, 1>;
+using solver_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, SUBSOLVER0_INPUT_SIZE, SOLVER_DENSE0_CASC_LEN, 1>;
+using solver_dense_graph = dense_matrix_graph<OUTPUT_SIZE, HIDDEN_SIZE, SOLVER_DENSEX_CASC_LEN, 1>;
 using output_dense0_graph = dense_matrix_graph<OUTPUT_DENSE0_OUT_PAD, HIDDEN_SIZE, OUTPUT_DENSE0_CASC_LEN, 1>;
 
 class NeuralNetworkGraph : public graph {
@@ -96,10 +96,11 @@ public:
     kernel                      embed_split0;
     embed_dense1_graph          embed_dense1;
     kernel                      embed_bias_relu1;
-    input_gmio                  embed_weights_gmio;
     input_port                  embed_bias0_rtp;
     input_port                  embed_bias1_rtp;
-    adf::shared_buffer<float>   embed_weights_vault;
+    input_port                  embed_matrixA0_rtp;
+    input_port                  embed_matrixA1_0_rtp;
+    input_port                  embed_matrixA1_1_rtp;
 
 
 
@@ -119,9 +120,11 @@ public:
     input_port                  	solver0_bias1_rtp;
     input_port                  	solver0_bias2_rtp;
     input_port                  	solver0_bias3_rtp;
+    std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver0_dense0_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense1_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense2_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense3_matrixA_rtp;
     adf::shared_buffer<float>   	solver0_roll_buf;
-    input_gmio                   solver0_weights_gmio;
-    adf::shared_buffer<float>    solver0_weights_vault;
 
 
 
@@ -142,8 +145,13 @@ public:
     input_port                  	solver1_bias2_rtp;
     input_port                  	solver1_bias3_rtp;
     adf::shared_buffer<float>   	solver1_roll_buf;
-    input_gmio                   solver1_weights_gmio;
-    adf::shared_buffer<float>    solver1_weights_vault;
+    // input_gmio                   solver1_weights_gmio;
+    // adf::shared_buffer<float>    solver1_weights_vault;
+
+    std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver1_dense0_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense1_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense2_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense3_matrixA_rtp;
 
 
     kernel                      	solver2_rollconcat;
@@ -163,8 +171,13 @@ public:
     input_port                  	solver2_bias2_rtp;
     input_port                  	solver2_bias3_rtp;
     adf::shared_buffer<float>   	solver2_roll_buf;
-    input_gmio                   solver2_weights_gmio;
-    adf::shared_buffer<float>    solver2_weights_vault;
+    // input_gmio                   solver2_weights_gmio;
+    // adf::shared_buffer<float>    solver2_weights_vault;
+    std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver2_dense0_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense1_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense2_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense3_matrixA_rtp;
+
 
 
     output_dense0_graph         output_dense0;
@@ -186,11 +199,11 @@ public:
             headers(k) = {"window_split_128_to_64x2.h"};
             return k;
         };
-        const auto make_weight_vault = [&](input_gmio& gmio,
-                                           adf::shared_buffer<float>& buffer,
-                                           const std::string& gmio_name,
-                                           unsigned total_elements,
-                                           unsigned consumers) {
+        [[maybe_unused]] const auto make_weight_vault = [&](input_gmio& gmio,
+                                                           adf::shared_buffer<float>& buffer,
+                                                           const std::string& gmio_name,
+                                                           unsigned total_elements,
+                                                           unsigned consumers) {
             gmio = input_gmio::create(gmio_name.c_str(), GMIO_WEIGHT_BURST_BYTES, GMIO_WEIGHT_BANDWIDTH_MBPS);
             buffer = shared_buffer<float>::create({static_cast<unsigned>(total_elements)}, 1, consumers);
             connect<>(gmio.out[0], buffer.in[0]);
@@ -200,12 +213,12 @@ public:
                 .offset = {0}
             });
         };
-        const auto connect_vault_slice = [&](adf::shared_buffer<float>& buffer,
-                                             unsigned total_elements,
-                                             unsigned out_index,
-                                             auto& destination_port,
-                                             unsigned offset,
-                                             unsigned length) {
+        [[maybe_unused]] const auto connect_vault_slice = [&](adf::shared_buffer<float>& buffer,
+                                                             unsigned total_elements,
+                                                             unsigned out_index,
+                                                             auto& destination_port,
+                                                             unsigned offset,
+                                                             unsigned length) {
             connect<>(buffer.out[out_index], destination_port);
             read_access(buffer.out[out_index]) = tiling({
                 .buffer_dimension = {static_cast<unsigned>(total_elements)},
@@ -213,13 +226,13 @@ public:
                 .offset = {static_cast<int>(offset)}
             });
         };
-        const auto setup_solver_vault = [&](input_gmio& gmio,
-                                            adf::shared_buffer<float>& buffer,
-                                            const std::string& gmio_name,
-                                            auto& dense0,
-                                            auto& dense1,
-                                            auto& dense2,
-                                            auto& dense3) {
+        [[maybe_unused]] const auto setup_solver_vault = [&](input_gmio& gmio,
+                                                            adf::shared_buffer<float>& buffer,
+                                                            const std::string& gmio_name,
+                                                            auto& dense0,
+                                                            auto& dense1,
+                                                            auto& dense2,
+                                                            auto& dense3) {
             make_weight_vault(gmio, buffer, gmio_name, SOLVER_VAULT_TOTAL, SOLVER_VAULT_CONSUMERS);
             unsigned out_index = 0;
             unsigned offset = 0;
@@ -266,18 +279,10 @@ public:
         pipeline_out = output_plio::create("aieml10_out", plio_32_bits,
                                            (base_path + "/" + AIEML10_OUTPUT_FILE).c_str());
 
-        make_weight_vault(embed_weights_gmio,
-                          embed_weights_vault,
-                          "embed_weights_gmio",
-                          EMBED_VAULT_TOTAL,
-                          EMBED_VAULT_CONSUMERS);
-        connect_vault_slice(embed_weights_vault,
-                            EMBED_VAULT_TOTAL,
-                            0U,
-                            embed_dense0.inA[0],
-                            0U,
-                            EMBED_DENSE0_WEIGHTS_TOTAL);
         connect<>(embed_input_gmio.out[0], embed_dense0.inB[0]);
+        connect<parameter>(embed_matrixA0_rtp, embed_dense0.matrixA[0]);
+        connect<parameter>(embed_matrixA1_0_rtp, embed_dense1.matrixA[0]);
+        connect<parameter>(embed_matrixA1_1_rtp, embed_dense1.matrixA[1]);
 
         embed_bias_relu0 = make_bias_relu_kernel();
         embed_bias_relu1 = make_bias_relu_kernel();
@@ -291,19 +296,6 @@ public:
         auto embed_split_leg1 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(embed_split0.out[1], embed_dense1.inB[1]);
         adf::fifo_depth(embed_split_leg0) = DEFAULT_FIFO_DEPTH;
         adf::fifo_depth(embed_split_leg1) = DEFAULT_FIFO_DEPTH;
-
-        connect_vault_slice(embed_weights_vault,
-                            EMBED_VAULT_TOTAL,
-                            1U,
-                            embed_dense1.inA[0],
-                            EMBED_DENSE0_WEIGHTS_TOTAL,
-                            EMBED_DENSE1_WEIGHTS_PER_PART);
-        connect_vault_slice(embed_weights_vault,
-                            EMBED_VAULT_TOTAL,
-                            2U,
-                            embed_dense1.inA[1],
-                            EMBED_DENSE0_WEIGHTS_TOTAL + EMBED_DENSE1_WEIGHTS_PER_PART,
-                            EMBED_DENSE1_WEIGHTS_PER_PART);
 
         connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_bias_relu1.in[0]);
         connect<parameter>(embed_bias1_rtp, embed_bias_relu1.in[1]);
@@ -336,13 +328,14 @@ public:
             });
         }
 
-        setup_solver_vault(solver0_weights_gmio,
-                           solver0_weights_vault,
-                           "solver0_weights_gmio",
-                           solver0_dense0,
-                           solver0_dense1,
-                           solver0_dense2,
-                           solver0_dense3);
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            connect<parameter>(solver0_dense0_matrixA_rtp[part], solver0_dense0.matrixA[part]);
+        }
+        for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+            connect<parameter>(solver0_dense1_matrixA_rtp[part], solver0_dense1.matrixA[part]);
+            connect<parameter>(solver0_dense2_matrixA_rtp[part], solver0_dense2.matrixA[part]);
+            connect<parameter>(solver0_dense3_matrixA_rtp[part], solver0_dense3.matrixA[part]);
+        }
 
         for (kernel* br : {&solver0_bias_relu0, &solver0_bias_relu1, &solver0_bias_relu2, &solver0_bias_relu3}) {
             *br = make_bias_relu_kernel();
@@ -402,13 +395,14 @@ public:
             });
         }
 
-        setup_solver_vault(solver1_weights_gmio,
-                           solver1_weights_vault,
-                           "solver1_weights_gmio",
-                           solver1_dense0,
-                           solver1_dense1,
-                           solver1_dense2,
-                           solver1_dense3);
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            connect<parameter>(solver1_dense0_matrixA_rtp[part], solver1_dense0.matrixA[part]);
+        }
+        for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+            connect<parameter>(solver1_dense1_matrixA_rtp[part], solver1_dense1.matrixA[part]);
+            connect<parameter>(solver1_dense2_matrixA_rtp[part], solver1_dense2.matrixA[part]);
+            connect<parameter>(solver1_dense3_matrixA_rtp[part], solver1_dense3.matrixA[part]);
+        }
 
         for (kernel* br : {&solver1_bias_relu0, &solver1_bias_relu1, &solver1_bias_relu2, &solver1_bias_relu3}) {
             *br = make_bias_relu_kernel();
@@ -467,13 +461,14 @@ public:
             });
         }
 
-        setup_solver_vault(solver2_weights_gmio,
-                           solver2_weights_vault,
-                           "solver2_weights_gmio",
-                           solver2_dense0,
-                           solver2_dense1,
-                           solver2_dense2,
-                           solver2_dense3);
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            connect<parameter>(solver2_dense0_matrixA_rtp[part], solver2_dense0.matrixA[part]);
+        }
+        for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+            connect<parameter>(solver2_dense1_matrixA_rtp[part], solver2_dense1.matrixA[part]);
+            connect<parameter>(solver2_dense2_matrixA_rtp[part], solver2_dense2.matrixA[part]);
+            connect<parameter>(solver2_dense3_matrixA_rtp[part], solver2_dense3.matrixA[part]);
+        }
 
         for (kernel* br : {&solver2_bias_relu0, &solver2_bias_relu1, &solver2_bias_relu2, &solver2_bias_relu3}) {
             *br = make_bias_relu_kernel();
@@ -507,7 +502,6 @@ public:
  // // // Output  -------------------------------------------------
      
         connect<parameter>(output_matrixA_rtp, output_dense0.matrixA[0]);
-        // auto solver2_to_output = connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu3.out[0], output_dense0.inB[0]);
         auto solver2_to_output = connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu3.out[0], output_dense0.inB[0]);
         adf::fifo_depth(solver2_to_output) = DEFAULT_FIFO_DEPTH;
         connect<window<WINDOW_BYTES_OUTPUT_PAD>>(output_dense0.out[0], pipeline_out.in[0]);

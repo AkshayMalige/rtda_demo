@@ -16,7 +16,6 @@ NeuralNetworkGraph g;
 namespace {
 
 constexpr std::size_t EMBED_DENSE0_WEIGHTS_COUNT = static_cast<std::size_t>(EMBED_DENSE0_WEIGHTS_TOTAL);
-constexpr std::size_t EMBED_DENSE1_PART_COUNT = static_cast<std::size_t>(EMBED_DENSE1_CASC_LEN);
 constexpr std::size_t EMBED_DENSE1_WEIGHTS_PER_PART_HOST =
     static_cast<std::size_t>(EMBED_DENSE1_WEIGHTS_PER_PART);
 constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(INPUT_SIZE);
@@ -81,24 +80,6 @@ int main() {
         }
         return true;
     };
-    auto load_and_send_vault = [&](input_gmio& gmio_port,
-                                   const std::vector<std::pair<std::string, std::size_t>>& segments,
-                                   const std::string& context) -> bool {
-        std::size_t total_expected = 0;
-        for (const auto& segment : segments) {
-            total_expected += segment.second;
-        }
-        std::vector<float> combined;
-        combined.reserve(total_expected);
-        for (const auto& [relative_path, expected_count] : segments) {
-            const auto values = load_vector(relative_path, expected_count);
-            if (values.size() != expected_count) {
-                return false;
-            }
-            combined.insert(combined.end(), values.begin(), values.end());
-        }
-        return send_vector_via_gmio(combined, gmio_port, context);
-    };
     auto load_and_update_ports = [&](const std::string& relative_path,
                                      std::size_t expected_count,
                                      std::initializer_list<input_port*> ports) -> bool {
@@ -111,71 +92,109 @@ int main() {
         }
         return true;
     };
-    auto make_solver_segments = [&](const char* dense0_prefix,
-                                    const char* dense1_prefix,
-                                    const char* dense2_prefix,
-                                    const char* dense3_prefix) {
-        std::vector<std::pair<std::string, std::size_t>> segments;
-        segments.reserve(SOLVER_DENSE0_PART_COUNT + 3 * SOLVER_DENSEX_PART_COUNT);
-        for (std::size_t part = 0; part < SOLVER_DENSE0_PART_COUNT; ++part) {
-            segments.emplace_back(std::string(dense0_prefix) + std::to_string(part) + ".txt",
-                                  SOLVER_DENSE0_WEIGHTS_PER_PART_HOST);
+    auto load_and_update_matrix_parts = [&](const std::string& prefix,
+                                            std::size_t part_count,
+                                            std::size_t expected_count_per_part,
+                                            auto& port_array) -> bool {
+        for (std::size_t part = 0; part < part_count; ++part) {
+            const auto path = prefix + std::to_string(part) + ".txt";
+            if (!load_and_update_ports(path,
+                                       expected_count_per_part,
+                                       {&port_array[part]})) {
+                return false;
+            }
         }
-        for (std::size_t part = 0; part < SOLVER_DENSEX_PART_COUNT; ++part) {
-            segments.emplace_back(std::string(dense1_prefix) + std::to_string(part) + ".txt",
-                                  SOLVER_DENSEX_WEIGHTS_PER_PART_HOST);
+        return true;
+    };
+    auto load_solver_weights = [&](const char* dense0_prefix,
+                                   const char* dense1_prefix,
+                                   const char* dense2_prefix,
+                                   const char* dense3_prefix,
+                                   auto& dense0_ports,
+                                   auto& dense1_ports,
+                                   auto& dense2_ports,
+                                   auto& dense3_ports) -> bool {
+        if (!load_and_update_matrix_parts(dense0_prefix,
+                                          SOLVER_DENSE0_PART_COUNT,
+                                          SOLVER_DENSE0_WEIGHTS_PER_PART_HOST,
+                                          dense0_ports)) {
+            return false;
         }
-        for (std::size_t part = 0; part < SOLVER_DENSEX_PART_COUNT; ++part) {
-            segments.emplace_back(std::string(dense2_prefix) + std::to_string(part) + ".txt",
-                                  SOLVER_DENSEX_WEIGHTS_PER_PART_HOST);
+        if (!load_and_update_matrix_parts(dense1_prefix,
+                                          SOLVER_DENSEX_PART_COUNT,
+                                          SOLVER_DENSEX_WEIGHTS_PER_PART_HOST,
+                                          dense1_ports)) {
+            return false;
         }
-        for (std::size_t part = 0; part < SOLVER_DENSEX_PART_COUNT; ++part) {
-            segments.emplace_back(std::string(dense3_prefix) + std::to_string(part) + ".txt",
-                                  SOLVER_DENSEX_WEIGHTS_PER_PART_HOST);
+        if (!load_and_update_matrix_parts(dense2_prefix,
+                                          SOLVER_DENSEX_PART_COUNT,
+                                          SOLVER_DENSEX_WEIGHTS_PER_PART_HOST,
+                                          dense2_ports)) {
+            return false;
         }
-        return segments;
+        if (!load_and_update_matrix_parts(dense3_prefix,
+                                          SOLVER_DENSEX_PART_COUNT,
+                                          SOLVER_DENSEX_WEIGHTS_PER_PART_HOST,
+                                          dense3_ports)) {
+            return false;
+        }
+        return true;
+    };
+    auto load_solver_biases = [&](const char* bias0_path,
+                                  const char* bias1_path,
+                                  const char* bias2_path,
+                                  const char* bias3_path,
+                                  input_port& bias0_port,
+                                  input_port& bias1_port,
+                                  input_port& bias2_port,
+                                  input_port& bias3_port) -> bool {
+        if (!load_and_update_ports(bias0_path,
+                                   SUBSOLVER0_DENSE0_BIAS_SIZE,
+                                   {&bias0_port})) {
+            return false;
+        }
+        if (!load_and_update_ports(bias1_path,
+                                   SUBSOLVER0_DENSE1_BIAS_SIZE,
+                                   {&bias1_port})) {
+            return false;
+        }
+        if (!load_and_update_ports(bias2_path,
+                                   SUBSOLVER0_DENSE2_BIAS_SIZE,
+                                   {&bias2_port})) {
+            return false;
+        }
+        if (!load_and_update_ports(bias3_path,
+                                   SUBSOLVER0_DENSE3_BIAS_SIZE,
+                                   {&bias3_port})) {
+            return false;
+        }
+        return true;
     };
 
-    // Weight preload via GMIO ------------------------------------------------
+    // Weight preload via RTP -------------------------------------------------
 
-    std::vector<std::pair<std::string, std::size_t>> embed_segments;
-    embed_segments.reserve(EMBED_DENSE1_PART_COUNT + 1);
-    embed_segments.emplace_back(EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_COUNT);
-    for (std::size_t part = 0; part < EMBED_DENSE1_PART_COUNT; ++part) {
-        embed_segments.emplace_back(EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(part) + ".txt",
-                                    EMBED_DENSE1_WEIGHTS_PER_PART_HOST);
-    }
-    if (!load_and_send_vault(g.embed_weights_gmio, embed_segments, "embed_weights_vault")) {
+    if (!load_and_update_ports(EMBED_DENSE0_WEIGHTS,
+                               EMBED_DENSE0_WEIGHTS_COUNT,
+                               {&g.embed_matrixA0_rtp})) {
         return -1;
     }
-    const auto solver0_segments = make_solver_segments(
-        SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
-        SUBSOLVER0_DENSE1_WEIGHTS_PREFIX,
-        SUBSOLVER0_DENSE2_WEIGHTS_PREFIX,
-        SUBSOLVER0_DENSE3_WEIGHTS_PREFIX);
-    if (!load_and_send_vault(g.solver0_weights_gmio, solver0_segments, "solver0_weights_vault")) {
-        return -1;
+    for (std::size_t part = 0; part < static_cast<std::size_t>(EMBED_DENSE1_CASC_LEN); ++part) {
+        const auto path = EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
+        input_port* target_port = nullptr;
+        if (part == 0U) {
+            target_port = &g.embed_matrixA1_0_rtp;
+        } else if (part == 1U) {
+            target_port = &g.embed_matrixA1_1_rtp;
+        } else {
+            std::cerr << "Error: Unsupported embed_dense1 cascade index " << part << std::endl;
+            return -1;
+        }
+        if (!load_and_update_ports(path,
+                                   EMBED_DENSE1_WEIGHTS_PER_PART_HOST,
+                                   {target_port})) {
+            return -1;
+        }
     }
-    const auto solver1_segments = make_solver_segments(
-        SUBSOLVER1_DENSE0_WEIGHTS_PREFIX,
-        SUBSOLVER1_DENSE1_WEIGHTS_PREFIX,
-        SUBSOLVER1_DENSE2_WEIGHTS_PREFIX,
-        SUBSOLVER1_DENSE3_WEIGHTS_PREFIX);
-    if (!load_and_send_vault(g.solver1_weights_gmio, solver1_segments, "solver1_weights_vault")) {
-        return -1;
-    }
-    const auto solver2_segments = make_solver_segments(
-        SUBSOLVER2_DENSE0_WEIGHTS_PREFIX,
-        SUBSOLVER2_DENSE1_WEIGHTS_PREFIX,
-        SUBSOLVER2_DENSE2_WEIGHTS_PREFIX,
-        SUBSOLVER2_DENSE3_WEIGHTS_PREFIX);
-    if (!load_and_send_vault(g.solver2_weights_gmio, solver2_segments, "solver2_weights_vault")) {
-        return -1;
-    }
-
-
-    // // Embed bias updates ------------------------------------------------
-
     if (!load_and_update_ports(EMBED_DENSE0_BIAS,
                                EMBED_DENSE0_BIAS_SIZE,
                                {&g.embed_bias0_rtp})) {
@@ -187,72 +206,67 @@ int main() {
         return -1;
     }
 
+    if (!load_solver_weights(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE3_WEIGHTS_PREFIX,
+                             g.solver0_dense0_matrixA_rtp,
+                             g.solver0_dense1_matrixA_rtp,
+                             g.solver0_dense2_matrixA_rtp,
+                             g.solver0_dense3_matrixA_rtp)) {
+        return -1;
+    }
+    if (!load_solver_weights(SUBSOLVER1_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE3_WEIGHTS_PREFIX,
+                             g.solver1_dense0_matrixA_rtp,
+                             g.solver1_dense1_matrixA_rtp,
+                             g.solver1_dense2_matrixA_rtp,
+                             g.solver1_dense3_matrixA_rtp)) {
+        return -1;
+    }
+    if (!load_solver_weights(SUBSOLVER2_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE3_WEIGHTS_PREFIX,
+                             g.solver2_dense0_matrixA_rtp,
+                             g.solver2_dense1_matrixA_rtp,
+                             g.solver2_dense2_matrixA_rtp,
+                             g.solver2_dense3_matrixA_rtp)) {
+        return -1;
+    }
+
     // // Solver0 bias updates ------------------------------------------------
    
-    if (!load_and_update_ports(SUBSOLVER0_DENSE0_BIAS,
-                               SUBSOLVER0_DENSE0_BIAS_SIZE,
-                               {&g.solver0_bias0_rtp})) {
+    if (!load_solver_biases(SUBSOLVER0_DENSE0_BIAS,
+                            SUBSOLVER0_DENSE1_BIAS,
+                            SUBSOLVER0_DENSE2_BIAS,
+                            SUBSOLVER0_DENSE3_BIAS,
+                            g.solver0_bias0_rtp,
+                            g.solver0_bias1_rtp,
+                            g.solver0_bias2_rtp,
+                            g.solver0_bias3_rtp)) {
         return -1;
     }
-    if (!load_and_update_ports(SUBSOLVER0_DENSE1_BIAS,
-        SUBSOLVER0_DENSE1_BIAS_SIZE,
-        {&g.solver0_bias1_rtp})) {
+    if (!load_solver_biases(SUBSOLVER1_DENSE0_BIAS,
+                            SUBSOLVER1_DENSE1_BIAS,
+                            SUBSOLVER1_DENSE2_BIAS,
+                            SUBSOLVER1_DENSE3_BIAS,
+                            g.solver1_bias0_rtp,
+                            g.solver1_bias1_rtp,
+                            g.solver1_bias2_rtp,
+                            g.solver1_bias3_rtp)) {
         return -1;
     }
-    if (!load_and_update_ports(SUBSOLVER0_DENSE2_BIAS,
-        SUBSOLVER0_DENSE2_BIAS_SIZE,
-        {&g.solver0_bias2_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER0_DENSE3_BIAS,
-        SUBSOLVER0_DENSE3_BIAS_SIZE,
-        {&g.solver0_bias3_rtp})) {
-        return -1;
-    }
-
-    // // Solver1 bias updates ------------------------------------------------
-    if (!load_and_update_ports(SUBSOLVER1_DENSE0_BIAS,
-        SUBSOLVER0_DENSE0_BIAS_SIZE,
-        {&g.solver1_bias0_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER1_DENSE1_BIAS,
-        SUBSOLVER0_DENSE1_BIAS_SIZE,
-        {&g.solver1_bias1_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER1_DENSE2_BIAS,
-        SUBSOLVER0_DENSE2_BIAS_SIZE,
-        {&g.solver1_bias2_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER1_DENSE3_BIAS,
-        SUBSOLVER0_DENSE3_BIAS_SIZE,
-        {&g.solver1_bias3_rtp})) {
-        return -1;
-    }
-
-
-    // // Solver2 bias updates ------------------------------------------------
-
-    if (!load_and_update_ports(SUBSOLVER2_DENSE0_BIAS,
-        SUBSOLVER0_DENSE0_BIAS_SIZE,
-        {&g.solver2_bias0_rtp})) {
-    return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER2_DENSE1_BIAS,
-        SUBSOLVER0_DENSE1_BIAS_SIZE,
-        {&g.solver2_bias1_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER2_DENSE2_BIAS,
-        SUBSOLVER0_DENSE2_BIAS_SIZE,
-        {&g.solver2_bias2_rtp})) {
-        return -1;
-    }
-    if (!load_and_update_ports(SUBSOLVER2_DENSE3_BIAS,
-        SUBSOLVER0_DENSE3_BIAS_SIZE,
-        {&g.solver2_bias3_rtp})) {
+    if (!load_solver_biases(SUBSOLVER2_DENSE0_BIAS,
+                            SUBSOLVER2_DENSE1_BIAS,
+                            SUBSOLVER2_DENSE2_BIAS,
+                            SUBSOLVER2_DENSE3_BIAS,
+                            g.solver2_bias0_rtp,
+                            g.solver2_bias1_rtp,
+                            g.solver2_bias2_rtp,
+                            g.solver2_bias3_rtp)) {
         return -1;
     }
 

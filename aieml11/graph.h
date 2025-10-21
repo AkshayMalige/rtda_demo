@@ -6,25 +6,60 @@
 #include "aie_api/aie_adf.hpp"
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
-static constexpr unsigned int TP_SHIFT = 0;
-static constexpr unsigned int TP_RND = rnd_floor;
-static constexpr unsigned int TP_NUM_FRAMES = 1;
-static constexpr unsigned int TP_SAT = 0;
-static constexpr unsigned int TP_SSR = 1;
-static constexpr unsigned int TP_DIM_A_LEADING = 1;
-static constexpr unsigned int TP_CASC_LEN_LAYER1 = 1;
-static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
-using dense8x128 = matrix_vector_mul_graph<
-    float, float,
-    HIDDEN_SIZE,
-    INPUT_SIZE,
-    TP_SHIFT,
-    TP_RND,
-    TP_NUM_FRAMES,
-    TP_CASC_LEN_LAYER1,
-    TP_SAT,
-    TP_SSR,
-    TP_DIM_A_LEADING>;
+// static constexpr unsigned int TP_SHIFT = 0;
+// static constexpr unsigned int TP_RND = rnd_floor;
+// static constexpr unsigned int TP_NUM_FRAMES = 1;
+// static constexpr unsigned int TP_SAT = 0;
+// static constexpr unsigned int TP_SSR = 1;
+// static constexpr unsigned int TP_DIM_A_LEADING = 1;
+// static constexpr unsigned int TP_CASC_LEN_LAYER1 = 1;
+// static constexpr unsigned int TP_CASC_LEN_LAYER2 = 2;
+// using dense8x128 = matrix_vector_mul_graph<
+//     float, float,
+//     HIDDEN_SIZE,
+//     INPUT_SIZE,
+//     TP_SHIFT,
+//     TP_RND,
+//     TP_NUM_FRAMES,
+//     TP_CASC_LEN_LAYER1,
+//     TP_SAT,
+//     TP_SSR,
+//     TP_DIM_A_LEADING>;
+
+
+    template<
+    unsigned Rows,
+    unsigned Cols,
+    unsigned CascLen,
+    unsigned UseMatrixReload,
+    unsigned DimALeading = 1,
+    unsigned Shift = 0,
+    unsigned Rnd = rnd_floor,
+    unsigned NumFrames = 1,
+    unsigned Saturation = 0,
+    unsigned Ssr = 1,
+    unsigned Api = 0,
+    unsigned DualIp = 0,
+    unsigned NumOutputs = 1>
+using dense_matrix_graph = matrix_vector_mul_graph<
+    float,
+    float,
+    Rows,
+    Cols,
+    Shift,
+    Rnd,
+    NumFrames,
+    CascLen,
+    Saturation,
+    Ssr,
+    DimALeading,
+    UseMatrixReload,
+    Api,
+    DualIp,
+    NumOutputs>;
+
+using embed_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, INPUT_SIZE, EMBED_DENSE0_CASC_LEN, 1>;
+
 
 class NeuralNetworkGraph : public graph {
 public:
@@ -32,7 +67,7 @@ public:
     input_plio  layer0_weights;
     // Output of first dense layer exposed via PLIO for direct PL interfacing
     // output_plio layer0_out;
-    dense8x128   dense1;
+    embed_dense0_graph   dense1;
 
     adf::output_gmio gmioOut; 
 	adf::input_gmio gmioIn;
