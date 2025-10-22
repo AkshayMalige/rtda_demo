@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# ntfy wrapper to notify when a command finishes
+
+topic="synthara"   # your ntfy topic name
+cmd="$*"
+start=$(date +%H:%M:%S)
+
+# run the command
+eval "$cmd"
+code=$?
+end=$(date +%H:%M:%S)
+
+# send notification
+if [ $code -eq 0 ]; then
+  curl -d "✅ '$cmd' completed successfully ($start → $end)" ntfy.sh/$topic
+else
+  curl -d "❌ '$cmd' failed with exit code $code ($start → $end)" ntfy.sh/$topic
+fi
+
+exit $code

@@ -7,8 +7,8 @@ echo "📦 Sourcing XRT..."
 source /opt/xilinx/xrt/setup.sh
 
 # === Set and Source Vitis environment ===
-echo "📦 Setting and sourcing Vitis 2024.2..."
-export XILINX_VITIS=/tools/Xilinx/Vitis/2024.2
+echo "📦 Setting and sourcing Vitis 2025.1..."
+export XILINX_VITIS=/tools/Xilinx/2025.1/Vitis
 source ${XILINX_VITIS}/settings64.sh
 
 # === Source PetaLinux environment ===
@@ -30,7 +30,8 @@ export ROOTFS=${EDGE_COMMON_SW}/rootfs.ext4
 export SYSROOT=/opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
 
 # === Set Vitis platform path ===
-export PLATFORM=${XILINX_VITIS}/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
+export PLATFORM=${XILINX_VITIS}/base_platforms/xilinx_vek280_base_202510_1/xilinx_vek280_base_202510_1.xpfm
+
 export XILINX_VITIS_DATA_DIR=/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml10/.vitis_data
 
 echo ""
