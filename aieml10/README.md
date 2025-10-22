@@ -1,96 +1,86 @@
-# AIEML10 Graph — Fused Bias + Leaky ReLU
+# AIEML10 Graph — New Design Overview
 
-This AI Engine design implements the aieml10 topology. As an optimization, the separate `bias_add` and `leaky_relu` kernels are now fused into a single kernel to save tiles/resources and FIFOs while preserving behavior and interfaces (bias RTPs, shapes, and ordering).
+This design builds a 5‑stage dense network on AI Engine with fused bias + leaky‑ReLU activations, GMIO for bulk I/O, and RTP for per‑layer parameters. All weights and biases are provided per layer at runtime via distinct RTP ports, so you can swap in real, different weights/biases for every layer without changing the graph.
 
-## Runtime Data Movement
-Weights are now staged via four “vault” buffers so the host loads them once with GMIO and every graph run reuses the on-array copies:
+Key sources: `graph.h`, `graph.cpp`, `bias_relu_fused.cpp`, `roll_concat.cpp`.
 
-- `embed_weights_vault` (17 408 floats) holds both embed layer matrices (128×8 and 128×128 split across the cascade).
-- Three solver vaults (`solver{0,1,2}_weights_vault`, each 81 920 floats) carry the full dense stacks for their branches (128×256 plus three 128×128 matrices).
-- Each vault is populated during `g.init()` using a single GMIO burst, then sliced by the graph into the individual cascade ports.
+## Model Stitching
+- Embed stage:
+  - `embed_dense0` 128×8 → fused `bias_add_leaky_relu` → `window_split_128_to_64x2` →
+  - `embed_dense1` 128×128 (2‑way cascade reload) → fused `bias_add_leaky_relu`.
+- Three solver stages, chained: `solver0` → `solver1` → `solver2`.
+  - Each stage expands 128→256 using `roll_concat`, then runs four layers:
+    - `dense0` 128×256 → fused `bias+leaky_relu` → split(64/64) →
+    - `dense1` 128×128 (2 parts) → fused → split →
+    - `dense2` 128×128 (2 parts) → fused → split →
+    - `dense3` 128×128 (2 parts) → fused.
+  - The output of `solver{i}.dense3` feeds the next stage’s `roll_concat`.
+- Output stage:
+  - `output_dense0` 32×128 → GMIO out.
 
-Biases and the final output matrix continue to use RTP updates because they are small and infrequently changed, while activations still travel over PLIO streams. The table below summarises every host-managed transfer per graph run (sizes are in floats).
+All dense layers use matrix reload (RTP) for weights; every fused activation uses an RTP for its bias. Activations move between kernels as AIE windows, not over PLIO.
 
-| Payload | Source → Destination | Connection Type | Size (floats) |
-| --- | --- | --- | --- |
-| Input activations (`embed_input.txt`) | Host DDR → `pipeline_in` PLIO → `embed_dense0.inB[0]` | PLIO window | 8 per frame |
-| Embed weight vault | Host DDR → `embed_weights_gmio` → `embed_weights_vault` → `{embed_dense0.inA[0], embed_dense1.inA[0..1]}` | GMIO → shared_buffer | 17 408 |
-| Solver0 weight vault | Host DDR → `solver0_weights_gmio` → `solver0_weights_vault` → `{solver0_dense{0..3}.inA}` | GMIO → shared_buffer | 81 920 |
-| Solver1 weight vault | Host DDR → `solver1_weights_gmio` → `solver1_weights_vault` → `{solver1_dense{0..3}.inA}` | GMIO → shared_buffer | 81 920 |
-| Solver2 weight vault | Host DDR → `solver2_weights_gmio` → `solver2_weights_vault` → `{solver2_dense{0..3}.inA}` | GMIO → shared_buffer | 81 920 |
-| Embed biases (`EMBED_DENSE{0,1}_BIAS`) | Host DDR → `embed_bias{0,1}_rtp` | RTP (`g.update`) | 2 × 128 |
-| Solver0 biases (`SUBSOLVER0_DENSE{0..3}_BIAS`) | Host DDR → `solver0_bias{0..3}_rtp` | RTP (`g.update`) | 4 × 128 |
-| Solver1 biases (`SUBSOLVER1_DENSE{0..3}_BIAS`) | Host DDR → `solver1_bias{0..3}_rtp` | RTP (`g.update`) | 4 × 128 |
-| Solver2 biases (`SUBSOLVER2_DENSE{0..3}_BIAS`) | Host DDR → `solver2_bias{0..3}_rtp` | RTP (`g.update`) | 4 × 128 |
-| Output dense matrix (`OUTPUT_DENSE0_WEIGHTS`) | Host DDR → `output_matrixA_rtp` | RTP (`g.update`) | 4 096 |
-| Output activations (`aieml10_output_aie.txt`) | `output_dense0.out[0]` → `pipeline_out` PLIO → Host file | PLIO window | 32 per frame |
+## Ports, Supply, and Sizes
+Sizes are in floats. Per‑frame payloads are shown for activations.
 
-**Notes**
-- GMIO vault sizes match the concatenated text files. Ordering is preserved (`dense0` parts first, followed by `dense1`, `dense2`, `dense3` parts) so the graph slicing offsets stay aligned.
-- Bias RTP updates remain additive: each call pushes 128 floats (the layer width) into the fused bias+activation kernels.
-- `g.run(N)` reuses all staged weights; only the PLIO streams and RTP payloads move per run.
+| Name | Direction | Supply | Size | Notes |
+| --- | --- | --- | ---: | --- |
+| `embed_input_gmio` | In (GMIO) | GMIO burst | 8 per frame | Input vectors (`EMBED_INPUT_DATA`). |
+| `embed_matrixA0_rtp` | In (RTP) | RTP (g.update) | 128×8 = 1 024 | `embed_dense0` weights. |
+| `embed_bias0_rtp` | In (RTP) | RTP (g.update) | 128 | Bias for `embed_dense0`. |
+| `embed_matrixA1_0_rtp` | In (RTP) | RTP (g.update) | 16 384/2 = 8 192 | `embed_dense1` weights part 0. |
+| `embed_matrixA1_1_rtp` | In (RTP) | RTP (g.update) | 8 192 | `embed_dense1` weights part 1. |
+| `embed_bias1_rtp` | In (RTP) | RTP (g.update) | 128 | Bias for `embed_dense1`. |
+| `solver0_dense0_matrixA_rtp[0..3]` | In (RTP) | RTP (g.update) | 4×8 192 | `dense0` weights split 4 ways (total 32 768). |
+| `solver0_dense{1,2,3}_matrixA_rtp[0..1]` | In (RTP) | RTP (g.update) | 3×(2×8 192) | Each 128×128 split 2 ways (total 3×16 384). |
+| `solver0_bias{0..3}_rtp` | In (RTP) | RTP (g.update) | 4×128 | Bias per layer. |
+| `solver1_dense0_matrixA_rtp[0..3]` | In (RTP) | RTP (g.update) | 4×8 192 | Same shape as solver0; separate ports. |
+| `solver1_dense{1,2,3}_matrixA_rtp[0..1]` | In (RTP) | RTP (g.update) | 3×(2×8 192) | Separate ports. |
+| `solver1_bias{0..3}_rtp` | In (RTP) | RTP (g.update) | 4×128 | Separate ports. |
+| `solver2_dense0_matrixA_rtp[0..3]` | In (RTP) | RTP (g.update) | 4×8 192 | Same shape; separate ports. |
+| `solver2_dense{1,2,3}_matrixA_rtp[0..1]` | In (RTP) | RTP (g.update) | 3×(2×8 192) | Separate ports. |
+| `solver2_bias{0..3}_rtp` | In (RTP) | RTP (g.update) | 4×128 | Separate ports. |
+| `output_matrixA_rtp` | In (RTP) | RTP (g.update) | 32×128 = 4 096 | Output layer weights. |
+| `embed_output_gmio` | Out (GMIO) | GMIO burst | 32 per frame | Final output vectors. |
 
-## What Changed
-- New fused kernel `bias_add_leaky_relu_kernel` performs bias add then leaky ReLU in one pass.
-  - Sources: `bias_relu_fused.h`, `bias_relu_fused.cpp`
-- Graph updates replaced every bias→relu pair with a single fused kernel:
-  - Embed stage: `embed_bias_relu0`, `embed_bias_relu1` replace `embed_bias{0,1}` + `embed_relu{0,1}`
-    - `graph.h:309–315` wires `embed_dense0 → embed_bias_relu0 → embed_split0`
-    - `graph.h:330–341` wires `embed_dense1 → embed_bias_relu1 → solver0_rollconcat`
-  - Solver stage (branch 1): `solver0_bias_relu{0..3}` replace `solver_bias{0..3}` + `solver_relu{0..3}`
-    - `graph.h` wires `solver0_dense{0..3} → solver0_bias_relu{0..3}` and into the existing splits
-    - `graph.h` sends `solver0_bias_relu3` output to `solver1_rollconcat`
-  - Solver stage (branch 2): `solver1_bias_relu{0..3}` similarly replace bias+relu
-    - `graph.h:457–469` feed split chains
-  - Solver stage (branch 3): `solver2_bias_relu{0..3}` similarly replace bias+relu
-    - `graph.h:522–544` feed split chains and final output
+Internal activation streams (AIE windows):
+- 128‑wide windows between dense → fused bias+relu, and fused → split.
+- 64‑wide windows from each split to subsequent dual‑input dense (SSR=2).
+- 256‑wide tiles written/read via `shared_buffer` around each `roll_concat` to feed 4‑way SSR dense0.
 
-No tensor sizes, file names, or RTP port names changed. All bias RTP updates in `graph.cpp` remain valid and continue to drive the fused kernels.
+Port definitions: see `graph.h:90`, `graph.h:97`, `graph.h:101`, `graph.h:107`, `graph.h:131`, `graph.h:154`, `graph.h:178`.
 
-## Kernel Runtime Ratios
-Runtime budget hints are updated to account for fusion (bias + relu):
-- `embed_bias_relu{0,1}`: `2.0` (≈1.0 + 1.0)
-- `solver0_bias_relu{0..3}`, `solver1_bias_relu{0..3}`, `solver2_bias_relu{0..3}`: `0.95` each (≈0.45 + 0.5)
-- `solver0_split{0..2}`, `solver1_split{0..2}`, `solver2_split{0..2}` unchanged: `0.65`
-- `solver0_rollconcat`, `solver1_rollconcat`, `solver2_rollconcat` unchanged: `1.0`
-  - See `graph_layout.hpp` for the runtime updates.
+## Per‑Layer Weights and Biases
+- Every layer has its own RTP port(s). `graph.cpp` loads each from a separate file declared in `../common/data_paths.h`.
+- Today, the solver branches reuse the same file prefixes as placeholders. When you have real weights per layer/branch, set unique prefixes:
+  - Edit `SUBSOLVER{1,2}_DENSE{0..3}_WEIGHTS_PREFIX` and `SUBSOLVER{1,2}_DENSE{0..3}_BIAS` in `../common/data_paths.h`.
+  - Provide per‑part files where required (e.g., `_part0.txt`, `_part1.txt`, `_part2.txt`, `_part3.txt`).
+- No PLIO is used for parameters; all matrices/biases are updated with `g.update(port, data, count)`.
+
+## Data Files and Shapes
+Default file names live in `../common/data_paths.h` and are read from `DATA_DIR` (defaults to `../data`). The key shapes are:
+- Embed: `embed_dense_0_weights.txt` (1 024), `embed_dense_1_weights_part{0,1}.txt` (8 192 each), `embed_dense_{0,1}_bias.txt` (128).
+- Solver branches 0/1/2:
+  - `solver_X_dense_0_weights_part{0..3}.txt` (8 192 each),
+  - `solver_X_dense_{1,2,3}_weights_part{0,1}.txt` (8 192 each),
+  - `solver_X_dense_{0,1,2,3}_bias.txt` (128 each), where X ∈ {0,1,2}.
+- Output: `output_dense_0_weights.txt` (4 096).
+- I/O: `embed_input.txt` (multiple of 8), `aieml10_output_aie.txt` (multiple of 32).
 
 ## Build and Simulate
-- Configure environment (example):
+- Setup:
   - `conda env create -f hls_env.yml && conda activate hls_env`
   - `source set_envs.sh`
-  - Optional: `export DATA_DIR=$PWD/../data` (defaults already set in Makefile)
-- Build AIE graph (TARGET can be `hw_emu` or `hw`):
-  - `make graph TARGET=hw_emu`
-- Run AI Engine simulation:
-  - `make sim TARGET=x86sim` or `make sim TARGET=hw_emu`
+  - Optional: `export DATA_DIR=$PWD/../data`
+- Build AIE graph (TARGET=`hw_emu` or `hw`): `make graph TARGET=hw_emu`
+- Simulate: `make sim TARGET=x86sim` or `make sim TARGET=hw_emu`
 
-## Profile, Trace, and Waveforms
-- Profile summary and timelines:
-  - Simulation already enables profiling (`--profile --online -text`).
-  - Open the run in Analyzer: `vitis_analyzer Work/aiesimulator_output/default.aierun_summary`.
-  - Explore Summary, Graph, and Timeline panes to spot hotspots and stalls.
-- Enable event trace timeline in sim:
-  - `make sim-trace` (adds `--trace` to aiesimulator) for richer timeline events.
-- Waveforms (WDB/VCD):
-  - The sim produces WDB waveforms (`-wdb`). Open them in Vivado/XSIM Wave, or convert to VCD:
-    - `make vcd` (uses `wdb2vcd` if present) → generates `aiesim.vcd`.
-    - If `wdb2vcd` isn’t on PATH, use the Vivado `wdb2vcd` binary or open the WDB directly in Vivado.
+## Profiling and Waves
+- Analyzer: `vitis_analyzer Work/aiesimulator_output/default.aierun_summary`
+- Enable timeline: `make sim-trace`
+- Convert WDB→VCD: `make vcd`
 
-## Post‑Run Checklist (VCD/Wave)
-- Dataflow and windowing: verify `connect<window<...>>` boundaries are respected and no dropped frames.
-- Backpressure: ensure stream valid/ready handshakes are sustained; watch for prolonged deassertions.
-- Core/DMA cadence: minimal idle between frames; DMA bursts align with window sizes.
-- Buffers/locks: shared buffer tiling shows no long lock holds or misordered tiles.
-- Throughput/latency: end‑to‑end latency for `g.run(1)` meets expectations and is stable between runs.
-- Correctness: compare `data/aieml10_output_aie.txt` to goldens.
-
-## Data and Parameters
-- Bias RTPs are loaded in `graph.cpp` during simulation init and continue to target the fused kernels’ bias ports.
-- If you change tensor sizes, update `common/nn_defs.h` equivalents in this design (`../common/nn_defs10.h`) and regenerate data under `data/` using the repository’s Python tools.
-
-## Files of Interest
-- Fused kernel: `bias_relu_fused.h`, `bias_relu_fused.cpp`
-- Graph wiring: `graph.h:196–216`, `graph.h:286–291`, `graph.h:309–341`, `graph.h:381–418`, `graph.h:515–544`
-- Runtime ratios: `graph_layout.hpp`
-- Build rules: `Makefile`
+## File Pointers
+- Port and wiring: `graph.h:197`, `graph.h:204`, `graph.h:213`, `graph.h:217`, `graph.h:222`, `graph.h:231`, `graph.h:269`, `graph.h:336`, `graph.h:402`, `graph.h:426`.
+- Runtime hints: `graph_layout.hpp`
+- Host parameter loads and GMIO transfers: `graph.cpp:180`, `graph.cpp:212`, `graph.cpp:300`, `graph.cpp:339`.
