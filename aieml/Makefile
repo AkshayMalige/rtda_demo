@@ -14,7 +14,7 @@ DSPLIB_PATH  ?= ../dsp_lib
 
 # ==== PROJECT FILES & DIRECTORIES ====
 GRAPH_SRC     := graph.cpp
-WORK_DIR      := Work
+WORK_DIR      ?= Work
 GRAPH_LIB     := $(WORK_DIR)/libadf.a
 KERNEL_SRCS   := \
 	bias_relu_fused.cpp \
@@ -57,6 +57,7 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
+
 $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_paths.h nn_defs10.h
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
@@ -69,7 +70,12 @@ $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_
 		exit 1; \
 	fi
 	$(AIECC) $(AIE_FLAGS) $(GRAPH_SRC) --workdir=$(WORK_DIR) 2>&1 | tee $(WORK_DIR)/aiecompiler.log
-	@echo "COMPLETE: AIE graph compiled."
+	@# aiecompiler drops libadf.a in CWD; relocate to $(WORK_DIR)
+	@if [ -f libadf.a ]; then \
+		echo "mv libadf.a -> $(GRAPH_LIB)"; \
+		mv -f libadf.a $(GRAPH_LIB); \
+	fi
+
 
 # --- Simulation ---
 sim: graph
@@ -91,8 +97,8 @@ endif
 clean:
 	@echo "--- Cleaning Workspace ---"
 	rm -rf $(WORK_DIR) .Xil *.log *.csv *.db *.aiecompile_summary \
-		aiesimulator_output $(WORK_DIR)/aiesimulator_output \
+		aiesimulator_output x86simulator_output $(WORK_DIR)/aiesimulator_output \
 		build_hw trdata.aiesim function_wdb_dir $(WORK_DIR)/function_wdb_dir\
-		pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT \
+		pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT *.jou\
 		*.json *.vcd *.wcfg *.wdb
 	@echo "CLEANED: Build and work directories removed."

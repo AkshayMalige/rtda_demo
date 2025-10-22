@@ -1,140 +1,46 @@
+// Host app for AIE-only graph (no PL kernels)
+// - Loads weights/biases via RTP (xrt::graph::update)
+// - Moves activations via GMIO using xrt::aie::bo async()
+
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "experimental/xrt_kernel.h"
-#include "experimental/xrt_graph.h"
-#include "experimental/xrt_device.h"
-#include "experimental/xrt_bo.h"
+#include <cstdlib>
+#include <limits>
+#include <iomanip>
+#include <cstring>
+
+#include "xrt/xrt_device.h"
+#include "xrt/xrt_graph.h"
+#include "xrt/xrt_aie.h"
+
+
+
 #include "data_paths.h"
-#include "nn_defs.h"
+#include "nn_defs10.h"
 
-// ------ Set this to "aieml", "aieml2", or "aieml3" ------
-static constexpr const char* kGraphName = "aieml";
-// ---------------------------------------------------------
-
-// Load text files containing floats into a vector
-static std::vector<float> read_file_to_vector(const std::string& filename, int size) {
-    std::vector<float> data;
-    data.reserve(size);
-    std::ifstream file(filename);
+// Load text file containing floats into a vector. If expected_count == 0, don't enforce.
+static std::vector<float> read_floats(const std::string& path, std::size_t expected_count) {
+    std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("ERROR: Could not open file " + filename);
+        throw std::runtime_error("Could not open file: " + path);
     }
-    float val;
-    while (file >> val) { data.push_back(val); }
-    file.close();
-    if ((int)data.size() != size) {
-        throw std::runtime_error("ERROR: File " + filename +
-                                 " does not contain the expected " + std::to_string(size) + " elements.");
+    std::vector<float> values;
+    values.reserve(expected_count ? expected_count : 1024);
+    float v = 0.0f;
+    while (file >> v) values.push_back(v);
+    if (expected_count && values.size() != expected_count) {
+        throw std::runtime_error("File has " + std::to_string(values.size()) + ", expected " + std::to_string(expected_count) + ": " + path);
     }
-    return data;
+    return values;
 }
 
-struct MM2SInfo {
-    std::string file;
-    int         size;
-    std::string kernel;
-    bool        preload;
-};
-
-struct GraphConfig {
-    std::vector<MM2SInfo> mm2s;
-    std::vector<std::string> relus;
-    std::vector<std::string> splitters;
-    std::string s2mm;
-    std::string output_file;
-    int output_size;
-    int relu_size;
-};
-
-static GraphConfig make_config(const std::string& graph, const std::string& base_path) {
-    if (graph == "aieml") {
-        GraphConfig cfg;
-        cfg.mm2s = {
-            {base_path + "/" + EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_SIZE, "mm2s_pl:{mm2s_weights1}", true},
-            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "0.txt", EMBED_DENSE1_WEIGHTS_PART_SIZE, "mm2s_pl:{mm2s_weights2_0}", true},
-            {base_path + "/" + EMBED_DENSE1_WEIGHTS_PREFIX + "1.txt", EMBED_DENSE1_WEIGHTS_PART_SIZE, "mm2s_pl:{mm2s_weights2_1}", true},
-            {base_path + "/" + EMBED_DENSE0_BIAS, EMBED_DENSE0_BIAS_SIZE, "mm2s_pl:{mm2s_bias1}", true},
-            {base_path + "/" + EMBED_DENSE1_BIAS, EMBED_DENSE1_BIAS_SIZE, "mm2s_pl:{mm2s_bias2}", true},
-            {base_path + "/" + EMBED_INPUT_DATA, EMBED_DENSE0_INPUT_SIZE, "mm2s_pl:{mm2s_din}", false},
-        };
-        cfg.relus = {"leaky_relu_pl:{relu}", "leaky_relu_pl:{relu2}"};
-        cfg.splitters = {"leaky_splitter_pl:{splitter}"};
-        cfg.s2mm = "s2mm_pl:{s2mm_out}";
-        cfg.output_file = base_path + "/" + EMBED_HOST_OUTPUT;
-        cfg.output_size = EMBED_FINAL_OUTPUT_SIZE;
-        cfg.relu_size = HIDDEN_SIZE;
-        return cfg;
-    } else if (graph == "aieml2") {
-        GraphConfig cfg;
-        // Layer 0 weights
-        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE0_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_DENSE0_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer0_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        // Layer 1-3 weights
-        for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE1_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer1_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE2_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer2_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        for (int i = 0; i < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_DENSE3_WEIGHTS_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_LAYER_WEIGHTS_PART_SIZE,
-                                "mm2s_pl:{layer3_weights_" + std::to_string(i) + "}",
-                                true});
-        }
-        // Biases
-        std::vector<std::string> bias_files = {SUBSOLVER0_DENSE0_BIAS, SUBSOLVER0_DENSE1_BIAS,
-                                               SUBSOLVER0_DENSE2_BIAS, SUBSOLVER0_DENSE3_BIAS};
-        for (int i = 0; i < 4; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + bias_files[i],
-                                SUBSOLVER0_LAYER_BIAS_SIZE,
-                                "mm2s_pl:{bias" + std::to_string(i) + "}",
-                                true});
-        }
-        // Inputs for layer 0
-        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
-            cfg.mm2s.push_back({base_path + "/" + SUBSOLVER0_INPUT_DATA_PREFIX + std::to_string(i) + ".txt",
-                                SUBSOLVER0_INPUT_PART_SIZE,
-                                "mm2s_pl:{layer0_in_" + std::to_string(i) + "}",
-                                false});
-        }
-        cfg.relus = {"leaky_relu_pl:{relu0}", "leaky_relu_pl:{relu1}", "leaky_relu_pl:{relu2}", "leaky_relu_pl:{relu3}"};
-        cfg.splitters = {"leaky_splitter_pl:{split0}", "leaky_splitter_pl:{split1}", "leaky_splitter_pl:{split2}"};
-        cfg.s2mm = "s2mm_pl:{s2mm_out}";
-        cfg.output_file = base_path + "/" + SUBSOLVER0_HOST_OUTPUT;
-        cfg.output_size = SUBSOLVER0_FINAL_OUTPUT_SIZE;
-        cfg.relu_size = HIDDEN_SIZE;
-        return cfg;
-    } else if (graph == "aieml3") {
-        GraphConfig cfg;
-        cfg.mm2s = {
-            {base_path + "/" + OUTPUT_DENSE0_WEIGHTS, OUTPUT_DENSE0_WEIGHTS_SIZE, "mm2s_pl:{mm2s_weights}", true},
-            {base_path + "/" + OUTPUT_DENSE0_BIAS,    OUTPUT_DENSE0_BIAS_SIZE,    "mm2s_pl:{mm2s_bias}",    true},
-            {base_path + "/" + OUTPUT_INPUT_DATA,     OUTPUT_DENSE0_INPUT_SIZE,   "mm2s_pl:{mm2s_din}",     false},
-        };
-        cfg.relus = {"leaky_relu_pl:{relu}"};
-        cfg.splitters = {};
-        cfg.s2mm = "s2mm_pl:{s2mm_out}";
-        cfg.output_file = base_path + "/" + OUTPUT_HOST_OUTPUT;
-        cfg.output_size = OUTPUT_FINAL_OUTPUT_SIZE;
-        cfg.relu_size = OUTPUT_DENSE0_OUT_PAD;
-        return cfg;
-    } else {
-        throw std::runtime_error("Unknown graph selection: " + graph);
-    }
+static std::string join(const std::string& base, const std::string& rel) {
+    if (base.empty()) return rel;
+    if (!base.empty() && base.back() == '/') return base + rel;
+    return base + "/" + rel;
 }
 
 int main(int argc, char** argv) {
@@ -142,109 +48,123 @@ int main(int argc, char** argv) {
         std::cout << "Usage: " << argv[0] << " <a.xclbin>\n";
         return 1;
     }
+    const std::string xclbin_path = argv[1];
 
-    const std::string xclbinFilename = argv[1];
-    const std::string base_path = "./data";
-
-    // Use the single variable above instead of a command-line option
-    GraphConfig cfg = make_config(kGraphName, base_path);
+    // Resolve DATA_DIR (defaults handled by data_paths.h for filenames; we just prepend here)
+    const char* dd_env = std::getenv("DATA_DIR");
+    const std::string data_base = dd_env ? dd_env : "../data";
 
     try {
+        // Open device and xclbin
         xrt::device device(0);
-        xrt::xclbin xclbin(xclbinFilename);
-        auto xclbin_uuid = device.load_xclbin(xclbin);
+        auto uuid = device.load_xclbin(xclbin_path);
 
-        // Load inputs/weights/biases into device buffers
-        std::vector<xrt::bo> mm2s_bos;
-        mm2s_bos.reserve(cfg.mm2s.size());
-        for (auto& spec : cfg.mm2s) {
-            auto data = read_file_to_vector(spec.file, spec.size);
-            xrt::bo bo(device, data.size() * sizeof(float), xrt::bo::flags::normal, 0);
-            bo.write(data.data());
-            bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-            mm2s_bos.push_back(std::move(bo));
-        }
-        xrt::bo output_buf(device, cfg.output_size * sizeof(float), xrt::bo::flags::normal, 0);
+        // Create graph handle (instance name is 'g' in aieml/graph.cpp)
+        xrt::graph graph(device, uuid, "g");
 
-        // Acquire kernel and graph handles
-        std::vector<xrt::kernel> mm2s_kernels;
-        for (auto& spec : cfg.mm2s) {
-            mm2s_kernels.emplace_back(device, xclbin_uuid, spec.kernel.c_str());
-        }
-        std::vector<xrt::kernel> relu_kernels;
-        for (auto& name : cfg.relus) {
-            relu_kernels.emplace_back(device, xclbin_uuid, name.c_str());
-        }
-        std::vector<xrt::kernel> split_kernels;
-        for (auto& name : cfg.splitters) {
-            split_kernels.emplace_back(device, xclbin_uuid, name.c_str());
-        }
-        xrt::kernel s2mm_kernel(device, xclbin_uuid, cfg.s2mm.c_str());
-        xrt::graph  aie_graph(device, xclbin_uuid, "g");
+        // ---------------- RTP preload: embed weights/biases ----------------
+        {
+            const auto emb_w0 = read_floats(join(data_base, EMBED_DENSE0_WEIGHTS), static_cast<std::size_t>(HIDDEN_SIZE) * INPUT_SIZE);
+            graph.update("g.embed_matrixA0_rtp", emb_w0.data());
 
-        // Start consumer kernels
-        auto s2mm_run = xrt::run(s2mm_kernel);
-        s2mm_run.set_arg(1, output_buf);
-        s2mm_run.set_arg(2, cfg.output_size);
-        s2mm_run.start();
+            const auto emb_w1_p0 = read_floats(join(data_base, std::string(EMBED_DENSE1_WEIGHTS_PREFIX) + "0.txt"),
+                                               static_cast<std::size_t>(OUTPUT_SIZE) * HIDDEN_SIZE / EMBED_DENSE1_CASC_LEN);
+            const auto emb_w1_p1 = read_floats(join(data_base, std::string(EMBED_DENSE1_WEIGHTS_PREFIX) + "1.txt"),
+                                               static_cast<std::size_t>(OUTPUT_SIZE) * HIDDEN_SIZE / EMBED_DENSE1_CASC_LEN);
+            graph.update("g.embed_matrixA1_0_rtp", emb_w1_p0.data());
+            graph.update("g.embed_matrixA1_1_rtp", emb_w1_p1.data());
 
-        std::vector<xrt::run> relu_runs;
-        for (auto& k : relu_kernels) {
-            auto r = xrt::run(k);
-            r.set_arg(3, cfg.relu_size);
-            r.start();
-            relu_runs.push_back(std::move(r));
-        }
-        std::vector<xrt::run> split_runs;
-        for (auto& k : split_kernels) {
-            auto r = xrt::run(k);
-            r.start();
-            split_runs.push_back(std::move(r));
+            const auto emb_b0 = read_floats(join(data_base, EMBED_DENSE0_BIAS), EMBED_DENSE0_BIAS_SIZE);
+            const auto emb_b1 = read_floats(join(data_base, EMBED_DENSE1_BIAS), EMBED_DENSE1_BIAS_SIZE);
+            graph.update("g.embed_bias0_rtp", emb_b0.data());
+            graph.update("g.embed_bias1_rtp", emb_b1.data());
         }
 
-        // Preload weights/biases before starting the AIE graph
-        for (size_t i = 0; i < mm2s_kernels.size(); ++i) {
-            if (cfg.mm2s[i].preload) {
-                auto run = xrt::run(mm2s_kernels[i]);
-                run.set_arg(0, mm2s_bos[i]);
-                run.set_arg(2, cfg.mm2s[i].size);
-                run.start();
-                run.wait();
+        // ---------------- RTP preload: solver weights/biases ----------------
+        auto load_solver_branch = [&](int idx) {
+            // Prefix macros per solver branch
+            const char* d0_prefix = idx == 0 ? SUBSOLVER0_DENSE0_WEIGHTS_PREFIX : (idx == 1 ? SUBSOLVER1_DENSE0_WEIGHTS_PREFIX : SUBSOLVER2_DENSE0_WEIGHTS_PREFIX);
+            const char* d1_prefix = idx == 0 ? SUBSOLVER0_DENSE1_WEIGHTS_PREFIX : (idx == 1 ? SUBSOLVER1_DENSE1_WEIGHTS_PREFIX : SUBSOLVER2_DENSE1_WEIGHTS_PREFIX);
+            const char* d2_prefix = idx == 0 ? SUBSOLVER0_DENSE2_WEIGHTS_PREFIX : (idx == 1 ? SUBSOLVER1_DENSE2_WEIGHTS_PREFIX : SUBSOLVER2_DENSE2_WEIGHTS_PREFIX);
+            const char* d3_prefix = idx == 0 ? SUBSOLVER0_DENSE3_WEIGHTS_PREFIX : (idx == 1 ? SUBSOLVER1_DENSE3_WEIGHTS_PREFIX : SUBSOLVER2_DENSE3_WEIGHTS_PREFIX);
+
+            const char* b0_path = idx == 0 ? SUBSOLVER0_DENSE0_BIAS : (idx == 1 ? SUBSOLVER1_DENSE0_BIAS : SUBSOLVER2_DENSE0_BIAS);
+            const char* b1_path = idx == 0 ? SUBSOLVER0_DENSE1_BIAS : (idx == 1 ? SUBSOLVER1_DENSE1_BIAS : SUBSOLVER2_DENSE1_BIAS);
+            const char* b2_path = idx == 0 ? SUBSOLVER0_DENSE2_BIAS : (idx == 1 ? SUBSOLVER1_DENSE2_BIAS : SUBSOLVER2_DENSE2_BIAS);
+            const char* b3_path = idx == 0 ? SUBSOLVER0_DENSE3_BIAS : (idx == 1 ? SUBSOLVER1_DENSE3_BIAS : SUBSOLVER2_DENSE3_BIAS);
+
+            const std::size_t d0_part = static_cast<std::size_t>(HIDDEN_SIZE) * (SUBSOLVER0_INPUT_SIZE / SUBSOLVER0_INPUT_PARTS);
+            const std::size_t dx_part = static_cast<std::size_t>(OUTPUT_SIZE) * (HIDDEN_SIZE / SUBSOLVER0_LAYER_WEIGHTS_PARTS);
+
+            for (int p = 0; p < SUBSOLVER0_INPUT_PARTS; ++p) {
+                auto vals = read_floats(join(data_base, std::string(d0_prefix) + std::to_string(p) + ".txt"), d0_part);
+                graph.update("g.solver" + std::to_string(idx) + "_dense0_matrixA_rtp[" + std::to_string(p) + "]", vals.data());
             }
-        }
-
-        // Run AIE graph
-        aie_graph.run(1);
-
-        // Start producers for input data streams
-        std::vector<xrt::run> mm2s_runs;
-        for (size_t i = 0; i < mm2s_kernels.size(); ++i) {
-            if (!cfg.mm2s[i].preload) {
-                auto run = xrt::run(mm2s_kernels[i]);
-                run.set_arg(0, mm2s_bos[i]);
-                run.set_arg(2, cfg.mm2s[i].size);
-                run.start();
-                mm2s_runs.push_back(std::move(run));
+            for (int p = 0; p < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++p) {
+                auto v1 = read_floats(join(data_base, std::string(d1_prefix) + std::to_string(p) + ".txt"), dx_part);
+                auto v2 = read_floats(join(data_base, std::string(d2_prefix) + std::to_string(p) + ".txt"), dx_part);
+                auto v3 = read_floats(join(data_base, std::string(d3_prefix) + std::to_string(p) + ".txt"), dx_part);
+                graph.update("g.solver" + std::to_string(idx) + "_dense1_matrixA_rtp[" + std::to_string(p) + "]", v1.data());
+                graph.update("g.solver" + std::to_string(idx) + "_dense2_matrixA_rtp[" + std::to_string(p) + "]", v2.data());
+                graph.update("g.solver" + std::to_string(idx) + "_dense3_matrixA_rtp[" + std::to_string(p) + "]", v3.data());
             }
+
+            auto b0 = read_floats(join(data_base, b0_path), SUBSOLVER0_DENSE0_BIAS_SIZE);
+            auto b1 = read_floats(join(data_base, b1_path), SUBSOLVER0_DENSE1_BIAS_SIZE);
+            auto b2 = read_floats(join(data_base, b2_path), SUBSOLVER0_DENSE2_BIAS_SIZE);
+            auto b3 = read_floats(join(data_base, b3_path), SUBSOLVER0_DENSE3_BIAS_SIZE);
+            graph.update("g.solver" + std::to_string(idx) + "_bias0_rtp", b0.data());
+            graph.update("g.solver" + std::to_string(idx) + "_bias1_rtp", b1.data());
+            graph.update("g.solver" + std::to_string(idx) + "_bias2_rtp", b2.data());
+            graph.update("g.solver" + std::to_string(idx) + "_bias3_rtp", b3.data());
+        };
+
+        load_solver_branch(0);
+        load_solver_branch(1);
+        load_solver_branch(2);
+
+        // ---------------- RTP preload: output weights ----------------
+        {
+            const auto out_w = read_floats(join(data_base, OUTPUT_DENSE0_WEIGHTS), OUTPUT_DENSE0_WEIGHTS_SIZE);
+            graph.update("g.output_matrixA_rtp", out_w.data());
         }
 
-        for (auto& r : mm2s_runs) r.wait();
-        aie_graph.wait();
-        s2mm_run.wait();
-
-        // Retrieve results
-        std::vector<float> host_output_data(cfg.output_size);
-        output_buf.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-        output_buf.read(host_output_data.data());
-
-        std::ofstream out(cfg.output_file);
-        for (int i = 0; i < cfg.output_size; ++i) {
-            std::cout << host_output_data[i] << '\n';
-            out << host_output_data[i] << '\n';
+        // ---------------- GMIO transfers and execution ----------------
+        const auto inputs = read_floats(join(data_base, EMBED_INPUT_DATA), 0U);
+        if (inputs.empty() || (inputs.size() % static_cast<std::size_t>(INPUT_SIZE)) != 0U) {
+            throw std::runtime_error("Input file size must be a non-zero multiple of INPUT_SIZE");
         }
+        const std::size_t run_count = inputs.size() / static_cast<std::size_t>(INPUT_SIZE);
+        const std::size_t out_elems = run_count * static_cast<std::size_t>(OUTPUT_DENSE0_OUT_PAD);
+        const std::size_t in_bytes = inputs.size() * sizeof(float);
+        const std::size_t out_bytes = out_elems * sizeof(float);
+
+        // Allocate non-cacheable buffers for GMIO
+        auto in_bo  = xrt::aie::bo(device, in_bytes, xrt::bo::flags::normal, 0);
+        auto out_bo = xrt::aie::bo(device, out_bytes, xrt::bo::flags::normal, 0);
+        auto in_ptr  = in_bo.map<float*>();
+        auto out_ptr = out_bo.map<float*>();
+        std::memcpy(in_ptr, inputs.data(), in_bytes);
+
+        // Kick asynchronous GMIO transfers and the graph
+        in_bo.async("g.embed_input_gmio", XCL_BO_SYNC_BO_GMIO_TO_AIE, in_bytes, 0);
+        graph.run(static_cast<int>(run_count));
+        auto out_run = out_bo.async("g.embed_output_gmio", XCL_BO_SYNC_BO_AIE_TO_GMIO, out_bytes, 0);
+        out_run.wait();
+        graph.end();
+
+        // Write outputs to file for comparison
+        const std::string out_path = join(data_base, AIEML10_OUTPUT_FILE);
+        std::ofstream ofs(out_path);
+        ofs << std::setprecision(std::numeric_limits<float>::max_digits10);
+        for (std::size_t i = 0; i < out_elems; ++i) {
+            ofs << out_ptr[i] << '\n';
+        }
+        std::cout << "Wrote " << out_elems << " floats to " << out_path << "\n";
     } catch (const std::exception& e) {
         std::cerr << "ERROR: " << e.what() << std::endl;
         return 1;
     }
     return 0;
 }
+

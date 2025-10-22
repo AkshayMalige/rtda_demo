@@ -1,28 +1,68 @@
-# Makefile to compile host.cpp for PetaLinux sysroot using aarch64-linux-gnu-g++
+# Makefile to build host app for AI Engine-only graph (no PL kernels)
 
-# Toolchain and paths
-SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
-CXX     := aarch64-linux-gnu-g++
-# Default data directory lives one level above the project root
+# Inputs from top-level
+TARGET ?= sw_emu
+EMU_PS ?= X86
+
+# Default data directory (top-level exports this already)
 DATA_DIR ?= $(abspath ../../data)
 export DATA_DIR
 
-# Sources and targets
+# Cross sysroot for QEMU/board builds
+SYSROOT ?= /opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
+
+# Select compiler per emulation mode
+ifeq ($(EMU_PS),X86)
+  HOST_NATIVE := 1
+else
+  HOST_NATIVE := 0
+endif
+
+# Sanitize environment contamination from cross toolchains when building natively
+ifeq ($(HOST_NATIVE),1)
+  ifneq ($(strip $(OECORE_TARGET_SYSROOT)),)
+    $(warning Detected Petalinux SDK environment (OECORE_TARGET_SYSROOT=$(OECORE_TARGET_SYSROOT)) while EMU_PS=X86; using native toolchain)
+  endif
+  ifneq ($(findstring aarch64,$(CXX)),)
+    $(warning CXX appears to be cross-compiler '$(CXX)'; overriding to native g++)
+  endif
+  override CXX := g++
+  # Ignore any inherited SYSROOT for native build
+  ifneq ($(strip $(SYSROOT)),)
+    $(warning Ignoring SYSROOT='$(SYSROOT)' for native build (EMU_PS=X86))
+  endif
+  override SYSROOT :=
+else
+  override CXX := aarch64-linux-gnu-g++
+endif
+
 SRC := host.cpp
 OBJ := $(SRC:.cpp=.o)
 OUT ?= system_host
 
-# Compiler and linker flags
-CXXFLAGS ?= -Wall -c -std=c++17 -Wno-int-to-pointer-cast \
-        --sysroot=$(SYSROOT) \
-        -I$(SYSROOT)/usr/include/xrt \
-        -I$(SYSROOT)/usr/include \
-        -I./ -I./src/ -I../common -I/aietools/include -I/include \
-        -DDATA_DIR='"$(DATA_DIR)"'
+COMMON_INC := -I./ -I../common -I../aieml
 
-LDFLAGS ?= --sysroot=$(SYSROOT) \
-	-L$(SYSROOT)/usr/lib \
-	-lstdc++ -lxrt_coreutil -lxrt_core -lpthread
+ifeq ($(HOST_NATIVE),1)
+  # Native (x86) build uses XRT from the host install
+  XRT_ROOT ?= $(XILINX_XRT)
+  ifeq ($(strip $(XRT_ROOT)),)
+    XRT_ROOT := /opt/xilinx/xrt
+  endif
+  override CXXFLAGS := -Wall -Wextra -O2 -std=c++17 -c \
+                       -I$(XRT_ROOT)/include \
+                       $(COMMON_INC) \
+                       -DDATA_DIR='"$(DATA_DIR)"'
+  override LDFLAGS  := -L$(XRT_ROOT)/lib -Wl,-rpath,$(XRT_ROOT)/lib \
+                       -lxrt_coreutil -lxrt_core -lpthread
+else
+  override CXXFLAGS := -Wall -Wextra -O2 -std=c++17 -c \
+                       --sysroot=$(SYSROOT) \
+                       -I$(SYSROOT)/usr/include/xrt -I$(SYSROOT)/usr/include \
+                       $(COMMON_INC) \
+                       -DDATA_DIR='"$(DATA_DIR)"'
+  override LDFLAGS  := --sysroot=$(SYSROOT) -L$(SYSROOT)/usr/lib \
+                       -lxrt_coreutil -lxrt_core -lpthread
+endif
 
 .PHONY: all clean
 
@@ -38,4 +78,3 @@ $(OUT): $(OBJ)
 clean:
 	rm -f $(OBJ) $(OUT) *.log
 	@echo "🧹 Cleaned up build artifacts"
-
