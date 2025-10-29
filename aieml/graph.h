@@ -102,81 +102,75 @@ public:
     input_port                  embed_matrixA1_0_rtp;
     input_port                  embed_matrixA1_1_rtp;
 
-
-
     kernel                      	solver0_rollconcat;
-    // solver_dense0_graph             solver0_dense0;
-    // kernel                      	solver0_bias_relu0;
-    // kernel                      	solver0_split0;
-    // solver_dense_graph              solver0_dense1;
-    // kernel                      	solver0_bias_relu1;
-    // kernel                      	solver0_split1;
-    // solver_dense_graph              solver0_dense2;
-    // kernel                      	solver0_bias_relu2;
-    // kernel                      	solver0_split2;
-    // solver_dense_graph              solver0_dense3;
-    // kernel                      	solver0_bias_relu3;
-    // input_port                  	solver0_bias0_rtp;
-    // input_port                  	solver0_bias1_rtp;
-    // input_port                  	solver0_bias2_rtp;
-    // input_port                  	solver0_bias3_rtp;
-    // std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver0_dense0_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense1_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense2_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense3_matrixA_rtp;
-    // adf::shared_buffer<float>   	solver0_roll_buf;
+    solver_dense0_graph             solver0_dense0;
+    kernel                      	solver0_bias_relu0;
+    kernel                      	solver0_split0;
+    solver_dense_graph              solver0_dense1;
+    kernel                      	solver0_bias_relu1;
+    kernel                      	solver0_split1;
+    solver_dense_graph              solver0_dense2;
+    kernel                      	solver0_bias_relu2;
+    kernel                      	solver0_split2;
+    solver_dense_graph              solver0_dense3;
+    kernel                      	solver0_bias_relu3;
+    input_port                  	solver0_bias0_rtp;
+    input_port                  	solver0_bias1_rtp;
+    input_port                  	solver0_bias2_rtp;
+    input_port                  	solver0_bias3_rtp;
+    std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver0_dense0_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense1_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense2_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver0_dense3_matrixA_rtp;
+    adf::shared_buffer<float>   	solver0_roll_buf;
+
+    kernel                      	solver1_rollconcat;
+    solver_dense0_graph             solver1_dense0;
+    kernel                      	solver1_bias_relu0;
+    kernel                      	solver1_split0;
+    solver_dense_graph              solver1_dense1;
+    kernel                      	solver1_bias_relu1;
+    kernel                      	solver1_split1;
+    solver_dense_graph              solver1_dense2;
+    kernel                      	solver1_bias_relu2;
+    kernel                      	solver1_split2;
+    solver_dense_graph              solver1_dense3;
+    kernel                      	solver1_bias_relu3;
+    input_port                  	solver1_bias0_rtp;
+    input_port                  	solver1_bias1_rtp;
+    input_port                  	solver1_bias2_rtp;
+    input_port                  	solver1_bias3_rtp;
+    adf::shared_buffer<float>   	solver1_roll_buf;
+    std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver1_dense0_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense1_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense2_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense3_matrixA_rtp;
 
 
+    kernel                      	solver2_rollconcat;
+    solver_dense0_graph             solver2_dense0;
+    kernel                      	solver2_bias_relu0;
+    kernel                      	solver2_split0;
+    solver_dense_graph              solver2_dense1;
+    kernel                      	solver2_bias_relu1;
+    kernel                      	solver2_split1;
+    solver_dense_graph              solver2_dense2;
+    kernel                      	solver2_bias_relu2;
+    kernel                      	solver2_split2;
+    solver_dense_graph              solver2_dense3;
+    kernel                      	solver2_bias_relu3;
+    input_port                  	solver2_bias0_rtp;
+    input_port                  	solver2_bias1_rtp;
+    input_port                  	solver2_bias2_rtp;
+    input_port                  	solver2_bias3_rtp;
+    adf::shared_buffer<float>   	solver2_roll_buf;
+    std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver2_dense0_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense1_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense2_matrixA_rtp;
+    std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense3_matrixA_rtp;
 
-    // kernel                      	solver1_rollconcat;
-    // solver_dense0_graph             solver1_dense0;
-    // kernel                      	solver1_bias_relu0;
-    // kernel                      	solver1_split0;
-    // solver_dense_graph              solver1_dense1;
-    // kernel                      	solver1_bias_relu1;
-    // kernel                      	solver1_split1;
-    // solver_dense_graph              solver1_dense2;
-    // kernel                      	solver1_bias_relu2;
-    // kernel                      	solver1_split2;
-    // solver_dense_graph              solver1_dense3;
-    // kernel                      	solver1_bias_relu3;
-    // input_port                  	solver1_bias0_rtp;
-    // input_port                  	solver1_bias1_rtp;
-    // input_port                  	solver1_bias2_rtp;
-    // input_port                  	solver1_bias3_rtp;
-    // adf::shared_buffer<float>   	solver1_roll_buf;
-    // std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver1_dense0_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense1_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense2_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver1_dense3_matrixA_rtp;
-
-
-    // kernel                      	solver2_rollconcat;
-    // solver_dense0_graph             solver2_dense0;
-    // kernel                      	solver2_bias_relu0;
-    // kernel                      	solver2_split0;
-    // solver_dense_graph              solver2_dense1;
-    // kernel                      	solver2_bias_relu1;
-    // kernel                      	solver2_split1;
-    // solver_dense_graph              solver2_dense2;
-    // kernel                      	solver2_bias_relu2;
-    // kernel                      	solver2_split2;
-    // solver_dense_graph              solver2_dense3;
-    // kernel                      	solver2_bias_relu3;
-    // input_port                  	solver2_bias0_rtp;
-    // input_port                  	solver2_bias1_rtp;
-    // input_port                  	solver2_bias2_rtp;
-    // input_port                  	solver2_bias3_rtp;
-    // adf::shared_buffer<float>   	solver2_roll_buf;
-    // std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver2_dense0_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense1_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense2_matrixA_rtp;
-    // std::array<input_port, SUBSOLVER0_LAYER_WEIGHTS_PARTS> solver2_dense3_matrixA_rtp;
-
-
-
-    // output_dense0_graph         output_dense0;
-    // input_port                  	output_matrixA_rtp;
+    output_dense0_graph         output_dense0;
+    input_port                  	output_matrixA_rtp;
 
 
     NeuralNetworkGraph() {
@@ -231,205 +225,205 @@ public:
         connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver0_rollconcat.in[0]);
         // connect<>(embed_input_gmio.out[0], solver0_rollconcat.in[0]);
         dimensions(solver0_rollconcat.in[0])  = {HIDDEN_SIZE};
-        dimensions(solver0_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
+        dimensions(solver0_rollconcat.out[0]) = {2 * HIDDEN_SIZE};
 
-        // solver0_roll_buf = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_INPUT_PARTS);
-        // connect<>(solver0_rollconcat.out[0], solver0_roll_buf.in[0]);
+        solver0_roll_buf = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_INPUT_PARTS);
+        connect<>(solver0_rollconcat.out[0], solver0_roll_buf.in[0]);
 
-        // write_access(solver0_roll_buf.in[0]) = tiling({
-        //     .buffer_dimension = {ROLL_CONCAT_TOTAL},
-        //     .tiling_dimension = {ROLL_CONCAT_TOTAL},
-        //     .offset = {0}
-        // });
+        write_access(solver0_roll_buf.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
 
-        // for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
-        //     connect<>(solver0_roll_buf.out[i], solver0_dense0.inB[i]);
-        //     read_access(solver0_roll_buf.out[i]) = tiling({
-        //         .buffer_dimension = {ROLL_CONCAT_TOTAL},
-        //         .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
-        //         .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
-        //     });
-        // }
+        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
+            connect<>(solver0_roll_buf.out[i], solver0_dense0.inB[i]);
+            read_access(solver0_roll_buf.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
+            });
+        }
 
-        // for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
-        //     connect<parameter>(solver0_dense0_matrixA_rtp[part], async(solver0_dense0.matrixA[part]));
-        // }
-        // for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
-        //     connect<parameter>(solver0_dense1_matrixA_rtp[part], async(solver0_dense1.matrixA[part]));
-        //     connect<parameter>(solver0_dense2_matrixA_rtp[part], async(solver0_dense2.matrixA[part]));
-        //     connect<parameter>(solver0_dense3_matrixA_rtp[part], async(solver0_dense3.matrixA[part]));
-        // }
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            connect<parameter>(solver0_dense0_matrixA_rtp[part], async(solver0_dense0.matrixA[part]));
+        }
+        for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+            connect<parameter>(solver0_dense1_matrixA_rtp[part], async(solver0_dense1.matrixA[part]));
+            connect<parameter>(solver0_dense2_matrixA_rtp[part], async(solver0_dense2.matrixA[part]));
+            connect<parameter>(solver0_dense3_matrixA_rtp[part], async(solver0_dense3.matrixA[part]));
+        }
 
-        // for (kernel* br : {&solver0_bias_relu0, &solver0_bias_relu1, &solver0_bias_relu2, &solver0_bias_relu3}) {
-        //     *br = make_bias_relu_kernel();
-        // }
-        // for (kernel* split : {&solver0_split0, &solver0_split1, &solver0_split2}) {
-        //     *split = make_split_kernel();
-        // }
+        for (kernel* br : {&solver0_bias_relu0, &solver0_bias_relu1, &solver0_bias_relu2, &solver0_bias_relu3}) {
+            *br = make_bias_relu_kernel();
+        }
+        for (kernel* split : {&solver0_split0, &solver0_split1, &solver0_split2}) {
+            *split = make_split_kernel();
+        }
 
-        // connect<parameter>(solver0_bias0_rtp, async(solver0_bias_relu0.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense0.out[0], solver0_bias_relu0.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu0.out[0], solver0_split0.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split0.out[0], solver0_dense1.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split0.out[1], solver0_dense1.inB[1]);
+        connect<parameter>(solver0_bias0_rtp, async(solver0_bias_relu0.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense0.out[0], solver0_bias_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu0.out[0], solver0_split0.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split0.out[0], solver0_dense1.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split0.out[1], solver0_dense1.inB[1]);
 
 
-        // connect<parameter>(solver0_bias1_rtp, async(solver0_bias_relu1.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense1.out[0], solver0_bias_relu1.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu1.out[0], solver0_split1.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split1.out[0], solver0_dense2.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split1.out[1], solver0_dense2.inB[1]);
+        connect<parameter>(solver0_bias1_rtp, async(solver0_bias_relu1.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense1.out[0], solver0_bias_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu1.out[0], solver0_split1.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split1.out[0], solver0_dense2.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split1.out[1], solver0_dense2.inB[1]);
 
-        // connect<parameter>(solver0_bias2_rtp, async(solver0_bias_relu2.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense2.out[0], solver0_bias_relu2.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu2.out[0], solver0_split2.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split2.out[0], solver0_dense3.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split2.out[1], solver0_dense3.inB[1]);
+        connect<parameter>(solver0_bias2_rtp, async(solver0_bias_relu2.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense2.out[0], solver0_bias_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu2.out[0], solver0_split2.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split2.out[0], solver0_dense3.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver0_split2.out[1], solver0_dense3.inB[1]);
 
-        // connect<parameter>(solver0_bias3_rtp, async(solver0_bias_relu3.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense3.out[0], solver0_bias_relu3.in[0]);
+        connect<parameter>(solver0_bias3_rtp, async(solver0_bias_relu3.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense3.out[0], solver0_bias_relu3.in[0]);
 
         // // // Solver 1 -------------------------------------------------
       
-        // solver1_rollconcat = kernel::create(roll_concat_kernel);
-        // source(solver1_rollconcat)  = "roll_concat.cpp";
-        // headers(solver1_rollconcat) = {"roll_concat.h"};
+        solver1_rollconcat = kernel::create(roll_concat_kernel);
+        source(solver1_rollconcat)  = "roll_concat.cpp";
+        headers(solver1_rollconcat) = {"roll_concat.h"};
 
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu3.out[0], solver1_rollconcat.in[0]);
-        // // connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver1_rollconcat.in[0]);
-        // dimensions(solver1_rollconcat.in[0])  = {HIDDEN_SIZE};
-        // dimensions(solver1_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_bias_relu3.out[0], solver1_rollconcat.in[0]);
+        // connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver1_rollconcat.in[0]);
+        dimensions(solver1_rollconcat.in[0])  = {HIDDEN_SIZE};
+        dimensions(solver1_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
 
-        // solver1_roll_buf = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_INPUT_PARTS);
-        // connect<>(solver1_rollconcat.out[0], solver1_roll_buf.in[0]);
+        solver1_roll_buf = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_INPUT_PARTS);
+        connect<>(solver1_rollconcat.out[0], solver1_roll_buf.in[0]);
 
-        // write_access(solver1_roll_buf.in[0]) = tiling({
-        //     .buffer_dimension = {ROLL_CONCAT_TOTAL},
-        //     .tiling_dimension = {ROLL_CONCAT_TOTAL},
-        //     .offset = {0}
-        // });
+        write_access(solver1_roll_buf.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
 
-        // for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
-        //     connect<>(solver1_roll_buf.out[i], solver1_dense0.inB[i]);
-        //     read_access(solver1_roll_buf.out[i]) = tiling({
-        //         .buffer_dimension = {ROLL_CONCAT_TOTAL},
-        //         .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
-        //         .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
-        //     });
-        // }
+        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
+            connect<>(solver1_roll_buf.out[i], solver1_dense0.inB[i]);
+            read_access(solver1_roll_buf.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
+            });
+        }
 
-        // for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
-        //     connect<parameter>(solver1_dense0_matrixA_rtp[part], async(solver1_dense0.matrixA[part]));
-        // }
-        // for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
-        //     connect<parameter>(solver1_dense1_matrixA_rtp[part], async(solver1_dense1.matrixA[part]));
-        //     connect<parameter>(solver1_dense2_matrixA_rtp[part], async(solver1_dense2.matrixA[part]));
-        //     connect<parameter>(solver1_dense3_matrixA_rtp[part], async(solver1_dense3.matrixA[part]));
-        // }
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            connect<parameter>(solver1_dense0_matrixA_rtp[part], async(solver1_dense0.matrixA[part]));
+        }
+        for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+            connect<parameter>(solver1_dense1_matrixA_rtp[part], async(solver1_dense1.matrixA[part]));
+            connect<parameter>(solver1_dense2_matrixA_rtp[part], async(solver1_dense2.matrixA[part]));
+            connect<parameter>(solver1_dense3_matrixA_rtp[part], async(solver1_dense3.matrixA[part]));
+        }
 
-        // for (kernel* br : {&solver1_bias_relu0, &solver1_bias_relu1, &solver1_bias_relu2, &solver1_bias_relu3}) {
-        //     *br = make_bias_relu_kernel();
-        // }
-        // for (kernel* split : {&solver1_split0, &solver1_split1, &solver1_split2}) {
-        //     *split = make_split_kernel();
-        // }
+        for (kernel* br : {&solver1_bias_relu0, &solver1_bias_relu1, &solver1_bias_relu2, &solver1_bias_relu3}) {
+            *br = make_bias_relu_kernel();
+        }
+        for (kernel* split : {&solver1_split0, &solver1_split1, &solver1_split2}) {
+            *split = make_split_kernel();
+        }
 
-        // connect<parameter>(solver1_bias0_rtp, async(solver1_bias_relu0.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense0.out[0], solver1_bias_relu0.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu0.out[0], solver1_split0.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split0.out[0], solver1_dense1.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split0.out[1], solver1_dense1.inB[1]);
+        connect<parameter>(solver1_bias0_rtp, async(solver1_bias_relu0.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense0.out[0], solver1_bias_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu0.out[0], solver1_split0.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split0.out[0], solver1_dense1.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split0.out[1], solver1_dense1.inB[1]);
 
-        // connect<parameter>(solver1_bias1_rtp, async(solver1_bias_relu1.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense1.out[0], solver1_bias_relu1.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu1.out[0], solver1_split1.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split1.out[0], solver1_dense2.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split1.out[1], solver1_dense2.inB[1]);
+        connect<parameter>(solver1_bias1_rtp, async(solver1_bias_relu1.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense1.out[0], solver1_bias_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu1.out[0], solver1_split1.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split1.out[0], solver1_dense2.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split1.out[1], solver1_dense2.inB[1]);
 
-        // connect<parameter>(solver1_bias2_rtp, async(solver1_bias_relu2.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense2.out[0], solver1_bias_relu2.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu2.out[0], solver1_split2.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split2.out[0], solver1_dense3.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split2.out[1], solver1_dense3.inB[1]);
+        connect<parameter>(solver1_bias2_rtp, async(solver1_bias_relu2.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense2.out[0], solver1_bias_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu2.out[0], solver1_split2.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split2.out[0], solver1_dense3.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver1_split2.out[1], solver1_dense3.inB[1]);
 
-        // connect<parameter>(solver1_bias3_rtp, async(solver1_bias_relu3.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense3.out[0], solver1_bias_relu3.in[0]);
+        connect<parameter>(solver1_bias3_rtp, async(solver1_bias_relu3.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_dense3.out[0], solver1_bias_relu3.in[0]);
 
 
         // // // // Solver 2 -------------------------------------------------
         
-        // solver2_rollconcat = kernel::create(roll_concat_kernel);
-        // source(solver2_rollconcat)  = "roll_concat.cpp";
-        // headers(solver2_rollconcat) = {"roll_concat.h"};
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu3.out[0], solver2_rollconcat.in[0]);
-        // // connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver2_rollconcat.in[0]);
-        // dimensions(solver2_rollconcat.in[0])  = {HIDDEN_SIZE};
-        // dimensions(solver2_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
+        solver2_rollconcat = kernel::create(roll_concat_kernel);
+        source(solver2_rollconcat)  = "roll_concat.cpp";
+        headers(solver2_rollconcat) = {"roll_concat.h"};
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver1_bias_relu3.out[0], solver2_rollconcat.in[0]);
+        // connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver2_rollconcat.in[0]);
+        dimensions(solver2_rollconcat.in[0])  = {HIDDEN_SIZE};
+        dimensions(solver2_rollconcat.out[0]) = {ROLL_CONCAT_TOTAL};
 
-        // solver2_roll_buf = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_INPUT_PARTS);
-        // connect<>(solver2_rollconcat.out[0], solver2_roll_buf.in[0]);
+        solver2_roll_buf = shared_buffer<float>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_INPUT_PARTS);
+        connect<>(solver2_rollconcat.out[0], solver2_roll_buf.in[0]);
 
-        // write_access(solver2_roll_buf.in[0]) = tiling({
-        //     .buffer_dimension = {ROLL_CONCAT_TOTAL},
-        //     .tiling_dimension = {ROLL_CONCAT_TOTAL},
-        //     .offset = {0}
-        // });
+        write_access(solver2_roll_buf.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
 
-        // for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
-        //     connect<>(solver2_roll_buf.out[i], solver2_dense0.inB[i]);
-        //     read_access(solver2_roll_buf.out[i]) = tiling({
-        //         .buffer_dimension = {ROLL_CONCAT_TOTAL},
-        //         .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
-        //         .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
-        //     });
-        // }
+        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
+            connect<>(solver2_roll_buf.out[i], solver2_dense0.inB[i]);
+            read_access(solver2_roll_buf.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
+            });
+        }
 
-        // for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
-        //     connect<parameter>(solver2_dense0_matrixA_rtp[part], async(solver2_dense0.matrixA[part]));
-        // }
-        // for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
-        //     connect<parameter>(solver2_dense1_matrixA_rtp[part], async(solver2_dense1.matrixA[part]));
-        //     connect<parameter>(solver2_dense2_matrixA_rtp[part], async(solver2_dense2.matrixA[part]));
-        //     connect<parameter>(solver2_dense3_matrixA_rtp[part], async(solver2_dense3.matrixA[part]));
-        // }
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            connect<parameter>(solver2_dense0_matrixA_rtp[part], async(solver2_dense0.matrixA[part]));
+        }
+        for (int part = 0; part < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++part) {
+            connect<parameter>(solver2_dense1_matrixA_rtp[part], async(solver2_dense1.matrixA[part]));
+            connect<parameter>(solver2_dense2_matrixA_rtp[part], async(solver2_dense2.matrixA[part]));
+            connect<parameter>(solver2_dense3_matrixA_rtp[part], async(solver2_dense3.matrixA[part]));
+        }
 
-        // for (kernel* br : {&solver2_bias_relu0, &solver2_bias_relu1, &solver2_bias_relu2, &solver2_bias_relu3}) {
-        //     *br = make_bias_relu_kernel();
-        // }
-        // for (kernel* split : {&solver2_split0, &solver2_split1, &solver2_split2}) {
-        //     *split = make_split_kernel();
-        // }
+        for (kernel* br : {&solver2_bias_relu0, &solver2_bias_relu1, &solver2_bias_relu2, &solver2_bias_relu3}) {
+            *br = make_bias_relu_kernel();
+        }
+        for (kernel* split : {&solver2_split0, &solver2_split1, &solver2_split2}) {
+            *split = make_split_kernel();
+        }
 
-        // connect<parameter>(solver2_bias0_rtp, async(solver2_bias_relu0.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense0.out[0], solver2_bias_relu0.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu0.out[0], solver2_split0.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split0.out[0], solver2_dense1.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split0.out[1], solver2_dense1.inB[1]);
+        connect<parameter>(solver2_bias0_rtp, async(solver2_bias_relu0.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense0.out[0], solver2_bias_relu0.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu0.out[0], solver2_split0.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split0.out[0], solver2_dense1.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split0.out[1], solver2_dense1.inB[1]);
 
-        // connect<parameter>(solver2_bias1_rtp, async(solver2_bias_relu1.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense1.out[0], solver2_bias_relu1.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu1.out[0], solver2_split1.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split1.out[0], solver2_dense2.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split1.out[1], solver2_dense2.inB[1]);
+        connect<parameter>(solver2_bias1_rtp, async(solver2_bias_relu1.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense1.out[0], solver2_bias_relu1.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu1.out[0], solver2_split1.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split1.out[0], solver2_dense2.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split1.out[1], solver2_dense2.inB[1]);
 
-        // connect<parameter>(solver2_bias2_rtp, async(solver2_bias_relu2.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense2.out[0], solver2_bias_relu2.in[0]);
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu2.out[0], solver2_split2.in[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split2.out[0], solver2_dense3.inB[0]);
-        // connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split2.out[1], solver2_dense3.inB[1]);
+        connect<parameter>(solver2_bias2_rtp, async(solver2_bias_relu2.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense2.out[0], solver2_bias_relu2.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu2.out[0], solver2_split2.in[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split2.out[0], solver2_dense3.inB[0]);
+        connect<window<WINDOW_BYTES_HALF_HIDDEN>>(solver2_split2.out[1], solver2_dense3.inB[1]);
 
-        // connect<parameter>(solver2_bias3_rtp, async(solver2_bias_relu3.in[1]));
-        // connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense3.out[0], solver2_bias_relu3.in[0]);
+        connect<parameter>(solver2_bias3_rtp, async(solver2_bias_relu3.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense3.out[0], solver2_bias_relu3.in[0]);
 
         
  // // // Output  -------------------------------------------------
      
-        // connect<parameter>(output_matrixA_rtp, async(output_dense0.matrixA[0]));
-        // auto solver2_to_output = connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu3.out[0], output_dense0.inB[0]);
-        // adf::fifo_depth(solver2_to_output) = DEFAULT_FIFO_DEPTH;
-        // connect<window<WINDOW_BYTES_OUTPUT_PAD>>(output_dense0.out[0], embed_output_gmio.in[0]);
+        connect<parameter>(output_matrixA_rtp, async(output_dense0.matrixA[0]));
+        auto solver2_to_output = connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu3.out[0], output_dense0.inB[0]);
+        adf::fifo_depth(solver2_to_output) = DEFAULT_FIFO_DEPTH;
+        connect<window<WINDOW_BYTES_OUTPUT_PAD>>(output_dense0.out[0], embed_output_gmio.in[0]);
         
-        connect<>(solver0_rollconcat.out[0], embed_output_gmio.in[0]);
+        // connect<>(solver0_rollconcat.out[0], embed_output_gmio.in[0]);
 
         apply_layout();
     }
