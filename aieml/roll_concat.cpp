@@ -6,7 +6,7 @@ using namespace adf;
 void roll_concat_kernel(adf::input_buffer<float>& __restrict in,
                         adf::output_buffer<float>& __restrict out0) {
     constexpr int N  = HIDDEN_SIZE;   // e.g. 128
-    constexpr int tH = 4;             // wrap threshold (counts only valid frames)
+    constexpr int tH = 50;             // wrap threshold (counts only valid frames)
     constexpr int K  = 2;             // concat(prev, curr) -> 2*N outputs
 
     // Two-frame circular buffer + snapshot of "first frame of current window"
