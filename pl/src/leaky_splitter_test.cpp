@@ -1,7 +1,7 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 #include "../../common/data_paths.h"
-#include "../../common/nn_defs.h"
+#include "../../aieml/nn_defs10.h"
 #include <ap_int.h>
 #include <fstream>
 #include <iostream>

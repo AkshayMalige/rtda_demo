@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <fstream>
-#include "../../common/nn_defs.h"
+#include "../../aieml/nn_defs10.h"
 #include "../../common/data_paths.h"
 
 #define OUTPUT_SIZE (HIDDEN_SIZE * ROLL_CONC_SUBSET_SIZE)

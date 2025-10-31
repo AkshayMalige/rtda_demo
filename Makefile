@@ -83,7 +83,8 @@ $(BUILD_DIR):
 
 ########################  v++ --package flags ##############################
 PKG_COMMON = --platform $(PLATFORM) --package.out_dir $(PKG_DIR) \
-             --package.defer_aie_run --package.sd_file $(EXEC)
+             --package.defer_aie_run --package.sd_file $(EXEC) \
+             --package.sd_dir data
 
 ifeq ($(TARGET),sw_emu)
   ifeq ($(EMU_PS),X86)
