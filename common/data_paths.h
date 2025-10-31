@@ -30,25 +30,25 @@
 
 // SUBSOLVER-1 graph files --------------------------------------------------
 
-#define SUBSOLVER1_DENSE0_WEIGHTS_PREFIX "solver_0_dense_0_weights_part"
-#define SUBSOLVER1_DENSE1_WEIGHTS_PREFIX "solver_0_dense_1_weights_part"
-#define SUBSOLVER1_DENSE2_WEIGHTS_PREFIX "solver_0_dense_2_weights_part"
-#define SUBSOLVER1_DENSE3_WEIGHTS_PREFIX "solver_0_dense_3_weights_part"
-#define SUBSOLVER1_DENSE0_BIAS         "solver_0_dense_0_bias.txt"
-#define SUBSOLVER1_DENSE1_BIAS         "solver_0_dense_1_bias.txt"
-#define SUBSOLVER1_DENSE2_BIAS         "solver_0_dense_2_bias.txt"
-#define SUBSOLVER1_DENSE3_BIAS         "solver_0_dense_3_bias.txt"
+#define SUBSOLVER1_DENSE0_WEIGHTS_PREFIX "solver_1_dense_0_weights_part"
+#define SUBSOLVER1_DENSE1_WEIGHTS_PREFIX "solver_1_dense_1_weights_part"
+#define SUBSOLVER1_DENSE2_WEIGHTS_PREFIX "solver_1_dense_2_weights_part"
+#define SUBSOLVER1_DENSE3_WEIGHTS_PREFIX "solver_1_dense_3_weights_part"
+#define SUBSOLVER1_DENSE0_BIAS         "solver_1_dense_0_bias.txt"
+#define SUBSOLVER1_DENSE1_BIAS         "solver_1_dense_1_bias.txt"
+#define SUBSOLVER1_DENSE2_BIAS         "solver_1_dense_2_bias.txt"
+#define SUBSOLVER1_DENSE3_BIAS         "solver_1_dense_3_bias.txt"
 
 // SUBSOLVER-2 graph files --------------------------------------------------
 
-#define SUBSOLVER2_DENSE0_WEIGHTS_PREFIX "solver_0_dense_0_weights_part"
-#define SUBSOLVER2_DENSE1_WEIGHTS_PREFIX "solver_0_dense_1_weights_part"
-#define SUBSOLVER2_DENSE2_WEIGHTS_PREFIX "solver_0_dense_2_weights_part"
-#define SUBSOLVER2_DENSE3_WEIGHTS_PREFIX "solver_0_dense_3_weights_part"
-#define SUBSOLVER2_DENSE0_BIAS         "solver_0_dense_0_bias.txt"
-#define SUBSOLVER2_DENSE1_BIAS         "solver_0_dense_1_bias.txt"
-#define SUBSOLVER2_DENSE2_BIAS         "solver_0_dense_2_bias.txt"
-#define SUBSOLVER2_DENSE3_BIAS         "solver_0_dense_3_bias.txt"
+#define SUBSOLVER2_DENSE0_WEIGHTS_PREFIX "solver_2_dense_0_weights_part"
+#define SUBSOLVER2_DENSE1_WEIGHTS_PREFIX "solver_2_dense_1_weights_part"
+#define SUBSOLVER2_DENSE2_WEIGHTS_PREFIX "solver_2_dense_2_weights_part"
+#define SUBSOLVER2_DENSE3_WEIGHTS_PREFIX "solver_2_dense_3_weights_part"
+#define SUBSOLVER2_DENSE0_BIAS         "solver_2_dense_0_bias.txt"
+#define SUBSOLVER2_DENSE1_BIAS         "solver_2_dense_1_bias.txt"
+#define SUBSOLVER2_DENSE2_BIAS         "solver_2_dense_2_bias.txt"
+#define SUBSOLVER2_DENSE3_BIAS         "solver_2_dense_3_bias.txt"
 
 // OUTPUT graph files --------------------------------------------------
 

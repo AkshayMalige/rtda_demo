@@ -27,12 +27,10 @@ constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(OUTPUT_DEN
 // constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(HIDDEN_SIZE);
 
 constexpr std::size_t SOLVER_DENSE0_PART_COUNT = static_cast<std::size_t>(SUBSOLVER0_INPUT_PARTS);
-constexpr std::size_t SOLVER_DENSE0_WEIGHTS_PER_PART_HOST =
-    static_cast<std::size_t>(SOLVER_DENSE0_WEIGHTS_PER_PART);
+constexpr std::size_t SOLVER_DENSE0_WEIGHTS_PER_PART_HOST = static_cast<std::size_t>(SOLVER_DENSE0_WEIGHTS_PER_PART);
 
 constexpr std::size_t SOLVER_DENSEX_PART_COUNT = static_cast<std::size_t>(SUBSOLVER0_LAYER_WEIGHTS_PARTS);
-constexpr std::size_t SOLVER_DENSEX_WEIGHTS_PER_PART_HOST =
-    static_cast<std::size_t>(SOLVER_DENSEX_WEIGHTS_PER_PART);
+constexpr std::size_t SOLVER_DENSEX_WEIGHTS_PER_PART_HOST = static_cast<std::size_t>(SOLVER_DENSEX_WEIGHTS_PER_PART);
 
 } // namespace
 
