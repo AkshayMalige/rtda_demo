@@ -71,13 +71,13 @@ void roll_concat_kernel(adf::input_buffer<float>& __restrict in,
     if (has_prev) {
         if (wrap_pending) {
             // Emit wrap pair using the *previous window's* first frame snapshot
-            for (int i = 0; i < N; ++i) *out_it++ = frames[prev_idx][i];   // last of prev window
             for (int i = 0; i < N; ++i) *out_it++ = first_snapshot[i];     // first of prev window
+            for (int i = 0; i < N; ++i) *out_it++ = frames[prev_idx][i];   // last of prev window
             wrap_pending = false;
         } else {
             // Normal pair [prev, curr]
-            for (int i = 0; i < N; ++i) *out_it++ = frames[prev_idx][i];
             for (int i = 0; i < N; ++i) *out_it++ = cur[i];
+            for (int i = 0; i < N; ++i) *out_it++ = frames[prev_idx][i];
         }
     } else {
         // Defensive (shouldn’t occur once active)
