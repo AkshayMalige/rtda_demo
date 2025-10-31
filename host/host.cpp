@@ -168,15 +168,15 @@ int main(int argc, char** argv)
         };
 
         load_solver_branch(0);
-        // load_solver_branch(1);
-        // load_solver_branch(2);
+        load_solver_branch(1);
+        load_solver_branch(2);
 
         // ---------------- Output weights ----------------
-        // {
-        //     auto out_w = read_floats_array<static_cast<std::size_t>(OUTPUT_DENSE0_WEIGHTS_SIZE)>(
-        //         join(data_base, OUTPUT_DENSE0_WEIGHTS));
-        //     graph.update("g.output_matrixA_rtp", out_w);
-        // }
+        {
+            auto out_w = read_floats_array<static_cast<std::size_t>(OUTPUT_DENSE0_WEIGHTS_SIZE)>(
+                join(data_base, OUTPUT_DENSE0_WEIGHTS));
+            graph.update("g.output_matrixA_rtp", out_w);
+        }
 
         // ---------------- GMIO transfers ----------------
         auto inputs = read_floats(join(data_base, EMBED_INPUT_DATA), 0U);
@@ -184,7 +184,7 @@ int main(int argc, char** argv)
             throw std::runtime_error("Input size must be a multiple of INPUT_SIZE");
 
         std::size_t run_count = inputs.size() / INPUT_SIZE;
-        std::size_t out_elems = run_count * HIDDEN_SIZE;
+        std::size_t out_elems = run_count * OUTPUT_DENSE0_OUT_PAD;
         std::size_t in_bytes  = inputs.size() * sizeof(float);
         std::size_t out_bytes = out_elems * sizeof(float);
 
