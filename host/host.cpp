@@ -109,65 +109,65 @@ int main(int argc, char** argv)
         }
 
         // ---------------- Solver branches ----------------
-        // auto load_solver_branch = [&](int idx) {
-        //     const char* d0p = idx == 0 ? SUBSOLVER0_DENSE0_WEIGHTS_PREFIX
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE0_WEIGHTS_PREFIX
-        //                                            : SUBSOLVER2_DENSE0_WEIGHTS_PREFIX);
-        //     const char* d1p = idx == 0 ? SUBSOLVER0_DENSE1_WEIGHTS_PREFIX
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE1_WEIGHTS_PREFIX
-        //                                            : SUBSOLVER2_DENSE1_WEIGHTS_PREFIX);
-        //     const char* d2p = idx == 0 ? SUBSOLVER0_DENSE2_WEIGHTS_PREFIX
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE2_WEIGHTS_PREFIX
-        //                                            : SUBSOLVER2_DENSE2_WEIGHTS_PREFIX);
-        //     const char* d3p = idx == 0 ? SUBSOLVER0_DENSE3_WEIGHTS_PREFIX
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE3_WEIGHTS_PREFIX
-        //                                            : SUBSOLVER2_DENSE3_WEIGHTS_PREFIX);
+        auto load_solver_branch = [&](int idx) {
+            const char* d0p = idx == 0 ? SUBSOLVER0_DENSE0_WEIGHTS_PREFIX
+                                       : (idx == 1 ? SUBSOLVER1_DENSE0_WEIGHTS_PREFIX
+                                                   : SUBSOLVER2_DENSE0_WEIGHTS_PREFIX);
+            const char* d1p = idx == 0 ? SUBSOLVER0_DENSE1_WEIGHTS_PREFIX
+                                       : (idx == 1 ? SUBSOLVER1_DENSE1_WEIGHTS_PREFIX
+                                                   : SUBSOLVER2_DENSE1_WEIGHTS_PREFIX);
+            const char* d2p = idx == 0 ? SUBSOLVER0_DENSE2_WEIGHTS_PREFIX
+                                       : (idx == 1 ? SUBSOLVER1_DENSE2_WEIGHTS_PREFIX
+                                                   : SUBSOLVER2_DENSE2_WEIGHTS_PREFIX);
+            const char* d3p = idx == 0 ? SUBSOLVER0_DENSE3_WEIGHTS_PREFIX
+                                       : (idx == 1 ? SUBSOLVER1_DENSE3_WEIGHTS_PREFIX
+                                                   : SUBSOLVER2_DENSE3_WEIGHTS_PREFIX);
 
-        //     const char* b0p = idx == 0 ? SUBSOLVER0_DENSE0_BIAS
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE0_BIAS : SUBSOLVER2_DENSE0_BIAS);
-        //     const char* b1p = idx == 0 ? SUBSOLVER0_DENSE1_BIAS
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE1_BIAS : SUBSOLVER2_DENSE1_BIAS);
-        //     const char* b2p = idx == 0 ? SUBSOLVER0_DENSE2_BIAS
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE2_BIAS : SUBSOLVER2_DENSE2_BIAS);
-        //     const char* b3p = idx == 0 ? SUBSOLVER0_DENSE3_BIAS
-        //                                : (idx == 1 ? SUBSOLVER1_DENSE3_BIAS : SUBSOLVER2_DENSE3_BIAS);
+            const char* b0p = idx == 0 ? SUBSOLVER0_DENSE0_BIAS
+                                       : (idx == 1 ? SUBSOLVER1_DENSE0_BIAS : SUBSOLVER2_DENSE0_BIAS);
+            const char* b1p = idx == 0 ? SUBSOLVER0_DENSE1_BIAS
+                                       : (idx == 1 ? SUBSOLVER1_DENSE1_BIAS : SUBSOLVER2_DENSE1_BIAS);
+            const char* b2p = idx == 0 ? SUBSOLVER0_DENSE2_BIAS
+                                       : (idx == 1 ? SUBSOLVER1_DENSE2_BIAS : SUBSOLVER2_DENSE2_BIAS);
+            const char* b3p = idx == 0 ? SUBSOLVER0_DENSE3_BIAS
+                                       : (idx == 1 ? SUBSOLVER1_DENSE3_BIAS : SUBSOLVER2_DENSE3_BIAS);
 
-        //     for (int p = 0; p < SUBSOLVER0_INPUT_PARTS; ++p) {
-        //         auto vals = read_floats_array<SOLVER_DENSE0_PART_SIZE>(
-        //             join(data_base, std::string(d0p) + std::to_string(p) + ".txt"));
-        //         graph.update("g.solver" + std::to_string(idx) + "_dense0_matrixA_rtp[" + std::to_string(p) + "]",
-        //                      vals);
-        //     }
-        //     for (int p = 0; p < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++p) {
-        //         auto v1 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
-        //             join(data_base, std::string(d1p) + std::to_string(p) + ".txt"));
-        //         auto v2 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
-        //             join(data_base, std::string(d2p) + std::to_string(p) + ".txt"));
-        //         auto v3 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
-        //             join(data_base, std::string(d3p) + std::to_string(p) + ".txt"));
-        //         graph.update("g.solver" + std::to_string(idx) + "_dense1_matrixA_rtp[" + std::to_string(p) + "]",
-        //                      v1);
-        //         graph.update("g.solver" + std::to_string(idx) + "_dense2_matrixA_rtp[" + std::to_string(p) + "]",
-        //                      v2);
-        //         graph.update("g.solver" + std::to_string(idx) + "_dense3_matrixA_rtp[" + std::to_string(p) + "]",
-        //                      v3);
-        //     }
+            for (int p = 0; p < SUBSOLVER0_INPUT_PARTS; ++p) {
+                auto vals = read_floats_array<SOLVER_DENSE0_PART_SIZE>(
+                    join(data_base, std::string(d0p) + std::to_string(p) + ".txt"));
+                graph.update("g.solver" + std::to_string(idx) + "_dense0_matrixA_rtp[" + std::to_string(p) + "]",
+                             vals);
+            }
+            for (int p = 0; p < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++p) {
+                auto v1 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
+                    join(data_base, std::string(d1p) + std::to_string(p) + ".txt"));
+                auto v2 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
+                    join(data_base, std::string(d2p) + std::to_string(p) + ".txt"));
+                auto v3 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
+                    join(data_base, std::string(d3p) + std::to_string(p) + ".txt"));
+                graph.update("g.solver" + std::to_string(idx) + "_dense1_matrixA_rtp[" + std::to_string(p) + "]",
+                             v1);
+                graph.update("g.solver" + std::to_string(idx) + "_dense2_matrixA_rtp[" + std::to_string(p) + "]",
+                             v2);
+                graph.update("g.solver" + std::to_string(idx) + "_dense3_matrixA_rtp[" + std::to_string(p) + "]",
+                             v3);
+            }
 
-        //     auto b0 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE0_BIAS_SIZE)>(
-        //         join(data_base, b0p));
-        //     auto b1 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE1_BIAS_SIZE)>(
-        //         join(data_base, b1p));
-        //     auto b2 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE2_BIAS_SIZE)>(
-        //         join(data_base, b2p));
-        //     auto b3 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE3_BIAS_SIZE)>(
-        //         join(data_base, b3p));
-        //     graph.update("g.solver" + std::to_string(idx) + "_bias0_rtp", b0);
-        //     graph.update("g.solver" + std::to_string(idx) + "_bias1_rtp", b1);
-        //     graph.update("g.solver" + std::to_string(idx) + "_bias2_rtp", b2);
-        //     graph.update("g.solver" + std::to_string(idx) + "_bias3_rtp", b3);
-        // };
+            auto b0 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE0_BIAS_SIZE)>(
+                join(data_base, b0p));
+            auto b1 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE1_BIAS_SIZE)>(
+                join(data_base, b1p));
+            auto b2 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE2_BIAS_SIZE)>(
+                join(data_base, b2p));
+            auto b3 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE3_BIAS_SIZE)>(
+                join(data_base, b3p));
+            graph.update("g.solver" + std::to_string(idx) + "_bias0_rtp", b0);
+            graph.update("g.solver" + std::to_string(idx) + "_bias1_rtp", b1);
+            graph.update("g.solver" + std::to_string(idx) + "_bias2_rtp", b2);
+            graph.update("g.solver" + std::to_string(idx) + "_bias3_rtp", b3);
+        };
 
-        // load_solver_branch(0);
+        load_solver_branch(0);
         // load_solver_branch(1);
         // load_solver_branch(2);
 
