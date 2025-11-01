@@ -172,11 +172,11 @@ int main(int argc, char** argv)
         load_solver_branch(2);
 
         // ---------------- Output weights ----------------
-        {
-            auto out_w = read_floats_array<static_cast<std::size_t>(OUTPUT_DENSE0_WEIGHTS_SIZE)>(
-                join(data_base, OUTPUT_DENSE0_WEIGHTS));
-            graph.update("g.output_matrixA_rtp", out_w);
-        }
+        // {
+        //     auto out_w = read_floats_array<static_cast<std::size_t>(OUTPUT_DENSE0_WEIGHTS_SIZE)>(
+        //         join(data_base, OUTPUT_DENSE0_WEIGHTS));
+        //     graph.update("g.output_matrixA_rtp", out_w);
+        // }
 
         // ---------------- GMIO transfers ----------------
         auto inputs = read_floats(join(data_base, EMBED_INPUT_DATA), 0U);
