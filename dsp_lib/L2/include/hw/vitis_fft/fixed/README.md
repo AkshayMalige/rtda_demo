@@ -1,4 +1,11 @@
-L2 include header files for XF FFT Library : Fixed point
+# DSP Library – L2 FFT (Fixed Point)
+
+These headers are pulled directly from AMD's Vitis DSP library and expose the fixed-point variants of the hierarchical FFT blocks. Our AI Engine inference graph does not currently instantiate these kernels, but the headers stay in-tree so the build can compile against a consistent DSPlib snapshot without fetching external dependencies.
+
+## Project Usage
+
+- `set_envs.sh` exports `DSPLIB_PATH` to this repository so both AIE simulation and hardware builds resolve the headers.
+- You can safely leave the contents untouched; any upgrades should come from the official DSPlib release to maintain licensing and API compatibility.
 
 ## License
 

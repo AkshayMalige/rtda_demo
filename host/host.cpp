@@ -184,7 +184,8 @@ int main(int argc, char** argv)
             throw std::runtime_error("Input size must be a multiple of INPUT_SIZE");
 
         std::size_t run_count = inputs.size() / INPUT_SIZE;
-        std::size_t out_elems = run_count * OUTPUT_DENSE0_OUT_PAD;
+        // std::size_t out_elems = run_count * OUTPUT_DENSE0_OUT_PAD;
+        std::size_t out_elems = run_count * HIDDEN_SIZE;
         std::size_t in_bytes  = inputs.size() * sizeof(float);
         std::size_t out_bytes = out_elems * sizeof(float);
 
