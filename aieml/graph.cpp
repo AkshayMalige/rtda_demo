@@ -22,10 +22,11 @@ constexpr std::size_t EMBED_DENSE1_WEIGHTS_PER_PART_HOST =
     static_cast<std::size_t>(EMBED_DENSE1_WEIGHTS_PER_PART);
 // For the current direct-GMIO hookup into roll_concat, the kernel
 // consumes HIDDEN_SIZE elements and produces 2*HIDDEN_SIZE per frame.
-// constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(INPUT_SIZE);
-constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(HIDDEN_SIZE);
+constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(INPUT_SIZE);
+// constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(HIDDEN_SIZE);
 // constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(OUTPUT_DENSE0_OUT_PAD);
-constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(2*HIDDEN_SIZE);
+// constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(ROLL_CONCAT_TOTAL);
+constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(HIDDEN_SIZE);
 // constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(2*10);
 
 constexpr std::size_t SOLVER_DENSE0_PART_COUNT = static_cast<std::size_t>(SUBSOLVER0_INPUT_PARTS);
@@ -171,79 +172,79 @@ int main() {
     };
 
 
-    // if (!load_and_update_ports(EMBED_DENSE0_BIAS,
-    //     EMBED_DENSE0_BIAS_SIZE,
-    //     {&g.embed_bias0_rtp})) {
-    //     return -1;
-    // }
+    if (!load_and_update_ports(EMBED_DENSE0_BIAS,
+        EMBED_DENSE0_BIAS_SIZE,
+        {&g.embed_bias0_rtp})) {
+        return -1;
+    }
 
-    // if (!load_and_update_ports(EMBED_DENSE1_BIAS,
-    //                            EMBED_DENSE1_BIAS_SIZE,
-    //                            {&g.embed_bias1_rtp})) {
-    //     return -1;
-    // }
+    if (!load_and_update_ports(EMBED_DENSE1_BIAS,
+                               EMBED_DENSE1_BIAS_SIZE,
+                               {&g.embed_bias1_rtp})) {
+        return -1;
+    }
 
         // Weight preload via RTP -------------------------------------------------
 
 
-    // if (!load_and_update_ports(EMBED_DENSE0_WEIGHTS,
-    //                            EMBED_DENSE0_WEIGHTS_COUNT,
-    //                            {&g.embed_matrixA0_rtp})) {
-    //     return -1;
-    // }
-    // for (std::size_t part = 0; part < static_cast<std::size_t>(EMBED_DENSE1_CASC_LEN); ++part) {
-    //     const auto path = EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
-    //     input_port* target_port = nullptr;
-    //     if (part == 0U) {
-    //         target_port = &g.embed_matrixA1_0_rtp;
-    //     } else if (part == 1U) {
-    //         target_port = &g.embed_matrixA1_1_rtp;
-    //     } else {
-    //         std::cerr << "Error: Unsupported embed_dense1 cascade index " << part << std::endl;
-    //         return -1;
-    //     }
-    //     if (!load_and_update_ports(path,
-    //                                EMBED_DENSE1_WEIGHTS_PER_PART_HOST,
-    //                                {target_port})) {
-    //         return -1;
-    //     }
-    // }
+    if (!load_and_update_ports(EMBED_DENSE0_WEIGHTS,
+                               EMBED_DENSE0_WEIGHTS_COUNT,
+                               {&g.embed_matrixA0_rtp})) {
+        return -1;
+    }
+    for (std::size_t part = 0; part < static_cast<std::size_t>(EMBED_DENSE1_CASC_LEN); ++part) {
+        const auto path = EMBED_DENSE1_WEIGHTS_PREFIX + std::to_string(part) + ".txt";
+        input_port* target_port = nullptr;
+        if (part == 0U) {
+            target_port = &g.embed_matrixA1_0_rtp;
+        } else if (part == 1U) {
+            target_port = &g.embed_matrixA1_1_rtp;
+        } else {
+            std::cerr << "Error: Unsupported embed_dense1 cascade index " << part << std::endl;
+            return -1;
+        }
+        if (!load_and_update_ports(path,
+                                   EMBED_DENSE1_WEIGHTS_PER_PART_HOST,
+                                   {target_port})) {
+            return -1;
+        }
+    }
 
     // if (!load_solver_weights(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
     //     g.solver0_dense3_matrixA_rtp)) {
     // return -1;
     // }
 
-    // if (!load_solver_weights(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
-    //                          SUBSOLVER0_DENSE1_WEIGHTS_PREFIX,
-    //                          SUBSOLVER0_DENSE2_WEIGHTS_PREFIX,
-    //                          SUBSOLVER0_DENSE3_WEIGHTS_PREFIX,
-    //                          g.solver0_dense0_matrixA_rtp,
-    //                          g.solver0_dense1_matrixA_rtp,
-    //                          g.solver0_dense2_matrixA_rtp,
-    //                          g.solver0_dense3_matrixA_rtp)) {
-    //     return -1;
-    // }
-    // if (!load_solver_weights(SUBSOLVER1_DENSE0_WEIGHTS_PREFIX,
-    //                          SUBSOLVER1_DENSE1_WEIGHTS_PREFIX,
-    //                          SUBSOLVER1_DENSE2_WEIGHTS_PREFIX,
-    //                          SUBSOLVER1_DENSE3_WEIGHTS_PREFIX,
-    //                          g.solver1_dense0_matrixA_rtp,
-    //                          g.solver1_dense1_matrixA_rtp,
-    //                          g.solver1_dense2_matrixA_rtp,
-    //                          g.solver1_dense3_matrixA_rtp)) {
-    //     return -1;
-    // }
-    // if (!load_solver_weights(SUBSOLVER2_DENSE0_WEIGHTS_PREFIX,
-    //                          SUBSOLVER2_DENSE1_WEIGHTS_PREFIX,
-    //                          SUBSOLVER2_DENSE2_WEIGHTS_PREFIX,
-    //                          SUBSOLVER2_DENSE3_WEIGHTS_PREFIX,
-    //                          g.solver2_dense0_matrixA_rtp,
-    //                          g.solver2_dense1_matrixA_rtp,
-    //                          g.solver2_dense2_matrixA_rtp,
-    //                          g.solver2_dense3_matrixA_rtp)) {
-    //     return -1;
-    // }
+    if (!load_solver_weights(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE3_WEIGHTS_PREFIX,
+                             g.solver0_dense0_matrixA_rtp,
+                             g.solver0_dense1_matrixA_rtp,
+                             g.solver0_dense2_matrixA_rtp,
+                             g.solver0_dense3_matrixA_rtp)) {
+        return -1;
+    }
+    if (!load_solver_weights(SUBSOLVER1_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE3_WEIGHTS_PREFIX,
+                             g.solver1_dense0_matrixA_rtp,
+                             g.solver1_dense1_matrixA_rtp,
+                             g.solver1_dense2_matrixA_rtp,
+                             g.solver1_dense3_matrixA_rtp)) {
+        return -1;
+    }
+    if (!load_solver_weights(SUBSOLVER2_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE3_WEIGHTS_PREFIX,
+                             g.solver2_dense0_matrixA_rtp,
+                             g.solver2_dense1_matrixA_rtp,
+                             g.solver2_dense2_matrixA_rtp,
+                             g.solver2_dense3_matrixA_rtp)) {
+        return -1;
+    }
 
     // // Solver0 bias updates ------------------------------------------------
    
@@ -252,36 +253,36 @@ int main() {
     // return -1;
     // }
 
-    // if (!load_solver_biases(SUBSOLVER0_DENSE0_BIAS,
-    //                         SUBSOLVER0_DENSE1_BIAS,
-    //                         SUBSOLVER0_DENSE2_BIAS,
-    //                         SUBSOLVER0_DENSE3_BIAS,
-    //                         g.solver0_bias0_rtp,
-    //                         g.solver0_bias1_rtp,
-    //                         g.solver0_bias2_rtp,
-    //                         g.solver0_bias3_rtp)) {
-    //     return -1;
-    // }
-    // if (!load_solver_biases(SUBSOLVER1_DENSE0_BIAS,
-    //                         SUBSOLVER1_DENSE1_BIAS,
-    //                         SUBSOLVER1_DENSE2_BIAS,
-    //                         SUBSOLVER1_DENSE3_BIAS,
-    //                         g.solver1_bias0_rtp,
-    //                         g.solver1_bias1_rtp,
-    //                         g.solver1_bias2_rtp,
-    //                         g.solver1_bias3_rtp)) {
-    //     return -1;
-    // }
-    // if (!load_solver_biases(SUBSOLVER2_DENSE0_BIAS,
-    //                         SUBSOLVER2_DENSE1_BIAS,
-    //                         SUBSOLVER2_DENSE2_BIAS,
-    //                         SUBSOLVER2_DENSE3_BIAS,
-    //                         g.solver2_bias0_rtp,
-    //                         g.solver2_bias1_rtp,
-    //                         g.solver2_bias2_rtp,
-    //                         g.solver2_bias3_rtp)) {
-    //     return -1;
-    // }
+    if (!load_solver_biases(SUBSOLVER0_DENSE0_BIAS,
+                            SUBSOLVER0_DENSE1_BIAS,
+                            SUBSOLVER0_DENSE2_BIAS,
+                            SUBSOLVER0_DENSE3_BIAS,
+                            g.solver0_bias0_rtp,
+                            g.solver0_bias1_rtp,
+                            g.solver0_bias2_rtp,
+                            g.solver0_bias3_rtp)) {
+        return -1;
+    }
+    if (!load_solver_biases(SUBSOLVER1_DENSE0_BIAS,
+                            SUBSOLVER1_DENSE1_BIAS,
+                            SUBSOLVER1_DENSE2_BIAS,
+                            SUBSOLVER1_DENSE3_BIAS,
+                            g.solver1_bias0_rtp,
+                            g.solver1_bias1_rtp,
+                            g.solver1_bias2_rtp,
+                            g.solver1_bias3_rtp)) {
+        return -1;
+    }
+    if (!load_solver_biases(SUBSOLVER2_DENSE0_BIAS,
+                            SUBSOLVER2_DENSE1_BIAS,
+                            SUBSOLVER2_DENSE2_BIAS,
+                            SUBSOLVER2_DENSE3_BIAS,
+                            g.solver2_bias0_rtp,
+                            g.solver2_bias1_rtp,
+                            g.solver2_bias2_rtp,
+                            g.solver2_bias3_rtp)) {
+        return -1;
+    }
 
 // // // Output block updates ---------------------------------------------
     // if (!load_and_update_ports(OUTPUT_DENSE0_WEIGHTS,
