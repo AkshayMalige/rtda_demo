@@ -6,7 +6,7 @@
 
 ######################## ▶ User-specific paths ◀ ###########################
 XILINX_VITIS   ?= /tools/Xilinx/2025.1/Vitis
-PLATFORM       ?= xilinx_vek280_base_202510_1
+PLATFORM       ?= xilinx_vek280_base_202420_1
 EDGE_COMMON_SW ?= /home/synthara/versal_common/xilinx-versal-common-v2024.2
 IMAGE          ?= $(EDGE_COMMON_SW)/Image
 ROOTFS         ?= $(EDGE_COMMON_SW)/rootfs.ext4

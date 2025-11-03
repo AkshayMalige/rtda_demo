@@ -9,6 +9,7 @@
 #include <cstring>
 #include <array>
 #include <algorithm>
+#include <cinttypes>
 
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_graph.h"
@@ -16,6 +17,57 @@
 
 #include "data_paths.h"
 #include "nn_defs10.h"
+
+// Retain C-style array semantics with 64B alignment for RTP DMA (mirrors async_array_rtp tutorial expectations).
+template<typename T, std::size_t N>
+struct alignas(64) aligned_array {
+    T elems[N];
+
+    T* data()
+    {
+        return elems;
+    }
+
+    const T* data() const
+    {
+        return elems;
+    }
+
+    T* begin()
+    {
+        return elems;
+    }
+
+    const T* begin() const
+    {
+        return elems;
+    }
+
+    T* end()
+    {
+        return elems + N;
+    }
+
+    const T* end() const
+    {
+        return elems + N;
+    }
+
+    constexpr std::size_t size() const
+    {
+        return N;
+    }
+
+    T& operator[](std::size_t idx)
+    {
+        return elems[idx];
+    }
+
+    const T& operator[](std::size_t idx) const
+    {
+        return elems[idx];
+    }
+};
 
 // -----------------------------------------------------------------------------
 // Helper to load text file into vector<float>
@@ -40,12 +92,19 @@ static std::vector<float> read_floats(const std::string& path, std::size_t expec
 }
 
 template<std::size_t N>
-static std::array<float, N> read_floats_array(const std::string& path)
+static aligned_array<float, N> read_floats_array(const std::string& path)
 {
     auto values = read_floats(path, N);
-    std::array<float, N> result{};
+    aligned_array<float, N> result{};
     std::copy(values.begin(), values.end(), result.begin());
     return result;
+}
+
+template<std::size_t N>
+static void load_rtp(xrt::graph& graph, const std::string& port, const std::string& path)
+{
+    auto payload = read_floats_array<N>(path);
+    graph.update(port, payload);
 }
 
 static std::string join(const std::string& base, const std::string& rel)
@@ -81,35 +140,45 @@ int main(int argc, char** argv)
 
     const std::string xclbin_path = argv[1];
     const std::string data_base = std::getenv("DATA_DIR") ? std::getenv("DATA_DIR") : "./data";
+    constexpr unsigned HOST_DEBUG_GMIO_BURST = 64U; // mirror graph's burst size for alignment checks
+
+    std::cout << "[host] xclbin=" << xclbin_path
+              << ", DATA_DIR=" << data_base << std::endl;
 
     try {
+        std::cout << "[host] Opening device(0)..." << std::endl;
         xrt::device device(0);
+        std::cout << "[host] Loading xclbin..." << std::endl;
         auto uuid = device.load_xclbin(xclbin_path);
+        std::cout << "[host] Opening graph 'g'..." << std::endl;
         xrt::graph graph(device, uuid, "g");
+        std::cout << "[host] Graph opened." << std::endl;
 
         // ---------------- Embed weights / biases ----------------
         {
-            auto w0 = read_floats_array<EMBED_DENSE0_WEIGHTS_SIZE>(
-                join(data_base, EMBED_DENSE0_WEIGHTS));
-            graph.update("g.embed_matrixA0_rtp", w0);
+            std::cout << "[host] Loading embed weights/bias..." << std::endl;
+            load_rtp<EMBED_DENSE0_WEIGHTS_SIZE>(
+                graph, "g.embed_matrixA0_rtp", join(data_base, EMBED_DENSE0_WEIGHTS));
 
-            auto w1_p0 = read_floats_array<EMBED_DENSE1_PART_SIZE>(
+            load_rtp<EMBED_DENSE1_PART_SIZE>(
+                graph,
+                "g.embed_matrixA1_0_rtp",
                 join(data_base, std::string(EMBED_DENSE1_WEIGHTS_PREFIX) + "0.txt"));
-            auto w1_p1 = read_floats_array<EMBED_DENSE1_PART_SIZE>(
+            load_rtp<EMBED_DENSE1_PART_SIZE>(
+                graph,
+                "g.embed_matrixA1_1_rtp",
                 join(data_base, std::string(EMBED_DENSE1_WEIGHTS_PREFIX) + "1.txt"));
-            graph.update("g.embed_matrixA1_0_rtp", w1_p0);
-            graph.update("g.embed_matrixA1_1_rtp", w1_p1);
 
-            auto b0 = read_floats_array<static_cast<std::size_t>(EMBED_DENSE0_BIAS_SIZE)>(
-                join(data_base, EMBED_DENSE0_BIAS));
-            auto b1 = read_floats_array<static_cast<std::size_t>(EMBED_DENSE1_BIAS_SIZE)>(
-                join(data_base, EMBED_DENSE1_BIAS));
-            graph.update("g.embed_bias0_rtp", b0);
-            graph.update("g.embed_bias1_rtp", b1);
+            load_rtp<static_cast<std::size_t>(EMBED_DENSE0_BIAS_SIZE)>(
+                graph, "g.embed_bias0_rtp", join(data_base, EMBED_DENSE0_BIAS));
+            load_rtp<static_cast<std::size_t>(EMBED_DENSE1_BIAS_SIZE)>(
+                graph, "g.embed_bias1_rtp", join(data_base, EMBED_DENSE1_BIAS));
+            std::cout << "[host] Embed weights/bias loaded." << std::endl;
         }
 
         // ---------------- Solver branches ----------------
         auto load_solver_branch = [&](int idx) {
+            std::cout << "[host] Loading solver branch " << idx << "..." << std::endl;
             const char* d0p = idx == 0 ? SUBSOLVER0_DENSE0_WEIGHTS_PREFIX
                                        : (idx == 1 ? SUBSOLVER1_DENSE0_WEIGHTS_PREFIX
                                                    : SUBSOLVER2_DENSE0_WEIGHTS_PREFIX);
@@ -133,38 +202,36 @@ int main(int argc, char** argv)
                                        : (idx == 1 ? SUBSOLVER1_DENSE3_BIAS : SUBSOLVER2_DENSE3_BIAS);
 
             for (int p = 0; p < SUBSOLVER0_INPUT_PARTS; ++p) {
-                auto vals = read_floats_array<SOLVER_DENSE0_PART_SIZE>(
-                    join(data_base, std::string(d0p) + std::to_string(p) + ".txt"));
-                graph.update("g.solver" + std::to_string(idx) + "_dense0_matrixA_rtp[" + std::to_string(p) + "]",
-                             vals);
+                const std::string port =
+                    "g.solver" + std::to_string(idx) + "_dense0_matrixA_rtp[" + std::to_string(p) + "]";
+                const std::string file = join(data_base, std::string(d0p) + std::to_string(p) + ".txt");
+                load_rtp<SOLVER_DENSE0_PART_SIZE>(graph, port, file);
             }
             for (int p = 0; p < SUBSOLVER0_LAYER_WEIGHTS_PARTS; ++p) {
-                auto v1 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
-                    join(data_base, std::string(d1p) + std::to_string(p) + ".txt"));
-                auto v2 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
-                    join(data_base, std::string(d2p) + std::to_string(p) + ".txt"));
-                auto v3 = read_floats_array<SOLVER_DENSEx_PART_SIZE>(
-                    join(data_base, std::string(d3p) + std::to_string(p) + ".txt"));
-                graph.update("g.solver" + std::to_string(idx) + "_dense1_matrixA_rtp[" + std::to_string(p) + "]",
-                             v1);
-                graph.update("g.solver" + std::to_string(idx) + "_dense2_matrixA_rtp[" + std::to_string(p) + "]",
-                             v2);
-                graph.update("g.solver" + std::to_string(idx) + "_dense3_matrixA_rtp[" + std::to_string(p) + "]",
-                             v3);
+                const std::string p_suffix = std::to_string(p) + ".txt";
+                load_rtp<SOLVER_DENSEx_PART_SIZE>(
+                    graph,
+                    "g.solver" + std::to_string(idx) + "_dense1_matrixA_rtp[" + std::to_string(p) + "]",
+                    join(data_base, std::string(d1p) + p_suffix));
+                load_rtp<SOLVER_DENSEx_PART_SIZE>(
+                    graph,
+                    "g.solver" + std::to_string(idx) + "_dense2_matrixA_rtp[" + std::to_string(p) + "]",
+                    join(data_base, std::string(d2p) + p_suffix));
+                load_rtp<SOLVER_DENSEx_PART_SIZE>(
+                    graph,
+                    "g.solver" + std::to_string(idx) + "_dense3_matrixA_rtp[" + std::to_string(p) + "]",
+                    join(data_base, std::string(d3p) + p_suffix));
             }
 
-            auto b0 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE0_BIAS_SIZE)>(
-                join(data_base, b0p));
-            auto b1 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE1_BIAS_SIZE)>(
-                join(data_base, b1p));
-            auto b2 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE2_BIAS_SIZE)>(
-                join(data_base, b2p));
-            auto b3 = read_floats_array<static_cast<std::size_t>(SUBSOLVER0_DENSE3_BIAS_SIZE)>(
-                join(data_base, b3p));
-            graph.update("g.solver" + std::to_string(idx) + "_bias0_rtp", b0);
-            graph.update("g.solver" + std::to_string(idx) + "_bias1_rtp", b1);
-            graph.update("g.solver" + std::to_string(idx) + "_bias2_rtp", b2);
-            graph.update("g.solver" + std::to_string(idx) + "_bias3_rtp", b3);
+            load_rtp<static_cast<std::size_t>(SUBSOLVER0_DENSE0_BIAS_SIZE)>(
+                graph, "g.solver" + std::to_string(idx) + "_bias0_rtp", join(data_base, b0p));
+            load_rtp<static_cast<std::size_t>(SUBSOLVER0_DENSE1_BIAS_SIZE)>(
+                graph, "g.solver" + std::to_string(idx) + "_bias1_rtp", join(data_base, b1p));
+            load_rtp<static_cast<std::size_t>(SUBSOLVER0_DENSE2_BIAS_SIZE)>(
+                graph, "g.solver" + std::to_string(idx) + "_bias2_rtp", join(data_base, b2p));
+            load_rtp<static_cast<std::size_t>(SUBSOLVER0_DENSE3_BIAS_SIZE)>(
+                graph, "g.solver" + std::to_string(idx) + "_bias3_rtp", join(data_base, b3p));
+            std::cout << "[host] Solver branch " << idx << " loaded." << std::endl;
         };
 
         load_solver_branch(0);
@@ -179,6 +246,7 @@ int main(int argc, char** argv)
         // }
 
         // ---------------- GMIO transfers ----------------
+        std::cout << "[host] Reading inputs..." << std::endl;
         auto inputs = read_floats(join(data_base, EMBED_INPUT_DATA), 0U);
         if (inputs.empty() || inputs.size() % INPUT_SIZE != 0)
             throw std::runtime_error("Input size must be a multiple of INPUT_SIZE");
@@ -189,25 +257,45 @@ int main(int argc, char** argv)
         std::size_t in_bytes  = inputs.size() * sizeof(float);
         std::size_t out_bytes = out_elems * sizeof(float);
 
+        auto align_info = [&](std::size_t n) { return n % HOST_DEBUG_GMIO_BURST; };
+        std::cout << "[host] input elements=" << inputs.size()
+                  << ", run_count=" << run_count
+                  << ", in_bytes=" << in_bytes << " (mod64=" << align_info(in_bytes) << ")"
+                  << ", out_elems=" << out_elems
+                  << ", out_bytes=" << out_bytes << " (mod64=" << align_info(out_bytes) << ")"
+                  << std::endl;
+
+        std::cout << "[host] Allocating BOs..." << std::endl;
         auto in_bo  = xrt::aie::bo(device, in_bytes,  xrt::bo::flags::normal, 0);
         auto out_bo = xrt::aie::bo(device, out_bytes, xrt::bo::flags::normal, 0);
+        std::cout << "[host] Mapping BOs..." << std::endl;
         auto in_ptr  = in_bo.map<float*>();
         auto out_ptr = out_bo.map<float*>();
+        std::cout << "[host] Mapped: in_ptr=" << static_cast<const void*>(in_ptr)
+                  << ", out_ptr=" << static_cast<const void*>(out_ptr) << std::endl;
 
+        std::cout << "[host] memcpy -> in_ptr (" << in_bytes << " bytes)..." << std::endl;
         std::memcpy(in_ptr, inputs.data(), in_bytes);
+        std::cout << "[host] memcpy done." << std::endl;
 
+        std::cout << "[host] Enqueue input GMIO async..." << std::endl;
         in_bo.async("g.embed_input_gmio", XCL_BO_SYNC_BO_GMIO_TO_AIE, in_bytes, 0);
+        std::cout << "[host] graph.run(" << run_count << ")..." << std::endl;
         graph.run(static_cast<int>(run_count));
+        std::cout << "[host] Enqueue output GMIO async..." << std::endl;
         auto out_run = out_bo.async("g.embed_output_gmio", XCL_BO_SYNC_BO_AIE_TO_GMIO, out_bytes, 0);
+        std::cout << "[host] Waiting for output GMIO..." << std::endl;
         out_run.wait();
+        std::cout << "[host] output GMIO complete. graph.end()..." << std::endl;
         graph.end();
+        std::cout << "[host] graph ended." << std::endl;
 
         std::ofstream ofs(join(data_base, AIEML10_OUTPUT_FILE));
         ofs << std::setprecision(std::numeric_limits<float>::max_digits10);
         for (std::size_t i = 0; i < out_elems; ++i)
             ofs << out_ptr[i] << '\n';
 
-        std::cout << "Wrote " << out_elems << " floats to " << AIEML10_OUTPUT_FILE << std::endl;
+        std::cout << "[host] Wrote " << out_elems << " floats to " << AIEML10_OUTPUT_FILE << std::endl;
     }
     catch (const std::exception& e) {
         std::cerr << "ERROR: " << e.what() << std::endl;
