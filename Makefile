@@ -156,7 +156,7 @@ print_vars:
 
 ################################  Clean  ###################################
 clean:
-	rm -rf $(PKG_DIR) $(BUILD_DIR) *.xclbin *.xsa *.log
+	rm -rf $(PKG_DIR) $(BUILD_DIR) *.xclbin *.xsa *.log _x host.exe
 
 clean_all:
 	$(MAKE) -C aieml    clean TARGET=$(AIE_TARGET)
