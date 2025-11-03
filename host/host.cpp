@@ -10,6 +10,9 @@
 #include <array>
 #include <algorithm>
 #include <cinttypes>
+#include <chrono>
+#include <future>
+#include <utility>
 
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_graph.h"
@@ -128,6 +131,21 @@ constexpr std::size_t SOLVER_DENSE0_PART_SIZE =
 constexpr std::size_t SOLVER_DENSEx_PART_SIZE =
     static_cast<std::size_t>(OUTPUT_SIZE) * (HIDDEN_SIZE / SUBSOLVER0_LAYER_WEIGHTS_PARTS);
 
+using steady_clock = std::chrono::steady_clock;
+
+struct host_timings {
+    steady_clock::duration total{};
+    steady_clock::duration weight_load{};
+    steady_clock::duration input_transfer{};
+    steady_clock::duration output_transfer{};
+    steady_clock::duration graph_exec{};
+};
+
+static double duration_ms(steady_clock::duration duration)
+{
+    return std::chrono::duration<double, std::milli>(duration).count();
+}
+
 // -----------------------------------------------------------------------------
 // main()
 // -----------------------------------------------------------------------------
@@ -145,6 +163,9 @@ int main(int argc, char** argv)
     std::cout << "[host] xclbin=" << xclbin_path
               << ", DATA_DIR=" << data_base << std::endl;
 
+    host_timings timings{};
+    const auto total_start = steady_clock::now();
+
     try {
         std::cout << "[host] Opening device(0)..." << std::endl;
         xrt::device device(0);
@@ -153,6 +174,8 @@ int main(int argc, char** argv)
         std::cout << "[host] Opening graph 'g'..." << std::endl;
         xrt::graph graph(device, uuid, "g");
         std::cout << "[host] Graph opened." << std::endl;
+
+        const auto weight_load_start = steady_clock::now();
 
         // ---------------- Embed weights / biases ----------------
         {
@@ -238,6 +261,8 @@ int main(int argc, char** argv)
         load_solver_branch(1);
         load_solver_branch(2);
 
+        timings.weight_load = steady_clock::now() - weight_load_start;
+
         // ---------------- Output weights ----------------
         // {
         //     auto out_w = read_floats_array<static_cast<std::size_t>(OUTPUT_DENSE0_WEIGHTS_SIZE)>(
@@ -274,20 +299,41 @@ int main(int argc, char** argv)
         std::cout << "[host] Mapped: in_ptr=" << static_cast<const void*>(in_ptr)
                   << ", out_ptr=" << static_cast<const void*>(out_ptr) << std::endl;
 
+        std::future<steady_clock::time_point> input_transfer_done;
+
         std::cout << "[host] memcpy -> in_ptr (" << in_bytes << " bytes)..." << std::endl;
+        const auto input_transfer_start = steady_clock::now();
         std::memcpy(in_ptr, inputs.data(), in_bytes);
         std::cout << "[host] memcpy done." << std::endl;
 
         std::cout << "[host] Enqueue input GMIO async..." << std::endl;
-        in_bo.async("g.embed_input_gmio", XCL_BO_SYNC_BO_GMIO_TO_AIE, in_bytes, 0);
+        auto in_job = in_bo.async("g.embed_input_gmio", XCL_BO_SYNC_BO_GMIO_TO_AIE, in_bytes, 0);
+        input_transfer_done = std::async(
+            std::launch::async,
+            [job = std::move(in_job)]() mutable {
+                job.wait();
+                return steady_clock::now();
+            });
+
         std::cout << "[host] graph.run(" << run_count << ")..." << std::endl;
+        const auto graph_exec_start = steady_clock::now();
         graph.run(static_cast<int>(run_count));
+
         std::cout << "[host] Enqueue output GMIO async..." << std::endl;
+        const auto output_transfer_start = steady_clock::now();
         auto out_run = out_bo.async("g.embed_output_gmio", XCL_BO_SYNC_BO_AIE_TO_GMIO, out_bytes, 0);
         std::cout << "[host] Waiting for output GMIO..." << std::endl;
         out_run.wait();
+        const auto output_transfer_end = steady_clock::now();
+        timings.output_transfer = output_transfer_end - output_transfer_start;
         std::cout << "[host] output GMIO complete. graph.end()..." << std::endl;
         graph.end();
+        const auto graph_exec_end = steady_clock::now();
+        timings.graph_exec = graph_exec_end - graph_exec_start;
+
+        const auto input_transfer_end = input_transfer_done.get();
+        timings.input_transfer = input_transfer_end - input_transfer_start;
+
         std::cout << "[host] graph ended." << std::endl;
 
         std::ofstream ofs(join(data_base, AIEML10_OUTPUT_FILE));
@@ -296,6 +342,22 @@ int main(int argc, char** argv)
             ofs << out_ptr[i] << '\n';
 
         std::cout << "[host] Wrote " << out_elems << " floats to " << AIEML10_OUTPUT_FILE << std::endl;
+
+        timings.total = steady_clock::now() - total_start;
+
+        std::cout << "\n[host] ===== Execution Report =====" << std::endl;
+        std::cout << "[host] weights/bias transfer : " << duration_ms(timings.weight_load) << " ms" << std::endl;
+        std::cout << "[host] input transfer        : " << duration_ms(timings.input_transfer) << " ms" << std::endl;
+        std::cout << "[host] output read           : " << duration_ms(timings.output_transfer) << " ms" << std::endl;
+        std::cout << "[host] graph exec (total)    : " << duration_ms(timings.graph_exec) << " ms" << std::endl;
+        if (run_count) {
+            const double run_count_d = static_cast<double>(run_count);
+            std::cout << "[host] graph exec per input  : "
+                      << duration_ms(timings.graph_exec) / run_count_d << " ms" << std::endl;
+            std::cout << "[host] host total per input  : "
+                      << duration_ms(timings.total) / run_count_d << " ms" << std::endl;
+        }
+        std::cout << "[host] host total (overall)  : " << duration_ms(timings.total) << " ms" << std::endl;
     }
     catch (const std::exception& e) {
         std::cerr << "ERROR: " << e.what() << std::endl;

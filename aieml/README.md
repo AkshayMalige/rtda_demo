@@ -1,6 +1,6 @@
 # AI Engine Solver Graph
 
-This directory contains the production AI Engine graph that powers the RTDA demo. The design ingests sequences of particle tracks (treat each track as 128 `float32` features) and processes them through a four-stage inference pipeline made up of an embed block followed by three solver stages. All compute executes inside the AI Engine array; programmable logic is only used for GMIO access and packaging.
+This directory contains the production AI Engine graph that powers the RTDA demo. The design ingests sequences of particle tracks (treat each track as 128 `float32` features) and processes them through a four-stage inference pipeline made up of an embed block followed by three solver stages. All compute executes inside the AI Engine array; programmable logic is only used for GMIO access and packaging. The graph is packaged as part of the top-level hardware flow and has been validated on a Versal VEK280 Evaluation Board.
 
 ---
 

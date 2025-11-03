@@ -29,7 +29,7 @@ graph TD
 - Pure AI Engine compute with GMIO ingress/egress, managed by an XRT host.
 - Four stages total: 1 embed + 3 solver stages (stateful track pairing via a `torch.roll`‑like kernel).
 - Runtime‑programmable weights and biases via RTP; no recompile needed for parameter changes.
-- Validated in x86/hardware simulation and packaged for VEK280‑class platforms.
+- Validated via x86/hardware simulation and on-silicon using a Versal VEK280 Evaluation Board (2025.1 toolchain).
 
 ---
 
@@ -154,6 +154,20 @@ From the repo root:
 - Run emulation:
   - `make run TARGET=sw_emu` (x86 or QEMU depending on `EMU_PS`)
   - `make run TARGET=hw_emu` (QEMU)
+
+### Hardware Bring-up (VEK280)
+
+- Build and package the hardware image: `make package TARGET=hw`
+- Copy the generated `package.hw/` contents to the board SD card (retain the directory tree).
+- Boot the VEK280 with the supplied BOOT.BIN, then run the host from the SD card mount:
+
+  ```bash
+  cd /mnt/sd-mmcblk0p1
+  ./host.exe system_hw.xclbin
+  ```
+
+- Outputs are written next to `host.exe` (default: `aieml10_output_aie.txt`); adjust `DATA_DIR` before launch if using alternate tensors.
+- This flow has been exercised end-to-end on actual hardware with the Versal VEK280 Evaluation Board.
 
 Artifacts:
 - `aieml/Work/libadf.a` — compiled AIE graph

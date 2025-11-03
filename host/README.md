@@ -8,6 +8,7 @@ The host binary configures the AI Engine graph, streams input tracks via GMIO, a
 
 - Command: `./host.exe <system_*.xclbin>`
 - Data root: `DATA_DIR` environment variable (defaults to `./data`).
+- Hardware example (VEK280 SD card): `./host.exe system_hw.xclbin`
 
 References:
 - Graph name: `g` (instantiated by xrt::graph).
@@ -76,6 +77,7 @@ File constants are declared in `common/data_paths.h` and consumed by both the ho
 From the repo root (recommended):
 - `make host TARGET=sw_emu` — native x86 build.
 - `make host TARGET=hw_emu` — cross-compile for QEMU/aarch64.
+- `make host TARGET=hw` — cross-compile for deployment on the board (aarch64).
 
 Standalone from `host/` (advanced):
 - Native x86: `make EMU_PS=X86` (requires `XILINX_XRT` and `XILINX_VITIS` set).
@@ -83,6 +85,25 @@ Standalone from `host/` (advanced):
 
 Outputs:
 - Executable at repo root: `host.exe` (copied into package SD).
+
+---
+
+## Running on the VEK280 Evaluation Board
+
+1. Build and package the hardware design from the repo root: `make package TARGET=hw`.
+2. Copy the contents of `package.hw/` to the bootable SD card (preserve folder structure).
+3. Boot the Versal VEK280 from that SD card.
+4. On the target prompt, mount the SD card (usually `/mnt/sd-mmcblk0p1`) and run:
+
+   ```bash
+   cd /mnt/sd-mmcblk0p1
+   export DATA_DIR=/mnt/sd-mmcblk0p1/data           # optional override
+   ./host.exe system_hw.xclbin
+   ```
+
+5. The host writes `aieml10_output_aie.txt` alongside the executable once GMIO transfers complete.
+
+This sequence has been validated end-to-end on the Versal VEK280 Evaluation Board using the 2025.1 toolchain.
 
 ---
 
@@ -109,4 +130,3 @@ Optional convenience:
 ## Notes on roll_concat and Framing
 
 - The AIE graph uses a stateful `roll_concat` kernel to pair the current 128-length activation with the previous one, counting only non-zero (valid) frames, and inserting a wrap pair every 50 valid tracks. The host does not manage this state; it simply feeds consecutive frames. On cold-start or when zero frames are present in the input, the kernel pads outputs with zeros, ensuring deterministic behaviour.
-
