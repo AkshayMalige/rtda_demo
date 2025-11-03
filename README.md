@@ -1,6 +1,6 @@
-# Real‑Time Track Data Analysis (RTDA) – Versal AI Engine Demo
+# Real‑Time Detector Alignment (RTDA) – Versal ACAP AIE-ML Demo
 
-This project demonstrates a fully in‑AIE inference pipeline for real‑time particle track processing. Each input frame is a single track represented by a fixed‑length float vector. The design embeds the track, then passes it through three solver stages, and streams results back over GMIO. All intermediate activations remain on‑chip inside the AI Engine array.
+This project demonstrates a fully in‑AIE-ML inference pipeline for real‑time particle track processing. Each input frame is a single track represented by a fixed‑length float vector. The design embeds the track, then passes it through three solver stages, and streams results back over GMIO. All intermediate activations remain on‑chip inside the AI Engine array.
 
 [PLACEHOLDER: Architecture diagram of stages and GMIO]
 
