@@ -17,9 +17,9 @@ int main() {
     std::vector<data_t> golden_data;
     golden_data.reserve(SIZE);
 
-    std::ifstream fin(std::string(DATA_DIR) + "/output_data_ref.txt");
+    std::ifstream fin(std::string(DATA_DIR) + "/embed_dense_0_bias.txt");
     if (!fin.is_open()) {
-        std::cerr << "ERROR: Cannot open input file leakyrelu_output_ref.txt" << std::endl;
+        std::cerr << "ERROR: Cannot open input file embed_dense_0_bias.txt" << std::endl;
         return 1;
     }
 

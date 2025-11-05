@@ -4,7 +4,7 @@
 
 
 # Target for compilation and simulation. Options: x86sim, hw
-TARGET       ?= hw
+TARGET       ?= x86sim
 
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300

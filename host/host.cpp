@@ -4,8 +4,6 @@
 #include <string>
 #include <stdexcept>
 #include <cstdlib>
-#include <limits>
-#include <iomanip>
 #include <cstring>
 #include <array>
 #include <algorithm>
@@ -137,7 +135,6 @@ struct host_timings {
     steady_clock::duration total{};
     steady_clock::duration weight_load{};
     steady_clock::duration input_transfer{};
-    steady_clock::duration output_transfer{};
     steady_clock::duration graph_exec{};
 };
 
@@ -277,27 +274,19 @@ int main(int argc, char** argv)
             throw std::runtime_error("Input size must be a multiple of INPUT_SIZE");
 
         std::size_t run_count = inputs.size() / INPUT_SIZE;
-        // std::size_t out_elems = run_count * OUTPUT_DENSE0_OUT_PAD;
-        std::size_t out_elems = run_count * HIDDEN_SIZE;
         std::size_t in_bytes  = inputs.size() * sizeof(float);
-        std::size_t out_bytes = out_elems * sizeof(float);
 
         auto align_info = [&](std::size_t n) { return n % HOST_DEBUG_GMIO_BURST; };
         std::cout << "[host] input elements=" << inputs.size()
                   << ", run_count=" << run_count
                   << ", in_bytes=" << in_bytes << " (mod64=" << align_info(in_bytes) << ")"
-                  << ", out_elems=" << out_elems
-                  << ", out_bytes=" << out_bytes << " (mod64=" << align_info(out_bytes) << ")"
                   << std::endl;
 
-        std::cout << "[host] Allocating BOs..." << std::endl;
+        std::cout << "[host] Allocating input BO..." << std::endl;
         auto in_bo  = xrt::aie::bo(device, in_bytes,  xrt::bo::flags::normal, 0);
-        auto out_bo = xrt::aie::bo(device, out_bytes, xrt::bo::flags::normal, 0);
-        std::cout << "[host] Mapping BOs..." << std::endl;
+        std::cout << "[host] Mapping input BO..." << std::endl;
         auto in_ptr  = in_bo.map<float*>();
-        auto out_ptr = out_bo.map<float*>();
-        std::cout << "[host] Mapped: in_ptr=" << static_cast<const void*>(in_ptr)
-                  << ", out_ptr=" << static_cast<const void*>(out_ptr) << std::endl;
+        std::cout << "[host] Mapped: in_ptr=" << static_cast<const void*>(in_ptr) << std::endl;
 
         std::future<steady_clock::time_point> input_transfer_done;
 
@@ -318,15 +307,7 @@ int main(int argc, char** argv)
         std::cout << "[host] graph.run(" << run_count << ")..." << std::endl;
         const auto graph_exec_start = steady_clock::now();
         graph.run(static_cast<int>(run_count));
-
-        std::cout << "[host] Enqueue output GMIO async..." << std::endl;
-        const auto output_transfer_start = steady_clock::now();
-        auto out_run = out_bo.async("g.embed_output_gmio", XCL_BO_SYNC_BO_AIE_TO_GMIO, out_bytes, 0);
-        std::cout << "[host] Waiting for output GMIO..." << std::endl;
-        out_run.wait();
-        const auto output_transfer_end = steady_clock::now();
-        timings.output_transfer = output_transfer_end - output_transfer_start;
-        std::cout << "[host] output GMIO complete. graph.end()..." << std::endl;
+        graph.wait();
         graph.end();
         const auto graph_exec_end = steady_clock::now();
         timings.graph_exec = graph_exec_end - graph_exec_start;
@@ -335,20 +316,13 @@ int main(int argc, char** argv)
         timings.input_transfer = input_transfer_end - input_transfer_start;
 
         std::cout << "[host] graph ended." << std::endl;
-
-        std::ofstream ofs(join(data_base, AIEML10_OUTPUT_FILE));
-        ofs << std::setprecision(std::numeric_limits<float>::max_digits10);
-        for (std::size_t i = 0; i < out_elems; ++i)
-            ofs << out_ptr[i] << '\n';
-
-        std::cout << "[host] Wrote " << out_elems << " floats to " << AIEML10_OUTPUT_FILE << std::endl;
+        std::cout << "[host] Graph output routed via PLIO; host does not collect activations directly." << std::endl;
 
         timings.total = steady_clock::now() - total_start;
 
         std::cout << "\n[host] ===== Execution Report =====" << std::endl;
         std::cout << "[host] weights/bias transfer : " << duration_ms(timings.weight_load) << " ms" << std::endl;
         std::cout << "[host] input transfer        : " << duration_ms(timings.input_transfer) << " ms" << std::endl;
-        std::cout << "[host] output read           : " << duration_ms(timings.output_transfer) << " ms" << std::endl;
         std::cout << "[host] graph exec (total)    : " << duration_ms(timings.graph_exec) << " ms" << std::endl;
         if (run_count) {
             const double run_count_d = static_cast<double>(run_count);

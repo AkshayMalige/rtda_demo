@@ -55,20 +55,18 @@ Weights and biases per layer:
 
 Input/Output files:
 - Input: `embed_input.txt` — size must be multiple of `INPUT_SIZE`.
-- Output: `aieml10_output_aie.txt` — `run_count * 128` floats with max precision.
+- Output (AIE simulation): `aieml10_output_aie.txt` written by the PLIO sink when running x86 or hardware simulation.
 
 File constants are declared in `common/data_paths.h` and consumed by both the host and AIE sim wrapper.
 
 ---
 
-## GMIO Transfers (g2aie_nb / aie2gm_nb)
+## GMIO Input Transfer (`gm2aie_nb`)
 
-- The host binds XRT BOs to GMIO endpoints using `xrt::aie::bo::async` on endpoint names `g.embed_input_gmio` and `g.embed_output_gmio`.
-- This is the XRT equivalent of AI Engine graph API calls `input_gmio::gm2aie_nb` and `output_gmio::aie2gm_nb`.
-- Data sizes:
-  - Input bytes: `inputs.size() * sizeof(float)`.
-  - Output bytes: `run_count * HIDDEN_SIZE * sizeof(float)`.
-- Ordering: the host enqueues input, starts `graph.run(run_count)`, enqueues output read, waits for completion, then calls `graph.end()`.
+- The host binds an XRT BO to the GMIO endpoint `g.embed_input_gmio` using `xrt::aie::bo::async`.
+- This mirrors the AI Engine graph API call `input_gmio::gm2aie_nb`.
+- Data size: `inputs.size() * sizeof(float)`.
+- Ordering: the host enqueues input, starts `graph.run(run_count)`, waits for completion, then calls `graph.end()`. Output remains in PL via `embed_output_plio`.
 
 ---
 
@@ -101,7 +99,7 @@ Outputs:
    ./host.exe system_hw.xclbin
    ```
 
-5. The host writes `aieml10_output_aie.txt` alongside the executable once GMIO transfers complete.
+5. Solver activations stream into PL via `embed_output_plio`; no host-side GMIO read is performed.
 
 This sequence has been validated end-to-end on the Versal VEK280 Evaluation Board using the 2025.1 toolchain.
 

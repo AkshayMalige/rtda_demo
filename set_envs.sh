@@ -33,8 +33,9 @@ export SYSROOT=/opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
 
 # === Set Vitis platform path ===
 export PLATFORM=${XILINX_VITIS}/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
+export DATA_DIR=/home/synthara/VersalPrjs/LDRD/rtda_demo/data
 
-export XILINX_VITIS_DATA_DIR=/home/synthara/VersalPrjs/LDRD/rtda_demo/aieml10/.vitis_data
+export XILINX_VITIS_DATA_DIR=/home/synthara/VersalPrjs/LDRD/rtda_demo/.vitis_data
 
 echo ""
 echo "🔍 Environment summary:"

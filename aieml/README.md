@@ -8,7 +8,7 @@ This directory contains the production AI Engine graph that powers the RTDA demo
 
 - **Stage 0 – Embed block**: two dense layers (`embed_dense0`, `embed_dense1`) with fused bias + leaky-ReLU activations and a 128-to-64×2 window splitter. This stage expands raw track features into a 128-wide activation stream.
 - **Stages 1–3 – Solver blocks**: each solver stage (`solver0`, `solver1`, `solver2`) starts with the custom `roll_concat` kernel, feeds a 4-way cascaded dense layer followed by three 2-way cascaded dense layers, and applies the same fused activation / splitter pattern between layers.
-- **Stage outputs**: solver2 returns a 128-wide activation that is driven directly to `embed_output_gmio`. There is no trailing dense layer; the solver output is the final tensor consumed by the host.
+- **Stage outputs**: solver2 returns a 128-wide activation that now drives the `embed_output_plio` stream into programmable logic. There is no trailing dense layer; downstream PL will consume the solver payload.
 - **Stateful track handling**: `roll_concat` mimics `torch.roll` behaviour over the last 50 valid tracks, zero-padding inactive frames and emitting wrap pairs only when a full 50-track window has been observed.
 
 ### Stage Summary
@@ -18,7 +18,7 @@ This directory contains the production AI Engine graph that powers the RTDA demo
 | Embed | `embed_dense0` → `bias_add_leaky_relu` → `window_split_128_to_64x2` → `embed_dense1` → `bias_add_leaky_relu` | `INPUT_SIZE` → 128 | `INPUT_SIZE` defaults to 8 in `nn_defs10.h`; set to 128 for full track feature vectors. Splitter feeds the cascaded matrix multiply. |
 | Solver 0 | `roll_concat` → shared buffer → `solver0_dense0` → `bias_add_leaky_relu` → `window_split` → `solver0_dense{1,2,3}` with in-between activation & split | 128 → 256 → 128 | `roll_concat` emits two 128-length windows per valid track; dense0 is 4-way cascaded (128×256). |
 | Solver 1 | Same kernel pattern as Solver 0 | 128 → 256 → 128 | Consumes the activated output from solver0. |
-| Solver 2 | Same kernel pattern as Solver 0 | 128 → 256 → 128 | Drives `embed_output_gmio` after the final activation. |
+| Solver 2 | Same kernel pattern as Solver 0 | 128 → 256 → 128 | Drives `embed_output_plio` after the final activation. |
 
 All kernels operate on `float32` windows. Shared buffers inside each solver tile the 256-length `roll_concat` output into four 64-element spans that feed the cascaded dense layer inputs.
 
@@ -40,7 +40,7 @@ Each cascade part receives a contiguous stripe of the parent weight matrix. For 
 | Interface | Direction | Type | Shape / Count | Consumers | Notes |
 |-----------|-----------|------|----------------|-----------|-------|
 | `embed_input_gmio` | Input | GMIO | `INPUT_SIZE` floats per frame | `embed_dense0.inB[0]` | Host pushes frames with `gm2aie_nb`; zero-padding keeps alignment when inactive tracks are present. |
-| `embed_output_gmio` | Output | GMIO | 128 floats per frame | Host | Non-blocking `aie2gm_nb` retrieves solver2 activations. |
+| `embed_output_plio` | Output | PLIO | 128 floats per frame | PL data movers / track-average kernel | Streamed activation vector for downstream PL processing. |
 | `embed_matrixA0_rtp` | Input | RTP | 128 × `INPUT_SIZE` weights (1024 floats at default settings) | `embed_dense0.matrixA[0]` | Single cascade; load once per run or when updating weights. |
 | `embed_matrixA1_{0,1}_rtp` | Input | RTP | 128 × 64 weights per port (8192 floats each) | `embed_dense1.matrixA[{0,1}]` | Two-part cascade. |
 | `embed_bias0_rtp`, `embed_bias1_rtp` | Input | RTP | 128 floats each | Corresponding bias kernels | Biases stored as contiguous float arrays. |
@@ -66,8 +66,8 @@ All RTP ports accept `float32` payloads. The naming scheme for the data files is
 ## Runtime Behaviour and Host Integration
 
 - The host application (`../host/host.cpp`) allocates GMIO buffers with `adf::GMIO::malloc`, loads weight and bias tensors from `DATA_DIR`, and streams them into RTP ports before starting the graph.
-- Input frames are transferred with `embed_input_gmio.gm2aie_nb`, while outputs use `embed_output_gmio.aie2gm_nb`. These non-blocking calls let the graph fill FIFOs while the host prepares subsequent transfers.
-- After `g.run(<frame_count>)`, the host waits on the GMIO transactions and writes the 128-wide solver output vectors to `aieml10_output_aie.txt`.
+- Input frames are transferred with `embed_input_gmio.gm2aie_nb`, while the final activation stream exits the array through `embed_output_plio` for PL consumption.
+- After `g.run(<frame_count>)`, the host waits on the GMIO input transaction; solver outputs are captured in PL (or, under simulation, flushed to `aieml10_output_aie.txt` by the PLIO).
 - Layout hints in `graph_layout.hpp` set runtime ratios for activation and splitter kernels, nudging the placer for balanced tile utilisation without over-constraining physical placement.
 
 ---

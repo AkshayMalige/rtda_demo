@@ -323,9 +323,9 @@ int main() {
         if (gmio_input_buffer != nullptr) {
             adf::GMIO::free(gmio_input_buffer);
         }
-        if (gmio_output_buffer != nullptr) {
-            adf::GMIO::free(gmio_output_buffer);
-        }
+        // if (gmio_output_buffer != nullptr) {
+        //     adf::GMIO::free(gmio_output_buffer);
+        // }
         g.end();
         return -1;
     }
@@ -333,11 +333,12 @@ int main() {
     std::memcpy(gmio_input_buffer, embed_inputs.data(), input_transaction_bytes);
 
     const auto gm2aie_status = g.embed_input_gmio.gm2aie_nb(gmio_input_buffer, input_transaction_bytes);
-    const auto aie2gm_status = g.embed_output_gmio.aie2gm_nb(gmio_output_buffer, output_transaction_bytes);
-    if (gm2aie_status != adf::return_code::ok || aie2gm_status != adf::return_code::ok) {
+    // const auto aie2gm_status = g.embed_output_gmio.aie2gm_nb(gmio_output_buffer, output_transaction_bytes);
+    // if (gm2aie_status != adf::return_code::ok || aie2gm_status != adf::return_code::ok) {
+    if (gm2aie_status != adf::return_code::ok) {
         std::cerr << "Error: GMIO transaction setup failed" << std::endl;
         adf::GMIO::free(gmio_input_buffer);
-        adf::GMIO::free(gmio_output_buffer);
+        // adf::GMIO::free(gmio_output_buffer);
         g.end();
         return -1;
     }
@@ -345,13 +346,13 @@ int main() {
     g.run(static_cast<int>(run_count));
     g.wait();
     g.embed_input_gmio.wait();
-    g.embed_output_gmio.wait();
+    // g.embed_output_gmio.wait();
 
-    const bool write_status = write_vector(AIEML10_OUTPUT_FILE, gmio_output_buffer, total_output_elements);
+    // const bool write_status = write_vector(AIEML10_OUTPUT_FILE, gmio_output_buffer, total_output_elements);
 
     adf::GMIO::free(gmio_input_buffer);
-    adf::GMIO::free(gmio_output_buffer);
+    // adf::GMIO::free(gmio_output_buffer);
     g.end();
-    return write_status ? 0 : -1;
+    return 0;
 }
 #endif

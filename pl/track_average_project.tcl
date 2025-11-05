@@ -1,9 +1,9 @@
 # ===================================================================
-# Vitis HLS Project TCL Script for 'leaky_splitter'
+# Vitis HLS Project TCL Script for 'track_average'
 # ===================================================================
 
 # --- Step 1: User Configuration ---
-set kernel_name "s2mm"
+set kernel_name "track_average"
 set part_name   "xcve2802-vsvh1760-2MP-e-S"
 
 # --- Step 2: Automatic Naming ---
@@ -25,13 +25,9 @@ if {$argc > 0} {
 open_project $project_name
 set_top $top_function
 
-# Add your project's specific source files from src/
 add_files $kernel_file
 add_files -tb $tb_file
-add_files -tb ../data/embed_dense_0_bias.txt
 
-
-# Use the -flow_target vitis flag for correct XO generation
 open_solution -flow_target vitis "solution1"
 
 set_part ${part_name}

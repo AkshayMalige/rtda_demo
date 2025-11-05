@@ -58,7 +58,7 @@ inline void NeuralNetworkGraph::apply_layout() {
 
 
     // adf::location<adf::GMIO>(embed_input_gmio) = adf::shim(AIEML10_INPUT_SHIM);
-    // adf::location<adf::GMIO>(embed_output_gmio) = adf::shim(AIEML10_OUTPUT_SHIM);
+    // adf::location<adf::PLIO>(embed_output_plio) = adf::shim(AIEML10_OUTPUT_SHIM);
 
     // const auto place_linear = [](kernel* kernels,
     //                              std::size_t count,

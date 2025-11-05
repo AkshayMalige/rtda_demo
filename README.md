@@ -1,6 +1,6 @@
 # Real‑Time Detector Alignment (RTDA) – Versal ACAP AIE-ML Demo
 
-This project demonstrates a fully in‑AIE-ML inference pipeline for real‑time particle track processing. Each input frame is a single track represented by a fixed‑length float vector. The design embeds the track, then passes it through three solver stages, and streams results back over GMIO. All intermediate activations remain on‑chip inside the AI Engine array.
+This project demonstrates a fully in‑AIE-ML inference pipeline for real‑time particle track processing. Each input frame is a single track represented by a fixed‑length float vector. The design embeds the track, then passes it through three solver stages, and streams results into programmable logic through a dedicated PLIO. All intermediate activations remain on‑chip inside the AI Engine array.
 
 [PLACEHOLDER: Architecture diagram of stages and GMIO]
 
@@ -9,9 +9,9 @@ This project demonstrates a fully in‑AIE-ML inference pipeline for real‑time
 ```mermaid
 %% See docs/architecture.mmd
 graph TD
-  subgraph GMIO
+  subgraph IO
     IN[embed_input_gmio]
-    OUT[embed_output_gmio]
+    OUT[embed_output_plio]
   end
   IN --> E0[embed_dense0] --> BR0[bias+leakyReLU] --> S0[split] --> E1[embed_dense1] --> BR1[bias+leakyReLU]
   BR1 --> RC0[solver0: roll_concat] --> D00[dense0] --> B00[bias] --> D01[dense1] --> B01[bias] --> D02[dense2] --> B02[bias] --> D03[dense3] --> B03[bias]
@@ -26,7 +26,7 @@ graph TD
 
 ## About This Project
 
-- Pure AI Engine compute with GMIO ingress/egress, managed by an XRT host.
+- Pure AI Engine compute with GMIO ingress and PLIO egress, managed by an XRT host.
 - Four stages total: 1 embed + 3 solver stages (stateful track pairing via a `torch.roll`‑like kernel).
 - Runtime‑programmable weights and biases via RTP; no recompile needed for parameter changes.
 - Validated via x86/hardware simulation and on-silicon using a Versal VEK280 Evaluation Board (2025.1 toolchain).
@@ -45,14 +45,14 @@ graph TD
 
 Key files:
 - `aieml/graph.h:1` – Graph declaration, ports, kernels, RTP definitions
-- `aieml/graph.cpp:1` – Simulation‑time host wrapper (AIE sim) to drive GMIO and RTP
+- `aieml/graph.cpp:1` – Simulation‑time host wrapper (AIE sim) to drive GMIO ingress and RTP updates while PLIO streams flush to files
 - `aieml/graph_layout.hpp:1` – Runtime ratio hints and (optional) placement nudges
 - `aieml/nn_defs10.h:1` – Canonical tensor sizes and cascade tiling constants
 - `aieml/bias_relu_fused.cpp:1` – Fused bias + leaky‑ReLU kernel
 - `aieml/window_split_128_to_64x2.cpp:1` – 128→64×2 splitter kernel
 - `aieml/roll_concat.cpp:1` – Stateful pairing kernel (PyTorch‑like roll with 50‑track window)
 - `common/data_paths.h:1` – All file names used by the host and AIE sim driver
-- `host/host.cpp:1` – XRT host: XCLBIN load, RTP updates, GMIO transfers
+- `host/host.cpp:1` – XRT host: XCLBIN load, RTP updates, and GMIO input transfers (output handed to PL via PLIO)
 
 [PLACEHOLDER: Repo map graphic]
 
@@ -66,7 +66,7 @@ Key files:
   1. Embed: `embed_dense0` → bias+leakyReLU → split(128→64×2) → `embed_dense1` → bias+leakyReLU
   2. Solver 0: `roll_concat` → dense0(4‑way) → bias+leakyReLU → split → dense1(2‑way) → bias+leakyReLU → split → dense2(2‑way) → bias+leakyReLU → split → dense3(2‑way) → bias+leakyReLU
   3. Solver 1: identical to Solver 0
-  4. Solver 2: identical to Solver 0, then stream out over GMIO
+  4. Solver 2: identical to Solver 0, then stream out over PLIO into the PL fabric
 
 - Data types: `float32` for all inputs, weights, biases, and activations.
 - Framing: one input frame = one track vector; one output frame = 128‑float activation.
@@ -103,17 +103,17 @@ Key files:
 
 See: `docs/roll_concat.mmd` for a sequence diagram of the 50-track windowing behaviour.
 
-### Ports and GMIO
+### Ports and External Interfaces
 
 - Input GMIO: `g.embed_input_gmio` — one frame = `INPUT_SIZE` floats
-- Output GMIO: `g.embed_output_gmio` — one frame = 128 floats
+- Output PLIO: `g.embed_output_plio` — one frame = 128 floats
 - RTP ports:
   - Embed: `g.embed_matrixA0_rtp`, `g.embed_matrixA1_{0,1}_rtp`, `g.embed_bias{0,1}_rtp`
   - Solvers (per stage i): `g.solveri_dense0_matrixA_rtp[0..3]`, `g.solveri_dense{1,2,3}_matrixA_rtp[0..1]`, `g.solveri_bias{0..3}_rtp`
 
-GMIO calls:
-- AIE sim driver uses `input_gmio::gm2aie_nb` / `output_gmio::aie2gm_nb` (non‑blocking).
-- Host binds XRT BOs and invokes `bo.async(..., "g.embed_input_gmio")` / `bo.async(..., "g.embed_output_gmio")` which is functionally equivalent to g2aie_nb/aie2gm_nb from the AI Engine API.
+I/O calls:
+- AIE sim driver uses `input_gmio::gm2aie_nb` for ingress; solver outputs are emitted by `output_plio::create` and captured as files during simulation.
+- The XRT host binds a BO to `g.embed_input_gmio` and enqueues the GMIO transfer. PL logic (or emulation file sinks) consumes `g.embed_output_plio` downstream.
 
 ---
 
@@ -208,8 +208,8 @@ Regenerate tensors:
 - Responsibilities:
   - Load XCLBIN, open `xrt::graph g`
   - Read tensors from `DATA_DIR` and update RTP ports
-  - Allocate XRT BOs and perform GMIO async transfers
-  - Run `g.run(run_count)` and write `aieml10_output_aie.txt`
+  - Allocate XRT BOs and perform GMIO input async transfers
+  - Run `g.run(run_count)`; solver activations stream to PL via `embed_output_plio`
 
 See: `host/README.md:1` for details on shapes, transfers, and build options.
 
