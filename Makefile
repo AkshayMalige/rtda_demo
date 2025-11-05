@@ -14,7 +14,7 @@ PACK_CFG       ?= ./pack.cfg
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
-TARGET ?= hw
+TARGET ?= hw_emu
 # Default host build: native for sw_emu, QEMU for hw_emu/hw
 ifeq ($(TARGET),$(filter $(TARGET),hw_emu hw))
   EMU_PS ?= QEMU
@@ -23,10 +23,15 @@ else
 endif
 ###########################################################################
 
+LINK_CFG  := ./common/linker_aieml.cfg
+HLS_KERNELS := track_average
+XO_DIR    := pl/ip
+
 ######################  Artifacts and directories  #########################
 # Allow overriding the AIE work directory name used under aieml/
 AIE_WORK_DIR_NAME ?= Work
 AIE_LIB   := aieml/$(AIE_WORK_DIR_NAME)/libadf.a
+PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
 BUILD_DIR := build_$(TARGET)
 XSA       := $(BUILD_DIR)/design_$(TARGET).xsa
 PKG_DIR   := package.$(TARGET)
@@ -49,16 +54,20 @@ else
   AIE_TARGET := hw
 endif
 
+
 ############################################################################
 #  Top-level targets
 ############################################################################
-.PHONY: all aie sim host link package run run_emu clean clean_all help print_vars
+.PHONY: all aie sim pl host link package run run_emu clean clean_all help print_vars
 
-all: aie host link package
+all: aie host pl link package
 
 # AIE graph build (delegates to aieml/)
 aie:
 	$(MAKE) -C aieml TARGET=$(AIE_TARGET) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+
+pl: $(PL_XOS)
+	@echo "✅ PL kernel artifacts ready: $(PL_XOS)"
 
 # Simulation convenience wrapper (AIE-only)
 sim:
@@ -69,12 +78,20 @@ sim:
 host:
 	$(MAKE) -C host EMU_PS=$(EMU_PS)
 
+$(PL_XOS):
+	$(MAKE) -C pl TARGET=$(TARGET) KERNELS="$(HLS_KERNELS)"
+
 ##############################  Link (XSA)  ################################
 # Create XSA by linking the AIE graph only
-$(XSA): $(AIE_LIB) | $(BUILD_DIR)
-	@echo "🔗 Linking (v++) AIE-only system to create XSA: $@"
-	v++ -l -t $(TARGET) --platform $(PLATFORM) $(AIE_LIB) -o $@
-	@echo "✅ XSA created: $@"
+
+$(XSA): $(AIE_LIB) $(PL_XOS) $(LINK_CFG) | $(BUILD_DIR)
+	@echo "🔗 Linking with:"
+	@echo "    PL_XOS   = $(PL_XOS)"
+	@echo "    AIE_LIB  = $(AIE_LIB)"
+	@echo "    LINK_CFG = $(LINK_CFG)"
+	v++ --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
+		$(PL_XOS) $(AIE_LIB) -o $@
+	@echo "✅ Linked design: $@"
 
 link: $(XSA)
 
@@ -156,17 +173,20 @@ print_vars:
 
 ################################  Clean  ###################################
 clean:
+	$(MAKE) -C pl clean TARGET=$(TARGET)
 	rm -rf $(PKG_DIR) $(BUILD_DIR) *.xclbin *.xsa *.log _x host.exe
 
 clean_all:
 	$(MAKE) -C aieml    clean TARGET=$(AIE_TARGET)
 	$(MAKE) -C host     clean
+	$(MAKE) -C pl       clean TARGET=$(TARGET)
 	rm -rf package.* build_* *.xclbin *.xsa *.log
 
 help:
 	@echo "Usage:"
 	@echo "  make aie TARGET=x86            # Build AIE graph for x86sim"
 	@echo "  make aie TARGET=hw             # Build AIE graph for hardware model"
+	@echo "  make pl TARGET=hw_emu          # Build track_average HLS kernel XO"
 	@echo "  make sim TARGET=x86            # Run AIE x86 simulation"
 	@echo "  make sim TARGET=hw             # Run AIE cycle-accurate sim"
 	@echo "  make host TARGET=sw_emu        # Build host for native x86"

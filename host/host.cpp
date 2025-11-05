@@ -11,10 +11,13 @@
 #include <chrono>
 #include <future>
 #include <utility>
+#include <limits>
 
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_graph.h"
 #include "xrt/xrt_aie.h"
+#include "xrt/xrt_kernel.h"
+#include "xrt/xrt_bo.h"
 
 #include "data_paths.h"
 #include "nn_defs10.h"
@@ -171,6 +174,9 @@ int main(int argc, char** argv)
         std::cout << "[host] Opening graph 'g'..." << std::endl;
         xrt::graph graph(device, uuid, "g");
         std::cout << "[host] Graph opened." << std::endl;
+        std::cout << "[host] Opening track_average kernel..." << std::endl;
+        xrt::kernel track_average_kernel(device, uuid, "track_average_pl:{track_average}");
+        std::cout << "[host] track_average kernel ready." << std::endl;
 
         const auto weight_load_start = steady_clock::now();
 
@@ -282,6 +288,70 @@ int main(int argc, char** argv)
                   << ", in_bytes=" << in_bytes << " (mod64=" << align_info(in_bytes) << ")"
                   << std::endl;
 
+        const std::size_t total_stream_elems =
+            run_count * static_cast<std::size_t>(HIDDEN_SIZE);
+        if (total_stream_elems == 0U) {
+            throw std::runtime_error("Graph configuration produced zero output elements.");
+        }
+        if (total_stream_elems > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::runtime_error("Track-average stream length exceeds int32 capacity.");
+        }
+
+        const char* threshold_env = std::getenv("TRACK_AVERAGE_THRESHOLD");
+        int track_threshold = 0;
+        if (threshold_env) {
+            track_threshold = std::atoi(threshold_env);
+        } else {
+            if (run_count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+                throw std::runtime_error("run_count exceeds int32 capacity; set TRACK_AVERAGE_THRESHOLD manually.");
+            }
+            track_threshold = static_cast<int>(run_count);
+        }
+        if (track_threshold <= 0) {
+            std::cout << "[host] track_average threshold must be positive; forcing to "
+                      << run_count << '.' << std::endl;
+            if (run_count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+                track_threshold = 1;
+            } else {
+                track_threshold = static_cast<int>(run_count);
+            }
+        }
+        if (run_count < static_cast<std::size_t>(track_threshold)) {
+            std::cout << "[host] Adjusting track_average threshold from "
+                      << track_threshold << " to " << run_count
+                      << " to match run_count." << std::endl;
+            if (run_count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+                throw std::runtime_error("run_count exceeds int32 capacity; lower TRACK_AVERAGE_THRESHOLD.");
+            }
+            track_threshold = static_cast<int>(run_count);
+        }
+        const std::size_t track_windows =
+            run_count / static_cast<std::size_t>(track_threshold);
+        if (track_windows == 0U) {
+            throw std::runtime_error("Track-average threshold exceeds available frames.");
+        }
+        const std::size_t track_output_elements =
+            track_windows * static_cast<std::size_t>(HIDDEN_SIZE);
+        const std::size_t track_output_bytes = track_output_elements * sizeof(float);
+        std::cout << "[host] track_average config: threshold=" << track_threshold
+                  << ", windows=" << track_windows
+                  << ", stream_elements=" << total_stream_elems << std::endl;
+        if (run_count % static_cast<std::size_t>(track_threshold) != 0U) {
+            std::cout << "[host] track_average warning: run_count (" << run_count
+                      << ") not divisible by threshold (" << track_threshold
+                      << "); dropping "
+                      << (run_count % static_cast<std::size_t>(track_threshold))
+                      << " frame(s)." << std::endl;
+        }
+
+        std::vector<float> track_output(track_output_elements, 0.0f);
+        xrt::bo track_out_bo(device, track_output_bytes, xrt::bo::flags::normal, 0);
+        xrt::run track_run = xrt::run(track_average_kernel);
+        track_run.set_arg(1, track_out_bo);
+        track_run.set_arg(2, static_cast<int>(total_stream_elems));
+        track_run.set_arg(3, track_threshold);
+        const std::string track_output_path = join(data_base, EMBED_HOST_OUTPUT);
+
         std::cout << "[host] Allocating input BO..." << std::endl;
         auto in_bo  = xrt::aie::bo(device, in_bytes,  xrt::bo::flags::normal, 0);
         std::cout << "[host] Mapping input BO..." << std::endl;
@@ -304,10 +374,14 @@ int main(int argc, char** argv)
                 return steady_clock::now();
             });
 
+        std::cout << "[host] Starting track_average kernel..." << std::endl;
+        track_run.start();
+
         std::cout << "[host] graph.run(" << run_count << ")..." << std::endl;
         const auto graph_exec_start = steady_clock::now();
         graph.run(static_cast<int>(run_count));
         graph.wait();
+        track_run.wait();
         graph.end();
         const auto graph_exec_end = steady_clock::now();
         timings.graph_exec = graph_exec_end - graph_exec_start;
@@ -316,7 +390,22 @@ int main(int argc, char** argv)
         timings.input_transfer = input_transfer_end - input_transfer_start;
 
         std::cout << "[host] graph ended." << std::endl;
-        std::cout << "[host] Graph output routed via PLIO; host does not collect activations directly." << std::endl;
+
+        track_out_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+        track_out_bo.read(track_output.data());
+        std::ofstream track_file(track_output_path);
+        if (!track_file.is_open()) {
+            throw std::runtime_error("Unable to open track-average output file: " + track_output_path);
+        }
+        for (std::size_t idx = 0; idx < track_output_elements; ++idx) {
+            std::cout << track_output[idx] << '\n';
+            track_file << track_output[idx] << '\n';
+        }
+        track_file.close();
+        std::cout << "[host] track_average captured "
+                  << track_windows << " frame(s), "
+                  << track_output_elements << " element(s) -> "
+                  << track_output_path << std::endl;
 
         timings.total = steady_clock::now() - total_start;
 

@@ -13,7 +13,7 @@ KERNELS ?= track_average
 
 IP_DIR   ?= ip
 LOG_FILE ?= vitis_hls.log
-TARGET ?= hw_emu
+TARGET ?= hw
 
 
 # ===================================================================
