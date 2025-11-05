@@ -1,7 +1,7 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 #include <ap_int.h>
-#include "../../aieml/nn_defs10.h"
+#include "../../common/nn_defs10.h"
 
 typedef float data_t;
 typedef hls::axis<data_t, 0, 0, 0> axis_t;

@@ -15,7 +15,7 @@ This directory contains the production AI Engine graph that powers the RTDA demo
 
 | Stage | Kernels | Frame shape (float32) | Notes |
 |-------|---------|-----------------------|-------|
-| Embed | `embed_dense0` → `bias_add_leaky_relu` → `window_split_128_to_64x2` → `embed_dense1` → `bias_add_leaky_relu` | `INPUT_SIZE` → 128 | `INPUT_SIZE` defaults to 8 in `nn_defs10.h`; set to 128 for full track feature vectors. Splitter feeds the cascaded matrix multiply. |
+| Embed | `embed_dense0` → `bias_add_leaky_relu` → `window_split_128_to_64x2` → `embed_dense1` → `bias_add_leaky_relu` | `INPUT_SIZE` → 128 | `INPUT_SIZE` defaults to 8 in `common/nn_defs10.h`; set to 128 for full track feature vectors. Splitter feeds the cascaded matrix multiply. |
 | Solver 0 | `roll_concat` → shared buffer → `solver0_dense0` → `bias_add_leaky_relu` → `window_split` → `solver0_dense{1,2,3}` with in-between activation & split | 128 → 256 → 128 | `roll_concat` emits two 128-length windows per valid track; dense0 is 4-way cascaded (128×256). |
 | Solver 1 | Same kernel pattern as Solver 0 | 128 → 256 → 128 | Consumes the activated output from solver0. |
 | Solver 2 | Same kernel pattern as Solver 0 | 128 → 256 → 128 | Drives `embed_output_plio` after the final activation. |
@@ -115,13 +115,13 @@ Use `make clean_all` at the root to purge AI Engine workspaces, host binaries, a
   python data/generate_test_data.py \
     --input-dim 128 --hidden-dim 128 --output-dim 128 --dtype float32
   ```
-  Align the script arguments with the constants in `nn_defs10.h` after any architecture change.
+  Align the script arguments with the constants in `common/nn_defs10.h` after any architecture change.
 
 ---
 
 ## Extending the Graph
 
-- Adjust `INPUT_SIZE`, `HIDDEN_SIZE`, or solver dimensions in `nn_defs10.h`, regenerate tensors, and update `data_paths.h` if new files are introduced.
+- Adjust `INPUT_SIZE`, `HIDDEN_SIZE`, or solver dimensions in `common/nn_defs10.h`, regenerate tensors, and update `data_paths.h` if new files are introduced.
 - When adding kernels, declare them in `graph.h`, wire them in `graph.cpp`, and update `graph_layout.hpp` if additional placement hints are required.
 - Inspect performance with `vitis_analyzer Work/aiesimulator_output/default.aierun_summary` after hardware-targeted simulations to validate throughput and GMIO utilisation.
 

@@ -36,7 +36,7 @@ Key code paths:
 
 ## Data Contracts (Shapes, Types)
 
-All tensors are `float32` and sizes are derived from `aieml/nn_defs10.h`.
+All tensors are `float32` and sizes are derived from `common/nn_defs10.h`.
 
 - Input frames: `INPUT_SIZE` floats (defaults to 8; set to 128 for full track feature vectors).
 - Output frames: `HIDDEN_SIZE` floats (128). Host writes `run_count * 128` values.

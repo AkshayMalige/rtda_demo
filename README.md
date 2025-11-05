@@ -47,7 +47,7 @@ Key files:
 - `aieml/graph.h:1` – Graph declaration, ports, kernels, RTP definitions
 - `aieml/graph.cpp:1` – Simulation‑time host wrapper (AIE sim) to drive GMIO ingress and RTP updates while PLIO streams flush to files
 - `aieml/graph_layout.hpp:1` – Runtime ratio hints and (optional) placement nudges
-- `aieml/nn_defs10.h:1` – Canonical tensor sizes and cascade tiling constants
+- `common/nn_defs10.h:1` – Canonical tensor sizes and cascade tiling constants
 - `aieml/bias_relu_fused.cpp:1` – Fused bias + leaky‑ReLU kernel
 - `aieml/window_split_128_to_64x2.cpp:1` – 128→64×2 splitter kernel
 - `aieml/roll_concat.cpp:1` – Stateful pairing kernel (PyTorch‑like roll with 50‑track window)
@@ -71,9 +71,9 @@ Key files:
 - Data types: `float32` for all inputs, weights, biases, and activations.
 - Framing: one input frame = one track vector; one output frame = 128‑float activation.
 
-### Dimensions and Parameters (aieml/nn_defs10.h)
+### Dimensions and Parameters (common/nn_defs10.h)
 
-- `INPUT_SIZE` (default 8) – number of features per track; set to 128 for full tracks: `aieml/nn_defs10.h:4`
+- `INPUT_SIZE` (default 8) – number of features per track; set to 128 for full tracks: `common/nn_defs10.h:4`
 - `HIDDEN_SIZE = 128`, `OUTPUT_SIZE = 128`
 - `LEAKY_SLOPE = 0.1f`
 - `ROLL_CONC_SUBSET_SIZE = 2` → `roll_concat` produces 256 values (2×128)
@@ -197,7 +197,7 @@ Default dataset: `./data` (or `DATA_DIR`). File constants live in `common/data_p
 
 Regenerate tensors:
 - `python data/generate_test_data.py --input-dim 128 --hidden-dim 128 --output-dim 128 --dtype float32`
-- Keep script args in sync with `aieml/nn_defs10.h` after changing dimensions.
+- Keep script args in sync with `common/nn_defs10.h` after changing dimensions.
 
 ---
 
@@ -217,7 +217,7 @@ See: `host/README.md:1` for details on shapes, transfers, and build options.
 
 ## Important Notes and Parameters
 
-- To process full 128‑float tracks, set `INPUT_SIZE = 128` in `aieml/nn_defs10.h:4` and regenerate data.
+- To process full 128‑float tracks, set `INPUT_SIZE = 128` in `common/nn_defs10.h:4` and regenerate data.
 - `roll_concat` pairs current/previous valid frames and injects window wrap pairs every 50 valid tracks; it pads zeros on cold‑start and for all‑zero frames.
 - GMIO bandwidth/fifo depths can be tuned in `aieml/graph.h:1` (`GMIO_*_BANDWIDTH_MBPS`, `DEFAULT_FIFO_DEPTH`).
 

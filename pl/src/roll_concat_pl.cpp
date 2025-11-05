@@ -1,7 +1,7 @@
 #include <hls_stream.h>
 #include <ap_int.h>
 #include <iostream>
-#include "../../aieml/nn_defs10.h"
+#include "../../common/nn_defs10.h"
 
 
 typedef float data_t;
