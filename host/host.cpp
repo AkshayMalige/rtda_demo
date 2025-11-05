@@ -297,33 +297,9 @@ int main(int argc, char** argv)
             throw std::runtime_error("Track-average stream length exceeds int32 capacity.");
         }
 
-        const char* threshold_env = std::getenv("TRACK_AVERAGE_THRESHOLD");
-        int track_threshold = 0;
-        if (threshold_env) {
-            track_threshold = std::atoi(threshold_env);
-        } else {
-            if (run_count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-                throw std::runtime_error("run_count exceeds int32 capacity; set TRACK_AVERAGE_THRESHOLD manually.");
-            }
-            track_threshold = static_cast<int>(run_count);
-        }
-        if (track_threshold <= 0) {
-            std::cout << "[host] track_average threshold must be positive; forcing to "
-                      << run_count << '.' << std::endl;
-            if (run_count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-                track_threshold = 1;
-            } else {
-                track_threshold = static_cast<int>(run_count);
-            }
-        }
+        const int track_threshold = TRACK_AVERAGE_THRESHOLD;
         if (run_count < static_cast<std::size_t>(track_threshold)) {
-            std::cout << "[host] Adjusting track_average threshold from "
-                      << track_threshold << " to " << run_count
-                      << " to match run_count." << std::endl;
-            if (run_count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-                throw std::runtime_error("run_count exceeds int32 capacity; lower TRACK_AVERAGE_THRESHOLD.");
-            }
-            track_threshold = static_cast<int>(run_count);
+            throw std::runtime_error("run_count must be at least TRACK_AVERAGE_THRESHOLD.");
         }
         const std::size_t track_windows =
             run_count / static_cast<std::size_t>(track_threshold);
@@ -398,7 +374,7 @@ int main(int argc, char** argv)
             throw std::runtime_error("Unable to open track-average output file: " + track_output_path);
         }
         for (std::size_t idx = 0; idx < track_output_elements; ++idx) {
-            std::cout << track_output[idx] << '\n';
+            // std::cout << track_output[idx] << '\n';
             track_file << track_output[idx] << '\n';
         }
         track_file.close();

@@ -5,6 +5,9 @@ constexpr int INPUT_SIZE = 8;
 constexpr int HIDDEN_SIZE = 128;
 constexpr int OUTPUT_SIZE = 128;
 constexpr float LEAKY_SLOPE = 0.1f;
+constexpr int TRACK_AVERAGE_THRESHOLD = 5;
+static_assert(TRACK_AVERAGE_THRESHOLD > 0,
+              "TRACK_AVERAGE_THRESHOLD must be positive");
 
 // Roll-concat: produce 256 (= 2 x 128)
 constexpr int ROLL_CONC_SUBSET_SIZE = 2;

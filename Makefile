@@ -14,7 +14,7 @@ PACK_CFG       ?= ./pack.cfg
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
-TARGET ?= hw_emu
+TARGET ?= hw
 # Default host build: native for sw_emu, QEMU for hw_emu/hw
 ifeq ($(TARGET),$(filter $(TARGET),hw_emu hw))
   EMU_PS ?= QEMU
