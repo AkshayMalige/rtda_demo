@@ -1,6 +1,6 @@
 # Host Application
 
-The host binary configures the AI Engine graph, streams input tracks via GMIO, and captures the solver output. It loads weight/bias tensors from `DATA_DIR`, updates the graph’s RTP ports, then performs non-blocking GMIO transfers to/from device memory.
+The host binary configures the AI Engine graph, streams input tracks via GMIO, and supervises the downstream PL kernel (`track_average_pl`) that consumes the solver output. It loads weight/bias tensors from `DATA_DIR`, updates the graph’s RTP ports, performs non-blocking GMIO transfers, and finally runs the averaging kernel to produce DDR-resident summaries.
 
 ---
 
@@ -24,13 +24,15 @@ References:
 - Reads input vectors `embed_input.txt` and verifies the length is a multiple of `INPUT_SIZE`.
 - Allocates two XRT AI Engine BOs for GMIO transfers and binds them to the graph’s GMIO endpoints.
 - Runs the graph for `run_count = len(inputs) / INPUT_SIZE` frames.
-- Writes `run_count * 128` output floats to `aieml10_output_aie.txt`.
+- Launches the `track_average_pl` kernel, passes the solver stream length plus averaging threshold, and waits for completion.
+- Writes the averaged PL output to `host_output.txt` (one 128-float vector per threshold window). Raw solver activations stay on the PLIO stream and do not return to the host.
 
 Key code paths:
 - Argument parsing and `DATA_DIR`: `host/host.cpp:62`.
 - RTP updates for embed: `host/host.cpp:76`–`host/host.cpp:96`.
 - RTP updates for solvers: `host/host.cpp:104`–`host/host.cpp:157`.
 - GMIO and run: `host/host.cpp:169`–`host/host.cpp:203`.
+- Track-average kernel launch and result capture: `host/host.cpp:177`–`host/host.cpp:382`.
 
 ---
 
@@ -56,6 +58,7 @@ Weights and biases per layer:
 Input/Output files:
 - Input: `embed_input.txt` — size must be multiple of `INPUT_SIZE`.
 - Output (AIE simulation): `aieml10_output_aie.txt` written by the PLIO sink when running x86 or hardware simulation.
+- Output (track average): `host_output.txt` populated by the host after `track_average_pl` completes (one row per threshold window, 128 floats per row).
 
 File constants are declared in `common/data_paths.h` and consumed by both the host and AIE sim wrapper.
 
@@ -67,6 +70,17 @@ File constants are declared in `common/data_paths.h` and consumed by both the ho
 - This mirrors the AI Engine graph API call `input_gmio::gm2aie_nb`.
 - Data size: `inputs.size() * sizeof(float)`.
 - Ordering: the host enqueues input, starts `graph.run(run_count)`, waits for completion, then calls `graph.end()`. Output remains in PL via `embed_output_plio`.
+
+## `track_average_pl` Control Flow
+
+- The kernel instance name is `track_average_pl:{track_average}`. The host opens it via `xrt::kernel` and retains one `xrt::run`.
+- Arguments:
+  1. Stream input (bound implicitly by the linker; no host action).
+  2. `mem`: destination BO handle where averaged results land (`host/host.cpp:323`).
+  3. `size`: total number of 32-bit words coming from the AI Engine stream (`run_count * HIDDEN_SIZE`).
+  4. `threshold`: number of frames per average (`TRACK_AVERAGE_THRESHOLD` constant in `common/nn_defs10.h`).
+- The host enforces `run_count >= threshold` and warns when `run_count % threshold != 0`, dropping the trailing partial window.
+- Results are synced from the output BO and written to `DATA_DIR/host_output.txt`, enabling quick inspection of PL post-processing during emulation or hardware runs.
 
 ---
 
@@ -99,7 +113,7 @@ Outputs:
    ./host.exe system_hw.xclbin
    ```
 
-5. Solver activations stream into PL via `embed_output_plio`; no host-side GMIO read is performed.
+5. Solver activations stream into PL via `embed_output_plio`; no host-side GMIO read is performed. Instead, the `track_average_pl` kernel writes averaged vectors to DDR, and the host mirrors them into `host_output.txt` on the SD card.
 
 This sequence has been validated end-to-end on the Versal VEK280 Evaluation Board using the 2025.1 toolchain.
 
@@ -121,6 +135,7 @@ Optional convenience:
 
 - File size mismatches throw exceptions with the expected/actual count.
 - Input size must be a multiple of `INPUT_SIZE` or execution aborts.
+- `track_average_pl` guardrails: the host enforces `run_count >= TRACK_AVERAGE_THRESHOLD` and fails early if the AI Engine stream length exceeds `INT_MAX`.
 - All errors are reported on stderr with `ERROR: <message>` and cause a non-zero exit.
 
 ---

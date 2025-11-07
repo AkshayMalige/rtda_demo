@@ -1,6 +1,6 @@
 # AI Engine Solver Graph
 
-This directory contains the production AI Engine graph that powers the RTDA demo. The design ingests sequences of particle tracks (treat each track as 128 `float32` features) and processes them through a four-stage inference pipeline made up of an embed block followed by three solver stages. All compute executes inside the AI Engine array; programmable logic is only used for GMIO access and packaging. The graph is packaged as part of the top-level hardware flow and has been validated on a Versal VEK280 Evaluation Board.
+This directory contains the production AI Engine graph that powers the RTDA demo. The design ingests sequences of particle tracks (treat each track as 128 `float32` features) and processes them through a four-stage inference pipeline made up of an embed block followed by three solver stages. All compute executes inside the AI Engine array; programmable logic terminates the PLIO stream via the `track_average_pl` kernel. The graph is packaged as part of the top-level hardware flow and has been validated on a Versal VEK280 Evaluation Board.
 
 ---
 
@@ -8,7 +8,7 @@ This directory contains the production AI Engine graph that powers the RTDA demo
 
 - **Stage 0 – Embed block**: two dense layers (`embed_dense0`, `embed_dense1`) with fused bias + leaky-ReLU activations and a 128-to-64×2 window splitter. This stage expands raw track features into a 128-wide activation stream.
 - **Stages 1–3 – Solver blocks**: each solver stage (`solver0`, `solver1`, `solver2`) starts with the custom `roll_concat` kernel, feeds a 4-way cascaded dense layer followed by three 2-way cascaded dense layers, and applies the same fused activation / splitter pattern between layers.
-- **Stage outputs**: solver2 returns a 128-wide activation that now drives the `embed_output_plio` stream into programmable logic. There is no trailing dense layer; downstream PL will consume the solver payload.
+- **Stage outputs**: solver2 returns a 128-wide activation that now drives the `embed_output_plio` stream into programmable logic, where `track_average_pl` optionally averages windows of frames before committing the data to DDR. There is no trailing dense layer; downstream PL can consume either the raw stream or the averaged result.
 - **Stateful track handling**: `roll_concat` mimics `torch.roll` behaviour over the last 50 valid tracks, zero-padding inactive frames and emitting wrap pairs only when a full 50-track window has been observed.
 
 ### Stage Summary
@@ -40,7 +40,7 @@ Each cascade part receives a contiguous stripe of the parent weight matrix. For 
 | Interface | Direction | Type | Shape / Count | Consumers | Notes |
 |-----------|-----------|------|----------------|-----------|-------|
 | `embed_input_gmio` | Input | GMIO | `INPUT_SIZE` floats per frame | `embed_dense0.inB[0]` | Host pushes frames with `gm2aie_nb`; zero-padding keeps alignment when inactive tracks are present. |
-| `embed_output_plio` | Output | PLIO | 128 floats per frame | PL data movers / track-average kernel | Streamed activation vector for downstream PL processing. |
+| `embed_output_plio` | Output | PLIO | 128 floats per frame | PL `track_average_pl` kernel (AXI4-Stream) | Streamed activation vector for downstream PL post-processing / averaging. |
 | `embed_matrixA0_rtp` | Input | RTP | 128 × `INPUT_SIZE` weights (1024 floats at default settings) | `embed_dense0.matrixA[0]` | Single cascade; load once per run or when updating weights. |
 | `embed_matrixA1_{0,1}_rtp` | Input | RTP | 128 × 64 weights per port (8192 floats each) | `embed_dense1.matrixA[{0,1}]` | Two-part cascade. |
 | `embed_bias0_rtp`, `embed_bias1_rtp` | Input | RTP | 128 floats each | Corresponding bias kernels | Biases stored as contiguous float arrays. |
@@ -100,7 +100,7 @@ All RTP ports accept `float32` payloads. The naming scheme for the data files is
 | `make run TARGET=hw_emu` | Repo root | Run emulation (invokes `launch_hw_emu.sh` for hardware emulation). | Host console logs |
 | `make -C aieml sim TARGET=x86sim` | `aieml/` | Run standalone x86 simulation of the graph. | `aieml/Work/x86simulator_output/` |
 | `make -C aieml sim TARGET=hw` | `aieml/` | Run `aiesimulator` with waveform dumps for hardware timing. | `aieml/Work/aiesimulator_output/` |
-| `make -C pl kernels KERNELS="mm2s s2mm"` | `pl/` | (Optional) build selected HLS kernels if a PL data mover is required. | `pl/ip/*.xo` |
+| `make -C pl kernels KERNELS="track_average"` | `pl/` | Build/export the PL post-processing kernel that consumes `embed_output_plio`. | `pl/ip/track_average_hls.xo` |
 
 Use `make clean_all` at the root to purge AI Engine workspaces, host binaries, and packaging artifacts between experiments.
 
@@ -125,4 +125,4 @@ Use `make clean_all` at the root to purge AI Engine workspaces, host binaries, a
 - When adding kernels, declare them in `graph.h`, wire them in `graph.cpp`, and update `graph_layout.hpp` if additional placement hints are required.
 - Inspect performance with `vitis_analyzer Work/aiesimulator_output/default.aierun_summary` after hardware-targeted simulations to validate throughput and GMIO utilisation.
 
-This README is the authoritative reference for the AI Engine graph; consult the root `README`/`Makefile` for host packaging details and the `pl/` directory if programmable logic kernels are reintroduced.
+This README is the authoritative reference for the AI Engine graph; consult the root `README`/`Makefile` for host packaging details and the `pl/` directory for information about the `track_average_pl` kernel and any additional programmable logic integrations.

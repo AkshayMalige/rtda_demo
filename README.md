@@ -36,7 +36,7 @@ graph TD
 ## Repository Structure
 
 - `aieml/` – AI Engine graph and kernels (primary implementation)
-- `pl/` – Optional HLS kernels and benches; not required for the AIE‑only flow
+- `pl/` – HLS kernels (mm2s, s2mm, leaky activations/splitters, and the `track_average_pl` post‑processor)
 - `host/` – XRT host application and Makefile
 - `common/` – Shared headers (tensor sizes, file name constants)
 - `data/` – Default inputs/weights/goldens; override with `DATA_DIR`
@@ -60,6 +60,51 @@ Key files:
 
 ---
 
+## Component Run Rules & Commands
+
+Follow these per-component rules to rebuild or validate the full stack. Always activate the Conda environment (`conda activate hls_env`) and `source set_envs.sh` so Vitis, XRT, and platform variables are available.
+
+### Data & Goldens
+- Default dataset: `./data`; override with `export DATA_DIR=$PWD/data_alt`.
+- Regenerate inputs, weights, and goldens whenever shapes in `common/nn_defs10.h` change:
+
+  ```bash
+  python data/generate_test_data.py \
+    --input-dim 128 --hidden-dim 128 --output-dim 128 --dtype float32
+  ```
+
+### AI Engine Graph (`aieml/`)
+- Functional sim build: `make aieml TARGET=sw_emu` (x86sim) or `make -C aieml sim TARGET=x86sim`.
+- Cycle-accurate sim: `make aieml TARGET=hw` or `make -C aieml sim TARGET=hw`.
+- Clean graph artifacts: `make -C aieml clean`.
+- Profiling: `vitis_analyzer aieml/Work/aiesimulator_output/default.aierun_summary`.
+
+### Programmable Logic Kernels (`pl/`)
+- Synthesize every kernel (mm2s, s2mm, leaky_relu, leaky_splitter, `track_average_pl`): `make -C pl kernels`.
+- Limit scope: `make -C pl kernels KERNELS="track_average"` (same flag works for `sim`).
+- Run C-sim for the new `track_average_pl`: `make -C pl sim TARGET=csim KERNELS="track_average"`.
+- Hardware co-sim: `make -C pl sim TARGET=hw_emu`.
+- Exported `.xo` files appear under `pl/ip/` and must be copied (or symlinked) into the build directory referenced by the link step. Ensure `track_average_pl.xo` is present before calling `make package`.
+
+`track_average_pl` consumes the `embed_output_plio` stream, averages configurable windows of 128-float solver outputs (set via its AXI-Lite `threshold`), and commits the averaged vectors back to DDR so the host or downstream PL logic can inspect aggregated track statistics.
+
+### Host Application (`host/`)
+- Build native host used for SW/HW emu: `make host TARGET=sw_emu`.
+- Cross-compile for QEMU/aarch64: `make host TARGET=hw_emu`.
+- Produce the board binary: `make host TARGET=hw`.
+- Run with a packaged design: `./host.exe package.hw_emu/system_hw_emu.xclbin`.
+
+### System Link, Package, Run
+1. Build the AI Engine graph (`make aieml TARGET=hw_emu`) and all PL kernels (`make -C pl kernels KERNELS="mm2s s2mm leaky_relu leaky_splitter track_average"`).
+2. Build the host for the same target (`make host TARGET=hw_emu`).
+3. Link and package everything: `make package TARGET=hw_emu`. For silicon runs, switch to `TARGET=hw`.
+4. Launch end-to-end emulation: `make run TARGET=hw_emu` (sets up QEMU, copies data, runs `host.exe`).
+5. For on-board execution, copy `package.hw/` to SD, boot the VEK280, set `DATA_DIR` if needed, and run `./host.exe system_hw.xclbin`. Outputs from `track_average_pl` land in DDR and can be read back through XRT buffers or PL monitors.
+
+All commands honor `DATA_DIR` and the shared filename helpers in `common/data_paths.h`, so you can rerun any component with alternate datasets without code changes.
+
+---
+
 ## Architecture and Data Model
 
 - Stages:
@@ -67,6 +112,7 @@ Key files:
   2. Solver 0: `roll_concat` → dense0(4‑way) → bias+leakyReLU → split → dense1(2‑way) → bias+leakyReLU → split → dense2(2‑way) → bias+leakyReLU → split → dense3(2‑way) → bias+leakyReLU
   3. Solver 1: identical to Solver 0
   4. Solver 2: identical to Solver 0, then stream out over PLIO into the PL fabric
+- Programmable Logic: `track_average_pl` kernel ingests the PLIO stream and averages groups of frames (default 128‑element vectors) before writing results back to DDR.
 
 - Data types: `float32` for all inputs, weights, biases, and activations.
 - Framing: one input frame = one track vector; one output frame = 128‑float activation.
@@ -113,7 +159,7 @@ See: `docs/roll_concat.mmd` for a sequence diagram of the 50-track windowing beh
 
 I/O calls:
 - AIE sim driver uses `input_gmio::gm2aie_nb` for ingress; solver outputs are emitted by `output_plio::create` and captured as files during simulation.
-- The XRT host binds a BO to `g.embed_input_gmio` and enqueues the GMIO transfer. PL logic (or emulation file sinks) consumes `g.embed_output_plio` downstream.
+- The XRT host binds a BO to `g.embed_input_gmio` and enqueues the GMIO transfer. `g.embed_output_plio` is hard-wired (see `common/linker_aieml.cfg`) to the PL `track_average_pl` kernel so averaged vectors reach DDR without an extra GMIO hop.
 
 ---
 
@@ -166,7 +212,7 @@ From the repo root:
   ./host.exe system_hw.xclbin
   ```
 
-- Outputs are written next to `host.exe` (default: `aieml10_output_aie.txt`); adjust `DATA_DIR` before launch if using alternate tensors.
+- Outputs are written next to `host.exe` (`host_output.txt` from `track_average_pl`, plus `aieml10_output_aie.txt` when running AIE simulation). Adjust `DATA_DIR` before launch if using alternate tensors.
 - This flow has been exercised end-to-end on actual hardware with the Versal VEK280 Evaluation Board.
 
 Artifacts:
@@ -194,6 +240,7 @@ Default dataset: `./data` (or `DATA_DIR`). File constants live in `common/data_p
   - `solver_i_dense_{0,1,2,3}_bias.txt` — 128 each
 - Output
   - `aieml10_output_aie.txt` — host/AIE sim output (`run_count × 128` floats)
+  - `host_output.txt` — averaged vectors captured from `track_average_pl` (one 128-float vector per completed threshold window)
 
 Regenerate tensors:
 - `python data/generate_test_data.py --input-dim 128 --hidden-dim 128 --output-dim 128 --dtype float32`
@@ -210,6 +257,7 @@ Regenerate tensors:
   - Read tensors from `DATA_DIR` and update RTP ports
   - Allocate XRT BOs and perform GMIO input async transfers
   - Run `g.run(run_count)`; solver activations stream to PL via `embed_output_plio`
+  - Launch the `track_average_pl` kernel, set its `threshold` (window size), and capture averaged vectors from DDR for verification or logging
 
 See: `host/README.md:1` for details on shapes, transfers, and build options.
 
@@ -220,6 +268,7 @@ See: `host/README.md:1` for details on shapes, transfers, and build options.
 - To process full 128‑float tracks, set `INPUT_SIZE = 128` in `common/nn_defs10.h:4` and regenerate data.
 - `roll_concat` pairs current/previous valid frames and injects window wrap pairs every 50 valid tracks; it pads zeros on cold‑start and for all‑zero frames.
 - GMIO bandwidth/fifo depths can be tuned in `aieml/graph.h:1` (`GMIO_*_BANDWIDTH_MBPS`, `DEFAULT_FIFO_DEPTH`).
+- `track_average_pl` divides accumulated sums by its `threshold` argument. Ensure `run_count` is a multiple of that threshold, otherwise the host warns and discards the final partial window.
 
 ---
 
