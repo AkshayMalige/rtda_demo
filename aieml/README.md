@@ -6,9 +6,10 @@ This directory contains the production AI Engine graph that powers the RTDA demo
 
 ## Architecture Overview
 
-<div style="overflow-x: auto; white-space: nowrap; border: 1px solid #333; border-radius: 6px; padding: 4px;">
-  <img src="1.png" alt="AI Engine architecture timeline" style="height:450px; display:inline-block; margin:0;" />
+<div style="overflow-x: auto; white-space: nowrap;">
+  <img src="1.png" alt="AI Engine architecture timeline" style="max-height: 500px; height: auto;">
 </div>
+
 
 - **Stage 0 – Embed block**: two dense layers (`embed_dense0`, `embed_dense1`) with fused bias + leaky-ReLU activations and a 128-to-64×2 window splitter. This stage expands raw track features into a 128-wide activation stream.
 - **Stages 1–3 – Solver blocks**: each solver stage (`solver0`, `solver1`, `solver2`) starts with the custom `roll_concat` kernel, feeds a 4-way cascaded dense layer followed by three 2-way cascaded dense layers, and applies the same fused activation / splitter pattern between layers.
