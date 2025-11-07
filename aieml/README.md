@@ -6,9 +6,11 @@ This directory contains the production AI Engine graph that powers the RTDA demo
 
 ## Architecture Overview
 
-<div style="overflow-x: auto; white-space: nowrap;">
-  <img src="1.png" alt="AI Engine architecture timeline" style="max-height: 500px; height: auto;">
-</div>
+[![AI Engine architecture timeline](1.png)](1.png)
+
+![AI Engine architecture timeline](https://user-images.githubusercontent.com/.../your_uploaded_image.png)
+
+
 
 
 - **Stage 0 – Embed block**: two dense layers (`embed_dense0`, `embed_dense1`) with fused bias + leaky-ReLU activations and a 128-to-64×2 window splitter. This stage expands raw track features into a 128-wide activation stream.
