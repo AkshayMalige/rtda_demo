@@ -6,6 +6,10 @@ This directory contains the production AI Engine graph that powers the RTDA demo
 
 ## Architecture Overview
 
+- <div style="overflow-x:auto;">
+    <img src="png/1.svg" alt="AI Engine architecture timeline" />
+  </div>
+
 - **Stage 0 – Embed block**: two dense layers (`embed_dense0`, `embed_dense1`) with fused bias + leaky-ReLU activations and a 128-to-64×2 window splitter. This stage expands raw track features into a 128-wide activation stream.
 - **Stages 1–3 – Solver blocks**: each solver stage (`solver0`, `solver1`, `solver2`) starts with the custom `roll_concat` kernel, feeds a 4-way cascaded dense layer followed by three 2-way cascaded dense layers, and applies the same fused activation / splitter pattern between layers.
 - **Stage outputs**: solver2 returns a 128-wide activation that now drives the `embed_output_plio` stream into programmable logic, where `track_average_pl` optionally averages windows of frames before committing the data to DDR. There is no trailing dense layer; downstream PL can consume either the raw stream or the averaged result.
