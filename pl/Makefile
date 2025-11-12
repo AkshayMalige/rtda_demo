@@ -6,8 +6,8 @@
 VITIS_HLS ?= vitis_hls
 
 # List of kernels (add more as needed)
-# KERNELS ?= mm2s leaky_relu leaky_splitter s2mm track_average
-KERNELS ?= track_average
+# KERNELS ?= mm2s leaky_relu leaky_splitter s2mm track_average dense_128
+KERNELS ?= dense_128
 # KERNELS :=
 
 
