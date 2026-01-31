@@ -6,6 +6,9 @@
 # Target for compilation and simulation. Options: x86sim, hw
 TARGET       ?= hw
 
+# Precision toggle: float (default) or int16
+PRECISION    ?= float
+
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300
 
@@ -50,7 +53,7 @@ AIE_FLAGS := \
 
 # ==== RULES ====
 
-.PHONY: all graph sim clean
+.PHONY: all graph sim clean force_config
 
 # --- Default Target ---
 all: graph
@@ -58,11 +61,28 @@ all: graph
 # --- AIE Graph Compilation ---
 graph: $(GRAPH_LIB)
 
+# --- Configuration Generation ---
+# Robustly generate config header based on PRECISION variable
+config_gen.h: force_config
+	@echo "#pragma once" > config_gen.h.tmp
+ifeq ($(PRECISION),int16)
+	@echo "#define USE_INT16 1" >> config_gen.h.tmp
+else
+	@echo "// USE_INT16 not defined" >> config_gen.h.tmp
+endif
+	@if [ ! -f config_gen.h ] || ! cmp -s config_gen.h config_gen.h.tmp; then \
+		mv config_gen.h.tmp config_gen.h; \
+		echo "--- config_gen.h updated for PRECISION=$(PRECISION) ---"; \
+	else \
+		rm config_gen.h.tmp; \
+	fi
+
+.PHONY: force_config
 
 # $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_paths.h ../common/nn_defs10.h
-$(GRAPH_LIB): $(GRAPH_SRC) graph.h utils.hpp ../common/data_paths.h ../common/nn_defs10.h
+$(GRAPH_LIB): config_gen.h $(GRAPH_SRC) graph.h utils.hpp data_types.h ../common/data_paths.h ../common/nn_defs10.h
 	@mkdir -p $(WORK_DIR)
-	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
+	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) PRECISION=$(PRECISION) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"
 	@if [ ! -d "$(DSPLIB_PATH)" ]; then \
 		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -102,5 +122,5 @@ clean:
 		aiesimulator_output x86simulator_output $(WORK_DIR)/aiesimulator_output \
 		build_hw trdata.aiesim function_wdb_dir $(WORK_DIR)/function_wdb_dir\
 		pl_sample* *.a .AIE_SIM_CMD_LINE_OPTIONS ISS_RPC_SERVER_PORT *.jou\
-		*.json *.vcd *.wcfg *.wdb
+		*.json *.vcd *.wcfg *.wdb config_gen.h
 	@echo "CLEANED: Build and work directories removed."

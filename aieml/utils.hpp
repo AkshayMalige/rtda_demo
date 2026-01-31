@@ -28,9 +28,11 @@ std::vector<T> load_values(const std::string& path, std::size_t expected_count =
     std::vector<T> values;
     if (expected_count > 0) values.reserve(expected_count);
 
-    T value;
-    while (file >> value) {
-        values.push_back(value);
+    // Read as double to handle potential formatting mismatches (e.g., "3.0" for int target)
+    // and then cast to the target type T.
+    double temp_val;
+    while (file >> temp_val) {
+        values.push_back(static_cast<T>(temp_val));
     }
     return values;
 }
@@ -73,7 +75,8 @@ bool load_and_update_ports_helper(GraphT& g, const std::string& relative_path, s
         return false;
     }
     for (auto* port : ports) {
-        g.update(*port, values.data(), expected_count);
+        // ADF update expects size in BYTES
+        g.update(*port, values.data(), values.size() * sizeof(T));
     }
     return true;
 }
