@@ -6,6 +6,7 @@
 
 #include "nn_defs10.h"
 #include "data_paths.h"
+#include "data_types.h"
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
 
@@ -13,7 +14,7 @@
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
-constexpr unsigned WINDOW_BYTES_HIDDEN = bytes_per_vector(HIDDEN_SIZE);
+constexpr unsigned WINDOW_BYTES_HIDDEN = HIDDEN_SIZE * sizeof(DATA_TYPE);
 constexpr unsigned EMBED_DENSE0_WEIGHTS_TOTAL = HIDDEN_SIZE * INPUT_SIZE;
 
 
@@ -38,8 +39,8 @@ template<
     unsigned DualIp = 0,
     unsigned NumOutputs = 1>
 using dense_matrix_graph = matrix_vector_mul_graph<
-    float,
-    float,
+    DATA_TYPE,
+    DATA_TYPE,
     Rows,
     Cols,
     Shift,

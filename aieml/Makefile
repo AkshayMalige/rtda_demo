@@ -4,10 +4,10 @@
 
 
 # Target for compilation and simulation. Options: x86sim, hw
-TARGET       ?= hw
+TARGET       ?= x86sim
 
 # Precision toggle: float (default) or int16
-PRECISION    ?= float
+PRECISION    ?= int16
 
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300
