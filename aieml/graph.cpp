@@ -38,18 +38,50 @@ int main() {
         return -1;
     }
 
-    // CRITICAL FIX:
-    // The RTP port in the single-kernel graph has a fixed buffer size of 8192 bytes.
-    // The adf::graph::update() API for typed ports expects the size in ELEMENTS, not bytes.
-    // The tool internally multiplies (elements * sizeof(type)) to verify against the port size.
+    // --- Weights Padding Logic ---
+    // If GRAPH_INPUT_SIZE (aligned) > INPUT_SIZE (logical), we must pad the weights matrix.
+    // The matrix is row-major: Rows = HIDDEN_SIZE, Cols = INPUT_SIZE.
+    // We assume DimALeading=1 in the graph definition implies row-major storage.
     
-    const size_t PORT_CAPACITY_BYTES = 8192;
-    const size_t MAX_ELEMENTS = PORT_CAPACITY_BYTES / sizeof(DATA_TYPE);
-    
-    // We send the smaller of what we have vs what fits.
-    const size_t elements_to_send = std::min(weights.size(), MAX_ELEMENTS);
+    std::vector<DATA_TYPE> padded_weights;
+    const DATA_TYPE* weights_data_ptr = weights.data();
+    size_t weights_count_to_send = weights.size();
 
-    g.update(g.embed_matrixA0_rtp, weights.data(), elements_to_send);
+    // Check if alignment padding is required
+    // GRAPH_INPUT_SIZE comes from graph.h
+    if (GRAPH_INPUT_SIZE > EMBED_INPUT_VECTOR_LENGTH) {
+        size_t rows = OUTPUT_VECTOR_LENGTH; // HIDDEN_SIZE
+        size_t cols = EMBED_INPUT_VECTOR_LENGTH; // INPUT_SIZE
+        size_t aligned_cols = GRAPH_INPUT_SIZE;
+        size_t padding_per_row = aligned_cols - cols;
+        
+        padded_weights.reserve(rows * aligned_cols);
+        
+        for (size_t r = 0; r < rows; ++r) {
+            // Copy row data
+            size_t row_start = r * cols;
+            // Check bounds safety
+            if (row_start + cols > weights.size()) {
+                 std::cerr << "Error: Weights data insufficient for " << rows << "x" << cols << std::endl;
+                 return -1;
+            }
+            
+            for (size_t c = 0; c < cols; ++c) {
+                padded_weights.push_back(weights[row_start + c]);
+            }
+            // Pad row
+            for (size_t p = 0; p < padding_per_row; ++p) {
+                padded_weights.push_back(0);
+            }
+        }
+        
+        weights_data_ptr = padded_weights.data();
+        weights_count_to_send = padded_weights.size();
+    }
+
+    // Update RTP port with element count.
+    // The tool validates (element_count * sizeof(T)) == port_size_bytes.
+    g.update(g.embed_matrixA0_rtp, weights_data_ptr, weights_count_to_send);
 
 
     const auto embed_inputs = load_vector_from_datadir<DATA_TYPE>(EMBED_INPUT_DATA, 0U);
@@ -73,36 +105,23 @@ int main() {
     }
 
     // --- Input Padding Logic for Int16 ---
-    // If precision is int16 (2 bytes) and input length is small (e.g. 8),
-    // we may not satisfy the AIE vector load requirement of 256 bits (32 bytes).
-    // In this case, we pad the input vector with zeros.
+    // Use the same GRAPH_INPUT_SIZE logic to pad inputs
     
     std::vector<DATA_TYPE> padded_inputs;
     const DATA_TYPE* data_ptr_to_send = nullptr;
-    std::size_t elements_per_transaction = EMBED_INPUT_VECTOR_LENGTH;
+    std::size_t elements_per_transaction = EMBED_INPUT_VECTOR_LENGTH; // Default logical
 
-    bool needs_padding = false;
-    
-    // Check: 2 bytes precision AND less than 32 bytes (256 bits) per vector
-    if (sizeof(DATA_TYPE) == 2 && (EMBED_INPUT_VECTOR_LENGTH * sizeof(DATA_TYPE) < 32)) {
-        size_t current_bytes = EMBED_INPUT_VECTOR_LENGTH * sizeof(DATA_TYPE);
-        size_t required_bytes = 32; // 256 bits
-        size_t missing_bytes = required_bytes - current_bytes;
-        size_t padding_elements = missing_bytes / sizeof(DATA_TYPE);
+    if (GRAPH_INPUT_SIZE > EMBED_INPUT_VECTOR_LENGTH) {
+        size_t padding_elements = GRAPH_INPUT_SIZE - EMBED_INPUT_VECTOR_LENGTH;
         
-        needs_padding = true;
-        elements_per_transaction = EMBED_INPUT_VECTOR_LENGTH + padding_elements;
-        
-        // Reserve memory: run_count * (original + padding)
+        elements_per_transaction = GRAPH_INPUT_SIZE;
         padded_inputs.reserve(run_count * elements_per_transaction);
         
         for (size_t i = 0; i < run_count; ++i) {
-            // Copy original vector
             size_t start_idx = i * EMBED_INPUT_VECTOR_LENGTH;
             for (size_t j = 0; j < EMBED_INPUT_VECTOR_LENGTH; ++j) {
                 padded_inputs.push_back(embed_inputs[start_idx + j]);
             }
-            // Add padding
             for (size_t p = 0; p < padding_elements; ++p) {
                 padded_inputs.push_back(0);
             }
@@ -110,11 +129,9 @@ int main() {
         
         data_ptr_to_send = padded_inputs.data();
     } else {
-        // No padding needed
         data_ptr_to_send = embed_inputs.data();
     }
 
-    // Calculate total elements based on the (possibly padded) transaction size
     const std::size_t total_input_elements_sent = run_count * elements_per_transaction;
     
     // -------------------------------------

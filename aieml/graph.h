@@ -24,6 +24,19 @@ constexpr unsigned GMIO_WEIGHT_BANDWIDTH_MBPS = 256U;
 constexpr unsigned GMIO_ACTIVATION_BURST_BYTES = 64U;
 constexpr unsigned GMIO_ACTIVATION_BANDWIDTH_MBPS = 256U;
 
+// --- Alignment Logic for Kernel ---
+// The AIE kernel requires the input dimension (Cols) to be a multiple of the vector size.
+// Vector size is 256 bits.
+constexpr unsigned VECTOR_BITS = 256;
+constexpr unsigned TYPE_BITS = sizeof(DATA_TYPE) * 8;
+constexpr unsigned ALIGNMENT_ELEMENTS = VECTOR_BITS / TYPE_BITS;
+
+// Round up INPUT_SIZE to the next multiple of ALIGNMENT_ELEMENTS
+// If INPUT_SIZE is 8 and DATA_TYPE is int16 (16-bit), ALIGNMENT is 16. GRAPH_INPUT_SIZE becomes 16.
+// If INPUT_SIZE is 8 and DATA_TYPE is float (32-bit), ALIGNMENT is 8. GRAPH_INPUT_SIZE remains 8.
+constexpr unsigned GRAPH_INPUT_SIZE = (INPUT_SIZE + ALIGNMENT_ELEMENTS - 1) / ALIGNMENT_ELEMENTS * ALIGNMENT_ELEMENTS;
+// ----------------------------------
+
 template<
     unsigned Rows,
     unsigned Cols,
@@ -55,7 +68,8 @@ using dense_matrix_graph = matrix_vector_mul_graph<
     DualIp,
     NumOutputs>;
 
-    using embed_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, INPUT_SIZE, EMBED_DENSE0_CASC_LEN, 1>;
+    // Use GRAPH_INPUT_SIZE instead of INPUT_SIZE for the template instantiation
+    using embed_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, GRAPH_INPUT_SIZE, EMBED_DENSE0_CASC_LEN, 1>;
 
 class NeuralNetworkGraph : public graph {
     public:

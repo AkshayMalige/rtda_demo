@@ -3,7 +3,7 @@
 typedef std::int16_t d_type;
 
 // Core layer sizes
-constexpr int INPUT_SIZE = 16;
+constexpr int INPUT_SIZE = 8;
 constexpr int HIDDEN_SIZE = 128;
 constexpr int OUTPUT_SIZE = 256;
 
