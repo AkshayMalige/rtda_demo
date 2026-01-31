@@ -42,16 +42,11 @@ int main() {
     // The RTP port in the single-kernel graph has a fixed buffer size of 8192 bytes.
     // The adf::graph::update() API for typed ports expects the size in ELEMENTS, not bytes.
     // The tool internally multiplies (elements * sizeof(type)) to verify against the port size.
-    //
-    // Port Capacity: 8192 bytes
-    // Int16 Capacity: 8192 / 2 = 4096 elements
-    // Float Capacity: 8192 / 4 = 2048 elements
     
     const size_t PORT_CAPACITY_BYTES = 8192;
     const size_t MAX_ELEMENTS = PORT_CAPACITY_BYTES / sizeof(DATA_TYPE);
     
     // We send the smaller of what we have vs what fits.
-    // Ideally the graph should be resized to fit the model, but for "work as it was", we clip.
     const size_t elements_to_send = std::min(weights.size(), MAX_ELEMENTS);
 
     g.update(g.embed_matrixA0_rtp, weights.data(), elements_to_send);
@@ -77,11 +72,57 @@ int main() {
         return -1;
     }
 
-    const std::size_t total_input_elements = run_count * EMBED_INPUT_VECTOR_LENGTH;
+    // --- Input Padding Logic for Int16 ---
+    // If precision is int16 (2 bytes) and input length is small (e.g. 8),
+    // we may not satisfy the AIE vector load requirement of 256 bits (32 bytes).
+    // In this case, we pad the input vector with zeros.
+    
+    std::vector<DATA_TYPE> padded_inputs;
+    const DATA_TYPE* data_ptr_to_send = nullptr;
+    std::size_t elements_per_transaction = EMBED_INPUT_VECTOR_LENGTH;
+
+    bool needs_padding = false;
+    
+    // Check: 2 bytes precision AND less than 32 bytes (256 bits) per vector
+    if (sizeof(DATA_TYPE) == 2 && (EMBED_INPUT_VECTOR_LENGTH * sizeof(DATA_TYPE) < 32)) {
+        size_t current_bytes = EMBED_INPUT_VECTOR_LENGTH * sizeof(DATA_TYPE);
+        size_t required_bytes = 32; // 256 bits
+        size_t missing_bytes = required_bytes - current_bytes;
+        size_t padding_elements = missing_bytes / sizeof(DATA_TYPE);
+        
+        needs_padding = true;
+        elements_per_transaction = EMBED_INPUT_VECTOR_LENGTH + padding_elements;
+        
+        // Reserve memory: run_count * (original + padding)
+        padded_inputs.reserve(run_count * elements_per_transaction);
+        
+        for (size_t i = 0; i < run_count; ++i) {
+            // Copy original vector
+            size_t start_idx = i * EMBED_INPUT_VECTOR_LENGTH;
+            for (size_t j = 0; j < EMBED_INPUT_VECTOR_LENGTH; ++j) {
+                padded_inputs.push_back(embed_inputs[start_idx + j]);
+            }
+            // Add padding
+            for (size_t p = 0; p < padding_elements; ++p) {
+                padded_inputs.push_back(0);
+            }
+        }
+        
+        data_ptr_to_send = padded_inputs.data();
+    } else {
+        // No padding needed
+        data_ptr_to_send = embed_inputs.data();
+    }
+
+    // Calculate total elements based on the (possibly padded) transaction size
+    const std::size_t total_input_elements_sent = run_count * elements_per_transaction;
+    
+    // -------------------------------------
+
     const std::size_t total_output_elements = run_count * OUTPUT_VECTOR_LENGTH;
     
-    // GMIO transactions use bytes, not elements.
-    const std::size_t input_transaction_bytes = total_input_elements * sizeof(DATA_TYPE);
+    // GMIO transactions use bytes
+    const std::size_t input_transaction_bytes = total_input_elements_sent * sizeof(DATA_TYPE);
     const std::size_t output_transaction_bytes = total_output_elements * sizeof(DATA_TYPE);
     
     // Allocate buffers using DATA_TYPE
@@ -100,7 +141,7 @@ int main() {
         return -1;
     }
 
-    std::memcpy(gmio_input_buffer, embed_inputs.data(), input_transaction_bytes);
+    std::memcpy(gmio_input_buffer, data_ptr_to_send, input_transaction_bytes);
 
     const auto gm2aie_status = g.embed_input_gmio.gm2aie_nb(gmio_input_buffer, input_transaction_bytes);
     const auto aie2gm_status = g.embed_output_gmio.aie2gm_nb(gmio_output_buffer, output_transaction_bytes);
