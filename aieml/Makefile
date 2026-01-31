@@ -4,7 +4,7 @@
 
 
 # Target for compilation and simulation. Options: x86sim, hw
-TARGET       ?= x86sim
+TARGET       ?= hw
 
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300
@@ -60,7 +60,7 @@ graph: $(GRAPH_LIB)
 
 
 # $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_paths.h ../common/nn_defs10.h
-$(GRAPH_LIB): $(GRAPH_SRC) graph.h ../common/data_paths.h ../common/nn_defs10.h
+$(GRAPH_LIB): $(GRAPH_SRC) graph.h utils.hpp ../common/data_paths.h ../common/nn_defs10.h
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"

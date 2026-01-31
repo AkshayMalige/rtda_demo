@@ -1,6 +1,7 @@
 #include "graph.h"
 #include "data_paths.h"
 #include "nn_defs10.h"
+#include "utils.hpp"
 #include <cstring>
 #include <fstream>
 #include <initializer_list>
@@ -26,68 +27,16 @@ namespace {
 
 int main() {
 
-    auto load_values = [](const std::string& path, std::size_t expected_count) -> std::vector<float> {
-        std::ifstream file(path);
-        if (!file.is_open()) {
-            std::cerr << "Error: Could not open file '" << path << "'" << std::endl;
-            return {};
-        }
-
-        std::vector<float> values;
-        values.reserve(expected_count);
-        float value = 0.0f;
-        while (file >> value) {
-            values.push_back(value);
-        }
-
-        if (expected_count != 0U && values.size() != expected_count) {
-            std::cerr << "Error: Expected " << expected_count << " values from '" << path
-                      << "', got " << values.size() << std::endl;
-            return {};
-        }
-        return values;
-    };
-
-    const std::string basePath = std::string(DATA_DIR) + "/";
-    auto load_vector = [&](const std::string& relative_path, std::size_t expected_count) {
-        return load_values(basePath + relative_path, expected_count);
-    };
-
-    auto load_and_update_ports = [&](const std::string& relative_path, std::size_t expected_count, std::initializer_list<input_port*> ports) -> bool {
-        const auto values = load_vector(relative_path, expected_count);
-        if (values.empty()) {
-            return false;
-        }
-        for (auto* port : ports) {
-        // ADF expects size in BYTES, not element count
-            g.update(*port, values.data(), expected_count);
-        }
-        return true;
-    };
-
-    auto write_vector = [&](const std::string& relative_path, const float* values, std::size_t count) -> bool {
-        std::ofstream file(basePath + relative_path);
-        if (!file.is_open()) {
-            std::cerr << "Error: Could not open output file '" << basePath + relative_path << "'" << std::endl;
-            return false;
-        }
-            file << std::setprecision(std::numeric_limits<float>::max_digits10);
-            for (std::size_t index = 0; index < count; ++index) {
-            file << values[index] << '\n';
-        }
-        return true;
-    };
-
     g.init();
 
-    if (!load_and_update_ports(EMBED_DENSE0_WEIGHTS,
+    if (!load_and_update_ports_helper(g, EMBED_DENSE0_WEIGHTS,
         EMBED_DENSE0_WEIGHTS_COUNT,
         {&g.embed_matrixA0_rtp})) {
         return -1;
     }
 
 
-    const auto embed_inputs = load_vector(EMBED_INPUT_DATA, 0U);
+    const auto embed_inputs = load_vector_from_datadir(EMBED_INPUT_DATA, 0U);
     if (embed_inputs.empty()) {
         std::cerr << "Error: embed input data is empty" << std::endl;
         return -1;
@@ -144,7 +93,7 @@ int main() {
     g.embed_input_gmio.wait();
     g.embed_output_gmio.wait();
 
-    const bool write_status = write_vector(AIEML10_OUTPUT_FILE, gmio_output_buffer, total_output_elements);
+    const bool write_status = write_vector_to_datadir(AIEML10_OUTPUT_FILE, gmio_output_buffer, total_output_elements);
 
     adf::GMIO::free(gmio_input_buffer);
     adf::GMIO::free(gmio_output_buffer);
