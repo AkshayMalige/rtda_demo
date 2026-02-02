@@ -85,6 +85,8 @@ int main() {
         g.update(*dense1_ports[i], weights.data(), weights.size());
     }
 
+    // 1.3 Load Bias for Dense1
+    if (!update_weight(g.embed_bias1_rtp, EMBED_DENSE1_BIAS, OUTPUT_SIZE)) return -1;
 
     // 2. Load Inputs
     const auto embed_inputs = load_vector_from_datadir<DATA_TYPE>(EMBED_INPUT_DATA, 0U);

@@ -96,6 +96,9 @@ class NeuralNetworkGraph : public graph {
     input_port                  embed_matrixA1_0_rtp;
     input_port                  embed_matrixA1_1_rtp;
 
+    kernel                      embed_bias_relu1;
+    input_port                  embed_bias1_rtp;
+
     NeuralNetworkGraph() {
 
         const auto make_bias_relu_kernel = []() {
@@ -118,10 +121,13 @@ class NeuralNetworkGraph : public graph {
         connect<parameter>(embed_matrixA0_rtp, async(embed_dense0.matrixA[0]));
 
         embed_bias_relu0 = make_bias_relu_kernel();
+        
         embed_split0 = make_split_kernel();
+        embed_bias_relu1 = make_bias_relu_kernel();
 
         runtime<ratio>(embed_bias_relu0) =  0.95;
         runtime<ratio>(embed_split0) =  0.95;
+        runtime<ratio>(embed_bias_relu1) =  0.95;
 
         connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense0.out[0], embed_bias_relu0.in[0]);
         connect<parameter>(embed_bias0_rtp, async(embed_bias_relu0.in[1]));
@@ -136,7 +142,10 @@ class NeuralNetworkGraph : public graph {
         connect<parameter>(embed_matrixA1_0_rtp, async(embed_dense1.matrixA[0]));
         connect<parameter>(embed_matrixA1_1_rtp, async(embed_dense1.matrixA[1]));
 
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_output_gmio.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_bias_relu1.in[0]);
+        connect<parameter>(embed_bias1_rtp, async(embed_bias_relu1.in[1]));
+
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], embed_output_gmio.in[0]);
 
     }
 };

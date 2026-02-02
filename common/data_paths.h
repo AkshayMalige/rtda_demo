@@ -16,3 +16,4 @@
 #define EMBED_DENSE0_BIAS           "embed_dense_0_bias.txt"
 
 #define EMBED_DENSE1_WEIGHTS_PREFIX "embed_dense_1_weights_part"
+#define EMBED_DENSE1_BIAS           "embed_dense_1_bias.txt"
