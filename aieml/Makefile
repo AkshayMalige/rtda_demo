@@ -7,7 +7,7 @@
 TARGET       ?= hw
 
 # Precision toggle: float (default) or int16
-PRECISION    ?= int16
+PRECISION    ?= float
 
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300

@@ -14,3 +14,5 @@
 #define AIEML10_OUTPUT_FILE         "aieml10_output_aie.txt"
 #define EMBED_HOST_OUTPUT           "host_output.txt"
 #define EMBED_DENSE0_BIAS           "embed_dense_0_bias.txt"
+
+#define EMBED_DENSE1_WEIGHTS_PREFIX "embed_dense_1_weights_part"

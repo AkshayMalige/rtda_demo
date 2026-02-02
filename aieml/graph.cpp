@@ -21,9 +21,9 @@ NeuralNetworkGraph g;
 namespace {
 
     constexpr std::size_t EMBED_DENSE0_WEIGHTS_COUNT = static_cast<std::size_t>(EMBED_DENSE0_WEIGHTS_TOTAL);
+    constexpr std::size_t EMBED_DENSE1_WEIGHTS_PER_PART_COUNT = static_cast<std::size_t>(EMBED_DENSE1_WEIGHTS_PER_PART);
     constexpr std::size_t EMBED_INPUT_VECTOR_LENGTH = static_cast<std::size_t>(INPUT_SIZE);
-    constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(HIDDEN_SIZE);
-
+    constexpr std::size_t OUTPUT_VECTOR_LENGTH = static_cast<std::size_t>(OUTPUT_SIZE);
 
 } // namespace
 
@@ -31,38 +31,59 @@ int main() {
 
     g.init();
 
-    // 1. Load and Pad Weights
-    auto weights = load_vector_from_datadir<DATA_TYPE>(EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_COUNT);
-    if (weights.empty()) {
-        std::cerr << "Error: Failed to load weights from " << EMBED_DENSE0_WEIGHTS << std::endl;
-        return -1;
+    // Helper lambda to load and update weights
+    auto update_weight = [&](adf::input_port& port, const std::string& filename, size_t expected_count) -> bool {
+        auto weights = load_vector_from_datadir<DATA_TYPE>(filename, expected_count);
+        if (weights.empty()) {
+            std::cerr << "Error: Failed to load weights from " << filename << std::endl;
+            return false;
+        }
+        // Empirical fix: Bias port seems to multiply by sizeof(DATA_TYPE) internally, so pass element count.
+        g.update(port, weights.data(), weights.size());
+        return true;
+    };
+
+    // 1. Load and Pad Weights for Dense0 (Special case due to padding)
+    {
+        auto weights = load_vector_from_datadir<DATA_TYPE>(EMBED_DENSE0_WEIGHTS, EMBED_DENSE0_WEIGHTS_COUNT);
+        if (weights.empty()) {
+            std::cerr << "Error: Failed to load weights from " << EMBED_DENSE0_WEIGHTS << std::endl;
+            return -1;
+        }
+
+        std::vector<DATA_TYPE> padded_weights;
+        const DATA_TYPE* weights_data_ptr = weights.data();
+        size_t weights_count_to_send = weights.size();
+
+        // If GRAPH_INPUT_SIZE (16 for int16) > INPUT_SIZE (e.g. 8), we pad the weights matrix.
+        if (GRAPH_INPUT_SIZE > EMBED_INPUT_VECTOR_LENGTH) {
+            padded_weights = pad_matrix_rows(weights, HIDDEN_SIZE, EMBED_INPUT_VECTOR_LENGTH, GRAPH_INPUT_SIZE);
+            weights_data_ptr = padded_weights.data();
+            weights_count_to_send = padded_weights.size();
+        }
+
+        // Empirical fix: Dense0 port seems to multiply by sizeof(DATA_TYPE) internally, so pass element count.
+        g.update(g.embed_matrixA0_rtp, weights_data_ptr, weights_count_to_send);
     }
-
-    std::vector<DATA_TYPE> padded_weights;
-    const DATA_TYPE* weights_data_ptr = weights.data();
-    size_t weights_count_to_send = weights.size();
-
-    // If GRAPH_INPUT_SIZE (16 for int16) > INPUT_SIZE (e.g. 8), we pad the weights matrix.
-    // Rows = HIDDEN_SIZE, Cols = INPUT_SIZE -> Padded to GRAPH_INPUT_SIZE
-    if (GRAPH_INPUT_SIZE > EMBED_INPUT_VECTOR_LENGTH) {
-        padded_weights = pad_matrix_rows(weights, OUTPUT_VECTOR_LENGTH, EMBED_INPUT_VECTOR_LENGTH, GRAPH_INPUT_SIZE);
-        weights_data_ptr = padded_weights.data();
-        weights_count_to_send = padded_weights.size();
-    }
-
-    // Update RTP port with element count (tool multiplies by sizeof(T))
-    g.update(g.embed_matrixA0_rtp, weights_data_ptr, weights_count_to_send);
-
 
     // 1.1 Load Bias
-    auto bias_data = load_vector_from_datadir<DATA_TYPE>(EMBED_DENSE0_BIAS, HIDDEN_SIZE);
-    if (bias_data.empty()) {
-        std::cerr << "Error: Failed to load bias from " << EMBED_DENSE0_BIAS << std::endl;
-        return -1;
+    if (!update_weight(g.embed_bias0_rtp, EMBED_DENSE0_BIAS, HIDDEN_SIZE)) return -1;
+
+    // 1.2 Load Weights for Dense1
+    std::vector<adf::input_port*> dense1_ports = {&g.embed_matrixA1_0_rtp, &g.embed_matrixA1_1_rtp};
+    for (size_t i = 0; i < dense1_ports.size(); ++i) {
+        std::string filename = std::string(EMBED_DENSE1_WEIGHTS_PREFIX) + std::to_string(i) + ".txt";
+        
+        // Inline loading to handle byte-size requirement for Dense1
+        auto weights = load_vector_from_datadir<DATA_TYPE>(filename, EMBED_DENSE1_WEIGHTS_PER_PART_COUNT);
+        if (weights.empty()) {
+            std::cerr << "Error: Failed to load weights from " << filename << std::endl;
+            return -1;
+        }
+
+        // Empirical fix: Dense1 ports DO NOT multiply by sizeof(DATA_TYPE), so pass BYTES.
+        g.update(*dense1_ports[i], weights.data(), weights.size());
     }
-    
-    // Update Bias RTP
-    g.update(g.embed_bias0_rtp, bias_data.data(), HIDDEN_SIZE);
 
 
     // 2. Load Inputs

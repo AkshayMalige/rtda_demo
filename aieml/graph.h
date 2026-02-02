@@ -11,13 +11,18 @@
 #include "aie_api/aie_adf.hpp"
 
 #include "bias_relu_fused.h"
-
+#include "window_split_128_to_64x2.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
 
 constexpr unsigned WINDOW_BYTES_HIDDEN = HIDDEN_SIZE * sizeof(DATA_TYPE);
 constexpr unsigned EMBED_DENSE0_WEIGHTS_TOTAL = HIDDEN_SIZE * INPUT_SIZE;
+constexpr unsigned EMBED_DENSE1_WEIGHTS_TOTAL = OUTPUT_SIZE * HIDDEN_SIZE;
+constexpr unsigned EMBED_DENSE1_WEIGHTS_PER_PART = EMBED_DENSE1_WEIGHTS_TOTAL / EMBED_DENSE1_CASC_LEN;
+static_assert(EMBED_DENSE1_WEIGHTS_PER_PART * EMBED_DENSE1_CASC_LEN == EMBED_DENSE1_WEIGHTS_TOTAL,
+              "EMBED_DENSE1 weights must divide evenly across cascades");
+constexpr unsigned WINDOW_BYTES_HALF_HIDDEN = HIDDEN_SPLIT_SIZE * sizeof(DATA_TYPE);
 
 
 constexpr unsigned DEFAULT_FIFO_DEPTH = 8U;
@@ -72,18 +77,24 @@ using dense_matrix_graph = matrix_vector_mul_graph<
 
     // Use GRAPH_INPUT_SIZE instead of INPUT_SIZE for the template instantiation
     using embed_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, GRAPH_INPUT_SIZE, EMBED_DENSE0_CASC_LEN, 1>;
+    using embed_dense1_graph = dense_matrix_graph<OUTPUT_SIZE, HIDDEN_SIZE, EMBED_DENSE1_CASC_LEN, 1>;
 
 class NeuralNetworkGraph : public graph {
     public:
 
     embed_dense0_graph          embed_dense0;
     kernel                      embed_bias_relu0;
-
     input_gmio                  embed_input_gmio;
     input_port                  embed_matrixA0_rtp;
     output_gmio                 embed_output_gmio;
 
     input_port                  embed_bias0_rtp;
+
+    kernel                      embed_split0;
+
+    embed_dense1_graph          embed_dense1;
+    input_port                  embed_matrixA1_0_rtp;
+    input_port                  embed_matrixA1_1_rtp;
 
     NeuralNetworkGraph() {
 
@@ -91,6 +102,12 @@ class NeuralNetworkGraph : public graph {
             kernel k = kernel::create(bias_add_leaky_relu_kernel);
             source(k)  = "bias_relu_fused.cpp";
             headers(k) = {"bias_relu_fused.h"};
+            return k;
+        };
+        const auto make_split_kernel = []() {
+            kernel k = kernel::create(window_split_128_to_64x2);
+            source(k)  = "window_split_128_to_64x2.cpp";
+            headers(k) = {"window_split_128_to_64x2.h"};
             return k;
         };
 
@@ -101,10 +118,25 @@ class NeuralNetworkGraph : public graph {
         connect<parameter>(embed_matrixA0_rtp, async(embed_dense0.matrixA[0]));
 
         embed_bias_relu0 = make_bias_relu_kernel();
+        embed_split0 = make_split_kernel();
+
         runtime<ratio>(embed_bias_relu0) =  0.95;
+        runtime<ratio>(embed_split0) =  0.95;
+
         connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense0.out[0], embed_bias_relu0.in[0]);
         connect<parameter>(embed_bias0_rtp, async(embed_bias_relu0.in[1]));
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu0.out[0], embed_output_gmio.in[0]);
+
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu0.out[0], embed_split0.in[0]);
+
+        auto embed_split_leg0 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(embed_split0.out[0], embed_dense1.inB[0]);
+        auto embed_split_leg1 = connect<window<WINDOW_BYTES_HALF_HIDDEN>>(embed_split0.out[1], embed_dense1.inB[1]);
+        adf::fifo_depth(embed_split_leg0) = DEFAULT_FIFO_DEPTH;
+        adf::fifo_depth(embed_split_leg1) = DEFAULT_FIFO_DEPTH;
+
+        connect<parameter>(embed_matrixA1_0_rtp, async(embed_dense1.matrixA[0]));
+        connect<parameter>(embed_matrixA1_1_rtp, async(embed_dense1.matrixA[1]));
+
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_output_gmio.in[0]);
 
     }
 };
