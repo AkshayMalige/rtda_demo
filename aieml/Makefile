@@ -7,7 +7,7 @@
 TARGET       ?= hw
 
 # Precision toggle: float (default) or int16
-PRECISION    ?= int16
+PRECISION    ?= float
 
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300
@@ -25,7 +25,8 @@ GRAPH_LIB     := $(WORK_DIR)/libadf.a
 # 	roll_concat.cpp \
 # 	split_16_to_8x2.cpp
 # KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
-
+KERNEL_SRCS   := bias_relu_fused.cpp
+KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 
 # ==== TOOLS ====
 AIECC        := aiecompiler
@@ -80,7 +81,7 @@ endif
 .PHONY: force_config
 
 # $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_paths.h ../common/nn_defs10.h
-$(GRAPH_LIB): config_gen.h $(GRAPH_SRC) graph.h utils.hpp data_types.h ../common/data_paths.h ../common/nn_defs10.h
+$(GRAPH_LIB): config_gen.h $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h utils.hpp data_types.h ../common/data_paths.h ../common/nn_defs10.h
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) PRECISION=$(PRECISION) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"

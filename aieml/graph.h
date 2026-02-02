@@ -10,6 +10,8 @@
 #include "matrix_vector_mul_graph.hpp"
 #include "aie_api/aie_adf.hpp"
 
+#include "bias_relu_fused.h"
+
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -75,18 +77,34 @@ class NeuralNetworkGraph : public graph {
     public:
 
     embed_dense0_graph          embed_dense0;
+    kernel                      embed_bias_relu0;
+
     input_gmio                  embed_input_gmio;
     input_port                  embed_matrixA0_rtp;
     output_gmio                 embed_output_gmio;
 
+    input_port                  embed_bias0_rtp;
+
     NeuralNetworkGraph() {
+
+        const auto make_bias_relu_kernel = []() {
+            kernel k = kernel::create(bias_add_leaky_relu_kernel);
+            source(k)  = "bias_relu_fused.cpp";
+            headers(k) = {"bias_relu_fused.h"};
+            return k;
+        };
 
         embed_input_gmio = input_gmio::create("embed_input_gmio", GMIO_ACTIVATION_BURST_BYTES, GMIO_ACTIVATION_BANDWIDTH_MBPS);
         embed_output_gmio = adf::output_gmio::create("embed_output_gmio", GMIO_ACTIVATION_BURST_BYTES, GMIO_ACTIVATION_BANDWIDTH_MBPS);
 
         connect<>(embed_input_gmio.out[0], embed_dense0.inB[0]);
         connect<parameter>(embed_matrixA0_rtp, async(embed_dense0.matrixA[0]));
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense0.out[0], embed_output_gmio.in[0]);
+
+        embed_bias_relu0 = make_bias_relu_kernel();
+        runtime<ratio>(embed_bias_relu0) =  0.95;
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense0.out[0], embed_bias_relu0.in[0]);
+        connect<parameter>(embed_bias0_rtp, async(embed_bias_relu0.in[1]));
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu0.out[0], embed_output_gmio.in[0]);
 
     }
 };

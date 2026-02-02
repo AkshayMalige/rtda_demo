@@ -57,6 +57,60 @@ bool write_vector(const std::string& path, const T* values, std::size_t count) {
 }
 
 // ==================================================================================
+// Data Padding Helpers
+// ==================================================================================
+
+// Pads a row-major matrix where each row is extended from 'original_cols' to 'target_cols' with zeros.
+template <typename T>
+std::vector<T> pad_matrix_rows(const std::vector<T>& input, size_t rows, size_t original_cols, size_t target_cols) {
+    if (target_cols <= original_cols) return input;
+
+    std::vector<T> padded;
+    padded.reserve(rows * target_cols);
+    
+    size_t padding_per_row = target_cols - original_cols;
+
+    for (size_t r = 0; r < rows; ++r) {
+        size_t row_start = r * original_cols;
+        // Safety check
+        if (row_start + original_cols > input.size()) break;
+
+        // Copy original row data
+        for (size_t c = 0; c < original_cols; ++c) {
+            padded.push_back(input[row_start + c]);
+        }
+        // Add padding
+        for (size_t p = 0; p < padding_per_row; ++p) {
+            padded.push_back(static_cast<T>(0));
+        }
+    }
+    return padded;
+}
+
+// Pads a stream of transactions. Each transaction of 'original_block_size' is padded to 'target_block_size'.
+template <typename T>
+std::vector<T> pad_transaction_stream(const std::vector<T>& input, size_t original_block_size, size_t target_block_size) {
+    if (target_block_size <= original_block_size) return input;
+
+    size_t num_transactions = input.size() / original_block_size;
+    size_t padding_per_block = target_block_size - original_block_size;
+
+    std::vector<T> padded;
+    padded.reserve(num_transactions * target_block_size);
+
+    for (size_t i = 0; i < num_transactions; ++i) {
+        size_t start_idx = i * original_block_size;
+        for (size_t j = 0; j < original_block_size; ++j) {
+            padded.push_back(input[start_idx + j]);
+        }
+        for (size_t p = 0; p < padding_per_block; ++p) {
+            padded.push_back(static_cast<T>(0));
+        }
+    }
+    return padded;
+}
+
+// ==================================================================================
 // ADF Graph Specific Helpers (depend on DATA_DIR and adf::)
 // ==================================================================================
 
@@ -75,7 +129,7 @@ bool load_and_update_ports_helper(GraphT& g, const std::string& relative_path, s
         return false;
     }
     for (auto* port : ports) {
-        // ADF update expects size in BYTES
+        // ADF update expects size in BYTES (NOTE: some environments might expect elements, check local usage)
         g.update(*port, values.data(), values.size() * sizeof(T));
     }
     return true;
