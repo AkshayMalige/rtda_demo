@@ -17,3 +17,13 @@
 
 #define EMBED_DENSE1_WEIGHTS_PREFIX "embed_dense_1_weights_part"
 #define EMBED_DENSE1_BIAS           "embed_dense_1_bias.txt"
+
+
+#define SUBSOLVER0_DENSE0_WEIGHTS_PREFIX "solver_0_dense_0_weights_part"
+#define SUBSOLVER0_DENSE1_WEIGHTS_PREFIX "solver_0_dense_1_weights_part"
+#define SUBSOLVER0_DENSE2_WEIGHTS_PREFIX "solver_0_dense_2_weights_part"
+#define SUBSOLVER0_DENSE3_WEIGHTS_PREFIX "solver_0_dense_3_weights_part"
+#define SUBSOLVER0_DENSE0_BIAS         "solver_0_dense_0_bias.txt"
+#define SUBSOLVER0_DENSE1_BIAS         "solver_0_dense_1_bias.txt"
+#define SUBSOLVER0_DENSE2_BIAS         "solver_0_dense_2_bias.txt"
+#define SUBSOLVER0_DENSE3_BIAS         "solver_0_dense_3_bias.txt"

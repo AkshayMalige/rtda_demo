@@ -7,7 +7,7 @@
 TARGET       ?= hw
 
 # Precision toggle: float (default) or int16
-PRECISION    ?= int16
+PRECISION    ?= float
 
 # Frequency for the Programmable Logic (PL) interfaces.
 PL_FREQZ     ?= 300
@@ -19,14 +19,13 @@ DSPLIB_PATH  ?= ../dsp_lib
 GRAPH_SRC     := graph.cpp
 WORK_DIR      ?= Work
 GRAPH_LIB     := $(WORK_DIR)/libadf.a
-# KERNEL_SRCS   := \
-# 	bias_relu_fused.cpp \
-# 	window_split_128_to_64x2.cpp \
-# 	roll_concat.cpp \
-# 	split_16_to_8x2.cpp
+KERNEL_SRCS   := \
+	bias_relu_fused.cpp \
+	window_split_128_to_64x2.cpp \
+	roll_concat.cpp 
 # KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
-KERNEL_SRCS   := bias_relu_fused.cpp
-KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
+# KERNEL_SRCS   := bias_relu_fused.cpp
+# KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 
 # ==== TOOLS ====
 AIECC        := aiecompiler

@@ -12,6 +12,7 @@
 
 #include "bias_relu_fused.h"
 #include "window_split_128_to_64x2.h"
+#include "roll_concat.h"
 
 using namespace adf;
 using namespace xf::dsp::aie::blas::matrix_vector_mul;
@@ -22,7 +23,13 @@ constexpr unsigned EMBED_DENSE1_WEIGHTS_TOTAL = OUTPUT_SIZE * HIDDEN_SIZE;
 constexpr unsigned EMBED_DENSE1_WEIGHTS_PER_PART = EMBED_DENSE1_WEIGHTS_TOTAL / EMBED_DENSE1_CASC_LEN;
 static_assert(EMBED_DENSE1_WEIGHTS_PER_PART * EMBED_DENSE1_CASC_LEN == EMBED_DENSE1_WEIGHTS_TOTAL,
               "EMBED_DENSE1 weights must divide evenly across cascades");
+
+constexpr unsigned SOLVER_DENSE0_WEIGHTS_TOTAL = HIDDEN_SIZE * SUBSOLVER0_INPUT_SIZE;
+constexpr unsigned SOLVER_DENSE0_WEIGHTS_PER_PART = SOLVER_DENSE0_WEIGHTS_TOTAL / SOLVER_DENSE0_CASC_LEN;
+static_assert(SOLVER_DENSE0_WEIGHTS_PER_PART * SOLVER_DENSE0_CASC_LEN == SOLVER_DENSE0_WEIGHTS_TOTAL,
+              "Solver dense0 weights must divide evenly across cascades");
 constexpr unsigned WINDOW_BYTES_HALF_HIDDEN = HIDDEN_SPLIT_SIZE * sizeof(DATA_TYPE);
+constexpr unsigned WINDOW_BYTES_ROLL_CONCAT = ROLL_CONCAT_TOTAL * sizeof(DATA_TYPE);
 
 
 constexpr unsigned DEFAULT_FIFO_DEPTH = 8U;
@@ -78,6 +85,7 @@ using dense_matrix_graph = matrix_vector_mul_graph<
     // Use GRAPH_INPUT_SIZE instead of INPUT_SIZE for the template instantiation
     using embed_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, GRAPH_INPUT_SIZE, EMBED_DENSE0_CASC_LEN, 1>;
     using embed_dense1_graph = dense_matrix_graph<OUTPUT_SIZE, HIDDEN_SIZE, EMBED_DENSE1_CASC_LEN, 1>;
+    using solver_dense0_graph = dense_matrix_graph<HIDDEN_SIZE, SUBSOLVER0_INPUT_SIZE, SOLVER_DENSE0_CASC_LEN, 1>;
 
 class NeuralNetworkGraph : public graph {
     public:
@@ -98,6 +106,11 @@ class NeuralNetworkGraph : public graph {
 
     kernel                      embed_bias_relu1;
     input_port                  embed_bias1_rtp;
+
+    kernel                              solver0_rollconcat;
+    adf::shared_buffer<DATA_TYPE>   	solver0_roll_buf;
+    std::array<input_port, SUBSOLVER0_INPUT_PARTS> solver0_dense0_matrixA_rtp;
+    solver_dense0_graph             solver0_dense0;
 
     NeuralNetworkGraph() {
 
@@ -145,7 +158,40 @@ class NeuralNetworkGraph : public graph {
         connect<window<WINDOW_BYTES_HIDDEN>>(embed_dense1.out[0], embed_bias_relu1.in[0]);
         connect<parameter>(embed_bias1_rtp, async(embed_bias_relu1.in[1]));
 
-        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], embed_output_gmio.in[0]);
+
+
+        solver0_rollconcat = kernel::create(roll_concat_kernel);
+        source(solver0_rollconcat)  = "roll_concat.cpp";
+        headers(solver0_rollconcat) = {"roll_concat.h"};
+        runtime<ratio>(solver0_rollconcat) =  1.0;
+
+        connect<window<WINDOW_BYTES_HIDDEN>>(embed_bias_relu1.out[0], solver0_rollconcat.in[0]);
+
+        solver0_roll_buf = shared_buffer<DATA_TYPE>::create({ROLL_CONCAT_TOTAL}, 1, SUBSOLVER0_INPUT_PARTS);
+        connect<window<WINDOW_BYTES_ROLL_CONCAT>>(solver0_rollconcat.out[0], solver0_roll_buf.in[0]);
+
+        write_access(solver0_roll_buf.in[0]) = tiling({
+            .buffer_dimension = {ROLL_CONCAT_TOTAL},
+            .tiling_dimension = {ROLL_CONCAT_TOTAL},
+            .offset = {0}
+        });
+
+        for (int i = 0; i < SUBSOLVER0_INPUT_PARTS; ++i) {
+            connect<>(solver0_roll_buf.out[i], solver0_dense0.inB[i]);
+            read_access(solver0_roll_buf.out[i]) = tiling({
+                .buffer_dimension = {ROLL_CONCAT_TOTAL},
+                .tiling_dimension = {ROLL_CONCAT_TILE_SPAN},
+                .offset = {static_cast<int>(i * ROLL_CONCAT_TILE_SPAN)}
+            });
+        }
+
+
+        for (int part = 0; part < SUBSOLVER0_INPUT_PARTS; ++part) {
+            connect<parameter>(solver0_dense0_matrixA_rtp[part], async(solver0_dense0.matrixA[part]));
+        }
+
+
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver0_dense0.out[0], embed_output_gmio.in[0]);
 
     }
 };
