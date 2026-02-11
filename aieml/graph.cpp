@@ -136,12 +136,64 @@ int main() {
     }
 
     // =========================================================================
-    // 2. Solver0 dense0 weights (4 cascade parts)
+    // 2. Solver0 weights & biases
     // =========================================================================
-    if (!load_and_update_matrix_parts(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
-                                      static_cast<std::size_t>(SUBSOLVER0_INPUT_PARTS),
-                                      static_cast<std::size_t>(SOLVER_DENSE0_WEIGHTS_PER_PART),
-                                      g.solver0_dense0_matrixA_rtp)) {
+
+    // Load all 4 dense layers: dense0 (4 parts) + dense1/2/3 (2 parts each)
+    auto load_solver_weights = [&](const char* d0_prefix, const char* d1_prefix,
+                                   const char* d2_prefix, const char* d3_prefix,
+                                   auto& d0_ports, auto& d1_ports,
+                                   auto& d2_ports, auto& d3_ports) -> bool {
+        if (!load_and_update_matrix_parts(d0_prefix,
+                                          static_cast<std::size_t>(SUBSOLVER0_INPUT_PARTS),
+                                          static_cast<std::size_t>(SOLVER_DENSE0_WEIGHTS_PER_PART),
+                                          d0_ports)) return false;
+        if (!load_and_update_matrix_parts(d1_prefix,
+                                          static_cast<std::size_t>(SUBSOLVER0_LAYER_WEIGHTS_PARTS),
+                                          static_cast<std::size_t>(SOLVER_DENSEX_WEIGHTS_PER_PART),
+                                          d1_ports)) return false;
+        if (!load_and_update_matrix_parts(d2_prefix,
+                                          static_cast<std::size_t>(SUBSOLVER0_LAYER_WEIGHTS_PARTS),
+                                          static_cast<std::size_t>(SOLVER_DENSEX_WEIGHTS_PER_PART),
+                                          d2_ports)) return false;
+        if (!load_and_update_matrix_parts(d3_prefix,
+                                          static_cast<std::size_t>(SUBSOLVER0_LAYER_WEIGHTS_PARTS),
+                                          static_cast<std::size_t>(SOLVER_DENSEX_WEIGHTS_PER_PART),
+                                          d3_ports)) return false;
+        return true;
+    };
+
+    // Load all 4 bias files
+    auto load_solver_biases = [&](const char* b0, const char* b1,
+                                  const char* b2, const char* b3,
+                                  adf::input_port& p0, adf::input_port& p1,
+                                  adf::input_port& p2, adf::input_port& p3) -> bool {
+        if (!load_and_update_ports(b0, SUBSOLVER0_DENSE0_BIAS_SIZE, {&p0})) return false;
+        if (!load_and_update_ports(b1, SUBSOLVER0_DENSE1_BIAS_SIZE, {&p1})) return false;
+        if (!load_and_update_ports(b2, SUBSOLVER0_DENSE2_BIAS_SIZE, {&p2})) return false;
+        if (!load_and_update_ports(b3, SUBSOLVER0_DENSE3_BIAS_SIZE, {&p3})) return false;
+        return true;
+    };
+
+    if (!load_solver_weights(SUBSOLVER0_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER0_DENSE3_WEIGHTS_PREFIX,
+                             g.solver0_dense0_matrixA_rtp,
+                             g.solver0_dense1_matrixA_rtp,
+                             g.solver0_dense2_matrixA_rtp,
+                             g.solver0_dense3_matrixA_rtp)) {
+        return -1;
+    }
+
+    if (!load_solver_biases(SUBSOLVER0_DENSE0_BIAS,
+                            SUBSOLVER0_DENSE1_BIAS,
+                            SUBSOLVER0_DENSE2_BIAS,
+                            SUBSOLVER0_DENSE3_BIAS,
+                            g.solver0_bias0_rtp,
+                            g.solver0_bias1_rtp,
+                            g.solver0_bias2_rtp,
+                            g.solver0_bias3_rtp)) {
         return -1;
     }
 

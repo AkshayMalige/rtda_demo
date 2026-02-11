@@ -24,10 +24,14 @@ void bias_add_leaky_relu_kernel(input_window<DATA_TYPE>* __restrict in,
 
     const auto slope_vec = aie::broadcast<DATA_TYPE, VEC>(slope_val);
 
+    // Copy bias to aligned local buffer (RTP data may not be vector-aligned in x86sim)
+    alignas(32) DATA_TYPE local_bias[HIDDEN_SIZE];
+    for (int i = 0; i < HIDDEN_SIZE; ++i) local_bias[i] = bias[i];
+
     // chess_prepare_for_pipelining
     for (int idx = 0; idx < HIDDEN_SIZE; idx += VEC) {
         const auto x = aie::load_v<VEC>(in_ptr + idx);
-        const auto b = aie::load_v<VEC>(bias + idx);
+        const auto b = aie::load_v<VEC>(local_bias + idx);
         const auto y = aie::add(x, b);
         
         if constexpr (std::is_same_v<DATA_TYPE, float>) {
