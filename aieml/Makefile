@@ -4,7 +4,7 @@
 
 
 # Target for compilation and simulation. Options: x86sim, hw
-TARGET       ?= hw
+TARGET       ?= x86sim
 
 # Precision toggle: float (default) or int16
 PRECISION    ?= int16
@@ -22,8 +22,8 @@ GRAPH_LIB     := $(WORK_DIR)/libadf.a
 KERNEL_SRCS   := \
 	bias_relu_fused.cpp \
 	window_split_128_to_64x2.cpp \
-	roll_concat.cpp 
-# KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
+	roll_concat.cpp
+KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 # KERNEL_SRCS   := bias_relu_fused.cpp
 # KERNEL_HDRS   := $(KERNEL_SRCS:.cpp=.h)
 

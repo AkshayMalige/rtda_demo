@@ -197,6 +197,50 @@ int main() {
         return -1;
     }
 
+    if (!load_solver_weights(SUBSOLVER1_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER1_DENSE3_WEIGHTS_PREFIX,
+                             g.solver1_dense0_matrixA_rtp,
+                             g.solver1_dense1_matrixA_rtp,
+                             g.solver1_dense2_matrixA_rtp,
+                             g.solver1_dense3_matrixA_rtp)) {
+        return -1;
+    }
+
+    if (!load_solver_biases(SUBSOLVER1_DENSE0_BIAS,
+                            SUBSOLVER1_DENSE1_BIAS,
+                            SUBSOLVER1_DENSE2_BIAS,
+                            SUBSOLVER1_DENSE3_BIAS,
+                            g.solver1_bias0_rtp,
+                            g.solver1_bias1_rtp,
+                            g.solver1_bias2_rtp,
+                            g.solver1_bias3_rtp)) {
+        return -1;
+    }
+
+    if (!load_solver_weights(SUBSOLVER2_DENSE0_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE1_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE2_WEIGHTS_PREFIX,
+                             SUBSOLVER2_DENSE3_WEIGHTS_PREFIX,
+                             g.solver2_dense0_matrixA_rtp,
+                             g.solver2_dense1_matrixA_rtp,
+                             g.solver2_dense2_matrixA_rtp,
+                             g.solver2_dense3_matrixA_rtp)) {
+        return -1;
+    }
+
+    if (!load_solver_biases(SUBSOLVER2_DENSE0_BIAS,
+                            SUBSOLVER2_DENSE1_BIAS,
+                            SUBSOLVER2_DENSE2_BIAS,
+                            SUBSOLVER2_DENSE3_BIAS,
+                            g.solver2_bias0_rtp,
+                            g.solver2_bias1_rtp,
+                            g.solver2_bias2_rtp,
+                            g.solver2_bias3_rtp)) {
+        return -1;
+    }
+
     // =========================================================================
     // 3. Load input data & run
     // =========================================================================

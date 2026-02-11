@@ -129,8 +129,8 @@ bool load_and_update_ports_helper(GraphT& g, const std::string& relative_path, s
         return false;
     }
     for (auto* port : ports) {
-        // ADF update expects size in BYTES (NOTE: some environments might expect elements, check local usage)
-        g.update(*port, values.data(), values.size() * sizeof(T));
+        // ADF update expects size in ELEMENT COUNT (framework multiplies by sizeof internally)
+        g.update(*port, values.data(), values.size());
     }
     return true;
 }
