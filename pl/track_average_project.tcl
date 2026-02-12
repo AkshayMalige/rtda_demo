@@ -17,16 +17,32 @@ if {$argc > 0} {
     set command [lindex $argv 0]
 } else {
     puts "ERROR: Please provide a command."
-    puts "Usage: vitis_hls -f project.tcl <command>"
+    puts "Usage: vitis_hls -f project.tcl <command> [data_type]"
     exit 1
+}
+
+# Data type configuration (default to float)
+if {$argc > 1} {
+    set data_type [lindex $argv 1]
+} else {
+    set data_type "float"
+}
+
+# Set compiler flags based on data type
+if {$data_type == "int16"} {
+    set cflags "-DUSE_INT16"
+    puts "### Using INT16 data type ###"
+} else {
+    set cflags "-DUSE_FLOAT32"
+    puts "### Using FLOAT32 data type ###"
 }
 
 # --- Step 4: Project and Solution Setup ---
 open_project $project_name
 set_top $top_function
 
-add_files $kernel_file
-add_files -tb $tb_file
+add_files $kernel_file -cflags $cflags
+add_files -tb $tb_file -cflags $cflags
 
 open_solution -flow_target vitis "solution1"
 
@@ -46,7 +62,7 @@ switch $command {
     "cosim" {
         puts "### Running Synthesis and Co-simulation... ###"
         csynth_design
-        cosim_design -rtl verilog -trace_level all
+        cosim_design -rtl verilog -trace_level none -disable_deadlock_detection
     }
     "export_ip" {
         puts "### Running Synthesis and Exporting IP... ###"

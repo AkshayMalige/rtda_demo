@@ -15,6 +15,9 @@ IP_DIR   ?= ip
 LOG_FILE ?= vitis_hls.log
 TARGET ?= hw_emu
 
+# Data type selection: float or int16
+DATA_TYPE ?= int16
+
 
 # ===================================================================
 # Rules
@@ -25,27 +28,27 @@ all: kernels
 # --- Build Rule ---
 .PHONY: kernels
 kernels:
-	@echo "--- Building All Kernels ---"
+	@echo "--- Building All Kernels with DATA_TYPE=$(DATA_TYPE) ---"
 	mkdir -p $(IP_DIR)
 	for KERNEL in $(KERNELS); do \
 		echo "--- Building $$KERNEL ---"; \
-		$(VITIS_HLS) "$${KERNEL}_project.tcl" kernels; \
+		$(VITIS_HLS) "$${KERNEL}_project.tcl" kernels $(DATA_TYPE); \
 	done
 
 # --- Simulation Rule ---
 .PHONY: sim
 sim:
-	@echo "--- Running Simulation for TARGET=$(TARGET) ---"
+	@echo "--- Running Simulation for TARGET=$(TARGET) with DATA_TYPE=$(DATA_TYPE) ---"
 ifneq ($(filter $(TARGET),hw hw_emu),)
 	for KERNEL in $(KERNELS); do \
 		echo "--- Running hw/hw_emu co-simulation for $$KERNEL ---"; \
-		$(VITIS_HLS) "$${KERNEL}_project.tcl" cosim; \
+		PATH=/usr/bin:$$PATH $(VITIS_HLS) "$${KERNEL}_project.tcl" cosim $(DATA_TYPE); \
 	done
 	@echo "COMPLETE: hw emulation finished."
 else
 	for KERNEL in $(KERNELS); do \
 		echo "--- Running C-simulation for $$KERNEL ---"; \
-		$(VITIS_HLS) "$${KERNEL}_project.tcl" csim; \
+		PATH=/usr/bin:$$PATH $(VITIS_HLS) "$${KERNEL}_project.tcl" csim $(DATA_TYPE); \
 	done
 	@echo "COMPLETE: c-simulation finished."
 endif
