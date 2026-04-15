@@ -4,7 +4,7 @@
 
 
 # Target for compilation and simulation. Options: x86sim, hw
-TARGET       ?= x86sim
+TARGET       ?= hw
 
 # Precision toggle: float (default) or int16
 PRECISION    ?= float
