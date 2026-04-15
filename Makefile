@@ -15,12 +15,11 @@ PACK_CFG       ?= ./pack.cfg
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
-# TARGET: x86 | sw_emu | hw_emu | hw
-#   x86     - AIE x86 functional simulation (fastest, no PL/host)
-#   sw_emu  - software emulation (x86sim AIE + native host)
-#   hw_emu  - hardware emulation (cycle-accurate AIE + QEMU host)
-#   hw      - full hardware build for VEK280 board
-TARGET ?= hw
+# TARGET: sw_emu | hw_emu | hw
+#   sw_emu - software emulation (x86sim AIE + native host)
+#   hw_emu - hardware emulation (cycle-accurate AIE + QEMU host)
+#   hw     - full hardware build for VEK280 board
+TARGET ?= sw_emu
 
 # PRECISION: float | int16
 #   float - 32-bit floating point weights, activations, and output
@@ -62,11 +61,8 @@ EXEC      := ./host.exe
 ###########################################################################
 
 #########################  AIE target mapping  #############################
-ifeq ($(TARGET),x86)
-  AIE_TARGET := x86sim
-else ifeq ($(TARGET),x86sim)
-  AIE_TARGET := x86sim
-else ifeq ($(TARGET),sw_emu)
+# sw_emu -> x86sim (functional), hw_emu/hw -> hw (for v++ link)
+ifeq ($(TARGET),sw_emu)
   AIE_TARGET := x86sim
 else
   AIE_TARGET := hw
@@ -199,17 +195,18 @@ clean_all:
 
 help:
 	@echo "Usage:"
-	@echo "  make aie TARGET=x86 PRECISION=float     # Build AIE graph for x86sim (float)"
-	@echo "  make aie TARGET=x86 PRECISION=int16     # Build AIE graph for x86sim (int16)"
-	@echo "  make aie TARGET=hw PRECISION=float      # Build AIE graph for hardware"
-	@echo "  make pl TARGET=hw_emu PRECISION=int16   # Build PL HLS kernels"
-	@echo "  make sim TARGET=x86 PRECISION=float     # Run AIE x86 simulation"
-	@echo "  make host TARGET=sw_emu PRECISION=float # Build host for native x86"
-	@echo "  make host TARGET=hw_emu PRECISION=int16 # Build host for QEMU/aarch64"
-	@echo "  make link TARGET=hw_emu                 # Create XSA"
-	@echo "  make package TARGET=hw_emu              # Package and generate xclbin"
-	@echo "  make run TARGET=sw_emu                  # Run SW emulation"
-	@echo "  make print_vars                         # Show all build variables"
-	@echo "  make clean                              # Clean PL + build artifacts"
-	@echo "  make clean_all                          # Clean everything"
+	@echo "  make aie TARGET=sw_emu PRECISION=float    # Build AIE graph for x86sim (float)"
+	@echo "  make aie TARGET=sw_emu PRECISION=int16    # Build AIE graph for x86sim (int16)"
+	@echo "  make aie TARGET=hw PRECISION=float        # Build AIE graph for hardware"
+	@echo "  make sim TARGET=sw_emu PRECISION=float    # Run AIE x86 simulation"
+	@echo "  make pl TARGET=hw_emu PRECISION=int16     # Build PL HLS kernels"
+	@echo "  make host TARGET=sw_emu PRECISION=float   # Build host for native x86"
+	@echo "  make host TARGET=hw_emu PRECISION=int16   # Build host for QEMU/aarch64"
+	@echo "  make link TARGET=hw_emu                   # Create XSA"
+	@echo "  make package TARGET=hw_emu                # Package and generate xclbin"
+	@echo "  make run TARGET=sw_emu                    # Run SW emulation"
+	@echo "  make all TARGET=hw_emu PRECISION=float    # Full build (aie+pl+host+link+package)"
+	@echo "  make print_vars                           # Show all build variables"
+	@echo "  make clean                                # Clean PL + build artifacts"
+	@echo "  make clean_all                            # Clean everything"
 ############################################################################

@@ -47,9 +47,9 @@ All commands accept `PRECISION=float` (default) or `PRECISION=int16`.
 
 ```bash
 # AIE graph
-make aie TARGET=x86 PRECISION=float       # x86 functional sim
+make aie TARGET=sw_emu PRECISION=float       # x86 functional sim
 make aie TARGET=hw  PRECISION=int16       # hardware model
-make sim TARGET=x86 PRECISION=float       # run x86 simulation
+make sim TARGET=sw_emu PRECISION=float       # run x86 simulation
 
 # PL kernels
 make pl TARGET=hw_emu PRECISION=float     # synthesize track_average
@@ -72,8 +72,8 @@ make clean_all
 ```bash
 # AIE only (aieml/)
 cd aieml
-make graph TARGET=x86sim PRECISION=float
-make sim   TARGET=x86sim
+make graph TARGET=sw_emusim PRECISION=float
+make sim   TARGET=sw_emusim
 make clean
 
 # PL only (pl/)
