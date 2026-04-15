@@ -6,14 +6,14 @@
 #ifdef USE_INT16
     typedef ap_int<16> data_t;
     typedef int32_t accum_t;  // Use wider type for accumulation to prevent overflow
-    #define DATA_WIDTH 16
+    typedef ap_int<32> stream_t;  // 32-bit stream to match plio_32_bits
 #else  // USE_FLOAT32 or default
     typedef float data_t;
     typedef float accum_t;
-    #define DATA_WIDTH 32
+    typedef float stream_t;
 #endif
 
-typedef hls::axis<data_t, 0, 0, 0> axis_t;
+typedef hls::axis<stream_t, 0, 0, 0> axis_t;  // Always 32-bit AXI stream
 
 static constexpr int VECTOR_SIZE = 128;
 
@@ -45,7 +45,11 @@ extern "C" {
         for (int i = 0; i < size; i++) {
             #pragma HLS PIPELINE II=1
             axis_t val = s.read();
+#ifdef USE_INT16
+            data_t data = val.data.range(15, 0);  // Extract int16 from 32-bit stream word
+#else
             data_t data = val.data;
+#endif
 
             if (window_count == 0) {
                 accum[element_index] = static_cast<accum_t>(data);

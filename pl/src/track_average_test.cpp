@@ -9,14 +9,16 @@
 #ifdef USE_INT16
     typedef ap_int<16> data_t;
     typedef int32_t accum_t;
+    typedef ap_int<32> stream_t;  // 32-bit stream to match plio_32_bits
     #define DATA_TYPE_NAME "INT16"
 #else  // USE_FLOAT32 or default
     typedef float data_t;
     typedef float accum_t;
+    typedef float stream_t;
     #define DATA_TYPE_NAME "FLOAT32"
 #endif
 
-typedef hls::axis<data_t, 0, 0, 0> axis_t;
+typedef hls::axis<stream_t, 0, 0, 0> axis_t;  // Always 32-bit AXI stream
 
 #ifdef USE_INT16
     extern "C" void track_average_pl(hls::stream<axis_t>& s, ap_int<16>* mem, int size, int threshold);
@@ -48,7 +50,11 @@ int main() {
 #endif
         input[i] = val;
         axis_t packet;
+#ifdef USE_INT16
+        packet.data = static_cast<stream_t>(val);  // Pack int16 into 32-bit stream word
+#else
         packet.data = val;
+#endif
         packet.keep = -1;
         packet.last = ((i + 1) % VECTOR_SIZE) == 0;
         s_in.write(packet);

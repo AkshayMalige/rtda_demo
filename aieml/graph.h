@@ -100,7 +100,7 @@ class NeuralNetworkGraph : public graph {
     kernel                      embed_bias_relu0;
     input_gmio                  embed_input_gmio;
     input_port                  embed_matrixA0_rtp;
-    output_gmio                 embed_output_gmio;
+    output_plio                 embed_output_plio;
     input_port                  embed_bias0_rtp;
     kernel                      embed_split0;
     embed_dense1_graph          embed_dense1;
@@ -195,7 +195,10 @@ class NeuralNetworkGraph : public graph {
         };
 
         embed_input_gmio = input_gmio::create("embed_input_gmio", GMIO_ACTIVATION_BURST_BYTES, GMIO_ACTIVATION_BANDWIDTH_MBPS);
-        embed_output_gmio = adf::output_gmio::create("embed_output_gmio", GMIO_ACTIVATION_BURST_BYTES, GMIO_ACTIVATION_BANDWIDTH_MBPS);
+
+        std::string base_path = std::string(DATA_DIR);
+        embed_output_plio = output_plio::create("embed_output", plio_32_bits,
+                                                (base_path + "/" + AIEML10_OUTPUT_FILE).c_str());
 
         connect<>(embed_input_gmio.out[0], embed_dense0.inB[0]);
         connect<parameter>(embed_matrixA0_rtp, async(embed_dense0.matrixA[0]));
@@ -418,7 +421,7 @@ class NeuralNetworkGraph : public graph {
         connect<parameter>(solver2_bias3_rtp, async(solver2_bias_relu3.in[1]));
         connect<window<WINDOW_BYTES_HIDDEN>>(solver2_dense3.out[0], solver2_bias_relu3.in[0]);
 
-        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu3.out[0], embed_output_gmio.in[0]);
+        connect<window<WINDOW_BYTES_HIDDEN>>(solver2_bias_relu3.out[0], embed_output_plio.in[0]);
 
         apply_layout();
     }

@@ -268,18 +268,13 @@ int main() {
         total_input_elements = padded_inputs.size();
     }
 
-    // GMIO transactions
-    const std::size_t total_output_elements = run_count * OUTPUT_VECTOR_LENGTH;
+    // GMIO input transaction
     const std::size_t input_transaction_bytes = total_input_elements * sizeof(DATA_TYPE);
-    const std::size_t output_transaction_bytes = total_output_elements * sizeof(DATA_TYPE);
 
-    DATA_TYPE* gmio_in  = static_cast<DATA_TYPE*>(adf::GMIO::malloc(input_transaction_bytes));
-    DATA_TYPE* gmio_out = static_cast<DATA_TYPE*>(adf::GMIO::malloc(output_transaction_bytes));
+    DATA_TYPE* gmio_in = static_cast<DATA_TYPE*>(adf::GMIO::malloc(input_transaction_bytes));
 
-    if (gmio_in == nullptr || gmio_out == nullptr) {
+    if (gmio_in == nullptr) {
         std::cerr << "Error: GMIO::malloc failed" << std::endl;
-        if (gmio_in  != nullptr) adf::GMIO::free(gmio_in);
-        if (gmio_out != nullptr) adf::GMIO::free(gmio_out);
         g.end();
         return -1;
     }
@@ -287,25 +282,20 @@ int main() {
     std::memcpy(gmio_in, inputs_ptr, input_transaction_bytes);
 
     const auto gm2aie_status = g.embed_input_gmio.gm2aie_nb(gmio_in, input_transaction_bytes);
-    const auto aie2gm_status = g.embed_output_gmio.aie2gm_nb(gmio_out, output_transaction_bytes);
 
-    if (gm2aie_status != adf::return_code::ok || aie2gm_status != adf::return_code::ok) {
+    if (gm2aie_status != adf::return_code::ok) {
         std::cerr << "Error: GMIO transaction setup failed" << std::endl;
         adf::GMIO::free(gmio_in);
-        adf::GMIO::free(gmio_out);
         g.end();
         return -1;
     }
 
+    // Output goes to PLIO file automatically during simulation
     g.run(static_cast<int>(run_count));
     g.wait();
     g.embed_input_gmio.wait();
-    g.embed_output_gmio.wait();
-
-    write_output(AIEML10_OUTPUT_FILE, gmio_out, total_output_elements);
 
     adf::GMIO::free(gmio_in);
-    adf::GMIO::free(gmio_out);
 
     g.end();
 
