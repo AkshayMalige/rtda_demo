@@ -15,17 +15,30 @@ PACK_CFG       ?= ./pack.cfg
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
+# TARGET: x86 | sw_emu | hw_emu | hw
+#   x86     - AIE x86 functional simulation (fastest, no PL/host)
+#   sw_emu  - software emulation (x86sim AIE + native host)
+#   hw_emu  - hardware emulation (cycle-accurate AIE + QEMU host)
+#   hw      - full hardware build for VEK280 board
 TARGET ?= hw
+
+# PRECISION: float | int16
+#   float - 32-bit floating point weights, activations, and output
+#   int16 - 16-bit integer weights, activations, and output
+#   NOTE: data/ files must contain values matching the chosen precision.
+#         Clean and rebuild when switching: make clean_all
 PRECISION ?= float
 
-# Default host build: native for sw_emu, QEMU for hw_emu/hw
+# EMU_PS: X86 | QEMU (auto-set based on TARGET, override if needed)
+#   X86  - native x86 host binary (used for sw_emu)
+#   QEMU - aarch64 cross-compiled host binary (used for hw_emu/hw)
 ifeq ($(TARGET),$(filter $(TARGET),hw_emu hw))
   EMU_PS ?= QEMU
 else
   EMU_PS ?= X86
 endif
 
-# Map PRECISION to PL DATA_TYPE
+# Map PRECISION to PL DATA_TYPE (internal, no need to set manually)
 ifeq ($(PRECISION),int16)
   PL_DATA_TYPE := int16
 else

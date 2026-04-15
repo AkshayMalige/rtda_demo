@@ -13,9 +13,16 @@ KERNELS ?= track_average
 
 IP_DIR   ?= ip
 LOG_FILE ?= vitis_hls.log
+
+# TARGET: csim | hw_emu | hw
+#   csim   - C simulation only (fast functional check)
+#   hw_emu - synthesis + RTL co-simulation
+#   hw     - synthesis + export XO for v++ link
 TARGET ?= hw_emu
 
-# Data type selection: float or int16
+# DATA_TYPE: float | int16
+#   float - 32-bit float stream and memory interface
+#   int16 - 16-bit integer (stream widened to 32-bit for PLIO compatibility)
 DATA_TYPE ?= int16
 
 

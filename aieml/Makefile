@@ -3,15 +3,21 @@
 # ===================================================================
 
 
-# Target for compilation and simulation. Options: x86sim, hw
+# TARGET: x86sim | hw
+#   x86sim - x86 functional simulation (fast, no timing)
+#   hw     - hardware model (for v++ link/package or aiesimulator)
 TARGET       ?= hw
 
-# Precision toggle: float (default) or int16
+# PRECISION: float | int16
+#   float - 32-bit floating point (DATA_TYPE = float)
+#   int16 - 16-bit integer (DATA_TYPE = int16_t, requires int16 data files)
+#   Generates config_gen.h to toggle USE_INT16 define
 PRECISION    ?= float
 
-# Frequency for the Programmable Logic (PL) interfaces.
+# PL_FREQZ: PL interface clock frequency in MHz
 PL_FREQZ     ?= 300
 
+# DSPLIB_PATH: path to Vitis DSP Library (L1/L2)
 DSPLIB_PATH  ?= ../dsp_lib
 
 

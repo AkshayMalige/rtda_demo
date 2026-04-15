@@ -4,10 +4,14 @@ HOST_OBJ   := host.o
 HOST_DEPS  := $(HOST_OBJ:.o=.d)
 HOST_INC   := -I./ -I../common -I$(XILINX_VITIS)/aietools/include
 
-# EMU_PS = X86 (native) | QEMU (aarch64 sysroot)
+# EMU_PS: X86 | QEMU
+#   X86  - native g++ build (for sw_emu or local testing)
+#   QEMU - aarch64 cross-compile using PetaLinux sysroot (for hw_emu/hw)
 EMU_PS ?= X86
 
-# Precision toggle: float (default) or int16
+# PRECISION: float | int16
+#   float - host reads/writes 32-bit float values for RTP and GMIO
+#   int16 - host reads/writes 16-bit integer values (adds -DUSE_INT16)
 PRECISION ?= float
 
 ifeq ($(PRECISION),int16)
