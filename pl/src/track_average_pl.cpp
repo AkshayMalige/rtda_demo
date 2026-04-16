@@ -17,13 +17,16 @@ typedef hls::axis<stream_t, 0, 0, 0> axis_t;  // Always 32-bit AXI stream
 
 static constexpr int VECTOR_SIZE = 128;
 
+// Memory port type: always 32-bit to avoid cosim issues with sub-32-bit m_axi
+#ifdef USE_INT16
+    typedef int32_t mem_t;
+#else
+    typedef float mem_t;
+#endif
+
 extern "C" {
     // Average incoming AXI stream frames into memory outputs
-#ifdef USE_INT16
-    void track_average_pl(hls::stream<axis_t>& s, ap_int<16>* mem, int size, int threshold) {
-#else
-    void track_average_pl(hls::stream<axis_t>& s, float* mem, int size, int threshold) {
-#endif
+    void track_average_pl(hls::stream<axis_t>& s, mem_t* mem, int size, int threshold) {
         #pragma HLS INTERFACE m_axi port=mem offset=slave bundle=gmem depth=4096
         #pragma HLS INTERFACE axis port=s
         #pragma HLS INTERFACE s_axilite port=mem bundle=control
@@ -66,10 +69,9 @@ extern "C" {
                     for (int j = 0; j < VECTOR_SIZE; j++) {
                         #pragma HLS UNROLL
 #ifdef USE_INT16
-                        // For int16: divide and cast back to int16
-                        mem[output_index * VECTOR_SIZE + j] = static_cast<data_t>(accum[j] / threshold);
+                        // For int16: divide, cast to int16, then widen to 32-bit for m_axi
+                        mem[output_index * VECTOR_SIZE + j] = static_cast<mem_t>(static_cast<data_t>(accum[j] / threshold));
 #else
-                        // For float: standard division
                         mem[output_index * VECTOR_SIZE + j] = accum[j] / static_cast<accum_t>(threshold);
 #endif
                     }

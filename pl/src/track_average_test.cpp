@@ -10,21 +10,19 @@
     typedef ap_int<16> data_t;
     typedef int32_t accum_t;
     typedef ap_int<32> stream_t;  // 32-bit stream to match plio_32_bits
+    typedef int32_t mem_t;        // 32-bit memory port to avoid cosim issues
     #define DATA_TYPE_NAME "INT16"
 #else  // USE_FLOAT32 or default
     typedef float data_t;
     typedef float accum_t;
     typedef float stream_t;
+    typedef float mem_t;
     #define DATA_TYPE_NAME "FLOAT32"
 #endif
 
 typedef hls::axis<stream_t, 0, 0, 0> axis_t;  // Always 32-bit AXI stream
 
-#ifdef USE_INT16
-    extern "C" void track_average_pl(hls::stream<axis_t>& s, ap_int<16>* mem, int size, int threshold);
-#else
-    extern "C" void track_average_pl(hls::stream<axis_t>& s, float* mem, int size, int threshold);
-#endif
+extern "C" void track_average_pl(hls::stream<axis_t>& s, mem_t* mem, int size, int threshold);
 
 static constexpr int VECTOR_SIZE = 128;
 static constexpr int TOTAL_FRAMES = 10;
@@ -34,7 +32,7 @@ static constexpr int OUTPUT_FRAMES = TOTAL_FRAMES / THRESHOLD;
 static constexpr int OUTPUT_SIZE = OUTPUT_FRAMES * VECTOR_SIZE;
 
 int main() {
-    std::cout << "=== Testing with " << DATA_TYPE_NAME << " ===" << std::endl;
+    std::cout << "\n\n=== Testing with " << DATA_TYPE_NAME << " ===" << std::endl;
 
     hls::stream<axis_t> s_in;
     std::vector<data_t> input(INPUT_SIZE);
@@ -60,18 +58,7 @@ int main() {
         s_in.write(packet);
     }
 
-    std::vector<data_t> output(OUTPUT_SIZE);
-#ifdef USE_INT16
-    // Initialize int16 output to zero
-    for (int i = 0; i < OUTPUT_SIZE; ++i) {
-        output[i] = 0;
-    }
-#else
-    // Initialize float output to zero
-    for (int i = 0; i < OUTPUT_SIZE; ++i) {
-        output[i] = 0.0f;
-    }
-#endif
+    std::vector<mem_t> output(OUTPUT_SIZE, 0);
 
     track_average_pl(s_in, output.data(), INPUT_SIZE, THRESHOLD);
 
@@ -85,21 +72,20 @@ int main() {
             }
 
 #ifdef USE_INT16
-            // For int16: integer division
-            data_t expected = static_cast<data_t>(sum / THRESHOLD);
-            data_t actual = output[frame * VECTOR_SIZE + elem];
+            // For int16: integer division; mem stores int16 sign-extended in int32
+            int16_t expected = static_cast<int16_t>(sum / THRESHOLD);
+            int16_t actual = static_cast<int16_t>(output[frame * VECTOR_SIZE + elem]);
             if (actual != expected) {
                 std::cerr << "Mismatch frame " << frame
                           << " element " << elem
-                          << ": expected " << expected.to_int()
-                          << ", got " << actual.to_int() << std::endl;
+                          << ": expected " << expected
+                          << ", got " << actual << std::endl;
                 pass = false;
                 break;
             }
 #else
-            // For float: use tolerance
-            data_t expected = sum / static_cast<accum_t>(THRESHOLD);
-            data_t actual = output[frame * VECTOR_SIZE + elem];
+            float expected = sum / static_cast<accum_t>(THRESHOLD);
+            float actual = output[frame * VECTOR_SIZE + elem];
             if (std::fabs(actual - expected) > 1e-5f) {
                 std::cerr << "Mismatch frame " << frame
                           << " element " << elem
@@ -115,9 +101,9 @@ int main() {
 
     if (pass) {
         std::cout << "Test PASSED – averages computed correctly for "
-                  << OUTPUT_FRAMES << " frames using " << DATA_TYPE_NAME << "." << std::endl;
+                  << OUTPUT_FRAMES << " frames using " << DATA_TYPE_NAME << ".\n\n" << std::endl;
     } else {
-        std::cout << "Test FAILED." << std::endl;
+        std::cout << "Test FAILED.\n\n" << std::endl;
     }
 
     return pass ? 0 : 1;

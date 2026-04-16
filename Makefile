@@ -1,8 +1,26 @@
 ############################################################################
 #  Top-level Makefile — AIE graph + PL + Host + Link + Package
-#  TARGET    = sw_emu | hw_emu | hw
-#  PRECISION = float | int16
-#  EMU_PS    = X86 | QEMU (host build mode)
+#
+#  COMPONENT-LEVEL TARGETS (standalone, no system TARGET needed):
+#    make aie_x86sim   — Compile AIE graph for x86 simulation
+#    make aie_hw       — Compile AIE graph for hardware / aiesimulator
+#    make aie_sim_x86  — Compile + run x86simulator (fast functional)
+#    make aie_sim_hw   — Compile + run aiesimulator (cycle-accurate)
+#    make pl_build     — PL kernel synthesis + export XO
+#    make pl_csim      — PL kernel C-simulation
+#    make pl_cosim     — PL kernel RTL co-simulation
+#    make host_x86     — Host native x86 build
+#    make host_aarch64 — Host aarch64 cross-compile
+#
+#  SYSTEM-LEVEL TARGETS (use TARGET=sw_emu|hw_emu|hw):
+#    make system TARGET=sw_emu  — Full build: x86sim AIE + PL + x86 host + link + package
+#    make system TARGET=hw_emu  — Full build: hw AIE + PL + aarch64 host + link + package
+#    make system TARGET=hw      — Full build: hw AIE + PL + aarch64 host + link + package
+#    make run    TARGET=sw_emu  — Build + run software emulation
+#    make run    TARGET=hw_emu  — Build + run hardware emulation
+#
+#  VARIABLES:
+#    PRECISION = float | int16
 ############################################################################
 
 ######################## User-specific paths ###############################
@@ -15,29 +33,30 @@ PACK_CFG       ?= ./pack.cfg
 ###########################################################################
 
 ##################### Build-time variables / defaults ######################
-# TARGET: sw_emu | hw_emu | hw
+# PRECISION: float | int16
+PRECISION ?= float
+
+# TARGET: sw_emu | hw_emu | hw  (only used by system-level targets)
 #   sw_emu - software emulation (x86sim AIE + native host)
 #   hw_emu - hardware emulation (cycle-accurate AIE + QEMU host)
 #   hw     - full hardware build for VEK280 board
-TARGET ?= sw_emu
+TARGET ?= hw_emu
 
-# PRECISION: float | int16
-#   float - 32-bit floating point weights, activations, and output
-#   int16 - 16-bit integer weights, activations, and output
-#   NOTE: data/ files must contain values matching the chosen precision.
-#         Clean and rebuild when switching: make clean_all
-PRECISION ?= float
-
-# EMU_PS: X86 | QEMU (auto-set based on TARGET, override if needed)
-#   X86  - native x86 host binary (used for sw_emu)
-#   QEMU - aarch64 cross-compiled host binary (used for hw_emu/hw)
-ifeq ($(TARGET),$(filter $(TARGET),hw_emu hw))
-  EMU_PS ?= QEMU
-else
+# EMU_PS: auto-set from TARGET (X86 for sw_emu, QEMU for hw_emu/hw)
+ifeq ($(TARGET),sw_emu)
   EMU_PS ?= X86
+else
+  EMU_PS ?= QEMU
 endif
 
-# Map PRECISION to PL DATA_TYPE (internal, no need to set manually)
+# AIE_TARGET: auto-set from TARGET (x86sim for sw_emu, hw for hw_emu/hw)
+ifeq ($(TARGET),sw_emu)
+  AIE_TARGET := x86sim
+else
+  AIE_TARGET := hw
+endif
+
+# Map PRECISION to PL DATA_TYPE
 ifeq ($(PRECISION),int16)
   PL_DATA_TYPE := int16
 else
@@ -45,11 +64,11 @@ else
 endif
 ###########################################################################
 
+######################## Internal paths & artifacts ########################
 LINK_CFG  := ./common/linker_aieml.cfg
 HLS_KERNELS := track_average
 XO_DIR    := pl/ip
 
-######################  Artifacts and directories  #########################
 AIE_WORK_DIR_NAME ?= Work
 AIE_LIB   := aieml/$(AIE_WORK_DIR_NAME)/libadf.a
 PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
@@ -60,40 +79,79 @@ XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
 EXEC      := ./host.exe
 ###########################################################################
 
-#########################  AIE target mapping  #############################
-# sw_emu -> x86sim (functional), hw_emu/hw -> hw (for v++ link)
-ifeq ($(TARGET),sw_emu)
-  AIE_TARGET := x86sim
-else
-  AIE_TARGET := hw
-endif
+############################################################################
+#  Phony targets
+############################################################################
+.PHONY: all system aie aie_x86sim aie_hw aie_sim_x86 aie_sim_hw sim \
+        pl pl_build pl_csim pl_cosim \
+        host host_x86 host_aarch64 \
+        link package run run_emu \
+        clean clean_all help print_vars
+
+############################################################################
+#  COMPONENT-LEVEL TARGETS  (standalone, no system TARGET needed)
+############################################################################
+
+# --- AIE graph compilation ---
+aie_x86sim:
+	$(MAKE) -C aieml graph TARGET=x86sim PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+
+aie_hw:
+	$(MAKE) -C aieml graph TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+
+# --- AIE simulation (compile + run) ---
+aie_sim_x86: aie_x86sim
+	$(MAKE) -C aieml sim TARGET=x86sim PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+
+aie_sim_hw: aie_hw
+	$(MAKE) -C aieml sim TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+
+# --- PL kernel synthesis (export XO for v++ link) ---
+pl_build:
+	$(MAKE) -C pl kernels DATA_TYPE=$(PL_DATA_TYPE)
+
+# --- PL simulation ---
+pl_csim:
+	$(MAKE) -C pl sim TARGET=csim DATA_TYPE=$(PL_DATA_TYPE)
+
+pl_cosim:
+	$(MAKE) -C pl sim TARGET=hw_emu DATA_TYPE=$(PL_DATA_TYPE)
+
+# --- Host builds ---
+host_x86:
+	$(MAKE) -C host EMU_PS=X86 PRECISION=$(PRECISION)
+
+host_aarch64:
+	$(MAKE) -C host EMU_PS=QEMU PRECISION=$(PRECISION)
 
 
 ############################################################################
-#  Top-level targets
+#  SYSTEM-LEVEL TARGETS  (use TARGET=sw_emu|hw_emu|hw)
 ############################################################################
-.PHONY: all aie sim pl host link package run run_emu clean clean_all help print_vars
 
-all: aie host pl link package
+# Full system build: aie + pl + host + link + package
+system: aie pl host link package
 
-# AIE graph build (delegates to aieml/)
+# Legacy alias
+all: system
+
+# --- AIE (dispatched by TARGET) ---
 aie:
-	$(MAKE) -C aieml TARGET=$(AIE_TARGET) PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+	$(MAKE) -C aieml graph TARGET=$(AIE_TARGET) PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
 
+# --- PL XO build (for system linking) ---
 pl: $(PL_XOS)
 	@echo "PL kernel artifacts ready: $(PL_XOS)"
 
-# Simulation convenience wrapper (AIE-only)
-sim:
-	@echo "AIE sim with TARGET=$(AIE_TARGET) (from TARGET=$(TARGET))"
-	$(MAKE) -C aieml sim TARGET=$(AIE_TARGET) PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+$(PL_XOS):
+	$(MAKE) -C pl kernels DATA_TYPE=$(PL_DATA_TYPE)
 
-# Build host application (native x86 or cross for QEMU)
+# --- Host (dispatched by TARGET via EMU_PS) ---
 host:
 	$(MAKE) -C host EMU_PS=$(EMU_PS) PRECISION=$(PRECISION)
 
-$(PL_XOS):
-	$(MAKE) -C pl TARGET=$(TARGET) KERNELS="$(HLS_KERNELS)" DATA_TYPE=$(PL_DATA_TYPE)
+# --- AIE simulation convenience (defaults to fast x86) ---
+sim: aie_sim_x86
 
 ##############################  Link (XSA)  ################################
 $(XSA): $(AIE_LIB) $(PL_XOS) $(LINK_CFG) | $(BUILD_DIR)
@@ -101,6 +159,7 @@ $(XSA): $(AIE_LIB) $(PL_XOS) $(LINK_CFG) | $(BUILD_DIR)
 	@echo "    PL_XOS   = $(PL_XOS)"
 	@echo "    AIE_LIB  = $(AIE_LIB)"
 	@echo "    LINK_CFG = $(LINK_CFG)"
+	@echo "    TARGET   = $(TARGET)"
 	v++ --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
 		$(PL_XOS) $(AIE_LIB) -o $@
 	@echo "Linked design: $@"
@@ -140,11 +199,12 @@ endif
 ##############################  Package  ###################################
 package: $(XCLBIN)
 
-$(XCLBIN): $(AIE_LIB) $(XSA) $(EXEC) | $(PKG_DIR)
+$(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
 	@echo "Packaging with:"
 	@echo "    AIE_LIB  = $(AIE_LIB)"
 	@echo "    XSA      = $(XSA)"
 	@echo "    EXEC     = $(EXEC)"
+	@echo "    TARGET   = $(TARGET)"
 	v++ --package $(PKG_FLAGS) $(PKG_COMMON) \
 		$(AIE_LIB) $(XSA) -o $@
 	@echo "Packaged design created in $(PKG_DIR)"
@@ -152,8 +212,10 @@ $(XCLBIN): $(AIE_LIB) $(XSA) $(EXEC) | $(PKG_DIR)
 $(PKG_DIR):
 	@mkdir -p $@
 
-##############################  Run helper  ################################
-run_emu: host package
+##############################  Run  #######################################
+run: system run_emu
+
+run_emu:
 ifeq ($(TARGET),sw_emu)
   ifeq ($(EMU_PS),X86)
 	@echo "Running SW-emulation on x86..."
@@ -166,11 +228,10 @@ else ifeq ($(TARGET),hw_emu)
 	@echo "Running HW-emulation on QEMU..."
 	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC) $(XCLBIN)
 else
-	@echo "Copy '$(PKG_DIR)' to SD-card and boot the VEK280."
+	@echo "TARGET=hw: Copy '$(PKG_DIR)' to SD-card and boot the VEK280."
 endif
 
-run: run_emu
-
+##############################  Debug  #####################################
 print_vars:
 	@echo "TARGET       = $(TARGET)"
 	@echo "PRECISION    = $(PRECISION)"
@@ -178,35 +239,55 @@ print_vars:
 	@echo "EMU_PS       = $(EMU_PS)"
 	@echo "AIE_TARGET   = $(AIE_TARGET)"
 	@echo "AIE_LIB      = $(AIE_LIB)"
+	@echo "PL_XOS       = $(PL_XOS)"
 	@echo "XSA          = $(XSA)"
 	@echo "EXEC         = $(EXEC)"
 	@echo "XCLBIN       = $(XCLBIN)"
 
 ################################  Clean  ###################################
 clean:
-	$(MAKE) -C pl clean TARGET=$(TARGET)
-	rm -rf $(PKG_DIR) $(BUILD_DIR) *.xclbin *.xsa *.log _x host.exe
+	$(MAKE) -C pl clean
+	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe
 
 clean_all:
-	$(MAKE) -C aieml    clean TARGET=$(AIE_TARGET)
-	$(MAKE) -C host     clean
-	$(MAKE) -C pl       clean TARGET=$(TARGET)
-	rm -rf package.* build_* *.xclbin *.xsa *.log
+	$(MAKE) -C aieml clean
+	$(MAKE) -C host  clean
+	$(MAKE) -C pl    clean
+	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe
 
+################################  Help  ####################################
 help:
-	@echo "Usage:"
-	@echo "  make aie TARGET=sw_emu PRECISION=float    # Build AIE graph for x86sim (float)"
-	@echo "  make aie TARGET=sw_emu PRECISION=int16    # Build AIE graph for x86sim (int16)"
-	@echo "  make aie TARGET=hw PRECISION=float        # Build AIE graph for hardware"
-	@echo "  make sim TARGET=sw_emu PRECISION=float    # Run AIE x86 simulation"
-	@echo "  make pl TARGET=hw_emu PRECISION=int16     # Build PL HLS kernels"
-	@echo "  make host TARGET=sw_emu PRECISION=float   # Build host for native x86"
-	@echo "  make host TARGET=hw_emu PRECISION=int16   # Build host for QEMU/aarch64"
-	@echo "  make link TARGET=hw_emu                   # Create XSA"
-	@echo "  make package TARGET=hw_emu                # Package and generate xclbin"
-	@echo "  make run TARGET=sw_emu                    # Run SW emulation"
-	@echo "  make all TARGET=hw_emu PRECISION=float    # Full build (aie+pl+host+link+package)"
-	@echo "  make print_vars                           # Show all build variables"
-	@echo "  make clean                                # Clean PL + build artifacts"
-	@echo "  make clean_all                            # Clean everything"
+	@echo ""
+	@echo "=== COMPONENT-LEVEL TARGETS (standalone) ==="
+	@echo ""
+	@echo "  AIE Graph:"
+	@echo "    make aie_x86sim  PRECISION=float   Compile AIE graph for x86 simulation"
+	@echo "    make aie_hw      PRECISION=float   Compile AIE graph for hw (aiesimulator / v++ link)"
+	@echo "    make aie_sim_x86 PRECISION=float   Compile + run x86simulator (fast functional)"
+	@echo "    make aie_sim_hw  PRECISION=float   Compile + run aiesimulator (cycle-accurate)"
+	@echo ""
+	@echo "  PL Kernels:"
+	@echo "    make pl_build    PRECISION=float   Synthesize + export XO files"
+	@echo "    make pl_csim     PRECISION=float   Run C-simulation"
+	@echo "    make pl_cosim    PRECISION=float   Run RTL co-simulation"
+	@echo ""
+	@echo "  Host Application:"
+	@echo "    make host_x86     PRECISION=float   Build for native x86 execution"
+	@echo "    make host_aarch64 PRECISION=float   Build for aarch64 (cross-compile)"
+	@echo ""
+	@echo "=== SYSTEM-LEVEL TARGETS (use TARGET=sw_emu|hw_emu|hw) ==="
+	@echo ""
+	@echo "    make system TARGET=sw_emu  PRECISION=float   Full sw_emu build"
+	@echo "    make system TARGET=hw_emu  PRECISION=float   Full hw_emu build"
+	@echo "    make system TARGET=hw      PRECISION=float   Full hardware build"
+	@echo "    make run    TARGET=sw_emu  PRECISION=float   Build + run sw emulation"
+	@echo "    make run    TARGET=hw_emu  PRECISION=float   Build + run hw emulation"
+	@echo ""
+	@echo "=== UTILITIES ==="
+	@echo ""
+	@echo "    make sim                            Quick AIE sim (alias for aie_sim_x86)"
+	@echo "    make print_vars TARGET=hw_emu       Show all build variable values"
+	@echo "    make clean                          Clean PL + system build artifacts"
+	@echo "    make clean_all                      Clean everything (AIE + PL + Host + system)"
+	@echo ""
 ############################################################################

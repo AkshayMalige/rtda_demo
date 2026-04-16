@@ -23,7 +23,7 @@ TARGET ?= hw_emu
 # DATA_TYPE: float | int16
 #   float - 32-bit float stream and memory interface
 #   int16 - 16-bit integer (stream widened to 32-bit for PLIO compatibility)
-DATA_TYPE ?= int16
+DATA_TYPE ?= float
 
 
 # ===================================================================
