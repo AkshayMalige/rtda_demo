@@ -9,14 +9,12 @@
 #    make pl_build     — PL kernel synthesis + export XO
 #    make pl_csim      — PL kernel C-simulation
 #    make pl_cosim     — PL kernel RTL co-simulation
-#    make host_x86     — Host native x86 build
-#    make host_aarch64 — Host aarch64 cross-compile
+#    make host_x86     — Host native x86 build (for local testing only)
+#    make host_aarch64 — Host aarch64 cross-compile (for hw_emu/hw)
 #
-#  SYSTEM-LEVEL TARGETS (use TARGET=sw_emu|hw_emu|hw):
-#    make system TARGET=sw_emu  — Full build: x86sim AIE + PL + x86 host + link + package
+#  SYSTEM-LEVEL TARGETS (use TARGET=hw_emu|hw):
 #    make system TARGET=hw_emu  — Full build: hw AIE + PL + aarch64 host + link + package
 #    make system TARGET=hw      — Full build: hw AIE + PL + aarch64 host + link + package
-#    make run    TARGET=sw_emu  — Build + run software emulation
 #    make run    TARGET=hw_emu  — Build + run hardware emulation
 #
 #  VARIABLES:
@@ -36,25 +34,10 @@ PACK_CFG       ?= ./pack.cfg
 # PRECISION: float | int16
 PRECISION ?= float
 
-# TARGET: sw_emu | hw_emu | hw  (only used by system-level targets)
-#   sw_emu - software emulation (x86sim AIE + native host)
+# TARGET: hw_emu | hw  (only used by system-level targets)
 #   hw_emu - hardware emulation (cycle-accurate AIE + QEMU host)
 #   hw     - full hardware build for VEK280 board
 TARGET ?= hw_emu
-
-# EMU_PS: auto-set from TARGET (X86 for sw_emu, QEMU for hw_emu/hw)
-ifeq ($(TARGET),sw_emu)
-  EMU_PS ?= X86
-else
-  EMU_PS ?= QEMU
-endif
-
-# AIE_TARGET: auto-set from TARGET (x86sim for sw_emu, hw for hw_emu/hw)
-ifeq ($(TARGET),sw_emu)
-  AIE_TARGET := x86sim
-else
-  AIE_TARGET := hw
-endif
 
 # Map PRECISION to PL DATA_TYPE
 ifeq ($(PRECISION),int16)
@@ -126,7 +109,9 @@ host_aarch64:
 
 
 ############################################################################
-#  SYSTEM-LEVEL TARGETS  (use TARGET=sw_emu|hw_emu|hw)
+#  SYSTEM-LEVEL TARGETS  (use TARGET=hw_emu|hw)
+#  AIE-ML on VEK280 does not support sw_emu at the system level.
+#  For fast AIE-only testing, use: make aie_sim_x86
 ############################################################################
 
 # Full system build: aie + pl + host + link + package
@@ -135,9 +120,9 @@ system: aie pl host link package
 # Legacy alias
 all: system
 
-# --- AIE (dispatched by TARGET) ---
+# --- AIE (always compiled with --target hw for system builds) ---
 aie:
-	$(MAKE) -C aieml graph TARGET=$(AIE_TARGET) PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+	$(MAKE) -C aieml graph TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
 
 # --- PL XO build (for system linking) ---
 pl: $(PL_XOS)
@@ -146,9 +131,9 @@ pl: $(PL_XOS)
 $(PL_XOS):
 	$(MAKE) -C pl kernels DATA_TYPE=$(PL_DATA_TYPE)
 
-# --- Host (dispatched by TARGET via EMU_PS) ---
+# --- Host (always cross-compiled for system builds) ---
 host:
-	$(MAKE) -C host EMU_PS=$(EMU_PS) PRECISION=$(PRECISION)
+	$(MAKE) -C host EMU_PS=QEMU PRECISION=$(PRECISION)
 
 # --- AIE simulation convenience (defaults to fast x86) ---
 sim: aie_sim_x86
@@ -169,45 +154,39 @@ link: $(XSA)
 $(BUILD_DIR):
 	@mkdir -p $@
 
-########################  v++ --package flags ##############################
-PKG_COMMON = --platform $(PLATFORM) --package.out_dir $(PKG_DIR) \
-             --package.defer_aie_run --package.sd_file $(EXEC) \
-             --package.sd_dir data
-
-ifeq ($(TARGET),sw_emu)
-  ifeq ($(EMU_PS),X86)
-    PKG_FLAGS = -t sw_emu
-  else
-    PKG_FLAGS = -t sw_emu \
-      --package.rootfs $(ROOTFS) \
-      --package.kernel_image $(IMAGE) \
-      --config $(PACK_CFG)
-  endif
-else ifeq ($(TARGET),hw_emu)
-  PKG_FLAGS = -t hw_emu \
-      --package.rootfs $(ROOTFS) \
-      --package.kernel_image $(IMAGE) \
-      --config $(PACK_CFG)
-else
-  PKG_FLAGS = -t hw \
-      --package.rootfs $(ROOTFS) \
-      --package.kernel_image $(IMAGE) \
-      --package.boot_mode sd \
-      --config $(PACK_CFG)
-endif
-
 ##############################  Package  ###################################
 package: $(XCLBIN)
 
+ifeq ($(TARGET),hw_emu)
 $(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
-	@echo "Packaging with:"
-	@echo "    AIE_LIB  = $(AIE_LIB)"
-	@echo "    XSA      = $(XSA)"
-	@echo "    EXEC     = $(EXEC)"
-	@echo "    TARGET   = $(TARGET)"
-	v++ --package $(PKG_FLAGS) $(PKG_COMMON) \
+	@echo "Packaging for hw_emu..."
+	v++ --package -t hw_emu \
+		--platform $(PLATFORM) \
+		--package.out_dir $(PKG_DIR) \
+		--package.defer_aie_run \
+		--package.rootfs $(ROOTFS) \
+		--package.kernel_image $(IMAGE) \
+		--package.sd_file $(EXEC) \
+		--package.sd_dir data \
+		--config $(PACK_CFG) \
 		$(AIE_LIB) $(XSA) -o $@
 	@echo "Packaged design created in $(PKG_DIR)"
+else
+$(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
+	@echo "Packaging for hw..."
+	v++ --package -t hw \
+		--platform $(PLATFORM) \
+		--package.out_dir $(PKG_DIR) \
+		--package.defer_aie_run \
+		--package.rootfs $(ROOTFS) \
+		--package.kernel_image $(IMAGE) \
+		--package.boot_mode sd \
+		--package.sd_file $(EXEC) \
+		--package.sd_dir data \
+		--config $(PACK_CFG) \
+		$(AIE_LIB) $(XSA) -o $@
+	@echo "Packaged design created in $(PKG_DIR)"
+endif
 
 $(PKG_DIR):
 	@mkdir -p $@
@@ -216,15 +195,7 @@ $(PKG_DIR):
 run: system run_emu
 
 run_emu:
-ifeq ($(TARGET),sw_emu)
-  ifeq ($(EMU_PS),X86)
-	@echo "Running SW-emulation on x86..."
-	XCL_EMULATION_MODE=sw_emu $(EXEC) $(XCLBIN)
-  else
-	@echo "Running SW-emulation on QEMU..."
-	$(PKG_DIR)/launch_sw_emu.sh -run-app $(EXEC) $(XCLBIN)
-  endif
-else ifeq ($(TARGET),hw_emu)
+ifeq ($(TARGET),hw_emu)
 	@echo "Running HW-emulation on QEMU..."
 	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC) $(XCLBIN)
 else
@@ -236,8 +207,6 @@ print_vars:
 	@echo "TARGET       = $(TARGET)"
 	@echo "PRECISION    = $(PRECISION)"
 	@echo "PL_DATA_TYPE = $(PL_DATA_TYPE)"
-	@echo "EMU_PS       = $(EMU_PS)"
-	@echo "AIE_TARGET   = $(AIE_TARGET)"
 	@echo "AIE_LIB      = $(AIE_LIB)"
 	@echo "PL_XOS       = $(PL_XOS)"
 	@echo "XSA          = $(XSA)"
@@ -247,13 +216,13 @@ print_vars:
 ################################  Clean  ###################################
 clean:
 	$(MAKE) -C pl clean
-	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe
+	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe emconfig.json
 
 clean_all:
 	$(MAKE) -C aieml clean
 	$(MAKE) -C host  clean
 	$(MAKE) -C pl    clean
-	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe
+	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe emconfig.json
 
 ################################  Help  ####################################
 help:
@@ -272,15 +241,13 @@ help:
 	@echo "    make pl_cosim    PRECISION=float   Run RTL co-simulation"
 	@echo ""
 	@echo "  Host Application:"
-	@echo "    make host_x86     PRECISION=float   Build for native x86 execution"
+	@echo "    make host_x86     PRECISION=float   Build for native x86 (local testing only)"
 	@echo "    make host_aarch64 PRECISION=float   Build for aarch64 (cross-compile)"
 	@echo ""
-	@echo "=== SYSTEM-LEVEL TARGETS (use TARGET=sw_emu|hw_emu|hw) ==="
+	@echo "=== SYSTEM-LEVEL TARGETS (use TARGET=hw_emu|hw) ==="
 	@echo ""
-	@echo "    make system TARGET=sw_emu  PRECISION=float   Full sw_emu build"
 	@echo "    make system TARGET=hw_emu  PRECISION=float   Full hw_emu build"
 	@echo "    make system TARGET=hw      PRECISION=float   Full hardware build"
-	@echo "    make run    TARGET=sw_emu  PRECISION=float   Build + run sw emulation"
 	@echo "    make run    TARGET=hw_emu  PRECISION=float   Build + run hw emulation"
 	@echo ""
 	@echo "=== UTILITIES ==="

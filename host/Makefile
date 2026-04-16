@@ -7,7 +7,7 @@ HOST_INC   := -I./ -I../common -I$(XILINX_VITIS)/aietools/include
 # EMU_PS: X86 | QEMU
 #   X86  - native g++ build (for sw_emu or local testing)
 #   QEMU - aarch64 cross-compile using PetaLinux sysroot (for hw_emu/hw)
-EMU_PS ?= X86
+EMU_PS ?= QEMU
 
 # PRECISION: float | int16
 #   float - host reads/writes 32-bit float values for RTP and GMIO
