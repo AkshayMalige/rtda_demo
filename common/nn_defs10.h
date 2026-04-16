@@ -40,3 +40,7 @@ constexpr int ROLL_CONCAT_TILE_SPAN = ROLL_CONCAT_TOTAL / SUBSOLVER0_INPUT_PARTS
 constexpr float LEAKY_SLOPE = 0.1f;
 constexpr int TRACK_AVERAGE_THRESHOLD = 50;
 static_assert(TRACK_AVERAGE_THRESHOLD > 0, "TRACK_AVERAGE_THRESHOLD must be positive");
+
+// Output dense layer dimensions (applied on host after track_average_pl)
+constexpr int OUTPUT_DENSE_IN_SIZE  = HIDDEN_SIZE; // 128
+constexpr int OUTPUT_DENSE_OUT_SIZE = 27;

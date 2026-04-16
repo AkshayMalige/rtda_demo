@@ -47,3 +47,6 @@
 #define SUBSOLVER2_DENSE2_BIAS         "solver_2_dense_2_bias.txt"
 #define SUBSOLVER2_DENSE3_BIAS         "solver_2_dense_3_bias.txt"
 
+// Output dense layer (128 -> 27), applied on host after track_average_pl
+#define OUTPUT_DENSE_WEIGHTS           "output_weights.txt"
+#define OUTPUT_DENSE_BIAS              "output_bias.txt"

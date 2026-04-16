@@ -332,21 +332,34 @@ int main(int argc, char** argv)
 
         track_out_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
         track_out_bo.read(track_output.data());
+
+        // ---- Output dense layer: avg(128) @ W(128,27) + B(27) -> 27 ----
+        // Weights stored row-major (128 rows x 27 cols), always loaded as float.
+        std::cout << "[host] Loading output dense weights/bias..." << std::endl;
+        auto out_W = read_values<float>(join(data_base, OUTPUT_DENSE_WEIGHTS),
+                                        static_cast<std::size_t>(OUTPUT_DENSE_IN_SIZE) * OUTPUT_DENSE_OUT_SIZE);
+        auto out_B = read_values<float>(join(data_base, OUTPUT_DENSE_BIAS),
+                                        static_cast<std::size_t>(OUTPUT_DENSE_OUT_SIZE));
+
         std::ofstream track_file(track_output_path);
         if (!track_file.is_open())
             throw std::runtime_error("Unable to open track-average output file: " + track_output_path);
+        track_file << std::setprecision(std::numeric_limits<float>::max_digits10);
 
-        // Set formatting: full precision for float, integer for int16
-        if (std::numeric_limits<DATA_TYPE>::is_iec559)
-            track_file << std::setprecision(std::numeric_limits<DATA_TYPE>::max_digits10);
-
-        for (std::size_t idx = 0; idx < track_output_elements; ++idx)
-            track_file << track_output[idx] << '\n';
+        for (std::size_t w = 0; w < track_windows; ++w) {
+            const DATA_TYPE* avg_vec = track_output.data() + w * static_cast<std::size_t>(OUTPUT_DENSE_IN_SIZE);
+            for (int j = 0; j < OUTPUT_DENSE_OUT_SIZE; ++j) {
+                float y = out_B[static_cast<std::size_t>(j)];
+                for (int k = 0; k < OUTPUT_DENSE_IN_SIZE; ++k)
+                    y += static_cast<float>(avg_vec[k]) * out_W[static_cast<std::size_t>(k) * OUTPUT_DENSE_OUT_SIZE + j];
+                track_file << y << '\n';
+            }
+        }
 
         track_file.close();
-        std::cout << "[host] track_average captured "
-                  << track_windows << " frame(s), "
-                  << track_output_elements << " element(s) -> "
+        std::cout << "[host] output dense applied: "
+                  << track_windows << " window(s), "
+                  << track_windows * static_cast<std::size_t>(OUTPUT_DENSE_OUT_SIZE) << " element(s) -> "
                   << track_output_path << std::endl;
 
         timings.total = steady_clock::now() - total_start;
