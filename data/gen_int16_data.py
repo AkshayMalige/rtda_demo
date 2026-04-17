@@ -2,7 +2,7 @@
 """
 Reads all .txt files from data_fp32/, counts lines in each,
 and writes a file with the same name to data/ containing the
-same number of random int16 values in range [0, 6].
+same number of random int16 values in range [0, 6]. not tested yet.
 """
 
 import random
