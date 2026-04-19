@@ -22,13 +22,7 @@
 
 #include "data_paths.h"
 #include "nn_defs10.h"
-
-// Precision switching — matches aieml/data_types.h logic
-#ifdef USE_INT16
-using DATA_TYPE = int16_t;
-#else
-using DATA_TYPE = float;
-#endif
+#include "data_types.h"   // DATA_TYPE + GRAPH_INPUT_SIZE (shared with aieml graph)
 
 // 64-byte aligned array for RTP DMA
 template<typename T, std::size_t N>
@@ -96,7 +90,13 @@ static_assert(HIDDEN_SIZE % SUBSOLVER0_LAYER_WEIGHTS_PARTS == 0,
 static_assert((static_cast<std::size_t>(OUTPUT_SIZE) * HIDDEN_SIZE) % EMBED_DENSE1_CASC_LEN == 0,
               "EMBED_DENSE1_CASC_LEN must divide OUTPUT_SIZE * HIDDEN_SIZE");
 
-constexpr std::size_t EMBED_DENSE0_WEIGHTS_SIZE = static_cast<std::size_t>(HIDDEN_SIZE) * INPUT_SIZE;
+// File on disk is always HIDDEN_SIZE * INPUT_SIZE (unpadded). The AIE graph
+// instantiates embed_dense0 with Cols=GRAPH_INPUT_SIZE, so for int16 we must
+// zero-pad each row from INPUT_SIZE to GRAPH_INPUT_SIZE before sending.
+constexpr std::size_t EMBED_DENSE0_WEIGHTS_FILE_SIZE =
+    static_cast<std::size_t>(HIDDEN_SIZE) * INPUT_SIZE;
+constexpr std::size_t EMBED_DENSE0_WEIGHTS_PORT_SIZE =
+    static_cast<std::size_t>(HIDDEN_SIZE) * GRAPH_INPUT_SIZE;
 constexpr std::size_t EMBED_DENSE1_PART_SIZE =
     (static_cast<std::size_t>(OUTPUT_SIZE) * HIDDEN_SIZE) / EMBED_DENSE1_CASC_LEN;
 constexpr std::size_t SOLVER_DENSE0_PART_SIZE =
@@ -157,8 +157,25 @@ int main(int argc, char** argv)
         // ---- Embed weights / biases ----
         {
             std::cout << "[host] Loading embed weights/bias..." << std::endl;
-            load_rtp<EMBED_DENSE0_WEIGHTS_SIZE>(
-                graph, "g.embed_matrixA0_rtp", join(data_base, EMBED_DENSE0_WEIGHTS));
+
+            // embed_dense0 weights: pad each row INPUT_SIZE -> GRAPH_INPUT_SIZE
+            // with zeros so the payload matches the RTP port dimension
+            // (HIDDEN_SIZE * GRAPH_INPUT_SIZE). For float, INPUT_SIZE already
+            // equals GRAPH_INPUT_SIZE so the inner copy fills the whole row.
+            // aligned_array is used because xrt::graph::update derives the
+            // payload size from sizeof(arg).
+            {
+                auto raw = read_values<DATA_TYPE>(
+                    join(data_base, EMBED_DENSE0_WEIGHTS),
+                    EMBED_DENSE0_WEIGHTS_FILE_SIZE);
+                aligned_array<DATA_TYPE, EMBED_DENSE0_WEIGHTS_PORT_SIZE> padded{};
+                for (std::size_t r = 0; r < static_cast<std::size_t>(HIDDEN_SIZE); ++r) {
+                    std::copy_n(raw.data() + r * INPUT_SIZE,
+                                INPUT_SIZE,
+                                padded.data() + r * GRAPH_INPUT_SIZE);
+                }
+                graph.update("g.embed_matrixA0_rtp", padded);
+            }
 
             load_rtp<EMBED_DENSE1_PART_SIZE>(
                 graph, "g.embed_matrixA1_0_rtp",
@@ -240,15 +257,30 @@ int main(int argc, char** argv)
 
         // ---- GMIO input transfers ----
         std::cout << "[host] Reading inputs..." << std::endl;
-        auto inputs = read_values<DATA_TYPE>(join(data_base, EMBED_INPUT_DATA), 0U);
-        if (inputs.empty() || inputs.size() % INPUT_SIZE != 0)
+        auto raw_inputs = read_values<DATA_TYPE>(join(data_base, EMBED_INPUT_DATA), 0U);
+        if (raw_inputs.empty() || raw_inputs.size() % INPUT_SIZE != 0)
             throw std::runtime_error("Input size must be a multiple of INPUT_SIZE");
 
-        std::size_t run_count = inputs.size() / INPUT_SIZE;
-        std::size_t in_bytes  = inputs.size() * sizeof(DATA_TYPE);
+        std::size_t run_count = raw_inputs.size() / INPUT_SIZE;
+
+        // The AIE kernel consumes GRAPH_INPUT_SIZE elements per invocation
+        // (rounded up from INPUT_SIZE for 256-bit vector alignment). Pad each
+        // input vector to that width. For float, GRAPH_INPUT_SIZE==INPUT_SIZE
+        // and this is an equal-size copy.
+        std::vector<DATA_TYPE> inputs(run_count * GRAPH_INPUT_SIZE,
+                                      static_cast<DATA_TYPE>(0));
+        for (std::size_t i = 0; i < run_count; ++i) {
+            std::copy_n(raw_inputs.data() + i * INPUT_SIZE,
+                        INPUT_SIZE,
+                        inputs.data() + i * GRAPH_INPUT_SIZE);
+        }
+        std::size_t in_bytes = inputs.size() * sizeof(DATA_TYPE);
 
         auto align_info = [&](std::size_t n) { return n % HOST_DEBUG_GMIO_BURST; };
-        std::cout << "[host] input elements=" << inputs.size()
+        std::cout << "[host] raw input elements=" << raw_inputs.size()
+                  << ", padded input elements=" << inputs.size()
+                  << " (INPUT_SIZE=" << INPUT_SIZE
+                  << " -> GRAPH_INPUT_SIZE=" << GRAPH_INPUT_SIZE << ")"
                   << ", run_count=" << run_count
                   << ", in_bytes=" << in_bytes << " (mod64=" << align_info(in_bytes) << ")"
                   << std::endl;
@@ -271,7 +303,15 @@ int main(int argc, char** argv)
 
         const std::size_t track_output_elements =
             track_windows * static_cast<std::size_t>(HIDDEN_SIZE);
-        const std::size_t track_output_bytes = track_output_elements * sizeof(DATA_TYPE);
+        // PL kernel's m_axi is always 32-bit wide for cosim compatibility
+        // (track_average_pl.cpp: mem_t = int32_t in int16 mode, float in fp32).
+        // Size the BO and host buffer to match the kernel's write width.
+#ifdef USE_INT16
+        using TRACK_MEM_T = std::int32_t;
+#else
+        using TRACK_MEM_T = float;
+#endif
+        const std::size_t track_output_bytes = track_output_elements * sizeof(TRACK_MEM_T);
         std::cout << "[host] track_average config: threshold=" << track_threshold
                   << ", windows=" << track_windows
                   << ", stream_elements=" << total_stream_elems << std::endl;
@@ -283,7 +323,7 @@ int main(int argc, char** argv)
                       << " frame(s)." << std::endl;
         }
 
-        std::vector<DATA_TYPE> track_output(track_output_elements, static_cast<DATA_TYPE>(0));
+        std::vector<TRACK_MEM_T> track_output(track_output_elements, static_cast<TRACK_MEM_T>(0));
         xrt::bo track_out_bo(device, track_output_bytes, xrt::bo::flags::normal, 0);
         xrt::run track_run = xrt::run(track_average_kernel);
         track_run.set_arg(1, track_out_bo);
@@ -347,7 +387,7 @@ int main(int argc, char** argv)
         track_file << std::setprecision(std::numeric_limits<float>::max_digits10);
 
         for (std::size_t w = 0; w < track_windows; ++w) {
-            const DATA_TYPE* avg_vec = track_output.data() + w * static_cast<std::size_t>(OUTPUT_DENSE_IN_SIZE);
+            const TRACK_MEM_T* avg_vec = track_output.data() + w * static_cast<std::size_t>(OUTPUT_DENSE_IN_SIZE);
             for (int j = 0; j < OUTPUT_DENSE_OUT_SIZE; ++j) {
                 float y = out_B[static_cast<std::size_t>(j)];
                 for (int k = 0; k < OUTPUT_DENSE_IN_SIZE; ++k)

@@ -86,7 +86,7 @@ endif
 .PHONY: force_config
 
 # $(GRAPH_LIB): $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h ../common/data_paths.h ../common/nn_defs10.h
-$(GRAPH_LIB): config_gen.h $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h utils.hpp data_types.h ../common/data_paths.h ../common/nn_defs10.h
+$(GRAPH_LIB): config_gen.h $(GRAPH_SRC) $(KERNEL_SRCS) $(KERNEL_HDRS) graph.h utils.hpp ../common/data_types.h ../common/data_paths.h ../common/nn_defs10.h
 	@mkdir -p $(WORK_DIR)
 	@echo "--- Compiling AIE Graph for TARGET=$(TARGET) PRECISION=$(PRECISION) ---"
 	@echo "INFO: Using Vitis DSP Library Path: $(DSPLIB_PATH)"

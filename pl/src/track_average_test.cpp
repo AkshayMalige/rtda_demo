@@ -37,26 +37,33 @@ int main() {
     hls::stream<axis_t> s_in;
     std::vector<data_t> input(INPUT_SIZE);
 
-    // Generate test input
     for (int i = 0; i < INPUT_SIZE; ++i) {
+        input[i] = static_cast<data_t>((i % 17) - 8);
+    }
+
 #ifdef USE_INT16
-        // For int16: use values in reasonable range
-        data_t val = static_cast<data_t>((i % 17) - 8);
-#else
-        // For float: use same pattern
-        data_t val = static_cast<data_t>((i % 17) - 8);
-#endif
-        input[i] = val;
+    // AIE-ML packs 2 int16 into each 32-bit beat (low half = N, high half = N+1).
+    // Mirror that here so the kernel's int16 path is exercised the way hardware drives it.
+    for (int b = 0; b < INPUT_SIZE / 2; ++b) {
         axis_t packet;
-#ifdef USE_INT16
-        packet.data = static_cast<stream_t>(val);  // Pack int16 into 32-bit stream word
+        stream_t word = 0;
+        word.range(15, 0)  = input[2 * b];
+        word.range(31, 16) = input[2 * b + 1];
+        packet.data = word;
+        packet.keep = -1;
+        packet.last = ((2 * b + 2) % VECTOR_SIZE) == 0;
+        s_in.write(packet);
+    }
 #else
-        packet.data = val;
-#endif
+    // float32: one element per 32-bit beat.
+    for (int i = 0; i < INPUT_SIZE; ++i) {
+        axis_t packet;
+        packet.data = input[i];
         packet.keep = -1;
         packet.last = ((i + 1) % VECTOR_SIZE) == 0;
         s_in.write(packet);
     }
+#endif
 
     std::vector<mem_t> output(OUTPUT_SIZE, 0);
 
