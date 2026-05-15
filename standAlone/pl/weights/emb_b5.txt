@@ -1,0 +1,1 @@
+../../../hls_projects/split_embed/firmware/weights/b5.txt

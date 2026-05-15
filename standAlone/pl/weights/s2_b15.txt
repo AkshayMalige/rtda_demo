@@ -1,0 +1,1 @@
+../../../hls_projects/split_solver2/firmware/weights/b15.txt
