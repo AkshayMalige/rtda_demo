@@ -24,8 +24,9 @@ IMAGE          ?= $(EDGE_COMMON_SW)/Image
 ROOTFS         ?= $(EDGE_COMMON_SW)/rootfs.ext4
 ###########################################################################
 
-TARGET   ?= hw_emu
-LINK_CFG := link.cfg
+TARGET       ?= hw
+KERNEL_FREQ  ?= 150000000
+LINK_CFG     := link.cfg
 DATA_FILES := $(abspath ../data/embed_input.txt) \
               $(abspath ../punit/outputs/keras_27dim.txt)
 XO_DIR   := pl/ip
@@ -85,6 +86,7 @@ $(BUILD_DIR):
 
 $(XSA): $(PL_XO) $(LINK_CFG) | $(BUILD_DIR)
 	v++ --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
+		--clock.defaultFreqHz $(KERNEL_FREQ) \
 		$(PL_XO) -o $@
 	@echo "Linked design: $@"
 

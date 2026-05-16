@@ -53,7 +53,7 @@ if {$command eq "cosim_only"} {
 } else {
     open_solution -flow_target vitis "solution1"
     set_part $part_name
-    create_clock -period 5 -name default
+    create_clock -period 6.667 -name default
     config_compile -name_max_length 80
     set_clock_uncertainty 0.5 default
 }

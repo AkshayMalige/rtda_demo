@@ -37,7 +37,7 @@ PRECISION ?= float
 # TARGET: hw_emu | hw  (only used by system-level targets)
 #   hw_emu - hardware emulation (cycle-accurate AIE + QEMU host)
 #   hw     - full hardware build for VEK280 board
-TARGET ?= hw_emu
+TARGET ?= hw
 
 # Map PRECISION to PL DATA_TYPE
 ifeq ($(PRECISION),int16)
