@@ -145,7 +145,7 @@ $(XSA): $(AIE_LIB) $(PL_XOS) $(LINK_CFG) | $(BUILD_DIR)
 	@echo "    AIE_LIB  = $(AIE_LIB)"
 	@echo "    LINK_CFG = $(LINK_CFG)"
 	@echo "    TARGET   = $(TARGET)"
-	v++ --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
+	v++ --link -t $(TARGET) --platform $(PLATFORM) --save-temps --config $(LINK_CFG) \
 		$(PL_XOS) $(AIE_LIB) -o $@
 	@echo "Linked design: $@"
 

@@ -85,7 +85,7 @@ $(BUILD_DIR):
 	@mkdir -p $@
 
 $(XSA): $(PL_XO) $(LINK_CFG) | $(BUILD_DIR)
-	v++ --link -t $(TARGET) --platform $(PLATFORM) --config $(LINK_CFG) \
+	v++ --link -t $(TARGET) --save-temps --platform $(PLATFORM) --config $(LINK_CFG) \
 		--clock.defaultFreqHz $(KERNEL_FREQ) \
 		$(PL_XO) -o $@
 	@echo "Linked design: $@"
