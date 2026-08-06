@@ -12,6 +12,8 @@ void bias_add_leaky_relu_kernel(input_window<DATA_TYPE>* __restrict in,
     DATA_TYPE* __restrict out_ptr       = reinterpret_cast<DATA_TYPE*>(out->ptr);
 
     constexpr int VEC = 32 / sizeof(DATA_TYPE); // 256-bit vector
+    static_assert(HIDDEN_SIZE % VEC == 0,
+                  "HIDDEN_SIZE must be a multiple of the 256-bit vector width");
 
     constexpr int shift = std::is_same_v<DATA_TYPE, float> ? 0 : 15;
     const DATA_TYPE slope_val = []() {
@@ -24,14 +26,16 @@ void bias_add_leaky_relu_kernel(input_window<DATA_TYPE>* __restrict in,
 
     const auto slope_vec = aie::broadcast<DATA_TYPE, VEC>(slope_val);
 
-    // Copy bias to aligned local buffer (RTP data may not be vector-aligned in x86sim)
-    alignas(32) DATA_TYPE local_bias[HIDDEN_SIZE];
-    for (int i = 0; i < HIDDEN_SIZE; ++i) local_bias[i] = bias[i];
+    // The bias is read straight out of the RTP buffer. aie::load_unaligned_v is
+    // the aie_api primitive for possibly-unaligned addresses, so no aligned
+    // local copy is needed. The copy this replaces was a 128-iteration scalar
+    // loop that cost ~768 of this kernel's ~960 int16 cycles and ran on every
+    // invocation even though the bias never changes.
 
     // chess_prepare_for_pipelining
     for (int idx = 0; idx < HIDDEN_SIZE; idx += VEC) {
         const auto x = aie::load_v<VEC>(in_ptr + idx);
-        const auto b = aie::load_v<VEC>(local_bias + idx);
+        const auto b = aie::load_unaligned_v<VEC>(bias + idx);
         const auto y = aie::add(x, b);
         
         if constexpr (std::is_same_v<DATA_TYPE, float>) {
