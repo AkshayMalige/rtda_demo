@@ -55,7 +55,7 @@ AIE_INCLUDES = --include=src $(KERNEL_INC) $(shell test -d src/weights && echo -
 
 VPP = source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; v++ --compile --config aie.cfg --mode aie
 
-.PHONY: all graph x86com sim x86 crosscheck crosscheck_ref report analyze \
+.PHONY: all graph system_graph x86com sim x86 crosscheck crosscheck_ref report analyze \
         regen verify_io ports vars clean clean_all help
 
 .DEFAULT_GOAL := graph
@@ -69,6 +69,21 @@ $(LIBADF): $(SRCS)
 	      --aie.workdir=$(WORK) --aie.output-archive=$(LIBADF) 2>&1 | tee log
 	@if grep -q "Compilation Failed" log; then \
 	   echo; echo "*** BUILD FAILED ***"; \
+	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; \
+	   rm -f $(LIBADF); exit 1; fi
+
+# System build: GMIO instead of PLIO, and main() becomes the host-side program
+# that loads the weights, DMAs the tracks in and the event mean out. Driven from
+# the top-level Makefile as `make system AIE_DIR=aieml_batch`.
+system_graph:
+	@echo ">>> aieml_batch: system build (SYSTEM_BUILD, GMIO, no PL)"
+	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; \
+	  v++ --compile --config aie.cfg --mode aie --target=hw \
+	      $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
+	      --aie.Xpreproc="-DSYSTEM_BUILD" \
+	      --aie.workdir=$(WORK) --aie.output-archive=$(LIBADF) 2>&1 | tee log
+	@if grep -q "Compilation Failed" log; then \
+	   echo; echo "*** SYSTEM BUILD FAILED ***"; \
 	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; \
 	   rm -f $(LIBADF); exit 1; fi
 
@@ -158,6 +173,7 @@ help:
 	@echo "  make analyze            open Vitis Analyzer"
 	@echo "  make vars / clean / clean_all"
 	@echo
+	@echo "  make system_graph       GMIO build for the full system (no PL)"
 	@echo "  make regen              regenerate src/ from ONNX  (needs aie4ml)"
 	@echo "  make verify_io          prove aie_io still matches aie4ml (needs aie4ml)"
 	@echo

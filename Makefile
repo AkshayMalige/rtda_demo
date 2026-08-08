@@ -37,7 +37,7 @@ PRECISION ?= float
 # TARGET: hw_emu | hw  (only used by system-level targets)
 #   hw_emu - hardware emulation (cycle-accurate AIE + QEMU host)
 #   hw     - full hardware build for VEK280 board
-TARGET ?= hw
+TARGET ?= hw_emu
 
 # Map PRECISION to PL DATA_TYPE
 ifeq ($(PRECISION),int16)
@@ -48,12 +48,23 @@ endif
 ###########################################################################
 
 ######################## Internal paths & artifacts ########################
-LINK_CFG  := ./common/linker_aieml.cfg
+# AIE_DIR selects which AIE design to build into the system.
+#   aieml        hand-written GEMV graph, 1 track/iteration, needs the PL
+#                track_average kernel  (LINK_CFG = linker_aieml.cfg)
+#   aieml_batch  batched aie::mmul graph, 8 tracks/iteration, track average in
+#                AIE, no PL at all     (LINK_CFG = linker_batch.cfg)
+AIE_DIR   ?= aieml
+ifeq ($(AIE_DIR),aieml_batch)
+  LINK_CFG  := ./common/linker_batch.cfg
+  HLS_KERNELS :=            # no PL kernels in the batched design
+else
+  LINK_CFG  := ./common/linker_aieml.cfg
+endif
 HLS_KERNELS := track_average
 XO_DIR    := pl/ip
 
 AIE_WORK_DIR_NAME ?= Work
-AIE_LIB   := aieml/$(AIE_WORK_DIR_NAME)/libadf.a
+AIE_LIB   := $(AIE_DIR)/$(AIE_WORK_DIR_NAME)/libadf.a
 PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
 BUILD_DIR := build_$(TARGET)
 XSA       := $(BUILD_DIR)/design_$(TARGET).xsa
@@ -121,8 +132,14 @@ system: aie pl host link package
 all: system
 
 # --- AIE (always compiled with --target hw for system builds) ---
+# aieml_batch has its own self-contained Makefile and needs SYSTEM_BUILD, which
+# swaps its PLIO simulation ports for GMIO and compiles the host-side main().
 aie:
+ifeq ($(AIE_DIR),aieml_batch)
+	$(MAKE) -C aieml_batch system_graph WORK=$(AIE_WORK_DIR_NAME)
+else
 	$(MAKE) -C aieml graph TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
+endif
 
 # --- PL XO build (for system linking) ---
 pl: $(PL_XOS)

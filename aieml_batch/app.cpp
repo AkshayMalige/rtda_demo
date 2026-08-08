@@ -38,7 +38,15 @@ template<typename... Ts> struct type_list {};
 
 class dut_graph : public graph {
 public:
+  // Simulation drives the graph from PLIO text files (data/ifm_c*.txt, y_p*.txt).
+  // The system build has no PL at all: the host DMAs straight into the array over
+  // GMIO, which is why linker cfg for this design carries no stream_connect.
+#ifdef SYSTEM_BUILD
+  input_gmio  gmio_x;        // x       : BATCH x 16 floats per iteration
+  output_gmio gmio_track;    // track_out: 128-wide event mean, valid on the last iteration
+#else
   input_plio plio_data[1];   // x only -- solver inputs are produced inside the graph
+#endif
 
   input_port wts1[L1Cfg::CAS_NUM * L1Cfg::CAS_LENGTH];
   input_port bias1[L1Cfg::CAS_NUM];
@@ -69,11 +77,22 @@ public:
   input_port wts14[L14Cfg::CAS_NUM * L14Cfg::CAS_LENGTH];
   input_port bias14[L14Cfg::CAS_NUM];
 
+#ifndef SYSTEM_BUILD
   output_plio plio_ofm[9];   // [8] = event tail (27 values + pad)
+#endif
 
   top_graph<L1Cfg, L2Cfg, L3Cfg, L4Cfg, L5Cfg, L6Cfg, L7Cfg, L8Cfg, L9Cfg, L10Cfg, L11Cfg, L12Cfg, L13Cfg, L14Cfg> dut;
 
   dut_graph() {
+#ifdef SYSTEM_BUILD
+    // 64-byte bursts, 256 MB/s -- same figures aieml/graph.h uses for activations.
+    gmio_x     = input_gmio::create("gmio_x", 64, 256);
+    gmio_track = output_gmio::create("gmio_track", 64, 256);
+    connect<>(gmio_x.out[0], dut.ifm[0]);
+    connect<>(dut.ofm[8], gmio_track.in[0]);
+    // ofm[0..7] (the per-stage debug taps) are left unconnected in the system
+    // build; only the event mean leaves the array.
+#else
     for (int col = 0; col < 1; ++col) {
       plio_data[col] = input_plio::create(
         "PLIO_ifm_" + std::to_string(col),
@@ -82,6 +101,7 @@ public:
       );
       connect<>(plio_data[col].out[0], dut.ifm[col]);
     }
+#endif
 
     for (int chain = 0; chain < L1Cfg::CAS_NUM; ++chain) {
       for (int col = 0; col < L1Cfg::CAS_LENGTH; ++col) {
@@ -196,6 +216,7 @@ public:
       connect<>( bias14[chain], dut.bias14[chain]);
     }
 
+#ifndef SYSTEM_BUILD
     for (int ch = 0; ch < 9; ++ch) {
       plio_ofm[ch] = output_plio::create(
         "PLIO_ofm_" + std::to_string(ch),
@@ -204,12 +225,28 @@ public:
       );
       connect<>(dut.ofm[ch], plio_ofm[ch].in[0]);
     }
+#endif
   }
 };
 
 dut_graph dut;
 
-#if defined(__AIESIM__) || defined(__X86SIM__)
+#if defined(__AIESIM__) || defined(__X86SIM__) || defined(SYSTEM_BUILD)
+#ifdef SYSTEM_BUILD
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+// Event geometry. Must match the compiled graph: N_ITER * TA_TRACKS slots cover
+// TA_EVENT real tracks, the rest are padding (see kernels/track_accum).
+static constexpr int SYS_BATCH   = 8;
+static constexpr int SYS_IN_DIM  = 16;   // padded embed input width
+static constexpr int SYS_TRACKS  = 50;   // real tracks per event
+static constexpr int SYS_OUT_W   = 128;  // graph emits the 128-wide event mean
+#endif
+
+// No argc/argv: the ADF frontend rejects them on main(). Paths come from the
+// environment instead, with defaults that work from the project directory.
 int main() {
   dut.init();
 
@@ -536,7 +573,57 @@ int main() {
   }
 
 
+#ifdef SYSTEM_BUILD
+  // ---- inputs: 50 real tracks, zero-padded to N_ITER * SYS_BATCH slots ----
+  const char* in_path  = std::getenv("RTDA_INPUT");
+  const char* out_path = std::getenv("RTDA_OUTPUT");
+  if (!in_path)  in_path  = "embed_input.txt";
+  if (!out_path) out_path = "track_mean_aie.txt";
+
+  const int slots = N_ITER * SYS_BATCH;
+  std::vector<float> host_in(static_cast<size_t>(slots) * SYS_IN_DIM, 0.0f);
+  if (FILE* f = std::fopen(in_path, "r")) {
+    // embed_input.txt is 8 values per track; the graph takes SYS_IN_DIM wide
+    // with the tail zero-filled (see gen_graph.py INPUT_DIM).
+    for (int t = 0; t < SYS_TRACKS; ++t)
+      for (int k = 0; k < 8; ++k)
+        if (std::fscanf(f, "%f", &host_in[(size_t)t * SYS_IN_DIM + k]) != 1) { t = SYS_TRACKS; break; }
+    std::fclose(f);
+  } else {
+    std::fprintf(stderr, "[aie] cannot open %s\n", in_path); dut.end(); return 1;
+  }
+
+  const size_t in_bytes  = host_in.size() * sizeof(float);
+  const size_t out_bytes = (size_t)N_ITER * SYS_OUT_W * sizeof(float);
+  float* gin  = static_cast<float*>(adf::GMIO::malloc(in_bytes));
+  float* gout = static_cast<float*>(adf::GMIO::malloc(out_bytes));
+  if (!gin || !gout) { std::fprintf(stderr, "[aie] GMIO::malloc failed\n"); dut.end(); return 1; }
+  std::memcpy(gin, host_in.data(), in_bytes);
+
+  dut.gmio_x.gm2aie_nb(gin, in_bytes);
+  dut.gmio_track.aie2gm_nb(gout, out_bytes);
   dut.run(N_ITER);
+  dut.gmio_x.wait();
+  dut.gmio_track.wait();
+
+  // The accumulator emits zeros until the event completes, so the last frame
+  // carries the mean. Take the last non-zero frame rather than assuming index 6.
+  int best = N_ITER - 1;
+  for (int i = N_ITER - 1; i >= 0; --i) {
+    float m = 0.0f;
+    for (int j = 0; j < SYS_OUT_W; ++j) { float v = gout[(size_t)i*SYS_OUT_W+j]; m = v < 0 ? (-v > m ? -v : m) : (v > m ? v : m); }
+    if (m > 0.0f) { best = i; break; }
+  }
+  if (FILE* f = std::fopen(out_path, "w")) {
+    for (int j = 0; j < SYS_OUT_W; ++j) std::fprintf(f, "%.9e\n", gout[(size_t)best*SYS_OUT_W + j]);
+    std::fclose(f);
+    std::printf("[aie] event mean (frame %d of %d) -> %s\n", best, N_ITER, out_path);
+  }
+  adf::GMIO::free(gin);
+  adf::GMIO::free(gout);
+#else
+  dut.run(N_ITER);
+#endif
   dut.end();
   return 0;
 }
