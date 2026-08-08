@@ -149,8 +149,14 @@ $(PL_XOS):
 	$(MAKE) -C pl kernels DATA_TYPE=$(PL_DATA_TYPE)
 
 # --- Host (always cross-compiled for system builds) ---
+# aieml_batch has its own host: no PL kernel, GMIO in/out, 92 RTP ports.
 host:
+ifeq ($(AIE_DIR),aieml_batch)
+	$(MAKE) -C host_batch EMU_PS=$(EMU_PS)
+	$(MAKE) -C aieml_batch rtp   # extract the 92 RTP payloads for the host
+else
 	$(MAKE) -C host EMU_PS=QEMU PRECISION=$(PRECISION)
+endif
 
 # --- AIE simulation convenience (defaults to fast x86) ---
 sim: aie_sim_x86

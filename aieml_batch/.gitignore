@@ -20,3 +20,4 @@ trdata.aiesim/
 *.vcd
 stamp_*.marker
 .gen.*.stamp
+sysdata/

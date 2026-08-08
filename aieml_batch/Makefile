@@ -55,7 +55,7 @@ AIE_INCLUDES = --include=src $(KERNEL_INC) $(shell test -d src/weights && echo -
 
 VPP = source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; v++ --compile --config aie.cfg --mode aie
 
-.PHONY: all graph system_graph x86com sim x86 crosscheck crosscheck_ref report analyze \
+.PHONY: all graph system_graph rtp x86com sim x86 crosscheck crosscheck_ref report analyze \
         regen verify_io ports vars clean clean_all help
 
 .DEFAULT_GOAL := graph
@@ -135,6 +135,15 @@ regen:
 verify_io:
 	@$(AIE4ML_PY) verify_io.py
 
+# Dump the 92 RTP payloads (~1 MB) for the XRT host. Port names are read from
+# Work/ps/c_rts/aie_control_config.json, so `make system_graph` must run first.
+rtp: sysdata/rtp_manifest.txt
+
+sysdata/rtp_manifest.txt: $(wildcard src/weights/*.h) extract_rtp.py
+	@test -f Work/ps/c_rts/aie_control_config.json || { \
+	   echo "ERROR: Work/ps/c_rts/aie_control_config.json missing - run 'make system_graph' first"; exit 1; }
+	@$(PYTHON) extract_rtp.py
+
 # --- utilities ----------------------------------------------------------
 vars:
 	@echo "BATCH        = $(BATCH)   (tracks per graph iteration)"
@@ -174,6 +183,7 @@ help:
 	@echo "  make vars / clean / clean_all"
 	@echo
 	@echo "  make system_graph       GMIO build for the full system (no PL)"
+	@echo "  make rtp                dump the 92 RTP payloads for the XRT host"
 	@echo "  make regen              regenerate src/ from ONNX  (needs aie4ml)"
 	@echo "  make verify_io          prove aie_io still matches aie4ml (needs aie4ml)"
 	@echo
