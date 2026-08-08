@@ -1,5 +1,20 @@
 #pragma once
 
+// The per-stage debug taps (buffer_*_out -> ofm[0..7]) exist only for the PLIO
+// simulation build, which drains them to text files. In SYSTEM_BUILD only the
+// event mean leaves the array, so the taps are removed entirely -- leaving them
+// connected to nothing deadlocks the graph: the buffer is still written each
+// iteration but never read, so the producing stage blocks forever.
+#ifdef SYSTEM_BUILD
+  #define N_STAGE_RD 1
+  #define EXTRA_RD   0
+  #define TAIL_OFM   0
+#else
+  #define N_STAGE_RD 3
+  #define EXTRA_RD   2
+  #define TAIL_OFM   8
+#endif
+
 #include <adf.h>
 using namespace adf;
 
@@ -707,7 +722,7 @@ struct graph_plan {
     self.buffer_emb_out = adf::shared_buffer<float>::create(
       { 128, 8 },
       2,
-      3
+      N_STAGE_RD
     );
     num_buffers(self.buffer_emb_out) = 2;
 
@@ -731,6 +746,7 @@ struct graph_plan {
 { .dimension=1, .stride=4, .wrap=2 }
     }
 });
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_emb_out.out[0]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -738,6 +754,8 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_emb_out.out[0], self.ofm[0]);
+#endif
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_emb_out.out[1]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -745,10 +763,11 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_emb_out.out[1], self.ofm[1]);
+#endif
     self.buffer_s0_out = adf::shared_buffer<float>::create(
       { 128, 8 },
       2,
-      3
+      N_STAGE_RD
     );
     num_buffers(self.buffer_s0_out) = 2;
 
@@ -772,6 +791,7 @@ struct graph_plan {
 { .dimension=1, .stride=4, .wrap=2 }
     }
 });
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_s0_out.out[0]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -779,6 +799,8 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_s0_out.out[0], self.ofm[2]);
+#endif
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_s0_out.out[1]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -786,10 +808,11 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_s0_out.out[1], self.ofm[3]);
+#endif
     self.buffer_s1_out = adf::shared_buffer<float>::create(
       { 128, 8 },
       2,
-      3
+      N_STAGE_RD
     );
     num_buffers(self.buffer_s1_out) = 2;
 
@@ -813,6 +836,7 @@ struct graph_plan {
 { .dimension=1, .stride=4, .wrap=2 }
     }
 });
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_s1_out.out[0]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -820,6 +844,8 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_s1_out.out[0], self.ofm[4]);
+#endif
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_s1_out.out[1]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -827,10 +853,11 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_s1_out.out[1], self.ofm[5]);
+#endif
     self.buffer_s2_out = adf::shared_buffer<float>::create(
       { 128, 8 },
       2,
-      3
+      N_STAGE_RD
     );
     num_buffers(self.buffer_s2_out) = 2;
 
@@ -854,6 +881,7 @@ struct graph_plan {
 { .dimension=1, .stride=4, .wrap=2 }
     }
 });
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_s2_out.out[0]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -861,6 +889,8 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_s2_out.out[0], self.ofm[6]);
+#endif
+#ifndef SYSTEM_BUILD
     read_access(self.buffer_s2_out.out[1]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 64, 8 },
@@ -868,6 +898,7 @@ struct graph_plan {
     , .boundary_dimension = { 128, 8 }
 });
     connect<>(self.buffer_s2_out.out[1], self.ofm[7]);
+#endif
 
 
 
@@ -875,15 +906,15 @@ struct graph_plan {
     // ---- event tail: track average + output dense --------------------
     // Reads the final stage's [128,8] block; emits 32 floats (27 real, padded)
     // once per 50-track event and zeros on the other iterations.
-    connect<>(self.buffer_s2_out.out[2], self.accum.in[0]);
-    read_access(self.buffer_s2_out.out[2]) = adf::tiling({
+    connect<>(self.buffer_s2_out.out[EXTRA_RD], self.accum.in[0]);
+    read_access(self.buffer_s2_out.out[EXTRA_RD]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 128, 8 },
   .offset           = { 0, 0 }
 });
     adf::dimensions(self.accum.in[0])  = { 128 * 8 };
     adf::dimensions(self.accum.out[0]) = { 128 };
-    connect<>(self.accum.out[0], self.ofm[8]);
+    connect<>(self.accum.out[0], self.ofm[TAIL_OFM]);
 
     // ---- batched roll-concat wiring ----------------------------------
     // Placed last: these reference buffer_emb_out / buffer_s{0,1}_out,
@@ -891,8 +922,8 @@ struct graph_plan {
     // --- batched roll-concat: buffer_emb_out [128,8] -> buffer_s0_in [256,8] ---
     // Replaces the four ifm feeds this buffer used to have. The kernel reads the
     // whole previous-stage block and emits [current | previous-track].
-    connect<>(self.buffer_emb_out.out[2], self.roll0.in[0]);
-    read_access(self.buffer_emb_out.out[2]) = adf::tiling({
+    connect<>(self.buffer_emb_out.out[EXTRA_RD], self.roll0.in[0]);
+    read_access(self.buffer_emb_out.out[EXTRA_RD]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 128, 8 },
   .offset           = { 0, 0 }
@@ -900,8 +931,8 @@ struct graph_plan {
     // --- batched roll-concat: buffer_s0_out [128,8] -> buffer_s1_in [256,8] ---
     // Replaces the four ifm feeds this buffer used to have. The kernel reads the
     // whole previous-stage block and emits [current | previous-track].
-    connect<>(self.buffer_s0_out.out[2], self.roll1.in[0]);
-    read_access(self.buffer_s0_out.out[2]) = adf::tiling({
+    connect<>(self.buffer_s0_out.out[EXTRA_RD], self.roll1.in[0]);
+    read_access(self.buffer_s0_out.out[EXTRA_RD]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 128, 8 },
   .offset           = { 0, 0 }
@@ -909,8 +940,8 @@ struct graph_plan {
     // --- batched roll-concat: buffer_s1_out [128,8] -> buffer_s2_in [256,8] ---
     // Replaces the four ifm feeds this buffer used to have. The kernel reads the
     // whole previous-stage block and emits [current | previous-track].
-    connect<>(self.buffer_s1_out.out[2], self.roll2.in[0]);
-    read_access(self.buffer_s1_out.out[2]) = adf::tiling({
+    connect<>(self.buffer_s1_out.out[EXTRA_RD], self.roll2.in[0]);
+    read_access(self.buffer_s1_out.out[EXTRA_RD]) = adf::tiling({
   .buffer_dimension = { 128, 8 },
   .tiling_dimension = { 128, 8 },
   .offset           = { 0, 0 }

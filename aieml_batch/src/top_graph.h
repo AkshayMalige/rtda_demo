@@ -29,7 +29,11 @@ class top_graph : public graph {
 public:
 
   adf::input_port  ifm [1];   // x only; the s{k}_in feeds are now internal (roll kernels)
-  adf::output_port ofm [9];   // [8] = event tail: 32 floats (27 real + pad)
+#ifdef SYSTEM_BUILD
+  adf::output_port ofm [1];   // only the event mean leaves the array
+#else
+  adf::output_port ofm [9];   // [0..7] per-stage debug taps, [8] = event tail
+#endif
 
 
   adf::input_port wts1

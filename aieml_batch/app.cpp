@@ -89,9 +89,7 @@ public:
     gmio_x     = input_gmio::create("gmio_x", 64, 256);
     gmio_track = output_gmio::create("gmio_track", 64, 256);
     connect<>(gmio_x.out[0], dut.ifm[0]);
-    connect<>(dut.ofm[8], gmio_track.in[0]);
-    // ofm[0..7] (the per-stage debug taps) are left unconnected in the system
-    // build; only the event mean leaves the array.
+    connect<>(dut.ofm[0], gmio_track.in[0]);   // the only output in SYSTEM_BUILD
 #else
     for (int col = 0; col < 1; ++col) {
       plio_data[col] = input_plio::create(
