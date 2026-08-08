@@ -144,11 +144,22 @@ def main():
     X = np.zeros((N_TRACKS, INPUT_DIM), dtype=np.float32)
     X[:, :8] = L('embed_input.txt').reshape(-1, 8)
     feed = {'x': blocks(X)}
-    # Each solver's 256-wide input is assemble() of the previous stage's golden
-    # output, so the solvers are validated independently rather than compounding.
-    stage_in = [emb_c] + soln_c[:-1]
-    for s in range(solvers):
-        feed[f's{s}_in'] = blocks(assemble(stage_in[s]))
+
+    # Solver inputs are external only while the graph still exposes them. Once
+    # the roll kernels are wired in, the graph produces them internally and the
+    # whole chain is driven from x alone -- a stricter test, because errors then
+    # compound across stages instead of each stage being fed a golden input.
+    graph_inputs = set(aie_io.load_ports()['inputs'])
+    external_rolls = sorted(t for t in graph_inputs if t.endswith('_in'))
+    if external_rolls:
+        stage_in = [emb_c] + soln_c[:-1]
+        for s in range(solvers):
+            if f's{s}_in' in graph_inputs:
+                feed[f's{s}_in'] = blocks(assemble(stage_in[s]))
+        print(f'    (solver inputs fed externally: {external_rolls})')
+    else:
+        print('    (solver inputs produced in-graph by the roll kernels; '
+              'driven from x alone)')
 
     # The graph was compiled with a fixed N_ITER; feeding a different count
     # stalls it waiting for data that never arrives.

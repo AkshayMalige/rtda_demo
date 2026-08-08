@@ -4,6 +4,7 @@
 #include "graph_plan.h"
 
 #include "dense_bias_relu_graph.h"
+#include "roll_concat_batch.h"
 
 using namespace adf;
 
@@ -26,7 +27,7 @@ template<
 class top_graph : public graph {
 public:
 
-  adf::input_port  ifm [13];
+  adf::input_port  ifm [1];   // x only; the s{k}_in feeds are now internal (roll kernels)
   adf::output_port ofm [8];
 
 
@@ -117,6 +118,11 @@ private:
   dense_bias_relu_graph<Cfg14>
     s2_d3_aie;
 
+  // Batched roll-concat, one per solver: turns the previous stage's
+  // [TRACKS][128] block into the [TRACKS][256] the solver's dense0 expects.
+  // Replaces the external s{k}_in graph inputs.
+  adf::kernel roll0, roll1, roll2;
+
   adf::shared_buffer<float> buffer_x;
   adf::shared_buffer<float> buffer_r_e0;
   adf::shared_buffer<float> buffer_s0_in;
@@ -155,6 +161,19 @@ private:
 
 public:
   top_graph() {
+    // Create the roll kernels before graph_plan wires them up.
+    static_assert(Cfg3::padded_independent_extent == RCB_TRACKS,
+                  "roll kernel is fixed at RCB_TRACKS; regenerate it if BATCH changes");
+    roll0 = adf::kernel::create(roll_concat_batch);
+    roll1 = adf::kernel::create(roll_concat_batch);
+    roll2 = adf::kernel::create(roll_concat_batch);
+    for (auto* k : {&roll0, &roll1, &roll2}) {
+      adf::source(*k) = "kernels/roll_concat_batch/roll_concat_batch.cpp";
+      // Pure data movement, but it sits on the critical path between stages;
+      // give it a whole tile rather than let the mapper share one.
+      adf::runtime<ratio>(*k) = 0.9;
+    }
+
     graph_plan<
       Cfg1,
       Cfg2,

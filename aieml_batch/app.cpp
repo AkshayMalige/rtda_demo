@@ -38,7 +38,7 @@ template<typename... Ts> struct type_list {};
 
 class dut_graph : public graph {
 public:
-  input_plio plio_data[13];
+  input_plio plio_data[1];   // x only -- solver inputs are produced inside the graph
 
   input_port wts1[L1Cfg::CAS_NUM * L1Cfg::CAS_LENGTH];
   input_port bias1[L1Cfg::CAS_NUM];
@@ -74,7 +74,7 @@ public:
   top_graph<L1Cfg, L2Cfg, L3Cfg, L4Cfg, L5Cfg, L6Cfg, L7Cfg, L8Cfg, L9Cfg, L10Cfg, L11Cfg, L12Cfg, L13Cfg, L14Cfg> dut;
 
   dut_graph() {
-    for (int col = 0; col < 13; ++col) {
+    for (int col = 0; col < 1; ++col) {
       plio_data[col] = input_plio::create(
         "PLIO_ifm_" + std::to_string(col),
         plio_128_bits,

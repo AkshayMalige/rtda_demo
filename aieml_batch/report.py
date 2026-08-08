@@ -67,12 +67,20 @@ def main():
           f'(min {iv.min():.1f}, max {iv.max():.1f}, n={iv.size})')
     print(f'  ns per track  = {iv.mean() / a.batch:.1f}   (batch = {a.batch})')
 
-    # MACs/track for the shipping topology, so GOPs cross-checks the II.
-    in_dim = ports['inputs']['x'][0].np_boundary[-1]
-    solvers = sum(1 for t in ports['inputs'] if t.endswith('_in'))
-    macs = in_dim * 128 + 128 * 128 + solvers * (2 * 128 * 128 + 3 * 128 * 128)
+    # MACs/track summed from the generated layer configs, so GOPs is an
+    # independent cross-check on the II. Derived from parameters.h rather than
+    # from the port names -- once the roll kernels moved in-graph there are no
+    # s{k}_in ports left to count.
+    params = (HERE / 'src' / 'parameters.h').read_text()
+    # The negative lookbehind matters: parameters.h also has padded_IN_FEAT,
+    # which a bare IN_FEAT pattern matches, double-counting every layer.
+    ins = [int(m) for m in re.findall(r'(?<![A-Za-z_])IN_FEAT\s*=\s*(\d+)', params)]
+    outs = [int(m) for m in re.findall(r'(?<![A-Za-z_])OUT_FEAT\s*=\s*(\d+)', params)]
+    layers = [(i, o) for i, o in zip(ins, outs)]
+    macs = sum(i * o for i, o in layers)
     gops = a.batch * macs * 2 / (iv.mean() * 1e-9) / 1e9
-    print(f'  GOPs          = {gops:.1f}   ({macs:,} MACs/track x {a.batch} tracks / II)')
+    print(f'  GOPs          = {gops:.1f}   ({macs:,} MACs/track over {len(layers)} '
+          f'dense layers x {a.batch} tracks / II)')
 
     print('\n  per port:')
     for k, v in sorted(per_port.items()):
