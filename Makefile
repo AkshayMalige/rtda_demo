@@ -70,7 +70,15 @@ BUILD_DIR := build_$(TARGET)
 XSA       := $(BUILD_DIR)/design_$(TARGET).xsa
 PKG_DIR   := package.$(TARGET)
 XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
-EXEC      := ./host.exe
+ifeq ($(AIE_DIR),aieml_batch)
+  EXEC     := ./host_batch.exe
+  # The batch host needs the fp32 weights AND the extracted RTP payloads on the
+  # SD image. SD_STAGE is assembled by the `sd_stage` target below.
+  SD_STAGE := ./sd_batch
+else
+  EXEC     := ./host.exe
+  SD_STAGE := ./data
+endif
 ###########################################################################
 
 ############################################################################
@@ -141,6 +149,12 @@ else
 	$(MAKE) -C aieml graph TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
 endif
 
+# Let the AIE archive be built on demand. Without this, `make link` or
+# `make package` on their own fail with "No rule to make target .../libadf.a"
+# and only `make system` works, because it happens to run `aie` first.
+$(AIE_LIB):
+	$(MAKE) aie AIE_DIR=$(AIE_DIR) TARGET=$(TARGET) PRECISION=$(PRECISION)
+
 # --- PL XO build (for system linking) ---
 pl: $(PL_XOS)
 	@echo "PL kernel artifacts ready: $(PL_XOS)"
@@ -178,7 +192,15 @@ $(BUILD_DIR):
 	@mkdir -p $@
 
 ##############################  Package  ###################################
-package: $(XCLBIN)
+sd_stage:
+ifeq ($(AIE_DIR),aieml_batch)
+	@rm -rf $(SD_STAGE) && mkdir -p $(SD_STAGE)
+	@cp -r data_fp32 $(SD_STAGE)/
+	@cp -r aieml_batch/sysdata $(SD_STAGE)/
+	@echo "SD staging ready: $(SD_STAGE) (data_fp32 + sysdata)"
+endif
+
+package: sd_stage $(XCLBIN)
 
 ifeq ($(TARGET),hw_emu)
 $(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
@@ -190,7 +212,7 @@ $(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
 		--package.rootfs $(ROOTFS) \
 		--package.kernel_image $(IMAGE) \
 		--package.sd_file $(EXEC) \
-		--package.sd_dir data \
+		--package.sd_dir $(SD_STAGE) \
 		--config $(PACK_CFG) \
 		$(AIE_LIB) $(XSA) -o $@
 	@echo "Packaged design created in $(PKG_DIR)"
@@ -205,7 +227,7 @@ $(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
 		--package.kernel_image $(IMAGE) \
 		--package.boot_mode sd \
 		--package.sd_file $(EXEC) \
-		--package.sd_dir data \
+		--package.sd_dir $(SD_STAGE) \
 		--config $(PACK_CFG) \
 		$(AIE_LIB) $(XSA) -o $@
 	@echo "Packaged design created in $(PKG_DIR)"
