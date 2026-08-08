@@ -1,0 +1,178 @@
+#!/usr/bin/env python
+"""Cross-check aieml_batch against the aieml/ reference output.
+
+Three-way comparison over the real 50-track stimulus in data_fp32/:
+
+    numpy golden  <->  data_fp32/aieml10_output_aie.txt   (validates the reference)
+    numpy golden  <->  aieml_batch AIE simulation          (validates the new graph)
+
+The golden model is the full 14-layer chain rebuilt in numpy from the same weight
+files, with leaky-ReLU max(y, 0.1*y) after every dense layer (LEAKY_SLOPE = 0.1,
+common/nn_defs10.h:40) and the roll-concat expressed as
+    assemble(a) = concat([a, roll(a, 1, axis=0)], axis=-1)
+which is what aieml/roll_concat.cpp computes.
+
+WARM-UP: tracks 0,1,2 are excluded. roll_concat starts with zero-initialised
+history and the network's receptive field is 4 tracks deep, so the first three
+outputs are contaminated. This is WARMUP = 3 in the reference notebooks, and it is
+expected -- those tracks differ by ~0.2 while tracks 3..49 agree to 1e-6.
+
+Usage:  crosscheck.py [--sim aie|x86] [--solvers N] [--batch N]
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from pathlib import Path
+
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parent
+# NOT 'DATA_DIR': ../set_envs.sh exports that pointing at data/, which holds int16
+# text. Loading it into a float32 model yields integer weights and garbage.
+D = Path(os.environ.get('WEIGHTS_DIR') or REPO / 'data_fp32')
+H = 128
+N_TRACKS = 50
+WARMUP = 3
+SLOPE = 0.1
+
+
+def L(n):
+    return np.loadtxt(D / n).astype(np.float32)
+
+
+def P(stem, n, r, c):
+    return np.concatenate([L(f'{stem}_part{i}.txt') for i in range(n)]).reshape(r, c).astype(np.float32)
+
+
+def lrelu(a):
+    return np.maximum(a, SLOPE * a)
+
+
+def assemble(a):
+    """roll_concat: row j -> [a[j], a[j-1]]  (circular over the 50-track event)."""
+    return np.concatenate([a, np.roll(a, 1, axis=0)], axis=-1)
+
+
+def golden():
+    """Full 14-layer chain in numpy. Returns (emb, [s0,s1,s2])."""
+    X = L('embed_input.txt').reshape(-1, 8)
+    h = lrelu(X @ L('embed_dense_0_weights.txt').reshape(8, H) + L('embed_dense_0_bias.txt'))
+    emb = lrelu(h @ P('embed_dense_1_weights', 2, H, H) + L('embed_dense_1_bias.txt'))
+    outs, cur = [], emb
+    for s in range(3):
+        z = lrelu(assemble(cur) @ P(f'solver_{s}_dense_0_weights', 4, 2 * H, H)
+                  + L(f'solver_{s}_dense_0_bias.txt'))
+        for n in (1, 2, 3):
+            z = z @ P(f'solver_{s}_dense_{n}_weights', 2, H, H) + L(f'solver_{s}_dense_{n}_bias.txt')
+            if n < 3:
+                z = lrelu(z)
+        cur = lrelu(z)
+        outs.append(cur)
+    return emb, outs
+
+
+# 1e-4, not 1e-5. float32 on AIE-ML is emulated on the bfloat16 datapath
+# (VCONV.bf16.fp32 + paired VMAC/VMSC), so results are not IEEE-exact fp32. Over a
+# 14-layer chain a few elements land ~1e-5 off on values of order 1, while the mean
+# stays ~1e-7. For scale: the aieml/ reference itself only agrees with a numpy
+# float64-ish golden to 1.1e-06, and the final output agrees to 4.0e-06.
+def compare(name, a, b, tol=1e-4):
+    d = np.abs(a[WARMUP:N_TRACKS] - b[WARMUP:N_TRACKS])
+    ok = d.max() < tol
+    print(f'  {name:34s} max|diff| = {d.max():.3e}  mean = {d.mean():.3e}   {"ok" if ok else "FAIL"}')
+    return ok
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--sim', choices=('aie', 'x86'), default='aie')
+    ap.add_argument('--solvers', type=int, default=int(os.environ.get('SOLVERS', '1')))
+    ap.add_argument('--batch', type=int, default=int(os.environ.get('BATCH', '8')))
+    ap.add_argument('--skip-aie', action='store_true', help='only validate the reference file')
+    ap.add_argument('--slope', type=float, default=None,
+                    help='leaky-ReLU slope for the golden used in check [2]. The RTDA '
+                         'model uses 0.1, but aie4ml only emits plain ReLU (slope 0), so '
+                         'pass 0 to check the graph against what it actually computes.')
+    a = ap.parse_args()
+
+    emb_g, soln_g = golden()          # slope 0.1 -- the real RTDA model
+    print(f'numpy golden: {N_TRACKS} tracks, comparing tracks {WARMUP}..{N_TRACKS - 1}\n')
+
+    ok = True
+    ref_path = D / 'aieml10_output_aie.txt'
+    if ref_path.exists():
+        ref = L(ref_path.name).reshape(-1, H)
+        print(f'[1] reference file vs numpy golden   ({ref_path})')
+        ok &= compare('aieml10_output_aie.txt', soln_g[2], ref, tol=1e-4)
+        pre = np.abs(soln_g[2][:WARMUP] - ref[:WARMUP]).max(axis=1)
+        print(f'      (warm-up tracks 0..2 differ by {np.round(pre, 4)} -- expected)\n')
+    else:
+        print(f'[1] SKIP: {ref_path} not found\n')
+
+    if a.skip_aie:
+        raise SystemExit(0 if ok else 1)
+
+    sys.path.insert(0, str(HERE))
+    import gen_graph as G
+
+    batch, solvers = a.batch, a.solvers
+    iters = -(-N_TRACKS // batch)                       # ceil, e.g. 7 blocks of 8 => 56 slots
+    pad = iters * batch
+
+    def blocks(arr):
+        out = np.zeros((pad, arr.shape[1]), dtype=np.float32)
+        out[:N_TRACKS] = arr
+        return out.reshape(iters, batch, arr.shape[1])
+
+    # The golden that check [2] compares against, and that drives the solver
+    # inputs, must use the SAME activation the graph implements. aie4ml emits
+    # plain ReLU (passes/fuse_activation.py handles only 'relu' and 'linear'),
+    # whereas the RTDA model uses leaky ReLU slope 0.1. Feeding leaky-derived
+    # inputs while comparing against a plain-ReLU golden compares two different
+    # networks and fails for the wrong reason.
+    global SLOPE
+    if a.slope is not None:
+        SLOPE = a.slope
+    emb_c, soln_c = golden()
+
+    X = np.zeros((N_TRACKS, G.INPUT_DIM), dtype=np.float32)
+    X[:, :8] = L('embed_input.txt').reshape(-1, 8)
+    feed = {'x': blocks(X)}
+    # Each solver's 256-wide input is assemble() of the previous stage's golden
+    # output, so the solvers are validated independently rather than compounding.
+    stage_in = [emb_c] + soln_c[:-1]
+    for s in range(solvers):
+        feed[f's{s}_in'] = blocks(assemble(stage_in[s]))
+
+    # gen_graph binds ITERS at import time, so patch the module global rather than
+    # the environment. This MUST match the ITERS the libadf.a was compiled with
+    # (N_ITER in src/parameters.h) or predict() rejects the input shape.
+    G.ITERS = iters
+    _, model = G._model(batch, solvers)
+    got = model.predict(feed, simulator=a.sim)
+
+    def flat(name):
+        return np.asarray(got[name]).reshape(-1, H)[:N_TRACKS]
+
+    if a.slope is not None and a.slope != 0.1:
+        print(f'\n    (check [2] golden uses leaky slope {a.slope}; the RTDA model is 0.1)')
+    print(f'[2] AIE ({a.sim} sim, batch={batch}, solvers={solvers}, iters={iters}) vs numpy golden')
+    ok &= compare('emb_out', emb_c, flat('emb_out'))
+    for s in range(solvers):
+        ok &= compare(f's{s}_out', soln_c[s], flat(f's{s}_out'))
+
+    if solvers == 3 and ref_path.exists():
+        print(f'\n[3] AIE final output vs {ref_path.name} (the aieml/ reference)')
+        ok &= compare('s2_out vs aieml reference', flat('s2_out'), ref, tol=1e-4)
+    elif solvers != 3:
+        print(f'\n[3] SKIP end-to-end vs aieml reference: needs --solvers 3 (have {solvers})')
+
+    print('\nPASS' if ok else '\nFAIL')
+    raise SystemExit(0 if ok else 1)
+
+
+if __name__ == '__main__':
+    main()
