@@ -31,7 +31,7 @@ ITERS        ?= 7          # 7 x 8 = 56 slots >= 50 tracks
 
 AIE_VITIS    ?= /tools/Xilinx/2025.2/Vitis
 AIE_PLAT_NAME?= xilinx_vek280_base_202520_1
-AIE_PLAT     := $(AIE_VITIS)/base_platforms/$(AIE_PLAT_NAME)/$(AIE_PLAT_NAME).xpfm
+AIE_PLAT     ?= $(AIE_VITIS)/base_platforms/$(AIE_PLAT_NAME)/$(AIE_PLAT_NAME).xpfm
 WEIGHTS_DIR  ?= $(CURDIR)/../data_fp32
 # Needs numpy and nothing else. Deliberately the miniforge base interpreter,
 # which has numpy but CANNOT import aie4ml -- so a green `make sim` is proof the

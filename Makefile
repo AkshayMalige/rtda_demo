@@ -56,11 +56,16 @@ endif
 AIE_DIR   ?= aieml
 ifeq ($(AIE_DIR),aieml_batch)
   LINK_CFG  := ./common/linker_batch.cfg
-  HLS_KERNELS :=            # no PL kernels in the batched design
 else
   LINK_CFG  := ./common/linker_aieml.cfg
 endif
 HLS_KERNELS := track_average
+# The batched design has no PL at all: the track average is an AIE kernel now.
+# This must come AFTER the line above, which would otherwise clobber it, and
+# BEFORE PL_XOS is computed from it.
+ifeq ($(AIE_DIR),aieml_batch)
+  HLS_KERNELS :=
+endif
 XO_DIR    := pl/ip
 
 AIE_WORK_DIR_NAME ?= Work
@@ -150,7 +155,11 @@ all: system
 # swaps its PLIO simulation ports for GMIO and compiles the host-side main().
 aie:
 ifeq ($(AIE_DIR),aieml_batch)
-	$(MAKE) -C aieml_batch system_graph WORK=$(AIE_WORK_DIR_NAME)
+	@echo ">>> aieml_batch system graph on the SYSTEM toolchain, not its own default."
+	@echo "    The rest of the flow (platform, rootfs, sysroot, XRT) is 2024.2, so the"
+	@echo "    graph must be too -- a 2025.2 libadf.a will not link against a 2024.2 XSA."
+	$(MAKE) -C aieml_batch system_graph WORK=$(AIE_WORK_DIR_NAME) \
+	    AIE_VITIS=$(XILINX_VITIS) AIE_PLAT="$(PLATFORM)"
 else
 	$(MAKE) -C aieml graph TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
 endif
