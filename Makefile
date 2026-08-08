@@ -64,7 +64,13 @@ HLS_KERNELS := track_average
 XO_DIR    := pl/ip
 
 AIE_WORK_DIR_NAME ?= Work
-AIE_LIB   := $(AIE_DIR)/$(AIE_WORK_DIR_NAME)/libadf.a
+# The two designs differ in where the archive lands: aieml/ emits it INSIDE the
+# workdir, aieml_batch/ at the project root (Work/ is only the build scratch).
+ifeq ($(AIE_DIR),aieml_batch)
+  AIE_LIB := $(AIE_DIR)/libadf.a
+else
+  AIE_LIB := $(AIE_DIR)/$(AIE_WORK_DIR_NAME)/libadf.a
+endif
 PL_XOS    := $(addprefix $(XO_DIR)/,$(addsuffix _hls.xo,$(HLS_KERNELS)))
 BUILD_DIR := build_$(TARGET)
 XSA       := $(BUILD_DIR)/design_$(TARGET).xsa
