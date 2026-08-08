@@ -49,34 +49,25 @@ extern "C" {
         // AIE-ML packs two int16 elements into each 32-bit AXI beat
         // (low half = element N, high half = element N+1). `size` is the
         // total element count expected, so we consume size/2 beats.
-        int beats = size >> 1;
-        for (int b = 0; b < beats; b++) {
+        //
+        // Iterate over ELEMENTS rather than beats, pulling a new beat every
+        // second element. Unpacking both halves inline instead would need two
+        // copies of the flush block below, i.e. 2 x 128 unrolled m_axi writes
+        // in one II=1 loop body against a single gmem port. The scheduler then
+        // walks the II upward (1, 2, 3, 4, 11, 15, ...) without converging and
+        // csynth never terminates. One flush site keeps this path structurally
+        // identical to the float path, which synthesises in ~20 s.
+        const int elems = (size >> 1) << 1;   // == beats * 2
+        axis_t val;
+        for (int i = 0; i < elems; i++) {
             #pragma HLS PIPELINE II=1
-            axis_t val = s.read();
-            data_t d0 = val.data.range(15, 0);
-            data_t d1 = val.data.range(31, 16);
+            if ((i & 1) == 0) val = s.read();
+            data_t d = (i & 1) ? static_cast<data_t>(val.data.range(31, 16))
+                               : static_cast<data_t>(val.data.range(15, 0));
 
-            // ---- element N ----
-            if (window_count == 0) accum[element_index]  = static_cast<accum_t>(d0);
-            else                   accum[element_index] += static_cast<accum_t>(d0);
-            element_index++;
-            if (element_index == VECTOR_SIZE) {
-                element_index = 0;
-                window_count++;
-                if (window_count == threshold) {
-                    for (int j = 0; j < VECTOR_SIZE; j++) {
-                        #pragma HLS UNROLL
-                        mem[output_index * VECTOR_SIZE + j] =
-                            static_cast<mem_t>(static_cast<data_t>(accum[j] / threshold));
-                    }
-                    output_index++;
-                    window_count = 0;
-                }
-            }
+            if (window_count == 0) accum[element_index]  = static_cast<accum_t>(d);
+            else                   accum[element_index] += static_cast<accum_t>(d);
 
-            // ---- element N+1 ----
-            if (window_count == 0) accum[element_index]  = static_cast<accum_t>(d1);
-            else                   accum[element_index] += static_cast<accum_t>(d1);
             element_index++;
             if (element_index == VECTOR_SIZE) {
                 element_index = 0;
