@@ -218,7 +218,7 @@ endif
 package: sd_stage $(XCLBIN)
 
 ifeq ($(TARGET),hw_emu)
-$(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
+$(XCLBIN): $(AIE_LIB) $(XSA) $(EXEC) | $(PKG_DIR)
 	@echo "Packaging for hw_emu..."
 	v++ --package -t hw_emu \
 		--platform $(PLATFORM) \
@@ -232,7 +232,7 @@ $(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
 		$(AIE_LIB) $(XSA) -o $@
 	@echo "Packaged design created in $(PKG_DIR)"
 else
-$(XCLBIN): $(AIE_LIB) $(XSA) | $(PKG_DIR)
+$(XCLBIN): $(AIE_LIB) $(XSA) $(EXEC) | $(PKG_DIR)
 	@echo "Packaging for hw..."
 	v++ --package -t hw \
 		--platform $(PLATFORM) \
