@@ -50,6 +50,19 @@ std::string join(const std::string& base, const std::string& rel)
     return base.back() == '/' ? base + rel : base + "/" + rel;
 }
 
+// --package.sd_dir copies the DIRECTORY, not its contents, so on the SD card the
+// payload lands under sd_batch/ rather than at the root. Try both so a bare
+// ./host_batch.exe works from /mnt as well as from the build tree.
+std::string first_existing(const std::vector<std::string>& cands, const std::string& what)
+{
+    for (const auto& c : cands) {
+        std::ifstream f(c);
+        if (f.good()) return c;
+    }
+    throw std::runtime_error("cannot locate " + what + " (tried: " + [&]{
+        std::string s; for (const auto& c : cands) s += c + " "; return s; }() + ")");
+}
+
 std::vector<float> read_text(const std::string& path, std::size_t expect = 0)
 {
     std::ifstream f(path);
@@ -126,8 +139,20 @@ int main(int argc, char** argv)
 {
     try {
         const std::string xclbin   = (argc > 1) ? argv[1] : "system_hw_emu.xclbin";
-        const std::string data_dir = (argc > 2) ? argv[2] : "data_fp32";
-        const std::string sysdata  = (argc > 3) ? argv[3] : "sysdata";
+        // Probe for the data next to the exe and under sd_batch/ (the packaged layout).
+        std::string data_dir, sysdata;
+        if (argc > 2) data_dir = argv[2];
+        else {
+            auto p = first_existing({"data_fp32/embed_input.txt",
+                                     "sd_batch/data_fp32/embed_input.txt"}, "data_fp32");
+            data_dir = p.substr(0, p.rfind('/'));
+        }
+        if (argc > 3) sysdata = argv[3];
+        else {
+            auto p = first_existing({"sysdata/rtp_manifest.txt",
+                                     "sd_batch/sysdata/rtp_manifest.txt"}, "sysdata");
+            sysdata = p.substr(0, p.rfind('/'));
+        }
         const std::string out_path = (argc > 4) ? argv[4] : "track_out_27.txt";
 
         std::cout << "[host] xclbin=" << xclbin << " data=" << data_dir
