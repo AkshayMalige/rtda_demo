@@ -830,7 +830,7 @@ struct graph_plan {
     self.buffer_s2_out = adf::shared_buffer<float>::create(
       { 128, 8 },
       2,
-      2
+      3
     );
     num_buffers(self.buffer_s2_out) = 2;
 
@@ -871,6 +871,19 @@ struct graph_plan {
 
 
 
+
+    // ---- event tail: track average + output dense --------------------
+    // Reads the final stage's [128,8] block; emits 32 floats (27 real, padded)
+    // once per 50-track event and zeros on the other iterations.
+    connect<>(self.buffer_s2_out.out[2], self.accum.in[0]);
+    read_access(self.buffer_s2_out.out[2]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 128, 8 },
+  .offset           = { 0, 0 }
+});
+    adf::dimensions(self.accum.in[0])  = { 128 * 8 };
+    adf::dimensions(self.accum.out[0]) = { 128 };
+    connect<>(self.accum.out[0], self.ofm[8]);
 
     // ---- batched roll-concat wiring ----------------------------------
     // Placed last: these reference buffer_emb_out / buffer_s{0,1}_out,

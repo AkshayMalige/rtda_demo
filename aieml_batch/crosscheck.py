@@ -179,6 +179,52 @@ def main():
     for s in range(solvers):
         ok &= compare(f's{s}_out', soln_c[s], flat(f's{s}_out'))
 
+    # --- event tail: track average + output dense, if the graph has it -------
+    if 'track_out' in got:
+        Wo = np.loadtxt(D / 'output_weights.txt').astype(np.float32).reshape(128, 27)
+        Bo = np.loadtxt(D / 'output_bias.txt').astype(np.float32)
+        # Two references, because they answer different questions.
+        # (orientation per host/host.cpp:394: y = avg @ W + B, W is [128][27])
+        #
+        #  - from the AIE's OWN s2_out: tests the accumulator and output dense
+        #    in isolation. Must be ~1e-6.
+        #  - from the pure numpy golden: also carries the warm-up difference,
+        #    because the mean includes tracks 0..2 where the graph's zero-pad
+        #    roll differs from the reference's circular roll by ~0.2. That shows
+        #    up as ~4e-3 here and is expected, not a defect.
+        y_aie_ref = flat('s2_out')[:N_TRACKS].mean(axis=0) @ Wo + Bo
+        y_g = soln_c[2][:N_TRACKS].mean(axis=0) @ Wo + Bo
+
+        width = np.asarray(got['track_out']).size // run_sim.n_iter()
+        frames = np.asarray(got['track_out']).reshape(-1, width)
+        nz = [i for i, f in enumerate(frames) if np.abs(f).max() > 0]
+        print(f'\n[4] event tail (track average + output dense 128->27)')
+        print(f'  emitting frames: {nz} of {len(frames)}   '
+              f'(expect only the last -- one event completes)')
+        if len(nz) != 1:
+            print(f'  FAIL: expected exactly 1 non-zero frame, got {len(nz)}')
+            ok = False
+        else:
+            f = frames[nz[0]]
+            if width == 128:
+                # graph emitted the mean; host applies the dense (as aieml/ does)
+                y = f @ Wo + Bo
+                y_aie_ref = flat('s2_out')[:N_TRACKS].mean(axis=0) @ Wo + Bo
+                print('  (graph emits the 128-wide mean; output dense applied host-side)')
+            else:
+                y = f[:27]
+            d = np.abs(y - y_aie_ref)
+            good = d.max() < 1e-4
+            ok &= good
+            print(f'  {"vs mean of the AIE own s2_out":34s} max|diff| = {d.max():.3e}  '
+                  f'mean = {d.mean():.3e}   {"ok" if good else "FAIL"}')
+            dg = np.abs(y - y_g)
+            print(f'  {"vs pure numpy golden":34s} max|diff| = {dg.max():.3e}  '
+                  f'(warm-up tracks 0..2 in the mean; expected)')
+            if width != 128:
+                pad = np.abs(f[27:]).max()
+                print(f'  padding lanes 27..31 max|.| = {pad:.3e} (expect 0)')
+
     if solvers == 3 and ref_path.exists():
         print(f'\n[3] AIE final output vs {ref_path.name} (the aieml/ reference)')
         ok &= compare('s2_out vs aieml reference', flat('s2_out'), ref, tol=1e-4)

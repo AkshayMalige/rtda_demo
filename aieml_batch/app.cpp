@@ -69,7 +69,7 @@ public:
   input_port wts14[L14Cfg::CAS_NUM * L14Cfg::CAS_LENGTH];
   input_port bias14[L14Cfg::CAS_NUM];
 
-  output_plio plio_ofm[8];
+  output_plio plio_ofm[9];   // [8] = event tail (27 values + pad)
 
   top_graph<L1Cfg, L2Cfg, L3Cfg, L4Cfg, L5Cfg, L6Cfg, L7Cfg, L8Cfg, L9Cfg, L10Cfg, L11Cfg, L12Cfg, L13Cfg, L14Cfg> dut;
 
@@ -196,7 +196,7 @@ public:
       connect<>( bias14[chain], dut.bias14[chain]);
     }
 
-    for (int ch = 0; ch < 8; ++ch) {
+    for (int ch = 0; ch < 9; ++ch) {
       plio_ofm[ch] = output_plio::create(
         "PLIO_ofm_" + std::to_string(ch),
         plio_128_bits,

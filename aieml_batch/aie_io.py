@@ -39,6 +39,8 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 PLAN = HERE / 'aie_pipeline.json'
+# Ports wired in by hand after generation (see the file's own comment).
+EXTRA = HERE / 'io_extra.json'
 # app.cpp creates every PLIO as plio_128_bits.
 PLIO_WIDTH_BITS = 128
 
@@ -130,6 +132,15 @@ def load_ports(plan_path: Path = PLAN):
             if r.get('target_type') == 'plio' and ep.get('name') == 'ofm':
                 outputs.setdefault(tensor, []).append(
                     Port('output', ep['port'], tensor, r['staging'], r['dtype']))
+
+    # Merge any hand-added ports. aie_pipeline.json is generated and only
+    # describes what aie4ml built; Phase 3 added kernels and ports by hand.
+    if EXTRA.exists():
+        extra = json.loads(EXTRA.read_text())
+        for direction, bucket in (('inputs', inputs), ('outputs', outputs)):
+            for e in extra.get(direction, []):
+                bucket.setdefault(e['tensor'], []).append(
+                    Port(direction[:-1], e['port'], e['tensor'], e['staging'], e['dtype']))
 
     for d in (inputs, outputs):
         for t in d:

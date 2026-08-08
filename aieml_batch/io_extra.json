@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "Hand-maintained supplement to aie_pipeline.json, for graph ports added after",
+    "generation. aie_pipeline.json is aie4ml's output and only knows the ports it",
+    "created; anything wired in by hand (Phase 3) is declared here and merged by",
+    "aie_io.load_ports(). Keep in step with src/graph_plan.h."
+  ],
+  "outputs": [
+    {
+      "tensor": "track_out",
+      "port": 8,
+      "dtype": { "format": "float32", "frac": 0 },
+      "staging": {
+        "io_boundary_dimension": [128],
+        "io_tiling_dimension": [128],
+        "offset": [0],
+        "slice_dimension": 0
+      }
+    }
+  ]
+}

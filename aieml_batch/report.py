@@ -39,6 +39,8 @@ def frame_intervals_ns(path: Path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--batch', type=int, default=8)
+    ap.add_argument('--iters', type=int, default=7)
+    ap.add_argument('--event', type=int, default=50, help='real tracks per event')
     a = ap.parse_args()
 
     data_dir = HERE / 'aiesimulator_output' / 'data'
@@ -65,7 +67,14 @@ def main():
     iv = np.concatenate(all_iv)
     print(f'  II            = {iv.mean():.1f} ns  '
           f'(min {iv.min():.1f}, max {iv.max():.1f}, n={iv.size})')
-    print(f'  ns per track  = {iv.mean() / a.batch:.1f}   (batch = {a.batch})')
+    # Two different questions, and they differ by 56/50 = 12%.
+    #   per slot  : II / BATCH -- what you get if the workload is a multiple of 8
+    #   per track : ITERS * II / 50 -- what you actually get on a 50-track event,
+    #               because the 7th iteration carries only 2 real tracks + 6 padding
+    iters = a.iters
+    print(f'  ns per slot   = {iv.mean() / a.batch:.1f}   (II / batch {a.batch})')
+    print(f'  ns per TRACK  = {iters * iv.mean() / a.event:.1f}   '
+          f'({iters} iterations x II / {a.event} real tracks)  <- the honest number')
 
     # MACs/track summed from the generated layer configs, so GOPs is an
     # independent cross-check on the II. Derived from parameters.h rather than
@@ -78,9 +87,9 @@ def main():
     outs = [int(m) for m in re.findall(r'(?<![A-Za-z_])OUT_FEAT\s*=\s*(\d+)', params)]
     layers = [(i, o) for i, o in zip(ins, outs)]
     macs = sum(i * o for i, o in layers)
-    gops = a.batch * macs * 2 / (iv.mean() * 1e-9) / 1e9
+    gops = a.event * macs * 2 / (a.iters * iv.mean() * 1e-9) / 1e9
     print(f'  GOPs          = {gops:.1f}   ({macs:,} MACs/track over {len(layers)} '
-          f'dense layers x {a.batch} tracks / II)')
+          f'dense layers, {a.event} real tracks per event)')
 
     print('\n  per port:')
     for k, v in sorted(per_port.items()):

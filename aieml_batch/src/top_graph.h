@@ -5,6 +5,7 @@
 
 #include "dense_bias_relu_graph.h"
 #include "roll_concat_batch.h"
+#include "track_accum.h"
 
 using namespace adf;
 
@@ -28,7 +29,7 @@ class top_graph : public graph {
 public:
 
   adf::input_port  ifm [1];   // x only; the s{k}_in feeds are now internal (roll kernels)
-  adf::output_port ofm [8];
+  adf::output_port ofm [9];   // [8] = event tail: 32 floats (27 real + pad)
 
 
   adf::input_port wts1
@@ -123,6 +124,9 @@ private:
   // Replaces the external s{k}_in graph inputs.
   adf::kernel roll0, roll1, roll2;
 
+  // Track average + output dense, once per 50-track event.
+  adf::kernel accum;
+
   adf::shared_buffer<float> buffer_x;
   adf::shared_buffer<float> buffer_r_e0;
   adf::shared_buffer<float> buffer_s0_in;
@@ -167,6 +171,9 @@ public:
     roll0 = adf::kernel::create(roll_concat_batch);
     roll1 = adf::kernel::create(roll_concat_batch);
     roll2 = adf::kernel::create(roll_concat_batch);
+    accum = adf::kernel::create(track_accum);
+    adf::source(accum) = "kernels/track_accum/track_accum.cpp";
+    adf::runtime<ratio>(accum) = 0.9;
     for (auto* k : {&roll0, &roll1, &roll2}) {
       adf::source(*k) = "kernels/roll_concat_batch/roll_concat_batch.cpp";
       // Pure data movement, but it sits on the critical path between stages;

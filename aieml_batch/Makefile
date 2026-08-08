@@ -100,7 +100,7 @@ crosscheck_ref:
 	@$(PYTHON) crosscheck.py --skip-aie
 
 report:
-	@$(PYTHON) report.py --batch $(BATCH)
+	@$(PYTHON) report.py --batch $(BATCH) --iters $(ITERS)
 
 ports:
 	@$(PYTHON) run_sim.py ports
