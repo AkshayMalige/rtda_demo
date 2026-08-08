@@ -1,0 +1,924 @@
+#pragma once
+
+#include <adf.h>
+using namespace adf;
+
+
+template<
+  typename Cfg1,
+  typename Cfg2,
+  typename Cfg3,
+  typename Cfg4,
+  typename Cfg5,
+  typename Cfg6,
+  typename Cfg7,
+  typename Cfg8,
+  typename Cfg9,
+  typename Cfg10,
+  typename Cfg11,
+  typename Cfg12,
+  typename Cfg13,
+  typename Cfg14
+>
+struct graph_plan {
+  template<typename GraphT>
+  static void configure(GraphT& self) {
+    self.buffer_x = adf::shared_buffer<float>::create(
+      { 16, 8 },
+      1,
+      1
+    );
+    num_buffers(self.buffer_x) = 2;
+
+    connect<>(self.ifm[0], self.buffer_x.in[0]);
+    write_access(self.buffer_x.in[0]) = adf::tiling({
+  .buffer_dimension = { 16, 8 },
+  .tiling_dimension = { 16, 8 },
+  .offset           = { 0, 0 }
+});
+    read_access(self.buffer_x.out[0]) = adf::tiling({
+  .buffer_dimension = { 16, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=2 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 16, 8 }
+});
+    connect<>(self.buffer_x.out[0], self.emb_d0_aie.in1[0]);
+    self.buffer_r_e0 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      1,
+      2
+    );
+    num_buffers(self.buffer_r_e0) = 2;
+
+    connect<>(self.emb_d0_aie.out1[0], self.buffer_r_e0.in[0]);
+    write_access(self.buffer_r_e0.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=32 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_e0.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_e0.out[0], self.emb_d1_aie.in1[0]);
+    read_access(self.buffer_r_e0.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_e0.out[1], self.emb_d1_aie.in1[1]);
+    self.buffer_s0_in = adf::shared_buffer<float>::create(
+      { 256, 8 },
+      4,
+      4
+    );
+    num_buffers(self.buffer_s0_in) = 2;
+
+    connect<>(self.ifm[1], self.buffer_s0_in.in[0]);
+    write_access(self.buffer_s0_in.in[0]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 0, 0 }
+});
+    connect<>(self.ifm[2], self.buffer_s0_in.in[1]);
+    write_access(self.buffer_s0_in.in[1]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 64, 0 }
+});
+    connect<>(self.ifm[3], self.buffer_s0_in.in[2]);
+    write_access(self.buffer_s0_in.in[2]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 128, 0 }
+});
+    connect<>(self.ifm[4], self.buffer_s0_in.in[3]);
+    write_access(self.buffer_s0_in.in[3]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 192, 0 }
+});
+    read_access(self.buffer_s0_in.out[0]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s0_in.out[0], self.s0_d0_aie.in1[0]);
+    read_access(self.buffer_s0_in.out[1]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s0_in.out[1], self.s0_d0_aie.in1[1]);
+    read_access(self.buffer_s0_in.out[2]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 128, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s0_in.out[2], self.s0_d0_aie.in1[2]);
+    read_access(self.buffer_s0_in.out[3]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 192, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s0_in.out[3], self.s0_d0_aie.in1[3]);
+    self.buffer_r_s0_0 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s0_0) = 2;
+
+    connect<>(self.s0_d0_aie.out1[0], self.buffer_r_s0_0.in[0]);
+    write_access(self.buffer_r_s0_0.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s0_d0_aie.out1[1], self.buffer_r_s0_0.in[1]);
+    write_access(self.buffer_r_s0_0.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s0_0.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s0_0.out[0], self.s0_d1_aie.in1[0]);
+    read_access(self.buffer_r_s0_0.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s0_0.out[1], self.s0_d1_aie.in1[1]);
+    self.buffer_r_s0_1 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s0_1) = 2;
+
+    connect<>(self.s0_d1_aie.out1[0], self.buffer_r_s0_1.in[0]);
+    write_access(self.buffer_r_s0_1.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s0_d1_aie.out1[1], self.buffer_r_s0_1.in[1]);
+    write_access(self.buffer_r_s0_1.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s0_1.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s0_1.out[0], self.s0_d2_aie.in1[0]);
+    read_access(self.buffer_r_s0_1.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s0_1.out[1], self.s0_d2_aie.in1[1]);
+    self.buffer_r_s0_2 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s0_2) = 2;
+
+    connect<>(self.s0_d2_aie.out1[0], self.buffer_r_s0_2.in[0]);
+    write_access(self.buffer_r_s0_2.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s0_d2_aie.out1[1], self.buffer_r_s0_2.in[1]);
+    write_access(self.buffer_r_s0_2.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s0_2.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s0_2.out[0], self.s0_d3_aie.in1[0]);
+    read_access(self.buffer_r_s0_2.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s0_2.out[1], self.s0_d3_aie.in1[1]);
+    self.buffer_s1_in = adf::shared_buffer<float>::create(
+      { 256, 8 },
+      4,
+      4
+    );
+    num_buffers(self.buffer_s1_in) = 2;
+
+    connect<>(self.ifm[5], self.buffer_s1_in.in[0]);
+    write_access(self.buffer_s1_in.in[0]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 0, 0 }
+});
+    connect<>(self.ifm[6], self.buffer_s1_in.in[1]);
+    write_access(self.buffer_s1_in.in[1]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 64, 0 }
+});
+    connect<>(self.ifm[7], self.buffer_s1_in.in[2]);
+    write_access(self.buffer_s1_in.in[2]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 128, 0 }
+});
+    connect<>(self.ifm[8], self.buffer_s1_in.in[3]);
+    write_access(self.buffer_s1_in.in[3]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 192, 0 }
+});
+    read_access(self.buffer_s1_in.out[0]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s1_in.out[0], self.s1_d0_aie.in1[0]);
+    read_access(self.buffer_s1_in.out[1]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s1_in.out[1], self.s1_d0_aie.in1[1]);
+    read_access(self.buffer_s1_in.out[2]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 128, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s1_in.out[2], self.s1_d0_aie.in1[2]);
+    read_access(self.buffer_s1_in.out[3]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 192, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s1_in.out[3], self.s1_d0_aie.in1[3]);
+    self.buffer_r_s1_0 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s1_0) = 2;
+
+    connect<>(self.s1_d0_aie.out1[0], self.buffer_r_s1_0.in[0]);
+    write_access(self.buffer_r_s1_0.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s1_d0_aie.out1[1], self.buffer_r_s1_0.in[1]);
+    write_access(self.buffer_r_s1_0.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s1_0.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s1_0.out[0], self.s1_d1_aie.in1[0]);
+    read_access(self.buffer_r_s1_0.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s1_0.out[1], self.s1_d1_aie.in1[1]);
+    self.buffer_r_s1_1 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s1_1) = 2;
+
+    connect<>(self.s1_d1_aie.out1[0], self.buffer_r_s1_1.in[0]);
+    write_access(self.buffer_r_s1_1.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s1_d1_aie.out1[1], self.buffer_r_s1_1.in[1]);
+    write_access(self.buffer_r_s1_1.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s1_1.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s1_1.out[0], self.s1_d2_aie.in1[0]);
+    read_access(self.buffer_r_s1_1.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s1_1.out[1], self.s1_d2_aie.in1[1]);
+    self.buffer_r_s1_2 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s1_2) = 2;
+
+    connect<>(self.s1_d2_aie.out1[0], self.buffer_r_s1_2.in[0]);
+    write_access(self.buffer_r_s1_2.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s1_d2_aie.out1[1], self.buffer_r_s1_2.in[1]);
+    write_access(self.buffer_r_s1_2.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s1_2.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s1_2.out[0], self.s1_d3_aie.in1[0]);
+    read_access(self.buffer_r_s1_2.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s1_2.out[1], self.s1_d3_aie.in1[1]);
+    self.buffer_s2_in = adf::shared_buffer<float>::create(
+      { 256, 8 },
+      4,
+      4
+    );
+    num_buffers(self.buffer_s2_in) = 2;
+
+    connect<>(self.ifm[9], self.buffer_s2_in.in[0]);
+    write_access(self.buffer_s2_in.in[0]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 0, 0 }
+});
+    connect<>(self.ifm[10], self.buffer_s2_in.in[1]);
+    write_access(self.buffer_s2_in.in[1]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 64, 0 }
+});
+    connect<>(self.ifm[11], self.buffer_s2_in.in[2]);
+    write_access(self.buffer_s2_in.in[2]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 128, 0 }
+});
+    connect<>(self.ifm[12], self.buffer_s2_in.in[3]);
+    write_access(self.buffer_s2_in.in[3]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 192, 0 }
+});
+    read_access(self.buffer_s2_in.out[0]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s2_in.out[0], self.s2_d0_aie.in1[0]);
+    read_access(self.buffer_s2_in.out[1]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s2_in.out[1], self.s2_d0_aie.in1[1]);
+    read_access(self.buffer_s2_in.out[2]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 128, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s2_in.out[2], self.s2_d0_aie.in1[2]);
+    read_access(self.buffer_s2_in.out[3]) = adf::tiling({
+  .buffer_dimension = { 256, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 192, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 256, 8 }
+});
+    connect<>(self.buffer_s2_in.out[3], self.s2_d0_aie.in1[3]);
+    self.buffer_r_s2_0 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s2_0) = 2;
+
+    connect<>(self.s2_d0_aie.out1[0], self.buffer_r_s2_0.in[0]);
+    write_access(self.buffer_r_s2_0.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s2_d0_aie.out1[1], self.buffer_r_s2_0.in[1]);
+    write_access(self.buffer_r_s2_0.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s2_0.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s2_0.out[0], self.s2_d1_aie.in1[0]);
+    read_access(self.buffer_r_s2_0.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s2_0.out[1], self.s2_d1_aie.in1[1]);
+    self.buffer_r_s2_1 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s2_1) = 2;
+
+    connect<>(self.s2_d1_aie.out1[0], self.buffer_r_s2_1.in[0]);
+    write_access(self.buffer_r_s2_1.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s2_d1_aie.out1[1], self.buffer_r_s2_1.in[1]);
+    write_access(self.buffer_r_s2_1.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s2_1.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s2_1.out[0], self.s2_d2_aie.in1[0]);
+    read_access(self.buffer_r_s2_1.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s2_1.out[1], self.s2_d2_aie.in1[1]);
+    self.buffer_r_s2_2 = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_r_s2_2) = 2;
+
+    connect<>(self.s2_d2_aie.out1[0], self.buffer_r_s2_2.in[0]);
+    write_access(self.buffer_r_s2_2.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s2_d2_aie.out1[1], self.buffer_r_s2_2.in[1]);
+    write_access(self.buffer_r_s2_2.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_r_s2_2.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s2_2.out[0], self.s2_d3_aie.in1[0]);
+    read_access(self.buffer_r_s2_2.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 8, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=8, .wrap=8 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_r_s2_2.out[1], self.s2_d3_aie.in1[1]);
+    self.buffer_emb_out = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_emb_out) = 2;
+
+    connect<>(self.emb_d1_aie.out1[0], self.buffer_emb_out.in[0]);
+    write_access(self.buffer_emb_out.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.emb_d1_aie.out1[1], self.buffer_emb_out.in[1]);
+    write_access(self.buffer_emb_out.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_emb_out.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 0, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_emb_out.out[0], self.ofm[0]);
+    read_access(self.buffer_emb_out.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 64, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_emb_out.out[1], self.ofm[1]);
+    self.buffer_s0_out = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_s0_out) = 2;
+
+    connect<>(self.s0_d3_aie.out1[0], self.buffer_s0_out.in[0]);
+    write_access(self.buffer_s0_out.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s0_d3_aie.out1[1], self.buffer_s0_out.in[1]);
+    write_access(self.buffer_s0_out.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_s0_out.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 0, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_s0_out.out[0], self.ofm[2]);
+    read_access(self.buffer_s0_out.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 64, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_s0_out.out[1], self.ofm[3]);
+    self.buffer_s1_out = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_s1_out) = 2;
+
+    connect<>(self.s1_d3_aie.out1[0], self.buffer_s1_out.in[0]);
+    write_access(self.buffer_s1_out.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s1_d3_aie.out1[1], self.buffer_s1_out.in[1]);
+    write_access(self.buffer_s1_out.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_s1_out.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 0, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_s1_out.out[0], self.ofm[4]);
+    read_access(self.buffer_s1_out.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 64, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_s1_out.out[1], self.ofm[5]);
+    self.buffer_s2_out = adf::shared_buffer<float>::create(
+      { 128, 8 },
+      2,
+      2
+    );
+    num_buffers(self.buffer_s2_out) = 2;
+
+    connect<>(self.s2_d3_aie.out1[0], self.buffer_s2_out.in[0]);
+    write_access(self.buffer_s2_out.in[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 0, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    connect<>(self.s2_d3_aie.out1[1], self.buffer_s2_out.in[1]);
+    write_access(self.buffer_s2_out.in[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 4, 4 },
+  .offset           = { 64, 0 }
+    , .tile_traversal = {
+{ .dimension=0, .stride=4, .wrap=16 },
+{ .dimension=1, .stride=4, .wrap=2 }
+    }
+});
+    read_access(self.buffer_s2_out.out[0]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 0, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_s2_out.out[0], self.ofm[6]);
+    read_access(self.buffer_s2_out.out[1]) = adf::tiling({
+  .buffer_dimension = { 128, 8 },
+  .tiling_dimension = { 64, 8 },
+  .offset           = { 64, 0 }
+    , .boundary_dimension = { 128, 8 }
+});
+    connect<>(self.buffer_s2_out.out[1], self.ofm[7]);
+
+
+
+
+  }
+};

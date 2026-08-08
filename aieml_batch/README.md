@@ -5,11 +5,20 @@ This file explains that idea. For the measurements that justify it, see
 `../GEMM_FEASIBILITY.md`.
 
 ```bash
-make gen        # build ONNX from ../data_fp32 and emit the AIE project
-make sim_x86    # functional check vs a Keras reference   (~1 min)
-make sim        # cycle-accurate aiesimulator + verify + report  (~5 min)
+make x86        # x86 compile + crosscheck            (~2 min)
+make sim        # hw compile + aiesimulator + crosscheck + report
+make crosscheck # compare vs numpy golden and the aieml/ reference
+make report     # II / ns-per-track of the last aie run
 make help       # everything else
 ```
+
+**This project is self-contained.** The graph, its kernels, its packed weights and
+its ADF testbench (`app.cpp`) are committed sources. Building and simulating needs
+only Vitis and numpy — no aie4ml, no ONNX, no Keras. The default `PYTHON` is an
+interpreter that *cannot* import aie4ml, so a green `make sim` proves it.
+
+Regenerating the graph from ONNX (`make regen`) is optional and does need aie4ml;
+you only need it to change topology, batch size, or precision.
 
 ---
 
@@ -220,9 +229,17 @@ waste stated as a rate.
 
 ## 7. Files
 
-| file | what |
-|---|---|
-| `Makefile` | the flow. Targets `all`/`x86com`/`x86sim`/`aiesim` are **reserved** — aie4ml shells out to them by name; do not rename. |
-| `gen_graph.py` | builds the ONNX from `../data_fp32`, runs aie4ml, verifies vs Keras, reports |
-| `Makefile.aie4ml` | the Makefile aie4ml generates; ours delegates to it |
-| `src/`, `app.cpp`, `aie.cfg` | generated — `make clean_all` removes them |
+| file | what | needs aie4ml? |
+|---|---|---|
+| `src/`, `app.cpp`, `aie.cfg` | the AIE graph, kernels, packed weights, ADF testbench — **committed source** | no |
+| `aie_pipeline.json` | the PLIO layout `aie_io` reads — **committed source** | no |
+| `Makefile` | the flow | no |
+| `aie_io.py` | PLIO marshalling: tensors <-> `data/ifm_c*.txt`, `y_p*.txt` | no |
+| `run_sim.py` | writes inputs, runs the simulator, reads outputs | no |
+| `crosscheck.py` | numpy golden + comparison vs `aieml/` | no |
+| `report.py` | TLAST-to-TLAST II and ns/track | no |
+| `gen_graph.py` | rebuild `src/` from ONNX (`make regen`) | **yes** |
+| `verify_io.py` | prove `aie_io` still matches aie4ml (`make verify_io`) | **yes** |
+
+`make clean` removes build products only; it will **not** touch `src/`, `app.cpp`,
+`aie.cfg` or `aie_pipeline.json`.

@@ -47,7 +47,12 @@ Background: `GEMM_FEASIBILITY.md` (the study), `ARCHITECTURE_COMPARISON.md` (old
 
 ---
 
-## Phase 1 — Leaky ReLU  *(start here next session)*
+## Phase 1 — Leaky ReLU  **[DONE 2026-08-08]**
+
+Implemented in aie4ml (branch `aie-mmul`, commit `fc9b0d2`). Check [3] = **4.023e-06**
+(was 0.2937). Costs **11.6%**: 465.8 -> 519.8 ns/track, because `aie::mul` returns an
+accumulator needing a `to_vector`, and on bf16-emulated fp32 that conversion costs VCONV.
+
 
 Five edits in aie4ml, then regenerate one last time:
 
@@ -63,7 +68,16 @@ Five edits in aie4ml, then regenerate one last time:
 drops from **2.937e-01** to **< 1e-4**. That is the proof the batched architecture
 reproduces the RTDA network. Get this before cutting the aie4ml cord.
 
-## Phase 2 — Vendor and cut aie4ml
+## Phase 2 — Vendor and cut aie4ml  **[DONE 2026-08-08]**
+
+`src/`, `app.cpp`, `aie.cfg`, `aie_pipeline.json` are committed source. `aie_io.py`
+replaces aie4ml's PLIO marshalling and was proven **byte-identical** against it
+(`make verify_io`: all 13 input files and all 4 output tensors). Build + simulate +
+crosscheck + report now run on an interpreter that cannot import aie4ml.
+**Placement kept as generated** (per instruction) rather than swapped for `runtime<ratio>`.
+Unused kernel templates (elementwise_add, layer_norm, matmul, softmax) pruned.
+
+Original plan:
 
 - Freeze the generated `src/` as committed, hand-editable source, leaky fix baked in.
 - **Strip `col_placement`/`row_placement`; add `graph_layout.hpp` with `runtime<ratio>`.**

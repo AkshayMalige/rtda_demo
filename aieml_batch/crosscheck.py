@@ -28,6 +28,8 @@ from pathlib import Path
 
 import numpy as np
 
+import aie_io
+
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 # NOT 'DATA_DIR': ../set_envs.sh exports that pointing at data/, which holds int16
@@ -116,11 +118,12 @@ def main():
         raise SystemExit(0 if ok else 1)
 
     sys.path.insert(0, str(HERE))
-    import gen_graph as G
+    import run_sim
 
     batch, solvers = a.batch, a.solvers
     iters = -(-N_TRACKS // batch)                       # ceil, e.g. 7 blocks of 8 => 56 slots
     pad = iters * batch
+    INPUT_DIM = aie_io.load_ports()['inputs']['x'][0].np_boundary[-1]
 
     def blocks(arr):
         out = np.zeros((pad, arr.shape[1]), dtype=np.float32)
@@ -138,7 +141,7 @@ def main():
         SLOPE = a.slope
     emb_c, soln_c = golden()
 
-    X = np.zeros((N_TRACKS, G.INPUT_DIM), dtype=np.float32)
+    X = np.zeros((N_TRACKS, INPUT_DIM), dtype=np.float32)
     X[:, :8] = L('embed_input.txt').reshape(-1, 8)
     feed = {'x': blocks(X)}
     # Each solver's 256-wide input is assemble() of the previous stage's golden
@@ -147,12 +150,13 @@ def main():
     for s in range(solvers):
         feed[f's{s}_in'] = blocks(assemble(stage_in[s]))
 
-    # gen_graph binds ITERS at import time, so patch the module global rather than
-    # the environment. This MUST match the ITERS the libadf.a was compiled with
-    # (N_ITER in src/parameters.h) or predict() rejects the input shape.
-    G.ITERS = iters
-    _, model = G._model(batch, solvers)
-    got = model.predict(feed, simulator=a.sim)
+    # The graph was compiled with a fixed N_ITER; feeding a different count
+    # stalls it waiting for data that never arrives.
+    if iters != run_sim.n_iter():
+        raise SystemExit(f'batch {batch} needs {iters} iterations but the graph was '
+                         f'built with N_ITER={run_sim.n_iter()}. Rebuild with '
+                         f'ITERS={iters} or pick a batch that divides {N_TRACKS} evenly.')
+    got = run_sim.run(feed, sim=a.sim)
 
     def flat(name):
         return np.asarray(got[name]).reshape(-1, H)[:N_TRACKS]
