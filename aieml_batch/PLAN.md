@@ -113,7 +113,31 @@ Cost: ReduceMean ~6,400 adds/event, output Gemm 3,456 MACs/event, against 13.2M 
 event = **0.03% of the work**. Then match `aieml/`'s GMIO/PLIO names so the interface is
 1 input -> 27 values per event.
 
-## Phase 4 — Delete the PL path, rewrite the host
+## Phase 4 — Delete the PL path, rewrite the host  **[DONE 2026-08-08]**
+
+Ran end to end on hw_emu. `make system TARGET=hw_emu AIE_DIR=aieml_batch`, then the
+XRT host on QEMU: 92 RTP ports loaded (1039 KB), 7 iterations x 8 tracks, event mean
+emitted on frame 6 of 7 (50 real tracks counted, 6 padding dropped).
+**hw_emu reproduces the simulation to 8.4e-07.** See `results/`.
+
+No PL kernels in the design at all -- `track_average_pl` is replaced by an AIE
+accumulator, and the host talks to the array over GMIO.
+
+Three bugs found only by running it, all worth remembering:
+1. `HLS_KERNELS :=` for the batch design was clobbered by a later unconditional
+   assignment, so track_average_pl was still linked -> CFGEN 83-2284.
+2. `aieml_batch` built its graph with Vitis 2025.2 while the platform, rootfs,
+   sysroot and XRT are 2024.2. The top Makefile now forces its own toolchain down.
+   (Standalone simulation still defaults to 2025.2 -- that is where the numbers
+   were measured and where the aie4ml regen path lives.)
+3. **Dangling `ofm[0..7]` deadlocked the graph.** The per-stage debug taps were
+   left unconnected in SYSTEM_BUILD, but the shared buffers were still created
+   with 3 readers and still written every iteration -- nothing drained them, so
+   the producing stage blocked forever. The 43 "No terminal or net" warnings were
+   the signal and were initially dismissed. Fixed by making the taps conditional
+   (1 reader in SYSTEM_BUILD, 3 in simulation); warnings went 43 -> 0.
+
+Original plan:
 
 - AIE -> DDR via GMIO directly; no `track_average_pl`, no AIE->PL stream.
 - Output bandwidth per event drops from 6,400 floats to 27 — **237x**.

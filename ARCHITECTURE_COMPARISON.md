@@ -162,14 +162,33 @@ BD per row:
 
 ---
 
+## 5b. Hardware emulation — validated 2026-08-08
+
+Full system run on QEMU (`TARGET=hw_emu AIE_DIR=aieml_batch`): AIE graph + XRT host,
+**no PL kernels**.
+
+| comparison | max abs diff |
+|---|---:|
+| hw_emu vs the x86/aie simulation | **8.4e-07** |
+| hw_emu vs `data_fp32/aieml10_output_aie.txt` | 5.0e-03 |
+| simulation vs the same reference | 5.0e-03 |
+
+The last two matching is the result: hardware emulation adds nothing. The 5.0e-03
+is the warm-up convention (tracks 0-2 use the zero-pad roll, and they are inside
+the 50-track mean); on tracks 3..49 the AIE agrees to 7.4e-06.
+
+Artifacts and the reproduce recipe: `aieml_batch/results/`.
+
+---
+
 ## 6. What `aieml_batch/` cannot do yet
 
 | capability | `aieml/` | `aieml_batch/` |
 |---|---|---|
 | x86 functional sim | yes | yes |
 | cycle-accurate aiesimulator | yes | yes |
-| **hw_emu** | yes | **no** — XRT is now installed, but still needs PL kernels, host app, `linker_aieml.cfg`, and v++ link/package, none of which exist here (Phase 3/4) |
-| **hardware** | yes | no, same reason |
+| **hw_emu** | yes | **yes** — validated 2026-08-08, see §5b. No PL kernels needed. |
+| **hardware** | yes | not tried; hw_emu passes, so the flow exists (`TARGET=hw`) |
 | int16 | yes | not built (aie4ml supports it; needs quantized weights) |
 | full 14-layer model | yes | `SOLVERS=3` wired but see below |
 
