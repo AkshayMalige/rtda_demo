@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_graph.h"
@@ -43,6 +44,23 @@ constexpr int IN_DIM     = 16;    // padded embed input width
 constexpr int HIDDEN     = 128;   // graph output width (the event mean)
 constexpr int OUT_DIM    = 27;    // after the host-side output dense
 constexpr int RAW_IN     = 8;     // values per track in embed_input.txt
+
+// MACs per track, summed over the 14 dense layers, so the report can express
+// throughput independently of wall clock. 16x128 + 128x128 + 3 x (256x128 +
+// 3 x 128x128) -- matches src/parameters.h and aieml_batch/report.py.
+constexpr long MACS_PER_TRACK = 264192L;
+
+using clk = std::chrono::steady_clock;
+double ms(clk::duration d) { return std::chrono::duration<double, std::milli>(d).count(); }
+double us(clk::duration d) { return std::chrono::duration<double, std::micro>(d).count(); }
+
+// MB/s from bytes and a duration; guards the divide so a zero-length phase
+// (possible on a fast host) prints 0 rather than inf.
+double mbps(std::size_t bytes, clk::duration d)
+{
+    const double sec = std::chrono::duration<double>(d).count();
+    return sec > 0.0 ? (static_cast<double>(bytes) / sec) / 1e6 : 0.0;
+}
 
 std::string join(const std::string& base, const std::string& rel)
 {
@@ -158,9 +176,11 @@ int main(int argc, char** argv)
         std::cout << "[host] xclbin=" << xclbin << " data=" << data_dir
                   << " sysdata=" << sysdata << std::endl;
 
+        const auto t_start = clk::now();
         xrt::device device(0);
         auto uuid = device.load_xclbin(xclbin);
         xrt::graph graph(device, uuid, "dut");
+        const auto t_xclbin = clk::now();
 
         // ---- RTP weights: 92 ports, ~1 MB ----------------------------------
         const auto manifest = read_manifest(join(sysdata, "rtp_manifest.txt"));
@@ -172,7 +192,9 @@ int main(int argc, char** argv)
             update_rtp(graph, e.port, payload);
             rtp_floats += e.n;
         }
-        std::cout << "[host] RTP loaded: " << rtp_floats * sizeof(float) / 1024 << " KB" << std::endl;
+        const auto t_rtp = clk::now();
+        const std::size_t rtp_bytes = rtp_floats * sizeof(float);
+        std::cout << "[host] RTP loaded: " << rtp_bytes / 1024 << " KB" << std::endl;
 
         // ---- input: 50 real tracks, zero-padded to N_ITER*BATCH slots -------
         auto raw = read_text(join(data_dir, "embed_input.txt"));
@@ -202,12 +224,18 @@ int main(int argc, char** argv)
                   << BATCH << " tracks (" << N_TRACKS << " real + "
                   << (slots - N_TRACKS) << " padding)" << std::endl;
 
+        // Input DMA, compute and output DMA overlap by design -- the graph
+        // consumes x as it arrives -- so they are timed as one phase. Waiting on
+        // the input transfer before graph.run() would deadlock: nothing is
+        // draining the shim DMA until the graph is running.
+        const auto t_exec0 = clk::now();
         in_bo.async("dut.gmio_x",     XCL_BO_SYNC_BO_GMIO_TO_AIE, in_bytes,  0);
         auto out_run = out_bo.async("dut.gmio_track", XCL_BO_SYNC_BO_AIE_TO_GMIO, out_bytes, 0);
 
         graph.run(N_ITER);
         graph.wait();
         out_run.wait();
+        const auto t_exec = clk::now();
 
         const float* out = out_bo.map<float*>();
 
@@ -251,6 +279,45 @@ int main(int argc, char** argv)
         for (int j = 0; j < HIDDEN; ++j) fm << mean[j] << '\n';
         fm.close();
         std::cout << "[host] wrote 128-wide event mean -> track_mean_128.txt" << std::endl;
+        const auto t_end = clk::now();
+
+        // ---- size + timing report ------------------------------------------
+        const long macs_event = MACS_PER_TRACK * N_TRACKS;
+        std::cout
+          << "\n[host] ===== Size report =====\n"
+          << "  RTP weights        : " << manifest.size() << " ports, "
+          << rtp_bytes / 1024.0 << " KB\n"
+          << "  Input  (x)         : " << slots << " slots x " << IN_DIM << " floats = "
+          << in_bytes / 1024.0 << " KB   (" << N_TRACKS << " real + "
+          << (slots - N_TRACKS) << " padding)\n"
+          << "  Output (event mean): " << N_ITER << " frames x " << HIDDEN << " floats = "
+          << out_bytes / 1024.0 << " KB   (1 frame carries the result)\n"
+          << "  Model              : 14 dense layers, " << MACS_PER_TRACK << " MACs/track\n"
+          << "                       " << macs_event / 1e6 << " MMAC/event, "
+          << 2 * macs_event / 1e6 << " MOP/event\n";
+
+        std::cout
+          << "\n[host] ===== Timing =====\n"
+          << "  xclbin load + graph open : " << ms(t_xclbin - t_start) << " ms\n"
+          << "  RTP load (" << manifest.size() << " ports)     : " << ms(t_rtp - t_xclbin)
+          << " ms   (" << mbps(rtp_bytes, t_rtp - t_xclbin) << " MB/s)\n"
+          << "  execute (DMA + graph)    : " << ms(t_exec - t_exec0) << " ms\n"
+          << "  output dense + write     : " << ms(t_end - t_exec) << " ms\n"
+          << "  TOTAL                    : " << ms(t_end - t_start) << " ms\n";
+
+        const auto exec = t_exec - t_exec0;
+        std::cout
+          << "\n  per event (" << N_TRACKS << " tracks) : " << ms(exec) << " ms\n"
+          << "  per track              : " << us(exec) / N_TRACKS << " us\n"
+          << "  effective throughput   : "
+          << (2.0 * macs_event) / (std::chrono::duration<double>(exec).count()) / 1e9 << " GOP/s\n";
+
+        std::cout <<
+          "\n  NOTE: under hw_emu these are EMULATION wall-clock times (QEMU PS +\n"
+          "  SystemC AIE model) and say nothing about silicon speed. The cycle-\n"
+          "  accurate figure for this graph is II = 4161 ns for 7 iterations,\n"
+          "  i.e. 582.6 ns per real track (aieml_batch: make report). Only a\n"
+          "  TARGET=hw run on the board gives meaningful wall-clock numbers.\n";
 
         graph.end();
         std::cout << "[host] done" << std::endl;
