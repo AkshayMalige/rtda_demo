@@ -1,4 +1,41 @@
-# hw_emu results — 2026-08-08
+# Results
+
+## Hardware (VEK280, TARGET=hw) — 2026-08-09
+
+Track-count sweep, all events in a single `graph.run()`:
+
+| tracks | events | per track | total execute |
+|---:|---:|---:|---:|
+| 50 | 1 | 12.700 us | 635 us |
+| 500 | 10 | 1.800 us | 900 us |
+| 5000 | 100 | **0.696 us** | 3480 us |
+
+A least-squares fit gives
+
+    total = 609.4 us (fixed) + 574.2 ns x tracks
+
+and the three points reproduce to <0.5%. Two conclusions:
+
+**1. The marginal cost is 574.2 ns/track against a cycle-accurate prediction of
+582.6 ns/track -- 1.4% agreement.** aiesimulator, hw_emu and silicon all agree; the
+AIE does exactly what the model said.
+
+**2. The 12.7 us/track at 50 tracks was never the array.** It is 609 us of fixed
+per-`graph.run()` cost (XRT/driver round-trip, GMIO arming) spread over too few
+tracks. At 50 tracks the array is busy 4.5% of the time; at 5000 it is 82%.
+
+Sustained throughput at 5000 tracks: **759 GOP/s**.
+Versus `aieml/` at 17,770 ns/track: **25.5x measured, 30.9x on the marginal rate.**
+
+The fixed cost is host-side and cannot be reduced by the AIE design. For a
+latency-bound single-event workload it dominates and would need separate work
+(persistent graph, GMIO ping-pong without re-arming, or a PL-side feeder).
+
+Reproduce:
+
+    RTDA_INPUT=sd_batch/testdata/embed_input_5000.txt ./host_batch.exe
+
+## hw_emu — 2026-08-08
 
 Captured from a full `TARGET=hw_emu AIE_DIR=aieml_batch` run on QEMU: AIE graph +
 XRT host, no PL kernels.
