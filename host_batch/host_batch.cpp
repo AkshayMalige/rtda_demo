@@ -38,8 +38,9 @@ namespace {
 // Geometry — must match the compiled graph (src/parameters.h N_ITER and
 // kernels/track_accum/track_accum.h).
 constexpr int BATCH      = 8;     // tracks per graph iteration
-constexpr int N_ITER     = 7;     // iterations per event: 7 * 8 = 56 slots
-constexpr int N_TRACKS   = 50;    // real tracks; the remaining 6 slots are padding
+constexpr int ITER_PER_EVENT  = 7;   // 7 * 8 = 56 slots per event
+constexpr int TRACKS_PER_EVENT = 50; // real tracks; the other 6 slots are padding
+constexpr int SLOTS_PER_EVENT = ITER_PER_EVENT * BATCH;   // 56
 constexpr int IN_DIM     = 16;    // padded embed input width
 constexpr int HIDDEN     = 128;   // graph output width (the event mean)
 constexpr int OUT_DIM    = 27;    // after the host-side output dense
@@ -156,7 +157,13 @@ std::vector<RtpEntry> read_manifest(const std::string& path)
 int main(int argc, char** argv)
 {
     try {
-        const std::string xclbin   = (argc > 1) ? argv[1] : "system_hw_emu.xclbin";
+        // Default to whichever xclbin is actually on the card: a TARGET=hw build
+        // produces system_hw.xclbin, hw_emu produces system_hw_emu.xclbin.
+        std::string xclbin;
+        if (argc > 1) xclbin = argv[1];
+        else          xclbin = first_existing({"system_hw.xclbin", "system_hw_emu.xclbin"},
+                                              "an xclbin");
+        const bool is_emu = xclbin.find("hw_emu") != std::string::npos;
         // Probe for the data next to the exe and under sd_batch/ (the packaged layout).
         std::string data_dir, sysdata;
         if (argc > 2) data_dir = argv[2];
@@ -198,10 +205,19 @@ int main(int argc, char** argv)
 
         // ---- input: 50 real tracks, zero-padded to N_ITER*BATCH slots -------
         auto raw = read_text(join(data_dir, "embed_input.txt"));
-        if (raw.size() < static_cast<std::size_t>(N_TRACKS) * RAW_IN)
-            throw std::runtime_error("embed_input.txt has fewer than 50 tracks");
+        const int file_tracks = static_cast<int>(raw.size() / RAW_IN);
+        if (file_tracks < 1) throw std::runtime_error("embed_input.txt has no complete tracks");
 
-        const std::size_t slots    = static_cast<std::size_t>(N_ITER) * BATCH;
+        // One event is TRACKS_PER_EVENT tracks laid out in SLOTS_PER_EVENT slots.
+        // Events must be padded INDIVIDUALLY, not concatenated: the accumulator
+        // stops at 50 and skips the rest of that block, so a short final block of
+        // one event would swallow the first tracks of the next.
+        const int n_events = (file_tracks + TRACKS_PER_EVENT - 1) / TRACKS_PER_EVENT;
+        const int n_iter   = n_events * ITER_PER_EVENT;
+        std::cout << "[host] input: " << file_tracks << " tracks -> " << n_events
+                  << " event(s), " << n_iter << " iterations" << std::endl;
+
+        const std::size_t slots    = static_cast<std::size_t>(n_iter) * BATCH;
         const std::size_t in_elems = slots * IN_DIM;
         const std::size_t in_bytes = in_elems * sizeof(float);
         // Padding slots are zeros here, but note they are NOT ignored downstream
@@ -209,20 +225,23 @@ int main(int argc, char** argv)
         // still produces a sizeable activation. The AIE accumulator drops them by
         // COUNTING to 50 (kernels/track_accum), not by relying on zeros.
         std::vector<float> host_in(in_elems, 0.0f);
-        for (int t = 0; t < N_TRACKS; ++t)
+        for (int t = 0; t < file_tracks; ++t) {
+            const int ev = t / TRACKS_PER_EVENT, idx = t % TRACKS_PER_EVENT;
+            const std::size_t slot = static_cast<std::size_t>(ev) * SLOTS_PER_EVENT + idx;
             for (int k = 0; k < RAW_IN; ++k)
-                host_in[static_cast<std::size_t>(t) * IN_DIM + k] = raw[static_cast<std::size_t>(t) * RAW_IN + k];
+                host_in[slot * IN_DIM + k] = raw[static_cast<std::size_t>(t) * RAW_IN + k];
+        }
 
-        const std::size_t out_elems = static_cast<std::size_t>(N_ITER) * HIDDEN;
+        const std::size_t out_elems = static_cast<std::size_t>(n_iter) * HIDDEN;
         const std::size_t out_bytes = out_elems * sizeof(float);
 
         auto in_bo  = xrt::aie::bo(device, in_bytes,  xrt::bo::flags::normal, 0);
         auto out_bo = xrt::aie::bo(device, out_bytes, xrt::bo::flags::normal, 0);
         std::memcpy(in_bo.map<float*>(), host_in.data(), in_bytes);
 
-        std::cout << "[host] running graph: " << N_ITER << " iterations x "
-                  << BATCH << " tracks (" << N_TRACKS << " real + "
-                  << (slots - N_TRACKS) << " padding)" << std::endl;
+        std::cout << "[host] running graph: " << n_iter << " iterations x "
+                  << BATCH << " tracks (" << file_tracks << " real + "
+                  << (slots - file_tracks) << " padding)" << std::endl;
 
         // Input DMA, compute and output DMA overlap by design -- the graph
         // consumes x as it arrives -- so they are timed as one phase. Waiting on
@@ -232,7 +251,7 @@ int main(int argc, char** argv)
         in_bo.async("dut.gmio_x",     XCL_BO_SYNC_BO_GMIO_TO_AIE, in_bytes,  0);
         auto out_run = out_bo.async("dut.gmio_track", XCL_BO_SYNC_BO_AIE_TO_GMIO, out_bytes, 0);
 
-        graph.run(N_ITER);
+        graph.run(n_iter);
         graph.wait();
         out_run.wait();
         const auto t_exec = clk::now();
@@ -243,16 +262,21 @@ int main(int argc, char** argv)
         // The accumulator emits zeros until the 50th real track lands, so the
         // last non-zero frame is the event mean. Searching for it (rather than
         // assuming index N_ITER-1) keeps this correct if N_ITER changes.
-        int frame = -1;
-        for (int i = N_ITER - 1; i >= 0; --i) {
+        std::vector<int> frames;
+        for (int i = 0; i < n_iter; ++i) {
             float m = 0.0f;
             for (int j = 0; j < HIDDEN; ++j)
                 m = std::max(m, std::fabs(out[static_cast<std::size_t>(i) * HIDDEN + j]));
-            if (m > 0.0f) { frame = i; break; }
+            if (m > 0.0f) frames.push_back(i);
         }
-        if (frame < 0) throw std::runtime_error("all output frames are zero - graph produced nothing");
-        std::cout << "[host] event mean in frame " << frame << " of " << N_ITER << std::endl;
-        const float* mean = out + static_cast<std::size_t>(frame) * HIDDEN;
+        if (frames.empty()) throw std::runtime_error("all output frames are zero - graph produced nothing");
+        std::cout << "[host] event means in frame(s):";
+        for (int f : frames) std::cout << ' ' << f;
+        std::cout << "  of " << n_iter << "   (expect " << n_events << ", at 6,13,20,...)" << std::endl;
+        if (static_cast<int>(frames.size()) != n_events)
+            std::cout << "[host] WARNING: " << frames.size() << " means for " << n_events
+                      << " events - the accumulator is not resetting as expected" << std::endl;
+        const float* mean = out + static_cast<std::size_t>(frames.back()) * HIDDEN;
 
         // ---- output dense on the host (as host/host.cpp:394) ----------------
         auto W = read_text(join(data_dir, "output_weights.txt"),
@@ -274,24 +298,39 @@ int main(int argc, char** argv)
         std::cout << "[host] wrote " << OUT_DIM << " values -> " << out_path << std::endl;
 
         // also dump the raw mean, so the 128-wide result can be compared directly
+        // track_mean_128.txt keeps the LAST event (so single-event runs and the
+        // existing compare tooling are unchanged); per-event files alongside it.
         std::ofstream fm("track_mean_128.txt");
         fm << std::setprecision(std::numeric_limits<float>::max_digits10);
         for (int j = 0; j < HIDDEN; ++j) fm << mean[j] << '\n';
         fm.close();
         std::cout << "[host] wrote 128-wide event mean -> track_mean_128.txt" << std::endl;
+        if (frames.size() > 1) {
+            for (std::size_t e = 0; e < frames.size(); ++e) {
+                const std::string fn = "track_mean_128_ev" + std::to_string(e) + ".txt";
+                std::ofstream fe(fn);
+                fe << std::setprecision(std::numeric_limits<float>::max_digits10);
+                const float* m = out + static_cast<std::size_t>(frames[e]) * HIDDEN;
+                for (int j = 0; j < HIDDEN; ++j) fe << m[j] << '\n';
+            }
+            std::cout << "[host] wrote " << frames.size()
+                      << " per-event means -> track_mean_128_ev*.txt" << std::endl;
+        }
         const auto t_end = clk::now();
 
         // ---- size + timing report ------------------------------------------
-        const long macs_event = MACS_PER_TRACK * N_TRACKS;
+        const long macs_event = MACS_PER_TRACK * file_tracks;
         std::cout
           << "\n[host] ===== Size report =====\n"
           << "  RTP weights        : " << manifest.size() << " ports, "
           << rtp_bytes / 1024.0 << " KB\n"
+          << "  Events             : " << n_events << " x " << TRACKS_PER_EVENT
+          << " tracks (" << file_tracks << " real)\n"
           << "  Input  (x)         : " << slots << " slots x " << IN_DIM << " floats = "
-          << in_bytes / 1024.0 << " KB   (" << N_TRACKS << " real + "
-          << (slots - N_TRACKS) << " padding)\n"
-          << "  Output (event mean): " << N_ITER << " frames x " << HIDDEN << " floats = "
-          << out_bytes / 1024.0 << " KB   (1 frame carries the result)\n"
+          << in_bytes / 1024.0 << " KB   (" << file_tracks << " real + "
+          << (slots - file_tracks) << " padding)\n"
+          << "  Output             : " << n_iter << " frames x " << HIDDEN << " floats = "
+          << out_bytes / 1024.0 << " KB   (" << n_events << " carry a result)\n"
           << "  Model              : 14 dense layers, " << MACS_PER_TRACK << " MACs/track\n"
           << "                       " << macs_event / 1e6 << " MMAC/event, "
           << 2 * macs_event / 1e6 << " MOP/event\n";
@@ -307,17 +346,29 @@ int main(int argc, char** argv)
 
         const auto exec = t_exec - t_exec0;
         std::cout
-          << "\n  per event (" << N_TRACKS << " tracks) : " << ms(exec) << " ms\n"
-          << "  per track              : " << us(exec) / N_TRACKS << " us\n"
+          << "\n  per event              : " << ms(exec) / n_events << " ms\n"
+          << "  per track              : " << us(exec) / file_tracks << " us\n"
           << "  effective throughput   : "
           << (2.0 * macs_event) / (std::chrono::duration<double>(exec).count()) / 1e9 << " GOP/s\n";
 
-        std::cout <<
+        const double aie_us = 4.1612 * n_iter;   // II 4161 ns/iteration, cycle-accurate
+        const double exec_us = us(exec);
+        std::cout
+          << "\n  AIE compute (modelled) : " << aie_us << " us   (II 4161 ns x "
+          << n_iter << " iterations)\n"
+          << "  measured execute       : " << exec_us << " us\n"
+          << "  launch/DMA overhead    : " << (exec_us - aie_us) << " us  ("
+          << (exec_us > 0 ? 100.0 * (exec_us - aie_us) / exec_us : 0.0) << "% of execute)\n"
+          << "     -> run more events per launch to amortise this\n";
+
+        if (is_emu) std::cout <<
           "\n  NOTE: under hw_emu these are EMULATION wall-clock times (QEMU PS +\n"
           "  SystemC AIE model) and say nothing about silicon speed. The cycle-\n"
           "  accurate figure for this graph is II = 4161 ns for 7 iterations,\n"
           "  i.e. 582.6 ns per real track (aieml_batch: make report). Only a\n"
           "  TARGET=hw run on the board gives meaningful wall-clock numbers.\n";
+        else std::cout <<
+          "\n  (TARGET=hw build: these are real wall-clock times.)\n";
 
         graph.end();
         std::cout << "[host] done" << std::endl;
