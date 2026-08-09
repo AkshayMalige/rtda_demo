@@ -95,7 +95,7 @@ endif
 ############################################################################
 #  Phony targets
 ############################################################################
-.PHONY: all system aie aie_x86sim aie_hw aie_sim_x86 aie_sim_hw sim \
+.PHONY: repackage all system aie aie_x86sim aie_hw aie_sim_x86 aie_sim_hw sim \
         pl pl_build pl_csim pl_cosim \
         host host_x86 host_aarch64 \
         link package run run_emu \
@@ -212,10 +212,18 @@ ifeq ($(AIE_DIR),aieml_batch)
 	@rm -rf $(SD_STAGE) && mkdir -p $(SD_STAGE)
 	@cp -r data_fp32 $(SD_STAGE)/
 	@cp -r aieml_batch/sysdata $(SD_STAGE)/
+	@cp -r testdata $(SD_STAGE)/   # multi-event inputs; see testdata/README.md
 	@echo "SD staging ready: $(SD_STAGE) (data_fp32 + sysdata)"
 endif
 
 package: sd_stage $(XCLBIN)
+
+# The SD staging directory's CONTENTS are not prerequisites of $(XCLBIN), so
+# changing what goes on the card (adding testdata, swapping weights) does not
+# trigger a repackage on its own. Use this to force one.
+repackage:
+	@rm -f $(XCLBIN)
+	@$(MAKE) package TARGET=$(TARGET) AIE_DIR=$(AIE_DIR)
 
 ifeq ($(TARGET),hw_emu)
 $(XCLBIN): $(AIE_LIB) $(XSA) $(EXEC) | $(PKG_DIR)
