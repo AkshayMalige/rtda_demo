@@ -55,7 +55,7 @@ AIE_INCLUDES = --include=src $(KERNEL_INC) $(shell test -d src/weights && echo -
 
 VPP = source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; v++ --compile --config aie.cfg --mode aie
 
-.PHONY: all graph system_graph rtp x86com sim x86 crosscheck crosscheck_ref report analyze \
+.PHONY: all graph system_graph rtp compare x86com sim x86 crosscheck crosscheck_ref report analyze \
         regen verify_io ports vars clean clean_all help
 
 .DEFAULT_GOAL := graph
@@ -113,6 +113,12 @@ crosscheck: graph
 
 crosscheck_ref:
 	@$(PYTHON) crosscheck.py --skip-aie
+
+# Cross-check a hardware run's track_mean_128.txt against every reference.
+# MEAN=<path> to point at a fresh run; defaults to the captured hw_emu result.
+MEAN ?= results/hw_emu_track_mean_128.txt
+compare:
+	@$(PYTHON) compare_hw.py $(MEAN) --sim x86
 
 report:
 	@$(PYTHON) report.py --batch $(BATCH) --iters $(ITERS)
@@ -177,6 +183,7 @@ help:
 	@echo "  make x86                x86 compile + crosscheck (fast)"
 	@echo "  make crosscheck         vs numpy golden + data_fp32 reference"
 	@echo "  make crosscheck_ref     validate the reference file only, no build"
+	@echo "  make compare MEAN=x.txt compare a hardware run vs all references"
 	@echo "  make report             II and ns/track of the last aie run"
 	@echo "  make ports              show the PLIO layout"
 	@echo "  make analyze            open Vitis Analyzer"
