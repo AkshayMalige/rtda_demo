@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <cstdlib>
 
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_graph.h"
@@ -204,7 +205,14 @@ int main(int argc, char** argv)
         std::cout << "[host] RTP loaded: " << rtp_bytes / 1024 << " KB" << std::endl;
 
         // ---- input: 50 real tracks, zero-padded to N_ITER*BATCH slots -------
-        auto raw = read_text(join(data_dir, "embed_input.txt"));
+        // Input file: RTDA_INPUT overrides, so a different track count can be run
+        // without copying over the one on the card (the SD partition is often
+        // mounted read-only, and a failed cp is silent).
+        const char* env_in = std::getenv("RTDA_INPUT");
+        const std::string in_file = env_in ? std::string(env_in)
+                                           : join(data_dir, "embed_input.txt");
+        std::cout << "[host] input file: " << in_file << std::endl;
+        auto raw = read_text(in_file);
         const int file_tracks = static_cast<int>(raw.size() / RAW_IN);
         if (file_tracks < 1) throw std::runtime_error("embed_input.txt has no complete tracks");
 
