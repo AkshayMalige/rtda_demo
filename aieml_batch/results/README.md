@@ -1,5 +1,23 @@
 # Results
 
+## Reproducibility fix — 2026-08-10
+
+Running the 10k-track test twice back to back originally gave PASS then FAIL, with
+**only event 0** wrong (2.5e-3). Cause: `roll_concat_batch`'s one-row `carry` is a
+static initialised at ELF LOAD, not at `graph.run()`. A second run on an already
+downloaded xclbin (`[drm] xclbin already downloaded to slot=0`) starts with the
+previous run's leftover carry, so event 0's first track pairs with stale state.
+Events 1..N are unaffected -- their predecessor comes from their own run.
+
+Fix: the host prepends one all-zero **flush event** and discards its result. Zero
+input slots produce bias-determined activations independent of history, so the
+roll state is deterministic before the first real track. Verified numerically:
+an arbitrary warm carry vs a cold carry gives `max|diff| = 0.000e+00`. Costs 7 of
+1407 iterations (0.5%). `RTDA_NO_FLUSH=1` restores the old behaviour.
+
+**Confirmed on hardware:** two consecutive runs now both PASS.
+
+
 ## Hardware (VEK280, TARGET=hw) — 2026-08-09
 
 Track-count sweep, all events in a single `graph.run()`:
