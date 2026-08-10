@@ -699,6 +699,33 @@ make help
 Knobs: `make sim BATCH=8 SOLVERS=3 ITERS=7 WEIGHTS_DIR=... AIE_VITIS=...`
 (changing `BATCH`/`SOLVERS`/`INPUT_DIM` needs `make regen` first).
 
+Equivalence with `aieml/`, which is driven from the repo root:
+
+| `aieml/` | here | runs |
+|---|---|---|
+| `make aie_x86sim` | `make x86com` | compile only, x86 |
+| `make aie_hw` | `make graph` | compile only, hw |
+| `make aie_sim_x86` | `make x86` | x86simulator |
+| `make aie_sim_hw` | `make sim` | aiesimulator |
+
+**VCD and profiling are off by default here.** `aieml/Makefile:116` always passes
+`--profile --dump-vcd=foo --output-time-stamp=no`; this project passes none of it,
+because VCD dumping is slow and the file grows with the iteration count — which bites
+on a 50-event run. Turn it on per run:
+
+```bash
+make sim VCD=1                              # -> foo.vcd, open with `make analyze`
+make sim PROFILE=1                          # -> profile_funct_*.txt, per-kernel cycles/duty
+make sim VCD=1 PROFILE=1
+make sim VCD=mine                           # -> mine.vcd
+make sim AIESIM_ARGS="--dump-vcd=foo --profile --online"    # anything else
+make x86_events EVENTS=10 VCD=1             # works on the multi-event targets too
+```
+
+> `--output-time-stamp=no` is deliberately **not** included, even though `aieml/` passes
+> it. `report.py` reads the `T <ns>` markers out of the PLIO output files to compute the
+> II, and that flag suppresses them — `make report` would go blank.
+
 ### 9.2 Simulating more than one event
 
 `make sim` / `make x86` / `make crosscheck` run **exactly one** 50-track event: the graph

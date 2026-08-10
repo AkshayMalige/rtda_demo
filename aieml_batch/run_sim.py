@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -59,7 +60,16 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     # marker rather than the tail.
     marker = 'Sim result: 0' if sim == 'aie' else 'Simulation completed successfully'
 
+    # Extra aiesimulator flags, e.g. --dump-vcd=foo --profile (aieml/Makefile:116
+    # passes exactly those). Off by default: VCD dumping is slow and the file grows
+    # with the iteration count, which matters on a multi-event run.
+    #
+    # Do NOT add --output-time-stamp=no here, whatever aieml/ does: report.py reads
+    # the `T <ns>` markers out of the PLIO output files to get the II, and that flag
+    # suppresses them.
     cmd = [exe, f'--pkg-dir={workdir}', *extra]
+    if sim == 'aie':
+        cmd += shlex.split(os.environ.get('RTDA_AIESIM_ARGS', ''))
     r = subprocess.run(cmd, cwd=HERE, text=True, capture_output=True)
     out = r.stdout + r.stderr
     if r.returncode != 0 or marker not in out:

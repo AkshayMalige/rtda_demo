@@ -40,6 +40,23 @@ PYTHON       ?= /home/synthara/miniforge3/bin/python
 # Only `regen` and `verify_io` need this one (aie4ml + onnx + keras).
 AIE4ML_PY    ?= /home/synthara/miniforge3/envs/envaie2/bin/python
 
+# Extra aiesimulator flags. aieml/Makefile:116 always passes
+#   --profile --dump-vcd=foo --output-time-stamp=no
+# This project passes NONE by default -- VCD dumping is slow and the file grows
+# with the iteration count, which bites on a 50-event run. Turn them on per-run:
+#
+#   make sim VCD=1              -> foo.vcd  (open in Vitis Analyzer)
+#   make sim PROFILE=1          -> profile_funct_*.txt  (per-kernel cycles/duty)
+#   make sim VCD=1 PROFILE=1
+#   make sim AIESIM_ARGS="--dump-vcd=mine --profile"    (anything else)
+#
+# NOTE: --output-time-stamp=no is deliberately NOT included. aieml/ passes it,
+# but report.py reads the `T <ns>` markers out of the PLIO output files to get
+# the II, and that flag suppresses them -- `make report` would go blank.
+VCD          ?=
+PROFILE      ?=
+AIESIM_ARGS  ?= $(if $(VCD),--dump-vcd=$(if $(filter 1,$(VCD)),foo,$(VCD)),) $(if $(PROFILE),--profile,)
+
 APP          := app
 LIBADF       := libadf.a
 LIBADF_X86   := libadf_x86.a
@@ -47,6 +64,7 @@ WORK         := Work
 WORK_X86     := Work_x86
 
 export BATCH SOLVERS INPUT_DIM ITERS WEIGHTS_DIR
+export RTDA_AIESIM_ARGS := $(strip $(AIESIM_ARGS))
 export AIE_PLATFORM := $(AIE_PLAT_NAME)
 
 SRCS       := $(APP).cpp aie.cfg $(shell find src -type f \( -name '*.h' -o -name '*.cpp' \) 2>/dev/null)
@@ -236,6 +254,8 @@ help:
 	@echo "  make compare MEAN=x.txt compare a hardware run vs all references"
 	@echo "  make report             II and ns/track of the last aie run"
 	@echo "  make ports              show the PLIO layout"
+	@echo "  make sim VCD=1          also dump foo.vcd  (aieml/ does this by default)"
+	@echo "  make sim PROFILE=1      also dump profile_funct_*.txt (per-kernel cycles)"
 	@echo "  make analyze            open Vitis Analyzer"
 	@echo "  make vars / clean / clean_all"
 	@echo
