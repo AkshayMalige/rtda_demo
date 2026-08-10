@@ -212,7 +212,7 @@ ifeq ($(AIE_DIR),aieml_batch)
 	@rm -rf $(SD_STAGE) && mkdir -p $(SD_STAGE)
 	@cp -r data_fp32 $(SD_STAGE)/
 	@cp -r aieml_batch/sysdata $(SD_STAGE)/
-	@cp -r testdata $(SD_STAGE)/   # multi-event inputs; see testdata/README.md
+	@cp -r testdata $(SD_STAGE)/   # multi-event inputs + goldens; see testdata/README.md
 	@echo "SD staging ready: $(SD_STAGE) (data_fp32 + sysdata)"
 endif
 

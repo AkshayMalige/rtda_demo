@@ -306,6 +306,43 @@ int main(int argc, char** argv)
         std::cout << "[host] wrote " << OUT_DIM << " values -> " << out_path << std::endl;
 
         // also dump the raw mean, so the 128-wide result can be compared directly
+        // ---- on-board verification against a golden, if one is supplied -----
+        // RTDA_GOLDEN=<file> where the file is "n_events n_cols" then one row of
+        // n_cols floats per event. Avoids copying hundreds of result files off
+        // the board just to diff them.
+        if (const char* gpath = std::getenv("RTDA_GOLDEN")) {
+            std::ifstream gf(gpath);
+            if (!gf) {
+                std::cout << "[host] WARNING: cannot open golden " << gpath << std::endl;
+            } else {
+                std::size_t g_ev = 0, g_cols = 0;
+                gf >> g_ev >> g_cols;
+                if (g_cols != static_cast<std::size_t>(HIDDEN)) {
+                    std::cout << "[host] WARNING: golden has " << g_cols
+                              << " columns, expected " << HIDDEN << std::endl;
+                } else {
+                    const std::size_t n_cmp = std::min(g_ev, frames.size());
+                    double worst = 0.0; std::size_t worst_ev = 0, bad = 0;
+                    std::vector<float> row(HIDDEN);
+                    for (std::size_t e = 0; e < g_ev; ++e) {
+                        for (int j = 0; j < HIDDEN; ++j) gf >> row[j];
+                        if (e >= n_cmp) continue;
+                        const float* m = out + static_cast<std::size_t>(frames[e]) * HIDDEN;
+                        double mx = 0.0;
+                        for (int j = 0; j < HIDDEN; ++j)
+                            mx = std::max(mx, static_cast<double>(std::fabs(m[j] - row[j])));
+                        if (mx > worst) { worst = mx; worst_ev = e; }
+                        if (mx > 1e-4) ++bad;
+                    }
+                    std::cout << "\n[host] ===== Verification vs " << gpath << " =====\n"
+                              << "  events compared : " << n_cmp << " of " << g_ev << "\n"
+                              << "  worst event     : " << worst_ev << "   max|diff| = " << worst << "\n"
+                              << "  over 1e-4       : " << bad << "\n"
+                              << (bad == 0 ? "  PASS\n" : "  FAIL\n");
+                }
+            }
+        }
+
         // track_mean_128.txt keeps the LAST event (so single-event runs and the
         // existing compare tooling are unchanged); per-event files alongside it.
         std::ofstream fm("track_mean_128.txt");
@@ -313,7 +350,7 @@ int main(int argc, char** argv)
         for (int j = 0; j < HIDDEN; ++j) fm << mean[j] << '\n';
         fm.close();
         std::cout << "[host] wrote 128-wide event mean -> track_mean_128.txt" << std::endl;
-        if (frames.size() > 1) {
+        if (frames.size() > 1 && std::getenv("RTDA_DUMP_EVENTS")) {
             for (std::size_t e = 0; e < frames.size(); ++e) {
                 const std::string fn = "track_mean_128_ev" + std::to_string(e) + ".txt";
                 std::ofstream fe(fn);
@@ -323,6 +360,9 @@ int main(int argc, char** argv)
             }
             std::cout << "[host] wrote " << frames.size()
                       << " per-event means -> track_mean_128_ev*.txt" << std::endl;
+        } else if (frames.size() > 1) {
+            std::cout << "[host] " << frames.size() << " events; set RTDA_DUMP_EVENTS=1 "
+                         "to write per-event files" << std::endl;
         }
         const auto t_end = clk::now();
 
