@@ -367,7 +367,7 @@ int main(int argc, char** argv)
         const auto t_end = clk::now();
 
         // ---- size + timing report ------------------------------------------
-        const long macs_event = MACS_PER_TRACK * file_tracks;
+        const long macs_total = MACS_PER_TRACK * file_tracks;   // over ALL tracks
         std::cout
           << "\n[host] ===== Size report =====\n"
           << "  RTP weights        : " << manifest.size() << " ports, "
@@ -380,8 +380,9 @@ int main(int argc, char** argv)
           << "  Output             : " << n_iter << " frames x " << HIDDEN << " floats = "
           << out_bytes / 1024.0 << " KB   (" << n_events << " carry a result)\n"
           << "  Model              : 14 dense layers, " << MACS_PER_TRACK << " MACs/track\n"
-          << "                       " << macs_event / 1e6 << " MMAC/event, "
-          << 2 * macs_event / 1e6 << " MOP/event\n";
+          << "                       " << MACS_PER_TRACK * TRACKS_PER_EVENT / 1e6
+          << " MMAC/event, " << macs_total / 1e6 << " MMAC total ("
+          << 2 * macs_total / 1e6 << " MOP)\n";
 
         std::cout
           << "\n[host] ===== Timing =====\n"
@@ -397,7 +398,7 @@ int main(int argc, char** argv)
           << "\n  per event              : " << ms(exec) / n_events << " ms\n"
           << "  per track              : " << us(exec) / file_tracks << " us\n"
           << "  effective throughput   : "
-          << (2.0 * macs_event) / (std::chrono::duration<double>(exec).count()) / 1e9 << " GOP/s\n";
+          << (2.0 * macs_total) / (std::chrono::duration<double>(exec).count()) / 1e9 << " GOP/s\n";
 
         const double aie_us = 4.1612 * n_iter;   // II 4161 ns/iteration, cycle-accurate
         const double exec_us = us(exec);
