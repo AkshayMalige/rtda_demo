@@ -197,7 +197,10 @@ help:
 	@echo "Knobs: BATCH SOLVERS ITERS INPUT_DIM WEIGHTS_DIR AIE_VITIS PYTHON"
 	@echo
 	@echo "Measured (full 14-layer model, float32, leaky ReLU 0.1, Vitis 2025.2):"
-	@echo "  BATCH=8   II 4158.1 ns -> 519.8 ns/track   vs aieml/ 17,770  = 34.2x"
+	@echo "  BATCH=8   II 4161 ns / iteration -> 520.1 ns per SLOT"
+	@echo "            7 iterations per 50-track event -> 582.6 ns per REAL track"
+	@echo "            vs aieml/ 17,770 ns/track = 30.5x"
+	@echo "  silicon   595.6 ns/track marginal (2.2% off the model), 803 GOP/s at 10k"
 	@echo "  matches data_fp32/aieml10_output_aie.txt to 4.0e-06 (tracks 3..49)"
 	@echo
 	@echo "Why 8: the float32 aie::mmul microtile is M=4 and the batch axis pads"

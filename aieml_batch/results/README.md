@@ -22,28 +22,33 @@ an arbitrary warm carry vs a cold carry gives `max|diff| = 0.000e+00`. Costs 7 o
 
 Track-count sweep, all events in a single `graph.run()`:
 
-| tracks | events | per track | total execute |
-|---:|---:|---:|---:|
-| 50 | 1 | 12.700 us | 635 us |
-| 500 | 10 | 1.800 us | 900 us |
-| 5000 | 100 | **0.696 us** | 3480 us |
+| tracks | events | per track | total execute | modelled AIE time | overhead |
+|---:|---:|---:|---:|---:|---:|
+| 50 | 1 | 12.700 us | 635 us | 29.1 us | 95.4% |
+| 500 | 10 | 1.800 us | 900 us | 291.3 us | 67.6% |
+| 5000 | 100 | 0.696 us | 3480 us | 2912.8 us | 16.3% |
+| 10000 | 200 | **0.658 us** | 6578 us | 5825.7 us | **11.4%** |
 
-A least-squares fit gives
+A least-squares fit over all four points gives
 
-    total = 609.4 us (fixed) + 574.2 ns x tracks
+    total = 583.0 us (fixed) + 595.6 ns x tracks
 
-and the three points reproduce to <0.5%. Two conclusions:
+and every point reproduces to within 3.5%. Two conclusions:
 
-**1. The marginal cost is 574.2 ns/track against a cycle-accurate prediction of
-582.6 ns/track -- 1.4% agreement.** aiesimulator, hw_emu and silicon all agree; the
+**1. The marginal cost is 595.6 ns/track against a cycle-accurate prediction of
+582.6 ns/track -- 2.2% agreement.** aiesimulator, hw_emu and silicon all agree; the
 AIE does exactly what the model said.
 
-**2. The 12.7 us/track at 50 tracks was never the array.** It is 609 us of fixed
+**2. The 12.7 us/track at 50 tracks was never the array.** It is 583 us of fixed
 per-`graph.run()` cost (XRT/driver round-trip, GMIO arming) spread over too few
-tracks. At 50 tracks the array is busy 4.5% of the time; at 5000 it is 82%.
+tracks. At 50 tracks the array is busy 4.6% of the time; at 10000 it is 89%.
 
-Sustained throughput at 5000 tracks: **759 GOP/s**.
-Versus `aieml/` at 17,770 ns/track: **25.5x measured, 30.9x on the marginal rate.**
+Sustained throughput at 10,000 tracks: **803 GOP/s**.
+Versus `aieml/` at 17,770 ns/track: **27x measured, 29.8x on the marginal rate.**
+
+Nothing in the design caps the event count -- host buffers are linear and small
+(10,000 tracks = 717 KB in, 720 KB out). The ceiling is the DDR allocation, not
+the array, and per-track cost keeps improving asymptotically toward 595.6 ns.
 
 The fixed cost is host-side and cannot be reduced by the AIE design. For a
 latency-bound single-event workload it dominates and would need separate work
@@ -52,6 +57,8 @@ latency-bound single-event workload it dominates and would need separate work
 Reproduce:
 
     RTDA_INPUT=sd_batch/testdata/embed_input_5000.txt ./host_batch.exe
+    RTDA_INPUT=sd_batch/testdata/embed_input_10000.txt \
+    RTDA_GOLDEN=sd_batch/testdata/golden_10000.txt ./host_batch.exe
 
 ## hw_emu — 2026-08-08
 
