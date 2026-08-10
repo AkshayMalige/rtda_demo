@@ -146,12 +146,30 @@ def main():
         for e in range(n_real_ev):
             np.savetxt(outdir / f'sim_mean_128_{tag}_ev{e}.txt', measured[e], fmt='%.9e')
         np.savetxt(outdir / f'sim_input_{tag}.txt', tracks.reshape(-1), fmt='%.9e')
+
+        # PER-TRACK stage outputs as well as the event mean. The array only ever
+        # sends track_out to the host, but in simulation the per-stage debug taps
+        # are wired to PLIO, so we get every track's 128-wide activation for free.
+        # That is the only way to analyse the warm-up tracks (0..2) separately --
+        # from the event mean alone they are already averaged in and cannot be
+        # separated. Laid out (slot, 128) over the whole run, flush event included,
+        # so slot = event*56 + track once the flush offset is removed.
+        stages = {}
+        for name in ('emb_out', 's0_out', 's1_out', 's2_out'):
+            if name in got:
+                stages[name] = np.asarray(got[name]).reshape(-1, H).astype(np.float32)
+
         np.savez_compressed(outdir / f'sim_{tag}.npz',
                             measured=measured, golden=means, tracks=tracks,
                             frames=np.asarray(nz), n_events=n_real_ev,
-                            n_tracks=n_tracks, flush=flush, sim=a.sim)
-        print(f'  wrote {n_real_ev} event mean(s) + stimulus -> {outdir}/')
-        print(f'        sim_{tag}.npz   (measured, golden, tracks, frames)\n')
+                            n_tracks=n_tracks, flush=flush, sim=a.sim,
+                            slots_per_event=make_golden.SLOTS_PER_EVENT,
+                            tracks_per_event=make_golden.TRACKS_PER_EVENT,
+                            flush_slots=(make_golden.SLOTS_PER_EVENT if flush else 0),
+                            **stages)
+        extra = f' + per-track {sorted(stages)}' if stages else ''
+        print(f'  wrote {n_real_ev} event mean(s) + stimulus{extra} -> {outdir}/')
+        print(f'        sim_{tag}.npz\n')
 
     # --- compare -------------------------------------------------------------
     print(f'  per-event agreement vs the numpy golden (tol {a.tol:.0e}):')
