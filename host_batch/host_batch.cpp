@@ -221,7 +221,18 @@ int main(int argc, char** argv)
         // stops at 50 and skips the rest of that block, so a short final block of
         // one event would swallow the first tracks of the next.
         const int n_events = (file_tracks + TRACKS_PER_EVENT - 1) / TRACKS_PER_EVENT;
-        const int n_iter   = n_events * ITER_PER_EVENT;
+
+        // Prepend one all-zero "flush" event whose result is discarded.
+        // roll_concat_batch's carry is a static initialised at ELF LOAD, not at
+        // graph.run(). A second run on an already-downloaded xclbin therefore
+        // starts with the previous run's leftover carry and event 0 comes out
+        // ~2.5e-3 different -- results depend on whether the board was cold.
+        // A few zero slots drive the roll state to a bias-determined value
+        // regardless of history, so the real events become reproducible either
+        // way. RTDA_NO_FLUSH=1 disables it (only correct from a cold start).
+        const bool flush   = std::getenv("RTDA_NO_FLUSH") == nullptr;
+        const int lead_ev  = flush ? 1 : 0;
+        const int n_iter   = (n_events + lead_ev) * ITER_PER_EVENT;
         std::cout << "[host] input: " << file_tracks << " tracks -> " << n_events
                   << " event(s), " << n_iter << " iterations" << std::endl;
 
@@ -235,7 +246,8 @@ int main(int argc, char** argv)
         std::vector<float> host_in(in_elems, 0.0f);
         for (int t = 0; t < file_tracks; ++t) {
             const int ev = t / TRACKS_PER_EVENT, idx = t % TRACKS_PER_EVENT;
-            const std::size_t slot = static_cast<std::size_t>(ev) * SLOTS_PER_EVENT + idx;
+            const std::size_t slot =
+                static_cast<std::size_t>(ev + lead_ev) * SLOTS_PER_EVENT + idx;
             for (int k = 0; k < RAW_IN; ++k)
                 host_in[slot * IN_DIM + k] = raw[static_cast<std::size_t>(t) * RAW_IN + k];
         }
@@ -249,7 +261,8 @@ int main(int argc, char** argv)
 
         std::cout << "[host] running graph: " << n_iter << " iterations x "
                   << BATCH << " tracks (" << file_tracks << " real + "
-                  << (slots - file_tracks) << " padding)" << std::endl;
+                  << (slots - file_tracks) << " padding"
+                  << (flush ? ", incl. 1 flush event" : "") << ")" << std::endl;
 
         // Input DMA, compute and output DMA overlap by design -- the graph
         // consumes x as it arrives -- so they are timed as one phase. Waiting on
@@ -278,6 +291,10 @@ int main(int argc, char** argv)
             if (m > 0.0f) frames.push_back(i);
         }
         if (frames.empty()) throw std::runtime_error("all output frames are zero - graph produced nothing");
+        if (flush && !frames.empty()) {
+            frames.erase(frames.begin());        // discard the flush event
+            std::cout << "[host] (flush event discarded; RTDA_NO_FLUSH=1 to disable)" << std::endl;
+        }
         std::cout << "[host] event means in frame(s):";
         for (int f : frames) std::cout << ' ' << f;
         std::cout << "  of " << n_iter << "   (expect " << n_events << ", at 6,13,20,...)" << std::endl;

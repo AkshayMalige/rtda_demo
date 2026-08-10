@@ -61,16 +61,27 @@ def synth_tracks(n, seed=1234):
     return out
 
 
-def golden(tracks):
-    """Run the model over the slot sequence, returning per-event 128-wide means."""
-    n_ev = (len(tracks) + TRACKS_PER_EVENT - 1) // TRACKS_PER_EVENT
+def golden(tracks, flush=True):
+    """Run the model over the slot sequence, returning per-event 128-wide means.
+
+    flush=True prepends one all-zero event whose result is discarded. Without it
+    the answer depends on whether the AIE was cold-started: roll_concat_batch's
+    carry is a static initialised at ELF LOAD, so a second graph.run() on an
+    already-loaded xclbin starts with the previous run's leftover state and
+    event 0 comes out different (measured: 2.5e-3). After a few zero slots the
+    roll state is bias-determined regardless of history, so a dummy event makes
+    every real event reproducible cold or warm.
+    """
+    n_real_ev = (len(tracks) + TRACKS_PER_EVENT - 1) // TRACKS_PER_EVENT
+    n_ev = n_real_ev + (1 if flush else 0)
     n_slots = n_ev * SLOTS_PER_EVENT
+    off = SLOTS_PER_EVENT if flush else 0     # real events start after the flush
 
     # --- lay tracks into slots, padding each event individually ---------------
     X = np.zeros((n_slots, IN_DIM))
     for t, row in enumerate(tracks):
         ev, idx = divmod(t, TRACKS_PER_EVENT)
-        X[ev * SLOTS_PER_EVENT + idx, :8] = row
+        X[off + ev * SLOTS_PER_EVENT + idx, :8] = row
 
     W_e0 = np.zeros((IN_DIM, H))
     W_e0[:8] = np.loadtxt(C.D / 'embed_dense_0_weights.txt').reshape(8, H)
@@ -92,9 +103,9 @@ def golden(tracks):
         cur = C.lrelu(z)
 
     # --- accumulate per event, counting real tracks (never trusting zeros) ----
-    means = np.zeros((n_ev, H))
-    for ev in range(n_ev):
-        base = ev * SLOTS_PER_EVENT
+    means = np.zeros((n_real_ev, H))
+    for ev in range(n_real_ev):
+        base = off + ev * SLOTS_PER_EVENT
         n_real = min(TRACKS_PER_EVENT, len(tracks) - ev * TRACKS_PER_EVENT)
         means[ev] = cur[base:base + n_real].sum(axis=0) / TRACKS_PER_EVENT
     return means, cur
@@ -105,6 +116,8 @@ def main():
     ap.add_argument('--tracks', type=int, default=10000)
     ap.add_argument('--out', default='../testdata')
     ap.add_argument('--seed', type=int, default=1234)
+    ap.add_argument('--no-flush', action='store_true',
+                    help='model a guaranteed cold start instead (see golden())')
     a = ap.parse_args()
 
     outdir = (HERE / a.out).resolve()
@@ -118,7 +131,7 @@ def main():
     stim.write_text('\n'.join(f'{v:.9e}' for v in tracks.ravel()) + '\n')
     print(f'  stimulus : {stim.name}  ({stim.stat().st_size/1024:.0f} KB)')
 
-    means, s2 = golden(tracks)
+    means, s2 = golden(tracks, flush=not a.no_flush)
     Wo = np.loadtxt(C.D / 'output_weights.txt').reshape(H, 27)
     Bo = np.loadtxt(C.D / 'output_bias.txt')
     y27 = means @ Wo + Bo
