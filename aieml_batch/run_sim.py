@@ -70,10 +70,27 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     cmd = [exe, f'--pkg-dir={workdir}', *extra]
     if sim == 'aie':
         cmd += shlex.split(os.environ.get('RTDA_AIESIM_ARGS', ''))
-    r = subprocess.run(cmd, cwd=HERE, text=True, capture_output=True)
-    out = r.stdout + r.stderr
-    if r.returncode != 0 or marker not in out:
-        why = f'rc={r.returncode}' if r.returncode else f'{marker!r} not found in output'
+
+    # Stream rather than capture. aiesimulator on this graph runs for minutes and
+    # prints nothing until it is done; buffering it makes a perfectly healthy run
+    # look like a hang, which is exactly how it was first reported. Echo every
+    # line as it arrives AND keep it, so the failure path can still scan for the
+    # success marker. RTDA_QUIET=1 restores the silent behaviour.
+    quiet = os.environ.get('RTDA_QUIET')
+    print(f'  $ {" ".join(cmd)}', flush=True)
+    lines = []
+    proc = subprocess.Popen(cmd, cwd=HERE, text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            bufsize=1)
+    for line in proc.stdout:
+        lines.append(line)
+        if not quiet:
+            print('  | ' + line.rstrip(), flush=True)
+    rc = proc.wait()
+
+    out = ''.join(lines)
+    if rc != 0 or marker not in out:
+        why = f'rc={rc}' if rc else f'{marker!r} not found in output'
         interesting = [ln for ln in out.splitlines()
                        if any(k in ln for k in ('ERROR', 'Error', 'error', 'FAIL', 'Fatal'))]
         tail = '\n'.join((interesting or out.strip().splitlines())[-15:])
