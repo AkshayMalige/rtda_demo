@@ -56,7 +56,7 @@ AIE_INCLUDES = --include=src $(KERNEL_INC) $(shell test -d src/weights && echo -
 VPP = source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; v++ --compile --config aie.cfg --mode aie
 
 .PHONY: all graph system_graph rtp compare x86com sim x86 crosscheck crosscheck_ref report analyze \
-        regen verify_io ports vars clean clean_all help
+        x86_events sim_events regen verify_io ports vars clean clean_all help
 
 .DEFAULT_GOAL := graph
 all: graph
@@ -114,6 +114,52 @@ crosscheck: graph
 crosscheck_ref:
 	@$(PYTHON) crosscheck.py --skip-aie
 
+# --- multi-event simulation ---------------------------------------------
+# `make sim` / `make crosscheck` run exactly ONE event: the graph is compiled
+# with N_ITER fixed at 7 and the 50-track reference is a single event. Event
+# BOUNDARY behaviour (roll carry crossing events, accumulator reset) therefore
+# goes untested -- and that is where the hardware reproducibility bug lived.
+#
+# EVENTS=N builds a second graph with N_ITER = ITERS*(N+1) (the +1 is the flush
+# event, mirroring the host) into its OWN archive and workdir, so the
+# single-event build and `make crosscheck` are left completely alone.
+#
+# FLUSH=1 (default) mirrors the host: one leading all-zero event, discarded.
+# FLUSH=0 drops it -- exact in simulation, since a simulator is always cold, and
+# 7 iterations cheaper, but then it no longer matches what runs on a board.
+# The iteration count and the driver flag must agree, so both come from here.
+EVENTS   ?= 2
+FLUSH    ?= 1
+EV_ITERS  = $(shell echo $$(( $(ITERS) * ($(EVENTS) + $(FLUSH)) )))
+EV_OUT   ?= results/sim_events
+EV_ARGS   = --events $(EVENTS) --out $(EV_OUT) $(if $(TRACKS),--tracks $(TRACKS),) \
+            $(if $(filter 0,$(FLUSH)),--no-flush,)
+
+x86_events:
+	@echo ">>> x86 build: $(EVENTS) event(s) + 1 flush = $(EV_ITERS) iterations"
+	@$(VPP) --target=x86sim $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
+	      --aie.Xpreproc="-DN_ITER_OVERRIDE=$(EV_ITERS)" \
+	      --aie.workdir=Work_x86_ev$(EVENTS) \
+	      --aie.output-archive=libadf_x86_ev$(EVENTS).a 2>&1 | tee log
+	@if grep -q "Compilation Failed" log; then \
+	   echo; echo "*** BUILD FAILED ***"; \
+	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; exit 1; fi
+	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; \
+	  RTDA_N_ITER=$(EV_ITERS) $(PYTHON) sim_events.py --sim x86 $(EV_ARGS)
+
+# Cycle-accurate, and MUCH slower than x86 -- keep EVENTS small (2-3).
+sim_events:
+	@echo ">>> aie build: $(EVENTS) event(s) + 1 flush = $(EV_ITERS) iterations"
+	@$(VPP) --target=hw $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
+	      --aie.Xpreproc="-DN_ITER_OVERRIDE=$(EV_ITERS)" \
+	      --aie.workdir=Work_ev$(EVENTS) \
+	      --aie.output-archive=libadf_ev$(EVENTS).a 2>&1 | tee log
+	@if grep -q "Compilation Failed" log; then \
+	   echo; echo "*** BUILD FAILED ***"; \
+	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; exit 1; fi
+	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; \
+	  RTDA_N_ITER=$(EV_ITERS) $(PYTHON) sim_events.py --sim aie $(EV_ARGS)
+
 # Cross-check a hardware run's track_mean_128.txt against every reference.
 # MEAN=<path> to point at a fresh run; defaults to the captured hw_emu result.
 MEAN ?= results/hw_emu_track_mean_128.txt
@@ -165,6 +211,7 @@ vars:
 
 clean:
 	rm -rf $(WORK) $(WORK_X86) $(LIBADF) $(LIBADF_X86) log log.* .Xil .crashReporter
+	rm -rf Work_ev* Work_x86_ev* libadf_ev*.a libadf_x86_ev*.a
 	rm -rf aiesimulator_output* x86simulator_output* aiesimulator*.log x86simulator*.log
 	rm -rf Map_Report.csv sol.db diag_report.log *.vcd trdata.aiesim pl_sample_count*
 	rm -rf qemu_rp.log temp .AIE_SIM_CMD_LINE_OPTIONS .io_check_* data
@@ -183,6 +230,9 @@ help:
 	@echo "  make x86                x86 compile + crosscheck (fast)"
 	@echo "  make crosscheck         vs numpy golden + data_fp32 reference"
 	@echo "  make crosscheck_ref     validate the reference file only, no build"
+	@echo "  make x86_events EVENTS=N   simulate N events (x86), dump results to $(EV_OUT)"
+	@echo "  make sim_events EVENTS=N   same on aiesimulator (cycle-accurate, slow)"
+	@echo "                             knobs: EVENTS FLUSH TRACKS EV_OUT"
 	@echo "  make compare MEAN=x.txt compare a hardware run vs all references"
 	@echo "  make report             II and ns/track of the last aie run"
 	@echo "  make ports              show the PLIO layout"

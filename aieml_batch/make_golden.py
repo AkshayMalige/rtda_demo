@@ -61,6 +61,29 @@ def synth_tracks(n, seed=1234):
     return out
 
 
+def slot_layout(tracks, flush=True):
+    """Lay tracks into the slot matrix the hardware actually sees.
+
+    Returns (X, n_real_ev, off) where X is (n_slots, IN_DIM). Events are padded
+    INDIVIDUALLY -- 50 real tracks then 6 zero slots -- never concatenated and
+    padded once at the end, because the accumulator stops at 50 and would
+    otherwise let one event's tail swallow the next event's head.
+
+    This is the single definition of the layout: host_batch.cpp reproduces it in
+    C++, and sim_events.py feeds it to the simulator, so both are compared
+    against a golden computed over exactly the same slots.
+    """
+    n_real_ev = (len(tracks) + TRACKS_PER_EVENT - 1) // TRACKS_PER_EVENT
+    n_ev = n_real_ev + (1 if flush else 0)
+    off = SLOTS_PER_EVENT if flush else 0     # real events start after the flush
+
+    X = np.zeros((n_ev * SLOTS_PER_EVENT, IN_DIM))
+    for t, row in enumerate(tracks):
+        ev, idx = divmod(t, TRACKS_PER_EVENT)
+        X[off + ev * SLOTS_PER_EVENT + idx, :8] = row
+    return X, n_real_ev, off
+
+
 def golden(tracks, flush=True):
     """Run the model over the slot sequence, returning per-event 128-wide means.
 
@@ -71,17 +94,11 @@ def golden(tracks, flush=True):
     event 0 comes out different (measured: 2.5e-3). After a few zero slots the
     roll state is bias-determined regardless of history, so a dummy event makes
     every real event reproducible cold or warm.
-    """
-    n_real_ev = (len(tracks) + TRACKS_PER_EVENT - 1) // TRACKS_PER_EVENT
-    n_ev = n_real_ev + (1 if flush else 0)
-    n_slots = n_ev * SLOTS_PER_EVENT
-    off = SLOTS_PER_EVENT if flush else 0     # real events start after the flush
 
-    # --- lay tracks into slots, padding each event individually ---------------
-    X = np.zeros((n_slots, IN_DIM))
-    for t, row in enumerate(tracks):
-        ev, idx = divmod(t, TRACKS_PER_EVENT)
-        X[off + ev * SLOTS_PER_EVENT + idx, :8] = row
+    A simulator is always cold (fresh process / fresh ELF), so flush=False is
+    exact there; the host defaults to flush=True because a board is not.
+    """
+    X, n_real_ev, off = slot_layout(tracks, flush)
 
     W_e0 = np.zeros((IN_DIM, H))
     W_e0[:8] = np.loadtxt(C.D / 'embed_dense_0_weights.txt').reshape(8, H)
@@ -126,6 +143,11 @@ def main():
     tracks = synth_tracks(a.tracks, a.seed)
     n_ev = (a.tracks + TRACKS_PER_EVENT - 1) // TRACKS_PER_EVENT
     print(f'  {a.tracks} tracks -> {n_ev} events, {n_ev*SLOTS_PER_EVENT} slots')
+    if a.tracks % TRACKS_PER_EVENT:
+        print(f'  WARNING: not a multiple of {TRACKS_PER_EVENT}. track_accum counts SLOTS, so'
+              f'\n           the last event averages padding activations in with its'
+              f'\n           {a.tracks % TRACKS_PER_EVENT} real tracks and the hardware will NOT match this golden.'
+              f'\n           Use a multiple of {TRACKS_PER_EVENT}.')
 
     stim = outdir / f'embed_input_{a.tracks}.txt'
     stim.write_text('\n'.join(f'{v:.9e}' for v in tracks.ravel()) + '\n')

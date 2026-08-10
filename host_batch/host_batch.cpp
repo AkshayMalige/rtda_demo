@@ -222,6 +222,20 @@ int main(int argc, char** argv)
         // one event would swallow the first tracks of the next.
         const int n_events = (file_tracks + TRACKS_PER_EVENT - 1) / TRACKS_PER_EVENT;
 
+        // track_accum counts SLOTS, not real tracks -- it cannot tell them apart,
+        // because a zero-input slot still carries a bias-determined activation by
+        // the time it reaches the accumulator. The count only means "real tracks"
+        // because the first 50 slots of a full event are real. A short final event
+        // therefore averages its few real tracks together with padding activations
+        // and comes out wrong (measured 8.0e-02 for a 20-track event) -- wrong, but
+        // plausible-looking, so say so loudly rather than let it pass.
+        if (file_tracks % TRACKS_PER_EVENT != 0)
+            std::cout << "[host] WARNING: " << file_tracks << " tracks is not a multiple of "
+                      << TRACKS_PER_EVENT << ". The last event has only "
+                      << (file_tracks % TRACKS_PER_EVENT) << " real tracks and its mean will be "
+                      << "WRONG (it averages padding activations too). Every other event is fine."
+                      << std::endl;
+
         // Prepend one all-zero "flush" event whose result is discarded.
         // roll_concat_batch's carry is a static initialised at ELF LOAD, not at
         // graph.run(). A second run on an already-downloaded xclbin therefore

@@ -15,8 +15,22 @@
 // slots are NOT harmless: every dense layer has a bias, so a zero input track
 // still produces a sizeable output (measured: |max| 0.13 against 0.49 for a real
 // track). Summing all 56 and dividing by 50 would shift every element of the
-// mean by ~6.6% of signal. So the kernel counts real tracks and stops at 50 --
-// the same guard pl/track_average_pl.cpp has as `window_count == threshold`.
+// mean by ~6.6% of signal. So the kernel counts and stops at 50 -- the same
+// guard pl/track_average_pl.cpp has as `window_count == threshold`.
+//
+// LIMITATION: it counts SLOTS CONSUMED, not real tracks -- it cannot tell the
+// two apart, because by the time a zero-input slot reaches here it carries a
+// bias-determined activation like any other. The count is only equivalent to
+// "real tracks" because the host fills the FIRST 50 slots of each event with
+// real tracks and pads the last 6.
+//
+// So EVERY EVENT MUST CARRY EXACTLY 50 REAL TRACKS. A short final event (a
+// track count that is not a multiple of 50) makes this sum 50 slots of which
+// only the first few are real, and the mean is wrong -- measured 8.0e-02 for an
+// event with 20 real tracks, which is large but still plausible-looking. The
+// host warns; sim_events.py --tracks warns. Fixing it properly needs the real
+// count delivered per event (an RTP, or a sentinel slot), which is a design
+// change, not a tweak.
 //
 // RATE. ADF buffer rates are static: a kernel wired to an output must write on
 // every iteration. It emits ZEROS until the event completes and the mean on the

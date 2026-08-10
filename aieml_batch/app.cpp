@@ -1,6 +1,23 @@
 #include "parameters.h"
 #include "top_graph.h"
 
+// N_ITER is how many iterations one run of the graph executes. It is NOT
+// structural -- nothing in graph_plan.h or top_graph.h depends on it -- but the
+// simulation PLIO files must carry exactly this many iterations or the graph
+// stalls waiting for data that never arrives, so it is fixed at compile time.
+//
+// One event is 7 iterations (7 x 8 = 56 slots >= 50 real tracks). Building with
+// -DN_ITER_OVERRIDE=<7*N> gives an N-event simulation, which is the only way to
+// exercise event-boundary behaviour (the roll carry crossing events, the
+// accumulator resetting) without hardware. Driven by `make x86_events EVENTS=N`.
+//
+// The SYSTEM build does not need this: there the XRT host owns the iteration
+// count via graph.run(n_iter) and picks it from the input file at run time.
+#ifdef N_ITER_OVERRIDE
+#undef N_ITER
+#define N_ITER N_ITER_OVERRIDE
+#endif
+
 using namespace adf;
 
 extern "C" {

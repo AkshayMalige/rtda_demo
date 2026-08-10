@@ -15,6 +15,7 @@ into this module rather than the CLI.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 from pathlib import Path
 
@@ -30,16 +31,28 @@ def n_iter() -> int:
 
     The input files must carry exactly this many iterations or the graph stalls
     waiting for data that never arrives.
+
+    RTDA_N_ITER overrides it, for builds made with -DN_ITER_OVERRIDE (the
+    multi-event simulation, `make x86_events`). app.cpp holds the override; the
+    generated parameters.h is left alone so `make regen` stays reproducible.
     """
+    env = os.environ.get('RTDA_N_ITER')
+    if env:
+        return int(env)
     for line in (HERE / 'src' / 'parameters.h').read_text().splitlines():
         if line.startswith('#define N_ITER'):
             return int(line.split()[-1])
     raise RuntimeError('N_ITER not found in src/parameters.h')
 
 
-def simulate(sim: str = 'aie', extra=()):
-    """Run the compiled graph. Assumes `make graph` / `make x86com` already ran."""
-    workdir = './Work' if sim == 'aie' else './Work_x86'
+def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
+    """Run the compiled graph. Assumes `make graph` / `make x86com` already ran.
+
+    workdir defaults to the single-event build; a multi-event build lives in its
+    own directory (Work_x86_ev<N>) so the two never overwrite each other.
+    """
+    if workdir is None:
+        workdir = './Work' if sim == 'aie' else './Work_x86'
     exe = 'aiesimulator' if sim == 'aie' else 'x86simulator'
     # The two simulators announce success differently, and both trail the message
     # with unrelated chatter ("IP-INFO: deleting packet ip"), so match on the
@@ -58,11 +71,12 @@ def simulate(sim: str = 'aie', extra=()):
     return out
 
 
-def run(feed: dict, sim: str = 'aie') -> dict:
+def run(feed: dict, sim: str = 'aie', workdir: str | None = None,
+        iterations: int | None = None) -> dict:
     """Write inputs, simulate, read outputs. The whole contract in one call."""
     ports = aie_io.load_ports()
-    aie_io.write_inputs(feed, ports, HERE, iterations=n_iter())
-    simulate(sim)
+    aie_io.write_inputs(feed, ports, HERE, iterations=iterations or n_iter())
+    simulate(sim, workdir=workdir)
     return aie_io.read_outputs(ports, HERE, sim=sim)
 
 

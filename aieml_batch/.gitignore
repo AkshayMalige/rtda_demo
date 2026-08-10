@@ -21,3 +21,4 @@ trdata.aiesim/
 stamp_*.marker
 .gen.*.stamp
 sysdata/
+results/sim_events/

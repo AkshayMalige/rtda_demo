@@ -699,7 +699,70 @@ make help
 Knobs: `make sim BATCH=8 SOLVERS=3 ITERS=7 WEIGHTS_DIR=... AIE_VITIS=...`
 (changing `BATCH`/`SOLVERS`/`INPUT_DIM` needs `make regen` first).
 
-### 9.2 Regenerate from ONNX (only to change topology / batch / precision)
+### 9.2 Simulating more than one event
+
+`make sim` / `make x86` / `make crosscheck` run **exactly one** 50-track event: the graph
+is compiled with `N_ITER` fixed at 7, and the reference is a single event. That leaves
+event-*boundary* behaviour untested — the roll carry chaining across events, and the
+accumulator resetting — which is precisely where the hardware reproducibility bug lived.
+
+`EVENTS=N` builds a second graph with `N_ITER = ITERS × (N + FLUSH)` into **its own**
+archive and workdir, so the single-event build and `make crosscheck` are untouched.
+
+```bash
+make x86_events EVENTS=1      #  14 iterations,  ~14 s of simulation
+make x86_events EVENTS=10     #  77 iterations,  ~50 s
+make x86_events EVENTS=50     # 357 iterations,  ~4 min
+
+make sim_events EVENTS=2      # aiesimulator instead: cycle-accurate, much slower
+```
+
+| knob | default | meaning |
+|---|---|---|
+| `EVENTS` | 2 | Real events to simulate. |
+| `FLUSH` | 1 | Prepend the discarded flush event, mirroring the host. `FLUSH=0` drops it — exact in simulation (a simulator is always cold) and 7 iterations cheaper, but no longer matches a board. |
+| `TRACKS` | `EVENTS × 50` | Real track count. **Keep it a multiple of 50** — see the warning below. |
+| `EV_OUT` | `results/sim_events` | Where results are written. |
+
+Each run writes, per configuration:
+
+```
+sim_mean_128_x86_<N>ev_<T>tr_ev<K>.txt    one 128-wide event mean per event
+sim_input_x86_<N>ev_<T>tr.txt             the stimulus that produced them
+sim_x86_<N>ev_<T>tr.npz                   measured, golden, tracks, frames, n_events
+```
+
+so the numbers can be checked elsewhere (a notebook) rather than only by the built-in
+comparison:
+
+```python
+d = np.load('results/sim_events/sim_x86_50ev_2500tr.npz')
+d['measured'].shape        # (50, 128)
+```
+
+Measured, all against the `make_golden.py` model:
+
+| events | tracks | iterations | worst max\|diff\| |
+|---:|---:|---:|---:|
+| 1 | 50 | 14 | 6.247e-07 |
+| 10 | 500 | 77 | 6.485e-07 |
+| 50 | 2,500 | 357 | 1.010e-06 |
+
+> **Every event must carry exactly 50 real tracks.** `track_accum` counts **slots
+> consumed**, not real tracks — it cannot tell them apart, because a zero-input slot
+> still carries a bias-determined activation by the time it reaches the accumulator. The
+> count only means "real tracks" because the host fills the first 50 slots of a full
+> event with real ones. A short final event averages padding activations in with its few
+> real tracks: **measured 8.03e-02 wrong** for a 20-track event — large, but
+> plausible-looking rather than obviously broken. The host, `sim_events.py` and
+> `make_golden.py` all warn when the track count is not a multiple of 50. Fixing it
+> needs the real count delivered per event (an RTP, or a sentinel slot), which is a
+> design change rather than a tweak.
+
+The equivalent on **hw_emu and hw needs no rebuild at all** — there the XRT host owns the
+iteration count and derives it from the input file. See [§9.5](#95-on-the-board).
+
+### 9.3 Regenerate from ONNX (only to change topology / batch / precision)
 
 ```bash
 cd aieml_batch
@@ -712,7 +775,7 @@ Needs `envaie2` (aie4ml + onnx + keras). **`make regen` discards hand-edits to `
 notably the leaky-ReLU patch lives in aie4ml (branch `aie-mmul`), not here, so regenerating
 with a stock aie4ml would silently reintroduce plain ReLU.
 
-### 9.3 Full system build (from the repo root)
+### 9.4 Full system build (from the repo root)
 
 ```bash
 source set_envs.sh                       # XRT + Vitis 2024.2 + sysroot
@@ -748,7 +811,7 @@ onto the **system** toolchain (2024.2) — a 2025.2 `libadf.a` will not link aga
 Note `--package.sd_dir` copies the *directory*, so on the card they land under
 `sd_batch/`; the host probes both layouts.
 
-### 9.4 On the board
+### 9.5 On the board
 
 ```bash
 sudo su
@@ -762,7 +825,7 @@ RTDA_GOLDEN=sd_batch/testdata/golden_10000.txt ./host_batch.exe    # verifies on
 RTDA_DUMP_EVENTS=1 ./host_batch.exe                       # per-event result files
 ```
 
-### 9.5 Generating a golden
+### 9.6 Generating a golden
 
 ```bash
 cd aieml_batch
@@ -784,7 +847,7 @@ Comparing results after the fact:
 make compare MEAN=results/hw_emu_track_mean_128.txt
 ```
 
-### 9.6 Clean
+### 9.7 Clean
 
 ```bash
 cd aieml_batch
