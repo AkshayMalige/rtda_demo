@@ -32,7 +32,11 @@ the first N events of a bigger golden.
 
 Regenerate with:
 
-    cd aieml_batch && ./make_golden.py --tracks 50000 --out ../testdata
+    cd aieml_batch && make golden TRACKS=50000
+
+(`./make_golden.py --tracks 50000 --out ../testdata` is equivalent, but fails in a shell
+where `set_envs.sh` has been sourced -- PetaLinux's numpy-less python shadows the real one.
+`make golden` pins the interpreter.)
 
 Keep the track count a **multiple of 50**. `track_accum` counts *slots*, not real tracks,
 so a short final event averages padding activations in with its real ones and comes out

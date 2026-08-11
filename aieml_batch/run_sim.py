@@ -15,6 +15,8 @@ into this module rather than the CLI.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import os
 import shlex
 import subprocess
@@ -98,13 +100,41 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     return out
 
 
+@contextlib.contextmanager
+def _exclusive():
+    """Serialise simulator runs in this directory.
+
+    app.cpp hard-codes its PLIO paths as `data/ifm_c<n>.txt`, relative to the
+    simulator's cwd, so EVERY run in this directory shares one input directory --
+    and the output goes to <sim>simulator_output/, also shared. Two concurrent
+    runs (two terminals, or a background job) overwrite each other's inputs
+    mid-flight and produce plausible-looking wrong numbers, or a confusing
+    mid-simulation failure. Fail fast and say why instead.
+    """
+    lock = HERE / '.sim.lock'
+    with lock.open('w') as fh:
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError(
+                'another simulation is already running in this directory.\n'
+                f'  {HERE} shares data/ and <sim>simulator_output/ across all runs, so they\n'
+                '  cannot overlap. Wait for it to finish, or check for a stray process:\n'
+                '      ps -ef | grep -E "x86simulator|aie2simmsm|sim_events"') from None
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
 def run(feed: dict, sim: str = 'aie', workdir: str | None = None,
         iterations: int | None = None) -> dict:
     """Write inputs, simulate, read outputs. The whole contract in one call."""
     ports = aie_io.load_ports()
-    aie_io.write_inputs(feed, ports, HERE, iterations=iterations or n_iter())
-    simulate(sim, workdir=workdir)
-    return aie_io.read_outputs(ports, HERE, sim=sim)
+    with _exclusive():
+        aie_io.write_inputs(feed, ports, HERE, iterations=iterations or n_iter())
+        simulate(sim, workdir=workdir)
+        return aie_io.read_outputs(ports, HERE, sim=sim)
 
 
 def main():

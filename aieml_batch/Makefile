@@ -74,7 +74,7 @@ AIE_INCLUDES = --include=src $(KERNEL_INC) $(shell test -d src/weights && echo -
 VPP = source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; v++ --compile --config aie.cfg --mode aie
 
 .PHONY: all graph system_graph rtp compare x86com sim x86 crosscheck crosscheck_ref report analyze \
-        x86_events sim_events regen verify_io ports vars clean clean_all help
+        x86_events sim_events golden regen verify_io ports vars clean clean_all help
 
 .DEFAULT_GOAL := graph
 all: graph
@@ -132,6 +132,19 @@ crosscheck: graph
 crosscheck_ref:
 	@$(PYTHON) crosscheck.py --skip-aie
 
+# --- reference data ------------------------------------------------------
+# Stimulus + streaming golden for TRACKS tracks, into ../testdata.
+#
+# Use this rather than `./make_golden.py`: ../set_envs.sh puts PetaLinux's python
+# first on PATH, and that one has no numpy, so both `./make_golden.py` and
+# `python make_golden.py` die with ModuleNotFoundError in a build shell. $(PYTHON)
+# is pinned to an interpreter that has numpy.
+#
+#   make golden TRACKS=50000
+TRACKS ?= 10000
+golden:
+	@$(PYTHON) make_golden.py --tracks $(TRACKS) --out ../testdata
+
 # --- multi-event simulation ---------------------------------------------
 # `make sim` / `make crosscheck` run exactly ONE event: the graph is compiled
 # with N_ITER fixed at 7 and the 50-track reference is a single event. Event
@@ -150,7 +163,11 @@ EVENTS   ?= 2
 FLUSH    ?= 1
 EV_ITERS  = $(shell echo $$(( $(ITERS) * ($(EVENTS) + $(FLUSH)) )))
 EV_OUT   ?= results/sim_events
-EV_ARGS   = --events $(EVENTS) --out $(EV_OUT) $(if $(TRACKS),--tracks $(TRACKS),) \
+# EV_TRACKS, not TRACKS: TRACKS belongs to `make golden` and has a default, and a
+# defaulted variable in the $(if ...) below would silently force --tracks on every
+# simulation run -- which is exactly the bug that made `make x86_events EVENTS=5`
+# ask for 10000 tracks in a 5-event build. Leave EV_TRACKS unset to get EVENTS x 50.
+EV_ARGS   = --events $(EVENTS) --out $(EV_OUT) $(if $(EV_TRACKS),--tracks $(EV_TRACKS),) \
             $(if $(filter 0,$(FLUSH)),--no-flush,)
 
 x86_events:
@@ -158,12 +175,13 @@ x86_events:
 	@$(VPP) --target=x86sim $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
 	      --aie.Xpreproc="-DN_ITER_OVERRIDE=$(EV_ITERS)" \
 	      --aie.workdir=Work_x86_ev$(EVENTS) \
-	      --aie.output-archive=libadf_x86_ev$(EVENTS).a 2>&1 | tee log
-	@if grep -q "Compilation Failed" log; then \
+	      --aie.output-archive=libadf_x86_ev$(EVENTS).a 2>&1 | tee log.x86_ev$(EVENTS)
+	@if grep -q "Compilation Failed" log.x86_ev$(EVENTS); then \
 	   echo; echo "*** BUILD FAILED ***"; \
-	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; exit 1; fi
-	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; \
-	  RTDA_N_ITER=$(EV_ITERS) $(PYTHON) sim_events.py --sim x86 $(EV_ARGS)
+	   grep -E "^ERROR: \[aiecompiler" log.x86_ev$(EVENTS) | sort -u | head -5; exit 1; fi
+	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; set -o pipefail; \
+	  RTDA_N_ITER=$(EV_ITERS) $(PYTHON) sim_events.py --sim x86 $(EV_ARGS) \
+	    2>&1 | tee -a log.x86_ev$(EVENTS)
 
 # Cycle-accurate, and MUCH slower than x86 -- keep EVENTS small (2-3).
 sim_events:
@@ -171,12 +189,13 @@ sim_events:
 	@$(VPP) --target=hw $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
 	      --aie.Xpreproc="-DN_ITER_OVERRIDE=$(EV_ITERS)" \
 	      --aie.workdir=Work_ev$(EVENTS) \
-	      --aie.output-archive=libadf_ev$(EVENTS).a 2>&1 | tee log
-	@if grep -q "Compilation Failed" log; then \
+	      --aie.output-archive=libadf_ev$(EVENTS).a 2>&1 | tee log.aie_ev$(EVENTS)
+	@if grep -q "Compilation Failed" log.aie_ev$(EVENTS); then \
 	   echo; echo "*** BUILD FAILED ***"; \
-	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; exit 1; fi
-	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; \
-	  RTDA_N_ITER=$(EV_ITERS) $(PYTHON) sim_events.py --sim aie $(EV_ARGS)
+	   grep -E "^ERROR: \[aiecompiler" log.aie_ev$(EVENTS) | sort -u | head -5; exit 1; fi
+	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; set -o pipefail; \
+	  RTDA_N_ITER=$(EV_ITERS) $(PYTHON) sim_events.py --sim aie $(EV_ARGS) \
+	    2>&1 | tee -a log.aie_ev$(EVENTS)
 
 # Cross-check a hardware run's track_mean_128.txt against every reference.
 # MEAN=<path> to point at a fresh run; defaults to the captured hw_emu result.

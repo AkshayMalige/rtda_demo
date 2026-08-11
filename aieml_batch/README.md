@@ -772,7 +772,7 @@ make sim_events EVENTS=2      # aiesimulator instead: cycle-accurate, much slowe
 |---|---|---|
 | `EVENTS` | 2 | Real events to simulate. |
 | `FLUSH` | 1 | Prepend the discarded flush event, mirroring the host. `FLUSH=0` drops it — exact in simulation (a simulator is always cold) and 7 iterations cheaper, but no longer matches a board. |
-| `TRACKS` | `EVENTS × 50` | Real track count. **Keep it a multiple of 50** — see the warning below. |
+| `EV_TRACKS` | `EVENTS × 50` | Real track count. **Keep it a multiple of 50** — see the warning below. Named `EV_TRACKS`, not `TRACKS`: that one belongs to `make golden` and is defaulted, so reusing it here forced `--tracks` onto every simulation run. |
 | `EV_OUT` | `results/sim_events` | Where results are written. |
 
 Each run writes, per configuration:
@@ -880,10 +880,18 @@ RTDA_DUMP_EVENTS=1 ./host_batch.exe                       # per-event result fil
 
 ```bash
 cd aieml_batch
-./make_golden.py --tracks 10000 --out ../testdata
-#   -> ../testdata/embed_input_10000.txt   stimulus
-#   -> ../testdata/golden_10000.npz        200 event means (128-wide) + the 27-dim projection
+make golden TRACKS=50000
+#   -> ../testdata/embed_input_50000.txt   stimulus, 1000 events
+#   -> ../testdata/golden_50000.npz        event means (128-wide) + the 27-dim projection
+#   -> ../testdata/golden_50000.txt        the same, for the board's RTDA_GOLDEN=
 ```
+
+`./make_golden.py --tracks 50000 --out ../testdata` does the same thing, **but only in a shell
+where `python` has numpy.** After `source ../set_envs.sh`, PetaLinux's python comes first on PATH
+and has no numpy, so both `./make_golden.py` and `python make_golden.py` fail there with
+`ModuleNotFoundError`. `make golden` uses `$(PYTHON)` and works either way.
+
+Keep `TRACKS` a **multiple of 50** — see the warning in [§9.2](#92-simulating-more-than-one-event).
 
 Only 50 real tracks exist in the repo, so anything larger is synthesised: 6 Gaussian
 features matched to the real per-column mean and std, columns 6–7 zero. That is fine for

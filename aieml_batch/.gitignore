@@ -1,8 +1,13 @@
 # Build products only. src/, app.cpp, aie.cfg and aie_pipeline.json are
 # COMMITTED SOURCES -- the project no longer regenerates them to build.
-Work/
-Work_x86/
+# Work*/ not Work/ + Work_x86/ -- the multi-event targets create Work_ev<N>/ and
+# Work_x86_ev<N>/, which the two exact names missed. 65 of those files reached a
+# commit before this was noticed.
+Work*/
 libadf*.a
+function_wdb_dir/
+*.wdb
+*.wcfg
 aiesimulator_output*/
 x86simulator_output*/
 data/
@@ -24,3 +29,5 @@ sysdata/
 results/sim_events/
 notebooks/out/
 .ipynb_checkpoints/
+.sim.lock
+log.*
