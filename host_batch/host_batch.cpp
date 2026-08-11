@@ -381,6 +381,30 @@ int main(int argc, char** argv)
         for (int j = 0; j < HIDDEN; ++j) fm << mean[j] << '\n';
         fm.close();
         std::cout << "[host] wrote 128-wide event mean -> track_mean_128.txt" << std::endl;
+        // ---- ALL events, one file -------------------------------------------
+        // A 50,000-track run is 1000 events. Writing 1000 files and then getting
+        // them off an SD card is miserable, so pack them into a single file in
+        // EXACTLY the layout the goldens use (testdata/golden_<N>.txt):
+        //
+        //     <n_events> <n_cols>
+        //     <n_cols floats>          one line per event
+        //
+        // so the same parser reads a golden, a measured run, or either side of a
+        // comparison. numpy: np.loadtxt(f, skiprows=1) gives (n_events, 128).
+        {
+            std::ofstream fa("track_means_all.txt");
+            fa << std::setprecision(std::numeric_limits<float>::max_digits10);
+            fa << frames.size() << ' ' << HIDDEN << '\n';
+            for (std::size_t e = 0; e < frames.size(); ++e) {
+                const float* m = out + static_cast<std::size_t>(frames[e]) * HIDDEN;
+                for (int j = 0; j < HIDDEN; ++j) fa << m[j] << (j + 1 == HIDDEN ? '\n' : ' ');
+            }
+        }
+        std::cout << "[host] wrote " << frames.size()
+                  << " event mean(s) -> track_means_all.txt  (single file, "
+                  << (frames.size() * HIDDEN * 14 + 16) / 1024 << " KB approx)" << std::endl;
+
+        // Per-event files remain opt-in, for tooling that wants them separately.
         if (frames.size() > 1 && std::getenv("RTDA_DUMP_EVENTS")) {
             for (std::size_t e = 0; e < frames.size(); ++e) {
                 const std::string fn = "track_mean_128_ev" + std::to_string(e) + ".txt";
@@ -389,11 +413,8 @@ int main(int argc, char** argv)
                 const float* m = out + static_cast<std::size_t>(frames[e]) * HIDDEN;
                 for (int j = 0; j < HIDDEN; ++j) fe << m[j] << '\n';
             }
-            std::cout << "[host] wrote " << frames.size()
-                      << " per-event means -> track_mean_128_ev*.txt" << std::endl;
-        } else if (frames.size() > 1) {
-            std::cout << "[host] " << frames.size() << " events; set RTDA_DUMP_EVENTS=1 "
-                         "to write per-event files" << std::endl;
+            std::cout << "[host] also wrote " << frames.size()
+                      << " per-event files -> track_mean_128_ev*.txt" << std::endl;
         }
         const auto t_end = clk::now();
 
@@ -440,6 +461,38 @@ int main(int argc, char** argv)
           << "  launch/DMA overhead    : " << (exec_us - aie_us) << " us  ("
           << (exec_us > 0 ? 100.0 * (exec_us - aie_us) / exec_us : 0.0) << "% of execute)\n"
           << "     -> run more events per launch to amortise this\n";
+
+        // ---- the same numbers, machine-readable -----------------------------
+        // The report above is for a human; this is for the notebook's timing
+        // section. key=value, one per line, so it parses with a two-line split
+        // and never needs the prose format kept stable.
+        {
+            std::ofstream fr("run_info.txt");
+            fr << std::setprecision(9);
+            fr << "xclbin="        << xclbin           << '\n'
+               << "emulation="     << (is_emu ? 1 : 0) << '\n'
+               << "input="         << in_file          << '\n'
+               << "tracks="        << file_tracks      << '\n'
+               << "events="        << n_events         << '\n'
+               << "tracks_per_event=" << TRACKS_PER_EVENT << '\n'
+               << "iterations="    << n_iter           << '\n'
+               << "flush_event="   << (flush ? 1 : 0)  << '\n'
+               << "rtp_ports="     << manifest.size()  << '\n'
+               << "rtp_bytes="     << rtp_bytes        << '\n'
+               << "in_bytes="      << in_bytes         << '\n'
+               << "out_bytes="     << out_bytes        << '\n'
+               << "macs_per_track=" << MACS_PER_TRACK  << '\n'
+               << "us_xclbin_open=" << us(t_xclbin - t_start)  << '\n'
+               << "us_rtp_load="    << us(t_rtp - t_xclbin)    << '\n'
+               << "us_execute="     << us(exec)                << '\n'
+               << "us_post="        << us(t_end - t_exec)      << '\n'
+               << "us_total="       << us(t_end - t_start)     << '\n'
+               << "us_per_track="   << us(exec) / file_tracks  << '\n'
+               << "gops="           << (2.0 * macs_total)
+                                       / std::chrono::duration<double>(exec).count() / 1e9 << '\n'
+               << "us_aie_modelled=" << aie_us << '\n';
+        }
+        std::cout << "\n[host] wrote run_info.txt  (machine-readable timing/size)\n";
 
         if (is_emu) std::cout <<
           "\n  NOTE: under hw_emu these are EMULATION wall-clock times (QEMU PS +\n"

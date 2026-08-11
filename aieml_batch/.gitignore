@@ -23,3 +23,4 @@ stamp_*.marker
 sysdata/
 results/sim_events/
 notebooks/out/
+.ipynb_checkpoints/

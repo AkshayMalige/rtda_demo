@@ -219,8 +219,32 @@ needs only Vitis.
 | `make_golden.py` | Generates an N-track stimulus **and** the exact golden, simulated over the *slot* sequence the hardware actually sees (padding slots, roll carry across events, flush event). | no |
 | `verify_run.py` | Diffs a multi-event run's `track_mean_128_ev*.txt` against a `golden_*.npz`. | no |
 | `extract_rtp.py` | Dumps the 92 RTP payloads to little-endian `.bin` + a manifest, for the XRT host. Port names come from `Work/ps/c_rts/aie_control_config.json`, not from a naming rule. | no |
+| `sim_events.py` | Multi-event simulation driver (`make x86_events` / `make sim_events`): builds an N-event stimulus, runs the simulator, checks every event mean, and dumps the per-track PLIO taps. | no |
+| `notebooks/rtda_reference.ipynb` | The analysis. Builds an independent reference from the project's ONNX, verifies the weight chain end to end, and splits the warm-up convention out of the arithmetic error. See below. | no |
 | `gen_graph.py` | Rebuilds `src/` from ONNX (`make regen`). Also holds the Keras reference and the ONNX construction. | **yes** |
 | `verify_io.py` | Proves `aie_io.py` still reproduces aie4ml's marshalling byte-for-byte. The gate that justified cutting the dependency. | **yes** |
+
+### `notebooks/rtda_reference.ipynb`
+
+The numerical case that this design computes the right function. It does not reuse
+`crosscheck.py`'s golden as its authority — a reference written alongside a design can be
+wrong in the same way the design is wrong, which has happened twice here (plain-vs-leaky
+ReLU, and a missing ReLU after each solver's `dense3`, both hidden behind a
+self-consistent Keras reference reporting MSE 6e-13). Instead it takes the physics side's
+own ONNX, `punit/onnx_no-residual/onnx_files_narrow/mlp_fp32.onnx`, and verifies an
+unbroken chain:
+
+```
+   the ONNX model  ==  data_fp32/*.txt  ==  the 92 mmul-packed RTP payloads the AIE runs
+        7.451e-09 (fp32 round-trip)              0.000e+00 (bit-exact)
+```
+
+then builds a 50,000-track reference from it and compares the simulations against it,
+separating the roll-convention difference (tracks 0–2) from the arithmetic difference
+(tracks 3–49).
+
+Needs `numpy onnx onnxruntime matplotlib` and nothing else — no aie4ml. `envaie2` is
+missing two of them (`pip install onnxruntime matplotlib`); `o2v` has all four already.
 
 **Outside this directory:**
 

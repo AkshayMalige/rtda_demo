@@ -286,11 +286,20 @@ clean:
 	$(MAKE) -C pl clean
 	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe emconfig.json
 
+# clean_all follows AIE_DIR: cleaning the aieml/ tree while building aieml_batch
+# leaves stale artifacts in the design you are actually working on, which is the
+# opposite of what "clean build" is for.
 clean_all:
+ifeq ($(AIE_DIR),aieml_batch)
+	$(MAKE) -C aieml_batch clean
+	$(MAKE) -C host_batch  clean
+else
 	$(MAKE) -C aieml clean
 	$(MAKE) -C host  clean
+endif
 	$(MAKE) -C pl    clean
-	rm -rf package.* build_* *.xclbin *.xsa *.log _x host.exe emconfig.json
+	rm -rf package.* build_* *.xclbin *.xsa *.log _x emconfig.json
+	rm -rf host.exe host_batch.exe $(SD_STAGE)
 
 ################################  Help  ####################################
 help:

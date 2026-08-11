@@ -161,6 +161,17 @@ def main():
     npz = outdir / f'golden_{a.tracks}.npz'
     np.savez_compressed(npz, means=means, y27=y27, n_events=n_ev, tracks=a.tracks)
     print(f'  golden   : {npz.name}  ({n_ev} event means, 128-wide + 27-dim)')
+
+    # Text form for the board: host_batch.cpp's RTDA_GOLDEN= reads "n_events n_cols"
+    # then one row of n_cols floats per event. The board has no numpy, so it cannot
+    # read the npz -- and copying result files off the SD card to diff them here is
+    # exactly the loop this avoids.
+    txt = outdir / f'golden_{a.tracks}.txt'
+    with txt.open('w') as f:
+        f.write(f'{n_ev} {H}\n')
+        for row in means:
+            f.write(' '.join(f'{v:.9e}' for v in row) + '\n')
+    print(f'  golden   : {txt.name}  ({txt.stat().st_size/1024:.0f} KB, for RTDA_GOLDEN=)')
     print(f'  event 0 mean range [{means[0].min():.5f}, {means[0].max():.5f}]')
     if n_ev > 1:
         print(f'  event 1 mean range [{means[1].min():.5f}, {means[1].max():.5f}]')
