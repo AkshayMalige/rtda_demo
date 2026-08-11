@@ -31,3 +31,5 @@ notebooks/out/
 .ipynb_checkpoints/
 .sim.lock
 log.*
+results/hw/
+__pycache__/
