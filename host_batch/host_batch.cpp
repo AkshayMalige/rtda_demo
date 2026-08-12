@@ -511,10 +511,21 @@ int main(int argc, char** argv)
           << "  effective throughput   : "
           << (2.0 * macs_total) / (std::chrono::duration<double>(exec).count()) / 1e9 << " GOP/s\n";
 
-        const double aie_us = 4.1612 * n_iter;   // II 4161 ns/iteration, cycle-accurate
+        // II is a property of the BUILD, not of the host: 4161 ns/iteration for fp32,
+        // 1033 ns for bf16 (aiesimulator, `make report`). Hard-coding fp32 made the
+        // "launch/DMA overhead" line below meaningless for a bf16 image -- it reported
+        // the fp32 model against a 4x faster array. sysdata/config.txt carries it;
+        // RTDA_II_NS overrides for a one-off.
+        double ii_ns = 4161.0;
+        {
+            const std::string s = read_config(join(sysdata, "config.txt"), "ii_ns", "");
+            if (!s.empty()) ii_ns = std::atof(s.c_str());
+            if (const char* e = std::getenv("RTDA_II_NS")) ii_ns = std::atof(e);
+        }
+        const double aie_us = ii_ns * 1e-3 * n_iter;
         const double exec_us = us(exec);
         std::cout
-          << "\n  AIE compute (modelled) : " << aie_us << " us   (II 4161 ns x "
+          << "\n  AIE compute (modelled) : " << aie_us << " us   (II " << ii_ns << " ns x "
           << n_iter << " iterations)\n"
           << "  measured execute       : " << exec_us << " us\n"
           << "  launch/DMA overhead    : " << (exec_us - aie_us) << " us  ("
@@ -549,7 +560,8 @@ int main(int argc, char** argv)
                << "us_per_track="   << us(exec) / file_tracks  << '\n'
                << "gops="           << (2.0 * macs_total)
                                        / std::chrono::duration<double>(exec).count() / 1e9 << '\n'
-               << "us_aie_modelled=" << aie_us << '\n';
+               << "us_aie_modelled=" << aie_us << '\n'
+               << "ii_ns="           << ii_ns  << '\n';
         }
         std::cout << "\n[host] wrote run_info.txt  (machine-readable timing/size)\n";
 

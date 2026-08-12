@@ -131,7 +131,11 @@ def main():
     (outdir / 'config.txt').write_text(
         f'precision={os.environ.get("RTDA_PRECISION", "fp32")}\n'
         f'input_dtype={"bfloat16" if any(d == "u16" for _, _, d, _ in manifest) else "float32"}\n'
-        f'output_dtype=float32\n')
+        f'output_dtype=float32\n'
+        # Measured II per iteration for this precision (aiesimulator, `make report`).
+        # The host uses it for its overhead line; wrong here only mis-labels a report,
+        # it does not affect the run.
+        f'ii_ns={ {"fp32": 4161.0, "bf16": 1033.0}.get(os.environ.get("RTDA_PRECISION", "fp32"), 4161.0) }\n')
     print(f'  {len(manifest)} RTP payloads, {total/1024:.0f} KB -> {outdir}/')
     print(f'  manifest: {outdir}/rtp_manifest.txt   config: {outdir}/config.txt')
 
