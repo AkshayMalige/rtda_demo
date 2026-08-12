@@ -81,7 +81,15 @@ def golden():
 # 14-layer chain a few elements land ~1e-5 off on values of order 1, while the mean
 # stays ~1e-7. For scale: the aieml/ reference itself only agrees with a numpy
 # float64-ish golden to 1.1e-06, and the final output agrees to 4.0e-06.
-def compare(name, a, b, tol=1e-4):
+# Tolerance is a property of the arithmetic, not of the design. float32 on
+# AIE-ML is emulated on the bf16 datapath and lands ~1e-5 from a float64 model;
+# a true bf16 build keeps ~8 mantissa bits and lands ~2e-2 on values of order 1.
+# One tolerance for both would either pass a broken fp32 build or fail every
+# healthy bf16 one.
+TOL = {'fp32': 1e-4, 'bf16': 5e-2}[os.environ.get('RTDA_PRECISION', 'fp32')]
+
+
+def compare(name, a, b, tol=TOL):
     d = np.abs(a[WARMUP:N_TRACKS] - b[WARMUP:N_TRACKS])
     ok = d.max() < tol
     print(f'  {name:34s} max|diff| = {d.max():.3e}  mean = {d.mean():.3e}   {"ok" if ok else "FAIL"}')
@@ -108,7 +116,7 @@ def main():
     if ref_path.exists():
         ref = L(ref_path.name).reshape(-1, H)
         print(f'[1] reference file vs numpy golden   ({ref_path})')
-        ok &= compare('aieml10_output_aie.txt', soln_g[2], ref, tol=1e-4)
+        ok &= compare('aieml10_output_aie.txt', soln_g[2], ref, tol=1e-4)  # the file is fp32
         pre = np.abs(soln_g[2][:WARMUP] - ref[:WARMUP]).max(axis=1)
         print(f'      (warm-up tracks 0..2 differ by {np.round(pre, 4)} -- expected)\n')
     else:
@@ -214,7 +222,7 @@ def main():
             else:
                 y = f[:27]
             d = np.abs(y - y_aie_ref)
-            good = d.max() < 1e-4
+            good = d.max() < TOL
             ok &= good
             print(f'  {"vs mean of the AIE own s2_out":34s} max|diff| = {d.max():.3e}  '
                   f'mean = {d.mean():.3e}   {"ok" if good else "FAIL"}')
@@ -227,7 +235,9 @@ def main():
 
     if solvers == 3 and ref_path.exists():
         print(f'\n[3] AIE final output vs {ref_path.name} (the aieml/ reference)')
-        ok &= compare('s2_out vs aieml reference', flat('s2_out'), ref, tol=1e-4)
+        # TOL, not 1e-4: this is the AIE's output, so it carries the build's own
+        # arithmetic error. 1e-4 is right for fp32 and fails every healthy bf16 run.
+        ok &= compare('s2_out vs aieml reference', flat('s2_out'), ref)
     elif solvers != 3:
         print(f'\n[3] SKIP end-to-end vs aieml reference: needs --solvers 3 (have {solvers})')
 

@@ -44,7 +44,7 @@ that *cannot* import aie4ml, so a green `make sim` proves it. Regenerating from 
 8. [Verification: what is checked against what](#8-verification-what-is-checked-against-what)
 9. [Commands — build, run, clean](#9-commands--build-run-clean)
 10. [Performance](#10-performance)
-11. [Porting to bfloat16](#11-porting-to-bfloat16)
+11. [Precision — fp32 and bf16](#11-precision--fp32-and-bf16)
 12. [Gotchas that already cost time](#12-gotchas-that-already-cost-time)
 
 ---
@@ -82,7 +82,7 @@ That is the entire philosophical change. Everything else follows from it.
 
 AIE-ML's vector unit has no "multiply a matrix by a vector" instruction. It has
 `aie::mmul`, which multiplies a small **block** of A by a small block of B. For float32
-on this device the block shape is fixed at **M=4, K=8, N=4** — `src/parameters.h` states
+on this device the block shape is fixed at **M=4, K=8, N=4** — `src_fp32/parameters.h` states
 it literally:
 
 ```c
@@ -158,17 +158,17 @@ needs only Vitis.
                                                        ▼
   ┌─ COMMITTED SOURCES (in git; never regenerated to build) ────────────────┐
   │                                                                         │
-  │   src/parameters.h      L1Cfg..L14Cfg: shapes, cascade split, mmul      │
+  │   src_<P>/parameters.h  L1Cfg..L14Cfg: shapes, cascade split, mmul      │
   │                         microtile, leaky alpha, placement, N_ITER       │
-  │   src/graph_plan.h      buffers, tiling descriptors, kernel wiring      │
-  │   src/top_graph.h       the `dut` subgraph: 14 dense blocks + tail      │
-  │   src/weights/*.h       29 headers of mmul-packed weights and biases    │
-  │   src/kernels/          dense_bias_relu/  (generated, hand-patched)     │
+  │   src_<P>/graph_plan.h  buffers, tiling descriptors, kernel wiring      │
+  │   src_<P>/top_graph.h   the `dut` subgraph: 14 dense blocks + tail      │
+  │   src_<P>/weights/*.h   29 headers of mmul-packed weights and biases    │
+  │   src_<P>/kernels/      dense_bias_relu/  (generated, hand-patched)     │
   │                         roll_concat_batch/ (hand-written)               │
   │                         track_accum/       (hand-written)               │
   │   app.cpp               ADF testbench + PLIO/GMIO wiring + main()       │
   │   aie.cfg               aiecompiler options                             │
-  │   aie_pipeline.json     the PLIO layout aie_io.py reads                 │
+  │   aie_pipeline_<P>.json the PLIO layout aie_io.py reads                 │
   │   io_extra.json         hand-added ports (track_out) merged on top      │
   │                                                                         │
   └────────────────────────────────┬────────────────────────────────────────┘
@@ -197,15 +197,15 @@ needs only Vitis.
 |---|---|
 | `app.cpp` | The ADF top level. Declares `dut_graph`, wires PLIO (simulation) or GMIO (`SYSTEM_BUILD`), declares all 92 RTP ports, and `main()` pushes the 28 weight/bias arrays with `dut.update()` before `run()`. |
 | `aie.cfg` | `kernel-linting`, `xlopt=1`, `pl-freq=312.5`, `Xmapper=BufferOptLevel8`. |
-| `src/parameters.h` | 14 `L<N>Cfg` structs — one per dense layer. Shapes, `CAS_LENGTH`/`CAS_NUM`, `LEAKY_ALPHA`, mmul `M,K,N`, placement, padded extents. Plus `#define N_ITER 7`. |
-| `src/graph_plan.h` | Buffer declarations and ADF tiling descriptors; how each tensor is sliced across kernels. |
-| `src/top_graph.h` | The `dut` subgraph — instantiates the 14 `dense_bias_relu_graph`s, the 3 `roll_concat_batch` kernels and `track_accum`, and connects them. |
-| `src/weights/*.h` | 29 headers: `weights_<layer>_aie.h`, `bias_<layer>_aie.h`, `output_dense_aie.h`. Arrays are already in `aie::mmul` tile order — see [§5](#5-weights-and-biases-from-the-model-to-92-rtp-ports). |
-| `src/kernels/dense_bias_relu/` | The GEMM kernel aie4ml emits, plus the leaky-ReLU patch. Templated on `L<N>Cfg`. |
-| `src/kernels/roll_concat_batch/` | Hand-written. Turns a `[8][128]` block into `[8][256]` = `[cur, prev]`, with a 128-float `static carry` for row 0. |
-| `src/kernels/track_accum/` | Hand-written. Counts 50 real tracks, emits the 128-wide mean, resets. Optionally applies the 128→27 output dense (`TA_OUTPUT_DENSE`, off by default). |
+| `src_<P>/parameters.h` | 14 `L<N>Cfg` structs — one per dense layer. Shapes, `CAS_LENGTH`/`CAS_NUM`, `LEAKY_ALPHA`, mmul `M,K,N`, placement, padded extents. Plus `#define N_ITER 7`. |
+| `src_<P>/graph_plan.h` | Buffer declarations and ADF tiling descriptors; how each tensor is sliced across kernels. |
+| `src_<P>/top_graph.h` | The `dut` subgraph — instantiates the 14 `dense_bias_relu_graph`s, the 3 `roll_concat_batch` kernels and `track_accum`, and connects them. |
+| `src_<P>/weights/*.h` | 29 headers: `weights_<layer>_aie.h`, `bias_<layer>_aie.h`, `output_dense_aie.h`. Arrays are already in `aie::mmul` tile order — see [§5](#5-weights-and-biases-from-the-model-to-92-rtp-ports). |
+| `src_<P>/kernels/dense_bias_relu/` | The GEMM kernel aie4ml emits, plus the leaky-ReLU patch. Templated on `L<N>Cfg`. |
+| `src_<P>/kernels/roll_concat_batch/` | Hand-written. Turns a `[8][128]` block into `[8][256]` = `[cur, prev]`, with a 128-float `static carry` for row 0. |
+| `src_<P>/kernels/track_accum/` | Hand-written. Counts 50 real tracks, emits the 128-wide mean, resets. Optionally applies the 128→27 output dense (`TA_OUTPUT_DENSE`, off by default). |
 | `aie_pipeline.json` | aie4ml's `physical.plan.buffers`. `aie_io.py` reads it to know which PLIO file feeds which slice of which tensor. |
-| `io_extra.json` | Hand-maintained supplement for ports added after generation (`track_out`). Merged by `aie_io.load_ports()`. Keep in step with `src/graph_plan.h`. |
+| `io_extra.json` | Hand-maintained supplement for ports added after generation (`track_out`). Merged by `aie_io.load_ports()`. Keep in step with `src_<P>/graph_plan.h`. |
 
 **Python tooling (numpy only, unless noted):**
 
@@ -221,7 +221,7 @@ needs only Vitis.
 | `extract_rtp.py` | Dumps the 92 RTP payloads to little-endian `.bin` + a manifest, for the XRT host. Port names come from `Work/ps/c_rts/aie_control_config.json`, not from a naming rule. | no |
 | `sim_events.py` | Multi-event simulation driver (`make x86_events` / `make sim_events`): builds an N-event stimulus, runs the simulator, checks every event mean, and dumps the per-track PLIO taps. | no |
 | `notebooks/rtda_reference.ipynb` | The analysis. Builds an independent reference from the project's ONNX, verifies the weight chain end to end, and splits the warm-up convention out of the arithmetic error. See below. | no |
-| `gen_graph.py` | Rebuilds `src/` from ONNX (`make regen`). Also holds the Keras reference and the ONNX construction. | **yes** |
+| `gen_graph.py` | Rebuilds `src_<P>/` from ONNX (`make regen PRECISION=<P>`). Also holds the Keras reference and the ONNX construction. | **yes** |
 | `verify_io.py` | Proves `aie_io.py` still reproduces aie4ml's marshalling byte-for-byte. The gate that justified cutting the dependency. | **yes** |
 
 ### `notebooks/rtda_reference.ipynb`
@@ -269,7 +269,7 @@ missing two of them (`pip install onnxruntime matplotlib`); `o2v` has all four a
 | `BATCH` | `8` | Tracks per graph iteration. See [§1](#why-8-and-not-50). Changing it requires `make regen`. |
 | `SOLVERS` | `3` | Solver blocks. Regen knob. |
 | `INPUT_DIM` | `16` | Width presented to the first dense layer. **Not 6 or 8** — see [§6](#6-padding--every-place-it-happens). Regen knob. |
-| `ITERS` | `7` | Iterations per event; must equal `N_ITER` in `src/parameters.h`. 7 × 8 = 56 ≥ 50. |
+| `ITERS` | `7` | Iterations per event; must equal `N_ITER` in `src_<P>/parameters.h`. 7 × 8 = 56 ≥ 50. |
 | `WEIGHTS_DIR` | `../data_fp32` | Where the weight text files come from. |
 | `AIE_VITIS` | `/tools/Xilinx/2025.2/Vitis` | Toolchain for **standalone** builds. The top-level Makefile overrides this to 2024.2 for system builds. |
 | `AIE_PLAT_NAME` | `xilinx_vek280_base_202520_1` | |
@@ -283,7 +283,7 @@ missing two of them (`pip install onnxruntime matplotlib`); `o2v` has all four a
 > `set_envs.sh` would silently point this build at `data/` (int16 weights!) and the 2024.2
 > platform. Hence `WEIGHTS_DIR` / `AIE_PLAT`. **Keep new names non-colliding.**
 
-### 3.2 Generated per-layer config — `src/parameters.h`
+### 3.2 Generated per-layer config — `src_<P>/parameters.h`
 
 One struct per dense layer, in graph order: `L1Cfg`=emb_d0, `L2Cfg`=emb_d1, then
 `L3..L6`=s0_d0..d3, `L7..L10`=s1, `L11..L14`=s2.
@@ -331,7 +331,7 @@ The two that drive everything else:
 
 ### 3.3 Kernel compile-time constants
 
-`src/kernels/track_accum/track_accum.h`:
+`src_<P>/kernels/track_accum/track_accum.h`:
 
 | constant | default | meaning |
 |---|---:|---|
@@ -340,7 +340,7 @@ The two that drive everything else:
 | `TA_EVENT` | 50 | `TRACK_AVERAGE_THRESHOLD` (`common/nn_defs10.h:41`). |
 | `TA_OUTPUT_DENSE` | **0** | Apply 128→27 in AIE (1) or on the host (0). Off because it is an M=1 GEMV — exactly the shape this project exists to avoid. 3,456 MACs (0.03% of an event) but measured **15–19 µs**, against 4.2 µs for the whole 14-layer pipeline. Free on the host. |
 
-`src/kernels/roll_concat_batch/roll_concat_batch.h`: `RCB_TRACKS` (8), `RCB_FEAT` (128).
+`src_<P>/kernels/roll_concat_batch/roll_concat_batch.h`: `RCB_TRACKS` (8), `RCB_FEAT` (128).
 
 ### 3.4 Host environment variables
 
@@ -524,7 +524,7 @@ exactly the sort of thing that silently loads the wrong weights.
 Two consumers of the same headers:
 
 - **Simulation** — `app.cpp:main()` calls `dut.update()` on all 28 arrays directly from
-  `src/weights/*.h`.
+  `src_<P>/weights/*.h`.
 - **System** — `make rtp` runs `extract_rtp.py`, which parses those same headers into
   `sysdata/rtp/<sanitised-port>.bin` plus `sysdata/rtp_manifest.txt`
   (`<port> <n_floats> <path>`), and `host_batch.cpp` pushes them with `xrt::graph::update`.
@@ -599,7 +599,7 @@ default, where the output dense runs on the host.
 ### Geometry constants (must match the compiled graph)
 
 ```c
-constexpr int BATCH            = 8;      // src/parameters.h, track_accum.h
+constexpr int BATCH            = 8;      // src_<P>/parameters.h, track_accum.h
 constexpr int ITER_PER_EVENT   = 7;      // N_ITER
 constexpr int TRACKS_PER_EVENT = 50;     // TA_EVENT
 constexpr int SLOTS_PER_EVENT  = 56;
@@ -817,12 +817,12 @@ iteration count and derives it from the input file. See [§9.5](#95-on-the-board
 
 ```bash
 cd aieml_batch
-make regen                # OVERWRITES src/, app.cpp, aie.cfg, aie_pipeline.json
+make regen PRECISION=fp32 # OVERWRITES src_fp32/ and aie_pipeline_fp32.json
 make verify_io            # prove aie_io.py still matches aie4ml byte-for-byte
 make x86                  # then rebuild and re-check
 ```
 
-Needs `envaie2` (aie4ml + onnx + keras). **`make regen` discards hand-edits to `src/`** —
+Needs `envaie2` (aie4ml + onnx + keras). **`make regen` discards hand-edits to `src_<P>/`** —
 notably the leaky-ReLU patch lives in aie4ml (branch `aie-mmul`), not here, so regenerating
 with a stock aie4ml would silently reintroduce plain ReLU.
 
@@ -906,7 +906,67 @@ Comparing results after the fact:
 make compare MEAN=results/hw_emu_track_mean_128.txt
 ```
 
-### 9.7 Clean
+### 9.7 Full run — clean build to notebook data, either precision
+
+Everything the notebooks need, from scratch. Replace `fp32` with `bf16` throughout for the
+other precision; the two never share a build product, so both can be done back to back.
+
+```bash
+cd /home/synthara/VersalPrjs/LDRD/quant_rtda/rtda_demo
+source set_envs.sh
+P=fp32                                    # or bf16
+
+# 1. clean (follows AIE_DIR; leaves src_*/ alone)
+make clean_all AIE_DIR=aieml_batch
+
+# 2. reference data - stimulus + streaming golden, precision-independent
+cd aieml_batch
+make golden TRACKS=50000
+
+# 3. simulations. Run BOTH before the system build: `make system` rebuilds
+#    Work_<P>/ as the GMIO SYSTEM_BUILD and the PLIO taps disappear.
+make x86_events PRECISION=$P EVENTS=5     # x86simulator      ~2 min
+make sim_events PRECISION=$P EVENTS=5     # aiesimulator      ~25 min
+make graph      PRECISION=$P              # hw graph, for the II/resource report
+make crosscheck PRECISION=$P
+make report     PRECISION=$P              # <- II, ns/track, GOP/s
+cd ..
+
+# 4. hardware
+make system TARGET=hw AIE_DIR=aieml_batch PRECISION=$P
+#    check before flashing:
+cat sd_batch/sysdata/config.txt           # must say precision=$P
+#    then write package.hw/sd_card.img to the SD card and boot
+```
+
+On the board:
+
+```bash
+sudo su; mount /dev/mmcblk0p1 /mnt; mount -o remount,rw /mnt; cd /mnt
+RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt ./host_batch.exe
+#    first line must read: [host] graph input dtype: float32   (or bfloat16)
+mkdir -p /mnt/usb && mount /dev/sda1 /mnt/usb
+cp track_means_all.txt run_info.txt /mnt/usb/ && sync && umount /mnt/usb
+```
+
+Copy those two files to `aieml_batch/results/hw_<P>/`, then run the notebook.
+
+**What ends up where** — this is the full input set for the notebooks:
+
+| path | from | holds |
+|---|---|---|
+| `../testdata/embed_input_50000.txt` | step 2 | the stimulus everything is driven by |
+| `../testdata/golden_50000.{npz,txt}` | step 2 | streaming-roll golden (the board's own check) |
+| `results/sim_events/sim_x86_<P>_5ev_250tr.npz` | step 3 | x86 event means **and** per-track taps |
+| `results/sim_events/sim_aie_<P>_5ev_250tr.npz` | step 3 | same, cycle-accurate |
+| `results/hw_<P>/track_means_all.txt` | board | all 1000 event means, one file |
+| `results/hw_<P>/run_info.txt` | board | timing/size, key=value |
+| `notebooks/out/golden_onnx_50000.npz` | the notebook | the ONNX reference (built on first run) |
+
+The `make report` output is not written to a file — copy the II / ns-per-track / GOP-per-second
+lines into the notebook's performance section by hand, or keep `log.<P>`.
+
+### 9.8 Clean
 
 ```bash
 cd aieml_batch
@@ -914,7 +974,8 @@ make clean       # build products only: Work/, libadf*.a, simulator output, logs
 make clean_all   # + throughput_info.json, AIECompiler.log, AIESimulator.log
 ```
 
-**`make clean` does not touch `src/`, `app.cpp`, `aie.cfg` or `aie_pipeline.json`** —
+**`make clean` does not touch `src_fp32/`, `src_bf16/`, `app.cpp`, `aie.cfg` or the
+`aie_pipeline_*.json` files** —
 those are committed sources, not build products. Use `make regen` to rebuild them.
 
 From the repo root, `make clean` / `make clean_all` handle the PL and system artifacts.
@@ -994,70 +1055,88 @@ asymptotically toward 595.6 ns.
 
 ---
 
-## 11. Porting to bfloat16
+## 11. Precision — fp32 and bf16
 
-This is the largest remaining lever — roughly **9× fewer instructions** for the same GEMM —
-and it is maybe half a day of work. It has **not** been done or tested. What follows is the
-plan and the one landmine already identified.
+**Both are built and measured.** `PRECISION` selects a whole generated source tree:
 
-### The steps
+```bash
+make x86        PRECISION=bf16      # or fp32 (the default)
+make graph      PRECISION=bf16
+make x86_events PRECISION=bf16 EVENTS=5
+make crosscheck PRECISION=bf16
+make report     PRECISION=bf16
+```
 
-1. **Regenerate with a different compute dtype.** In `gen_graph.py:make_config()`, add
-   `'ComputeDtype': 'bfloat16'` to `AIEConfig`, then `make regen`. aie4ml already declares
-   `bfloat16` in `DenseOpImplVariant.supported_precisions` and its AIE-ML `MICROTILE_OPTIONS`
-   maps `bfloat16 -> [(4,8,4)]` — the same microtile shape, so **the batch arithmetic in
-   [§1](#why-8-and-not-50) is unchanged: BATCH stays 8.**
+`src_fp32/` and `src_bf16/` each carry their own `parameters.h`, kernels and **weights
+already emitted in that dtype**, so switching precision switches the data with it — there
+is nothing else to keep in step. Every build product is precision-suffixed
+(`Work_bf16/`, `libadf_bf16.a`, `sysdata_bf16/`), so both coexist and switching never
+forces a rebuild of the other.
 
-2. **Fix the activation type test in aie4ml — this will break otherwise.**
-   `templates/nnet_utils/dense_bias_relu/dense_bias_relu.cpp`'s `apply_activation<>()`
-   branches on `std::is_floating_point_v<result_t>`. That is **`false` for `bfloat16`**,
-   which is a plain `struct bfloat16 {}` in the AIE API, not a built-in. The template would
-   take the *integer* branch and trip `static_assert(SHIFT > 0)`. Change it to something
-   like `!std::is_integral_v<result_t>`, or specialise on `bfloat16` explicitly.
+### Measured
 
-3. **Retype the two hand-written kernels.**
-   - `roll_concat_batch` — pure data movement; change `float` → `bfloat16`, `VEC` 8 → 16
-     (a 512-bit vector holds 16 bf16), and the `static carry[FEAT]`.
-   - `track_accum` — **keep the accumulator in `float`/`accfloat`.** It sums 50 values;
-     accumulating 50 additions in 8 mantissa bits would lose real precision for no speed
-     benefit. Convert on input, accumulate wide, convert on output (or leave the output
-     float, since it is one 128-wide vector per event).
+| | fp32 | bf16 | |
+|---|---:|---:|---|
+| II per iteration | 4161 ns | **1033 ns** | **4.03× faster** |
+| per real track | 582.6 ns | **144.6 ns** | 4.03× |
+| GOP/s (array) | 1,016 | **3,654** | 3.6× |
+| RTP weights | 1039 KB | **523 KB** | half |
+| 27 outputs vs the ONNX golden, warm-up excluded | 7.5e-07 | 3.96e-04 | 526× worse |
+| the same, as % of full scale (max \|value\| = 0.0914) | 0.001% | **0.43%** | |
 
-4. **Loosen the crosscheck tolerances.** bf16 has 8 mantissa bits, so expect ~1e-2 relative
-   rather than 1e-6. `crosscheck.py`, `compare_hw.py`, `verify_run.py --tol` and
-   `host_batch.cpp`'s hard-coded `1e-4` all need raising. **Decide the acceptable tolerance
-   from the physics before measuring it**, otherwise the test becomes "whatever we got".
+4× rather than the theoretical 9× (32 vs 284 instructions per 4×8×4 GEMM) because the
+design is partly data-movement bound. The per-port breakdown from `make report` shows it:
+the dense stages settle at ~925 ns while `track_out` sits at 1629 ns, so **the event tail
+is now the slowest stage in the graph** — it was not at fp32 speeds.
 
-5. **Halve the payload sizes on the host path.** RTP payloads become 2 bytes/element:
-   `extract_rtp.py`'s `struct.pack('<{n}f')` → a bf16 encoding, and `host_batch.cpp`'s
-   `update_n<64/128/2048/4096>` cases and `read_bin` need matching types. The manifest
-   already carries the element count, so the plumbing is in place.
+On accuracy, judge it per output rather than against full scale. The 27 outputs have very
+different spreads (std 0.00052 .. 0.01523 across events), so the same 3.96e-04 is ~2.6% of
+the widest output's own variation and ~76% of the narrowest one's. bf16 is comfortable for
+the wide outputs and marginal for the narrow ones.
 
-6. **Regenerate the golden in bf16.** `make_golden.py` computes in float64. Either keep it
-   as the "exact" reference and compare with a loosened tolerance, or add a bf16-rounding
-   simulation of each layer for a tighter bound. The first is simpler and enough to catch
-   a wiring bug; the second is what you want to prove the *numerics* are acceptable.
+### What it took
 
-### What to expect
+Four things, and the last three were not obvious:
 
-- Instruction count per GEMM: 284 → 32.
-- The 11.6% leaky-ReLU penalty should largely vanish (no `VCONV` on the `to_vector`).
-- The array-side per-track cost should drop substantially; the **583 µs fixed host cost
-  does not move**, so the win only shows at large track counts.
-- Weight memory halves (1.03 MB → 517 KB), which is not currently a constraint but does
-  halve the RTP load time (~1039 KB at whatever the measured MB/s is).
+1. **`apply_activation` could not compile for bf16.** It branched on
+   `std::is_floating_point_v<result_t>`, which is **false** for `bfloat16` (it is a
+   compiler builtin, not a std floating-point type), so every bf16 build took the integer
+   branch and tripped `static_assert(SHIFT > 0)`. Fixed in aie4ml to `!std::is_integral_v`.
+2. **`AIEConfig.ComputeDtype` was a no-op for ONNX input.** `passes/force_float_mode.py`
+   only rewrote `QuantIntent`; a float32 ONNX arrives as `FloatIntent`, so asking for
+   bfloat16 silently produced a float32 design — same dtypes, same weights, **no error**.
+   Fixed to re-cast float tensors as well.
+3. **aie4ml truncated fp32 → bf16 instead of rounding.** `(f32.view(uint32) >> 16)` is
+   round-toward-zero: double the worst-case error *and* a bias toward zero, which does not
+   cancel across 264,192 weights and 14 layers. Round-half-to-even instead. **This was
+   worth 8× end-to-end** — the event mean went from 4.13e-03 to 5.06e-04.
+4. **The resolver picks a different cascade split for bf16** (emb_d1 2→1, solver d0 4→2)
+   because the weights are half the size. That changes the kernel count, the graph
+   structure and the RTP port count. `gen_graph.py` now pins `cas_length` so the two trees
+   are structurally identical and precision is the only variable.
 
-### What will not change
+Weights are stored as `uint16_t` bit patterns (C++ has no bfloat16 literal) and reinterpret
+to `bfloat16` at the RTP port — `as_weights<Cfg>()` in `app.cpp`. It is genuinely a
+bf16 × bf16 multiply; verified by decoding the stored values back to float.
 
-Batch size (same microtile M=4), the 16-element alignment rule, the 56-slot event
-structure, the flush event, the roll-concat semantics, and the host's control flow.
+**Biases and the accumulator stay float32 in both builds.** `bias_t` is float, and
+`track_accum` widens bf16 → float on load and emits float: summing 50 values in 8 mantissa
+bits would lose precision for no gain (that kernel is 0.03% of the work), and it keeps the
+host path, `io_extra.json` and the notebooks identical across precisions. Verified — the
+tail matches its own `s2_out` mean to 4.05e-09.
 
-**int16** is a bigger job than bf16: the microtile shape changes (4×4×4 / 2×4×8 rather than
-4×8×4), `SHIFT` becomes live, and every layer needs a scale factor derived from the weight
-and activation ranges — quantisation-aware work, not a retype. `aieml/` already has an
-int16 path if that is the goal.
+### Regenerating a tree (needs aie4ml)
 
----
+```bash
+make regen PRECISION=bf16        # -> src_bf16/, aie_pipeline_bf16.json
+```
+
+`gen_graph.py --precision bf16 --out <dir>` generates into a scratch directory. Note the
+generator does **not** emit the Phase 3 additions (roll-concat, accumulator, output taps) —
+those are hand-wiring in `graph_plan.h` / `top_graph.h`. `src_bf16/` was assembled by taking
+the fp32 tree (which has them) and replacing `parameters.h`, `weights/` and
+`kernels/dense_bias_relu/` from the generated bf16 output, then retyping the two
+hand-written kernels. Redo that if you regenerate from scratch.
 
 ## 12. Gotchas that already cost time
 

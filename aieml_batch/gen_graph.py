@@ -165,13 +165,38 @@ def build_onnx(w, batch: int, solvers: int):
     return proto
 
 
-def make_config(batch: int, solvers: int):
+# PRECISION -> aie4ml's AIEConfig.ComputeDtype (passes/force_float_mode.py).
+# On AIE-ML both use the SAME aie::mmul microtile, (4,8,4) -- see
+# op_impls/families/matmul/common.py MICROTILE_OPTIONS -- so BATCH stays 8 and
+# the whole batching argument is unchanged by the precision switch.
+COMPUTE_DTYPE = {'fp32': 'float32', 'bf16': 'bfloat16'}
+
+
+def make_config(batch: int, solvers: int, precision: str = 'fp32'):
     # cas_num is capped at 2 on the 128-wide layers: the default of 4 saturates
     # the 6 MM2S DMA channels of a memory tile (per aie4ml tutorial_3).
-    directives = {n: {'parallelism': {'cas_num': 2}} for n in layer_names(solvers) if n != 'emb_d0'}
+    # cas_length is pinned, not left to the resolver. bf16 halves the weight bytes,
+    # so the resolver picks a SHORTER cascade for the same layer (emb_d1 2->1,
+    # solver d0 4->2). That changes the kernel count per layer, hence the graph
+    # structure, the RTP port count and the hand-added Phase 3 wiring -- and it
+    # would confound the comparison, since fp32 and bf16 would then differ in
+    # parallelism as well as precision. Pinning keeps the two trees structurally
+    # identical so precision is the only variable.
+    CAS_LENGTH = {'emb_d0': 1, 'emb_d1': 2}
+    for s in range(solvers):
+        CAS_LENGTH[f's{s}_d0'] = 4
+        for d in (1, 2, 3):
+            CAS_LENGTH[f's{s}_d{d}'] = 2
+    directives = {n: {'parallelism': {'cas_num': 2, 'cas_length': CAS_LENGTH[n]}}
+                  for n in layer_names(solvers) if n != 'emb_d0'}
+    aie_cfg = {'BatchSize': batch, 'Iterations': ITERS}
+    if precision not in COMPUTE_DTYPE:
+        raise ValueError(f'precision {precision!r}; use one of {list(COMPUTE_DTYPE)}')
+    if precision != 'fp32':
+        aie_cfg['ComputeDtype'] = COMPUTE_DTYPE[precision]
     return {
         'Part': PLATFORM,
-        'AIEConfig': {'BatchSize': batch, 'Iterations': ITERS},
+        'AIEConfig': aie_cfg,
         'LayerDirectives': directives,
     }
 
@@ -186,15 +211,16 @@ def stimulus(batch: int, solvers: int, seed: int = 42):
     return feed
 
 
-def _model(batch, solvers):
+def _model(batch, solvers, precision='fp32', output_dir=None):
     from aie4ml.frontends.onnx import from_onnx
     w = load_weights(solvers)
     proto = build_onnx(w, batch, solvers)
-    return w, from_onnx(proto, make_config(batch, solvers), output_dir=str(HERE), project_name=PROJECT)
+    return w, from_onnx(proto, make_config(batch, solvers, precision),
+                        output_dir=str(output_dir or HERE), project_name=PROJECT)
 
 
 def cmd_gen(a):
-    _, m = _model(a.batch, a.solvers)
+    _, m = _model(a.batch, a.solvers, a.precision, a.out)
     # aie4ml's write() drops its own Makefile into output_dir, clobbering ours.
     # Keep ours as Makefile and park theirs alongside for reference.
     mk = HERE / 'Makefile'
@@ -245,6 +271,11 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--batch', type=int, default=BATCH)
     p.add_argument('--solvers', type=int, default=SOLVERS)
+    p.add_argument('--precision', choices=('fp32', 'bf16'),
+                   default=os.environ.get('RTDA_PRECISION', 'fp32'))
+    p.add_argument('--out', default=None,
+                   help='generate into this directory instead of aieml_batch/ '
+                        '(use a scratch dir - write() also drops a Makefile)')
     sub = p.add_subparsers(dest='cmd', required=True)
     sub.add_parser('gen').set_defaults(fn=cmd_gen)
     v = sub.add_parser('verify'); v.add_argument('--sim', choices=('x86', 'aie'), default='x86')

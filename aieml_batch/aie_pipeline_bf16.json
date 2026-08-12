@@ -1,0 +1,9255 @@
+{
+ "logical": [
+  {
+   "name": "emb_d0_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "x",
+    "emb_d0_weight",
+    "emb_d0_bias"
+   ],
+   "outputs": [
+    "r_e0"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "x": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "emb_d0_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "emb_d0_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_e0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 16,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "emb_d0",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "emb_d1_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_e0",
+    "emb_d1_weight",
+    "emb_d1_bias"
+   ],
+   "outputs": [
+    "emb_out"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_e0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "emb_d1_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "emb_d1_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "emb_out": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "emb_d1",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s0_d0_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "s0_in",
+    "s0_d0_weight",
+    "s0_d0_bias"
+   ],
+   "outputs": [
+    "r_s0_0"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "s0_in": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d0_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d0_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s0_0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 256,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s0_d0",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s0_d1_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s0_0",
+    "s0_d1_weight",
+    "s0_d1_bias"
+   ],
+   "outputs": [
+    "r_s0_1"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s0_0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d1_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d1_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s0_1": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s0_d1",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s0_d2_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s0_1",
+    "s0_d2_weight",
+    "s0_d2_bias"
+   ],
+   "outputs": [
+    "r_s0_2"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s0_1": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d2_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d2_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s0_2": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s0_d2",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s0_d3_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s0_2",
+    "s0_d3_weight",
+    "s0_d3_bias"
+   ],
+   "outputs": [
+    "s0_out"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s0_2": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d3_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s0_d3_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "s0_out": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s0_d3",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s1_d0_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "s1_in",
+    "s1_d0_weight",
+    "s1_d0_bias"
+   ],
+   "outputs": [
+    "r_s1_0"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "s1_in": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d0_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d0_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s1_0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 256,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s1_d0",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s1_d1_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s1_0",
+    "s1_d1_weight",
+    "s1_d1_bias"
+   ],
+   "outputs": [
+    "r_s1_1"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s1_0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d1_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d1_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s1_1": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s1_d1",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s1_d2_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s1_1",
+    "s1_d2_weight",
+    "s1_d2_bias"
+   ],
+   "outputs": [
+    "r_s1_2"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s1_1": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d2_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d2_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s1_2": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s1_d2",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s1_d3_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s1_2",
+    "s1_d3_weight",
+    "s1_d3_bias"
+   ],
+   "outputs": [
+    "s1_out"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s1_2": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d3_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s1_d3_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "s1_out": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s1_d3",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s2_d0_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "s2_in",
+    "s2_d0_weight",
+    "s2_d0_bias"
+   ],
+   "outputs": [
+    "r_s2_0"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "s2_in": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d0_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d0_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s2_0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 256,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s2_d0",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s2_d1_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s2_0",
+    "s2_d1_weight",
+    "s2_d1_bias"
+   ],
+   "outputs": [
+    "r_s2_1"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s2_0": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d1_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d1_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s2_1": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s2_d1",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s2_d2_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s2_1",
+    "s2_d2_weight",
+    "s2_d2_bias"
+   ],
+   "outputs": [
+    "r_s2_2"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s2_1": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d2_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d2_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "r_s2_2": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s2_d2",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  },
+  {
+   "name": "s2_d3_aie",
+   "op_type": "dense",
+   "dialect": "AIE2",
+   "inputs": [
+    "r_s2_2",
+    "s2_d3_weight",
+    "s2_d3_bias"
+   ],
+   "outputs": [
+    "s2_out"
+   ],
+   "traits": {
+    "fused_activation": {
+     "activation": "leaky_relu",
+     "alpha": 0.10000000149011612
+    },
+    "io_view": {
+     "inputs": {
+      "r_s2_2": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d3_weight": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      },
+      "s2_d3_bias": {
+       "buffer_order": [
+        0
+       ]
+      }
+     },
+     "outputs": {
+      "s2_out": {
+       "buffer_order": [
+        1,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "metadata": {
+    "n_in": 128,
+    "n_out": 128,
+    "use_bias": true,
+    "layer_class": "Dense",
+    "source_class": "Gemm",
+    "source_layer": "s2_d3",
+    "input_roles": [
+     "lhs",
+     "rhs",
+     "bias"
+    ]
+   }
+  }
+ ],
+ "execution": [
+  {
+   "node": "emb_d0_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "x": {
+      "group": "in1",
+      "count": 1
+     }
+    },
+    "outputs": {
+     "r_e0": {
+      "group": "out1",
+      "count": 1
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "x": "auto",
+     "emb_d0_weight": "auto",
+     "emb_d0_bias": "auto"
+    },
+    "outputs": {
+     "r_e0": "auto"
+    }
+   },
+   "io_views": {
+    "x": {
+     "logical": [
+      8,
+      16
+     ],
+     "real": [
+      8,
+      16
+     ],
+     "full": [
+      8,
+      16
+     ],
+     "tile": [
+      8,
+      16
+     ],
+     "tile_raw": [
+      8,
+      16
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "emb_d0_weight": {
+     "logical": [
+      16,
+      128
+     ],
+     "real": [
+      16,
+      128
+     ],
+     "full": [
+      16,
+      128
+     ],
+     "tile": [
+      16,
+      128
+     ],
+     "tile_raw": [
+      16,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "emb_d0_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_e0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      128
+     ],
+     "tile_raw": [
+      8,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 1,
+     "cas_num": 1
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "x": {
+      "logical": [
+       8,
+       16
+      ],
+      "real": [
+       8,
+       16
+      ],
+      "full": [
+       8,
+       16
+      ],
+      "tile": [
+       8,
+       16
+      ],
+      "tile_raw": [
+       8,
+       16
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "emb_d0_weight": {
+      "logical": [
+       16,
+       128
+      ],
+      "real": [
+       16,
+       128
+      ],
+      "full": [
+       16,
+       128
+      ],
+      "tile": [
+       16,
+       128
+      ],
+      "tile_raw": [
+       16,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "emb_d0_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_e0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       128
+      ],
+      "tile_raw": [
+       8,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "x": "auto",
+      "emb_d0_weight": "auto",
+      "emb_d0_bias": "auto"
+     },
+     "outputs": {
+      "r_e0": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "emb_d1_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_e0": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "emb_out": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_e0": "auto",
+     "emb_d1_weight": "auto",
+     "emb_d1_bias": "auto"
+    },
+    "outputs": {
+     "emb_out": "auto"
+    }
+   },
+   "io_views": {
+    "r_e0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "emb_d1_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "emb_d1_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "emb_out": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_e0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "emb_d1_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "emb_d1_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "emb_out": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_e0": "auto",
+      "emb_d1_weight": "auto",
+      "emb_d1_bias": "auto"
+     },
+     "outputs": {
+      "emb_out": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s0_d0_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "s0_in": {
+      "group": "in1",
+      "count": 4
+     }
+    },
+    "outputs": {
+     "r_s0_0": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "s0_in": "auto",
+     "s0_d0_weight": "auto",
+     "s0_d0_bias": "auto"
+    },
+    "outputs": {
+     "r_s0_0": "auto"
+    }
+   },
+   "io_views": {
+    "s0_in": {
+     "logical": [
+      8,
+      256
+     ],
+     "real": [
+      8,
+      256
+     ],
+     "full": [
+      8,
+      256
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d0_weight": {
+     "logical": [
+      256,
+      128
+     ],
+     "real": [
+      256,
+      128
+     ],
+     "full": [
+      256,
+      128
+     ],
+     "tile": [
+      256,
+      128
+     ],
+     "tile_raw": [
+      256,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d0_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s0_0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 4,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "s0_in": {
+      "logical": [
+       8,
+       256
+      ],
+      "real": [
+       8,
+       256
+      ],
+      "full": [
+       8,
+       256
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d0_weight": {
+      "logical": [
+       256,
+       128
+      ],
+      "real": [
+       256,
+       128
+      ],
+      "full": [
+       256,
+       128
+      ],
+      "tile": [
+       256,
+       128
+      ],
+      "tile_raw": [
+       256,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d0_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s0_0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "s0_in": "auto",
+      "s0_d0_weight": "auto",
+      "s0_d0_bias": "auto"
+     },
+     "outputs": {
+      "r_s0_0": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s0_d1_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s0_0": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "r_s0_1": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s0_0": "auto",
+     "s0_d1_weight": "auto",
+     "s0_d1_bias": "auto"
+    },
+    "outputs": {
+     "r_s0_1": "auto"
+    }
+   },
+   "io_views": {
+    "r_s0_0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d1_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d1_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s0_1": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s0_0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d1_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d1_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s0_1": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s0_0": "auto",
+      "s0_d1_weight": "auto",
+      "s0_d1_bias": "auto"
+     },
+     "outputs": {
+      "r_s0_1": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s0_d2_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s0_1": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "r_s0_2": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s0_1": "auto",
+     "s0_d2_weight": "auto",
+     "s0_d2_bias": "auto"
+    },
+    "outputs": {
+     "r_s0_2": "auto"
+    }
+   },
+   "io_views": {
+    "r_s0_1": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d2_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d2_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s0_2": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s0_1": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d2_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d2_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s0_2": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s0_1": "auto",
+      "s0_d2_weight": "auto",
+      "s0_d2_bias": "auto"
+     },
+     "outputs": {
+      "r_s0_2": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s0_d3_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s0_2": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "s0_out": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s0_2": "auto",
+     "s0_d3_weight": "auto",
+     "s0_d3_bias": "auto"
+    },
+    "outputs": {
+     "s0_out": "auto"
+    }
+   },
+   "io_views": {
+    "r_s0_2": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d3_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s0_d3_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "s0_out": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s0_2": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d3_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s0_d3_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "s0_out": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s0_2": "auto",
+      "s0_d3_weight": "auto",
+      "s0_d3_bias": "auto"
+     },
+     "outputs": {
+      "s0_out": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s1_d0_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "s1_in": {
+      "group": "in1",
+      "count": 4
+     }
+    },
+    "outputs": {
+     "r_s1_0": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "s1_in": "auto",
+     "s1_d0_weight": "auto",
+     "s1_d0_bias": "auto"
+    },
+    "outputs": {
+     "r_s1_0": "auto"
+    }
+   },
+   "io_views": {
+    "s1_in": {
+     "logical": [
+      8,
+      256
+     ],
+     "real": [
+      8,
+      256
+     ],
+     "full": [
+      8,
+      256
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d0_weight": {
+     "logical": [
+      256,
+      128
+     ],
+     "real": [
+      256,
+      128
+     ],
+     "full": [
+      256,
+      128
+     ],
+     "tile": [
+      256,
+      128
+     ],
+     "tile_raw": [
+      256,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d0_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s1_0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 4,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "s1_in": {
+      "logical": [
+       8,
+       256
+      ],
+      "real": [
+       8,
+       256
+      ],
+      "full": [
+       8,
+       256
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d0_weight": {
+      "logical": [
+       256,
+       128
+      ],
+      "real": [
+       256,
+       128
+      ],
+      "full": [
+       256,
+       128
+      ],
+      "tile": [
+       256,
+       128
+      ],
+      "tile_raw": [
+       256,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d0_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s1_0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "s1_in": "auto",
+      "s1_d0_weight": "auto",
+      "s1_d0_bias": "auto"
+     },
+     "outputs": {
+      "r_s1_0": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s1_d1_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s1_0": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "r_s1_1": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s1_0": "auto",
+     "s1_d1_weight": "auto",
+     "s1_d1_bias": "auto"
+    },
+    "outputs": {
+     "r_s1_1": "auto"
+    }
+   },
+   "io_views": {
+    "r_s1_0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d1_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d1_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s1_1": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s1_0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d1_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d1_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s1_1": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s1_0": "auto",
+      "s1_d1_weight": "auto",
+      "s1_d1_bias": "auto"
+     },
+     "outputs": {
+      "r_s1_1": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s1_d2_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s1_1": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "r_s1_2": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s1_1": "auto",
+     "s1_d2_weight": "auto",
+     "s1_d2_bias": "auto"
+    },
+    "outputs": {
+     "r_s1_2": "auto"
+    }
+   },
+   "io_views": {
+    "r_s1_1": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d2_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d2_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s1_2": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s1_1": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d2_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d2_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s1_2": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s1_1": "auto",
+      "s1_d2_weight": "auto",
+      "s1_d2_bias": "auto"
+     },
+     "outputs": {
+      "r_s1_2": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s1_d3_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s1_2": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "s1_out": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s1_2": "auto",
+     "s1_d3_weight": "auto",
+     "s1_d3_bias": "auto"
+    },
+    "outputs": {
+     "s1_out": "auto"
+    }
+   },
+   "io_views": {
+    "r_s1_2": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d3_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s1_d3_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "s1_out": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s1_2": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d3_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s1_d3_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "s1_out": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s1_2": "auto",
+      "s1_d3_weight": "auto",
+      "s1_d3_bias": "auto"
+     },
+     "outputs": {
+      "s1_out": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s2_d0_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "s2_in": {
+      "group": "in1",
+      "count": 4
+     }
+    },
+    "outputs": {
+     "r_s2_0": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "s2_in": "auto",
+     "s2_d0_weight": "auto",
+     "s2_d0_bias": "auto"
+    },
+    "outputs": {
+     "r_s2_0": "auto"
+    }
+   },
+   "io_views": {
+    "s2_in": {
+     "logical": [
+      8,
+      256
+     ],
+     "real": [
+      8,
+      256
+     ],
+     "full": [
+      8,
+      256
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d0_weight": {
+     "logical": [
+      256,
+      128
+     ],
+     "real": [
+      256,
+      128
+     ],
+     "full": [
+      256,
+      128
+     ],
+     "tile": [
+      256,
+      128
+     ],
+     "tile_raw": [
+      256,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d0_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s2_0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 4,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "s2_in": {
+      "logical": [
+       8,
+       256
+      ],
+      "real": [
+       8,
+       256
+      ],
+      "full": [
+       8,
+       256
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d0_weight": {
+      "logical": [
+       256,
+       128
+      ],
+      "real": [
+       256,
+       128
+      ],
+      "full": [
+       256,
+       128
+      ],
+      "tile": [
+       256,
+       128
+      ],
+      "tile_raw": [
+       256,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d0_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s2_0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "s2_in": "auto",
+      "s2_d0_weight": "auto",
+      "s2_d0_bias": "auto"
+     },
+     "outputs": {
+      "r_s2_0": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s2_d1_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s2_0": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "r_s2_1": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s2_0": "auto",
+     "s2_d1_weight": "auto",
+     "s2_d1_bias": "auto"
+    },
+    "outputs": {
+     "r_s2_1": "auto"
+    }
+   },
+   "io_views": {
+    "r_s2_0": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d1_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d1_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s2_1": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s2_0": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d1_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d1_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s2_1": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s2_0": "auto",
+      "s2_d1_weight": "auto",
+      "s2_d1_bias": "auto"
+     },
+     "outputs": {
+      "r_s2_1": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s2_d2_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s2_1": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "r_s2_2": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s2_1": "auto",
+     "s2_d2_weight": "auto",
+     "s2_d2_bias": "auto"
+    },
+    "outputs": {
+     "r_s2_2": "auto"
+    }
+   },
+   "io_views": {
+    "r_s2_1": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d2_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d2_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "r_s2_2": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s2_1": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d2_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d2_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "r_s2_2": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s2_1": "auto",
+      "s2_d2_weight": "auto",
+      "s2_d2_bias": "auto"
+     },
+     "outputs": {
+      "r_s2_2": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  },
+  {
+   "node": "s2_d3_aie",
+   "variant_id": "dense.b.r.v1",
+   "ports": {
+    "inputs": {
+     "r_s2_2": {
+      "group": "in1",
+      "count": 2
+     }
+    },
+    "outputs": {
+     "s2_out": {
+      "group": "out1",
+      "count": 2
+     }
+    }
+   },
+   "io_route": {
+    "inputs": {
+     "r_s2_2": "auto",
+     "s2_d3_weight": "auto",
+     "s2_d3_bias": "auto"
+    },
+    "outputs": {
+     "s2_out": "auto"
+    }
+   },
+   "io_views": {
+    "r_s2_2": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d3_weight": {
+     "logical": [
+      128,
+      128
+     ],
+     "real": [
+      128,
+      128
+     ],
+     "full": [
+      128,
+      128
+     ],
+     "tile": [
+      128,
+      128
+     ],
+     "tile_raw": [
+      128,
+      128
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    },
+    "s2_d3_bias": {
+     "logical": [
+      128
+     ],
+     "real": [
+      128
+     ],
+     "full": [
+      128
+     ],
+     "tile": [
+      128
+     ],
+     "tile_raw": [
+      128
+     ],
+     "buffer_order": [
+      0
+     ],
+     "perm": null
+    },
+    "s2_out": {
+     "logical": [
+      8,
+      128
+     ],
+     "real": [
+      8,
+      128
+     ],
+     "full": [
+      8,
+      128
+     ],
+     "tile": [
+      8,
+      64
+     ],
+     "tile_raw": [
+      8,
+      64
+     ],
+     "buffer_order": [
+      1,
+      0
+     ],
+     "perm": null
+    }
+   },
+   "graph_header": "dense_bias_relu_graph.h",
+   "graph_name": "dense_bias_relu_graph",
+   "param_template": "dense_bias_relu",
+   "config": {
+    "precision": {
+     "lhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "rhs": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "output": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "acc": {
+      "format": "accfloat",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     },
+     "bias": {
+      "format": "bfloat16",
+      "frac": 0,
+      "rounding": "RND",
+      "saturation": "SAT"
+     }
+    },
+    "parallelism": {
+     "cas_length": 2,
+     "cas_num": 2
+    },
+    "microtiling": {
+     "microtile_m": 4,
+     "microtile_k": 8,
+     "microtile_n": 4
+    },
+    "io_views": {
+     "r_s2_2": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d3_weight": {
+      "logical": [
+       128,
+       128
+      ],
+      "real": [
+       128,
+       128
+      ],
+      "full": [
+       128,
+       128
+      ],
+      "tile": [
+       128,
+       128
+      ],
+      "tile_raw": [
+       128,
+       128
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     },
+     "s2_d3_bias": {
+      "logical": [
+       128
+      ],
+      "real": [
+       128
+      ],
+      "full": [
+       128
+      ],
+      "tile": [
+       128
+      ],
+      "tile_raw": [
+       128
+      ],
+      "buffer_order": [
+       0
+      ],
+      "perm": null
+     },
+     "s2_out": {
+      "logical": [
+       8,
+       128
+      ],
+      "real": [
+       8,
+       128
+      ],
+      "full": [
+       8,
+       128
+      ],
+      "tile": [
+       8,
+       64
+      ],
+      "tile_raw": [
+       8,
+       64
+      ],
+      "buffer_order": [
+       1,
+       0
+      ],
+      "perm": null
+     }
+    },
+    "io_route": {
+     "inputs": {
+      "r_s2_2": "auto",
+      "s2_d3_weight": "auto",
+      "s2_d3_bias": "auto"
+     },
+     "outputs": {
+      "s2_out": "auto"
+     }
+    },
+    "shift": 0,
+    "accumulator_tag": "accfloat",
+    "rounding_mode": "conv_even",
+    "flags": {
+     "use_relu": true,
+     "leaky_alpha": 0.10000000149011612,
+     "transpose_lhs": false,
+     "use_bias": true
+    }
+   }
+  }
+ ],
+ "physical": {
+  "placements": {
+   "emb_d0_aie": {
+    "col": 7,
+    "row": 0
+   },
+   "emb_d1_aie": {
+    "col": 7,
+    "row": 1
+   },
+   "s0_d1_aie": {
+    "col": 10,
+    "row": 0
+   },
+   "s0_d2_aie": {
+    "col": 13,
+    "row": 0
+   },
+   "s0_d0_aie": {
+    "col": 7,
+    "row": 3
+   },
+   "s0_d3_aie": {
+    "col": 16,
+    "row": 0
+   },
+   "s1_d1_aie": {
+    "col": 7,
+    "row": 5
+   },
+   "s1_d2_aie": {
+    "col": 10,
+    "row": 6
+   },
+   "s1_d0_aie": {
+    "col": 12,
+    "row": 4
+   },
+   "s1_d3_aie": {
+    "col": 13,
+    "row": 6
+   },
+   "s2_d1_aie": {
+    "col": 19,
+    "row": 0
+   },
+   "s2_d2_aie": {
+    "col": 22,
+    "row": 0
+   },
+   "s2_d0_aie": {
+    "col": 16,
+    "row": 2
+   },
+   "s2_d3_aie": {
+    "col": 23,
+    "row": 2
+   }
+  },
+  "plan": {
+   "buffers": [
+    {
+     "name": "buffer_x",
+     "dimension": [
+      16,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "ifm[0]",
+       "source_type": "plio",
+       "source_endpoint": {
+        "name": "ifm",
+        "port": 0
+       },
+       "target": "buffer_x.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         16,
+         8
+        ],
+        "tiling_dimension": [
+         16,
+         8
+        ],
+        "io_tiling_dimension": [
+         16,
+         8
+        ],
+        "io_boundary_dimension": [
+         16,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         16,
+         8
+        ],
+        "tiling_dimension": [
+         16,
+         8
+        ],
+        "io_tiling_dimension": [
+         16,
+         8
+        ],
+        "io_boundary_dimension": [
+         16,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_x.out[0]",
+       "target": "emb_d0_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "emb_d0_aie",
+        "op_impl_id": "emb_d0_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         16,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 2
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         16,
+         8
+        ],
+        "io_boundary_dimension": [
+         16,
+         8
+        ],
+        "io_tiling_dimension": [
+         16,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "x"
+    },
+    {
+     "name": "buffer_r_e0",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "emb_d0_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "emb_d0_aie",
+        "op_impl_id": "emb_d0_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_e0.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 32
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         128,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_e0.out[0]",
+       "target": "emb_d1_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "emb_d1_aie",
+        "op_impl_id": "emb_d1_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_e0.out[1]",
+       "target": "emb_d1_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "emb_d1_aie",
+        "op_impl_id": "emb_d1_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_e0"
+    },
+    {
+     "name": "buffer_s0_in",
+     "dimension": [
+      256,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [],
+     "readers": [
+      {
+       "source": "buffer_s0_in.out[0]",
+       "target": "s0_d0_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d0_aie",
+        "op_impl_id": "s0_d0_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s0_in.out[1]",
+       "target": "s0_d0_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d0_aie",
+        "op_impl_id": "s0_d0_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s0_in.out[2]",
+       "target": "s0_d0_aie.in1[2]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d0_aie",
+        "op_impl_id": "s0_d0_aie",
+        "group": "in1",
+        "port": 2
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         128,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s0_in.out[3]",
+       "target": "s0_d0_aie.in1[3]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d0_aie",
+        "op_impl_id": "s0_d0_aie",
+        "group": "in1",
+        "port": 3
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         192,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "s0_in"
+    },
+    {
+     "name": "buffer_r_s0_0",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s0_d0_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d0_aie",
+        "op_impl_id": "s0_d0_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s0_0.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s0_d0_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d0_aie",
+        "op_impl_id": "s0_d0_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s0_0.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s0_0.out[0]",
+       "target": "s0_d1_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d1_aie",
+        "op_impl_id": "s0_d1_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s0_0.out[1]",
+       "target": "s0_d1_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d1_aie",
+        "op_impl_id": "s0_d1_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s0_0"
+    },
+    {
+     "name": "buffer_r_s0_1",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s0_d1_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d1_aie",
+        "op_impl_id": "s0_d1_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s0_1.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s0_d1_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d1_aie",
+        "op_impl_id": "s0_d1_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s0_1.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s0_1.out[0]",
+       "target": "s0_d2_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d2_aie",
+        "op_impl_id": "s0_d2_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s0_1.out[1]",
+       "target": "s0_d2_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d2_aie",
+        "op_impl_id": "s0_d2_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s0_1"
+    },
+    {
+     "name": "buffer_r_s0_2",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s0_d2_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d2_aie",
+        "op_impl_id": "s0_d2_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s0_2.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s0_d2_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d2_aie",
+        "op_impl_id": "s0_d2_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s0_2.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s0_2.out[0]",
+       "target": "s0_d3_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d3_aie",
+        "op_impl_id": "s0_d3_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s0_2.out[1]",
+       "target": "s0_d3_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s0_d3_aie",
+        "op_impl_id": "s0_d3_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s0_2"
+    },
+    {
+     "name": "buffer_s1_in",
+     "dimension": [
+      256,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [],
+     "readers": [
+      {
+       "source": "buffer_s1_in.out[0]",
+       "target": "s1_d0_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d0_aie",
+        "op_impl_id": "s1_d0_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s1_in.out[1]",
+       "target": "s1_d0_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d0_aie",
+        "op_impl_id": "s1_d0_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s1_in.out[2]",
+       "target": "s1_d0_aie.in1[2]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d0_aie",
+        "op_impl_id": "s1_d0_aie",
+        "group": "in1",
+        "port": 2
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         128,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s1_in.out[3]",
+       "target": "s1_d0_aie.in1[3]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d0_aie",
+        "op_impl_id": "s1_d0_aie",
+        "group": "in1",
+        "port": 3
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         192,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "s1_in"
+    },
+    {
+     "name": "buffer_r_s1_0",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s1_d0_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d0_aie",
+        "op_impl_id": "s1_d0_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s1_0.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s1_d0_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d0_aie",
+        "op_impl_id": "s1_d0_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s1_0.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s1_0.out[0]",
+       "target": "s1_d1_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d1_aie",
+        "op_impl_id": "s1_d1_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s1_0.out[1]",
+       "target": "s1_d1_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d1_aie",
+        "op_impl_id": "s1_d1_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s1_0"
+    },
+    {
+     "name": "buffer_r_s1_1",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s1_d1_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d1_aie",
+        "op_impl_id": "s1_d1_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s1_1.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s1_d1_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d1_aie",
+        "op_impl_id": "s1_d1_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s1_1.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s1_1.out[0]",
+       "target": "s1_d2_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d2_aie",
+        "op_impl_id": "s1_d2_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s1_1.out[1]",
+       "target": "s1_d2_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d2_aie",
+        "op_impl_id": "s1_d2_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s1_1"
+    },
+    {
+     "name": "buffer_r_s1_2",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s1_d2_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d2_aie",
+        "op_impl_id": "s1_d2_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s1_2.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s1_d2_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d2_aie",
+        "op_impl_id": "s1_d2_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s1_2.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s1_2.out[0]",
+       "target": "s1_d3_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d3_aie",
+        "op_impl_id": "s1_d3_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s1_2.out[1]",
+       "target": "s1_d3_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s1_d3_aie",
+        "op_impl_id": "s1_d3_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s1_2"
+    },
+    {
+     "name": "buffer_s2_in",
+     "dimension": [
+      256,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [],
+     "readers": [
+      {
+       "source": "buffer_s2_in.out[0]",
+       "target": "s2_d0_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d0_aie",
+        "op_impl_id": "s2_d0_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s2_in.out[1]",
+       "target": "s2_d0_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d0_aie",
+        "op_impl_id": "s2_d0_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s2_in.out[2]",
+       "target": "s2_d0_aie.in1[2]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d0_aie",
+        "op_impl_id": "s2_d0_aie",
+        "group": "in1",
+        "port": 2
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         128,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_s2_in.out[3]",
+       "target": "s2_d0_aie.in1[3]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d0_aie",
+        "op_impl_id": "s2_d0_aie",
+        "group": "in1",
+        "port": 3
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         256,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         192,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         256,
+         8
+        ],
+        "io_boundary_dimension": [
+         256,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "s2_in"
+    },
+    {
+     "name": "buffer_r_s2_0",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s2_d0_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d0_aie",
+        "op_impl_id": "s2_d0_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s2_0.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s2_d0_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d0_aie",
+        "op_impl_id": "s2_d0_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s2_0.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s2_0.out[0]",
+       "target": "s2_d1_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d1_aie",
+        "op_impl_id": "s2_d1_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s2_0.out[1]",
+       "target": "s2_d1_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d1_aie",
+        "op_impl_id": "s2_d1_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s2_0"
+    },
+    {
+     "name": "buffer_r_s2_1",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s2_d1_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d1_aie",
+        "op_impl_id": "s2_d1_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s2_1.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s2_d1_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d1_aie",
+        "op_impl_id": "s2_d1_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s2_1.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s2_1.out[0]",
+       "target": "s2_d2_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d2_aie",
+        "op_impl_id": "s2_d2_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s2_1.out[1]",
+       "target": "s2_d2_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d2_aie",
+        "op_impl_id": "s2_d2_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s2_1"
+    },
+    {
+     "name": "buffer_r_s2_2",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s2_d2_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d2_aie",
+        "op_impl_id": "s2_d2_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_r_s2_2.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s2_d2_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d2_aie",
+        "op_impl_id": "s2_d2_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_r_s2_2.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_r_s2_2.out[0]",
+       "target": "s2_d3_aie.in1[0]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d3_aie",
+        "op_impl_id": "s2_d3_aie",
+        "group": "in1",
+        "port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      },
+      {
+       "source": "buffer_r_s2_2.out[1]",
+       "target": "s2_d3_aie.in1[1]",
+       "target_type": "op_impl",
+       "target_endpoint": {
+        "op_impl": "s2_d3_aie",
+        "op_impl_id": "s2_d3_aie",
+        "group": "in1",
+        "port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         8,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 8,
+          "wrap": 8
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       }
+      }
+     ],
+     "tensor": "r_s2_2"
+    },
+    {
+     "name": "buffer_emb_out",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "emb_d1_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "emb_d1_aie",
+        "op_impl_id": "emb_d1_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_emb_out.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "emb_d1_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "emb_d1_aie",
+        "op_impl_id": "emb_d1_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_emb_out.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_emb_out.out[0]",
+       "target": "ofm[0]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 0,
+        "op_impl_port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      },
+      {
+       "source": "buffer_emb_out.out[1]",
+       "target": "ofm[1]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 1,
+        "op_impl_port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      }
+     ],
+     "tensor": "emb_out"
+    },
+    {
+     "name": "buffer_s0_out",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s0_d3_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d3_aie",
+        "op_impl_id": "s0_d3_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_s0_out.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s0_d3_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s0_d3_aie",
+        "op_impl_id": "s0_d3_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_s0_out.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_s0_out.out[0]",
+       "target": "ofm[2]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 2,
+        "op_impl_port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      },
+      {
+       "source": "buffer_s0_out.out[1]",
+       "target": "ofm[3]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 3,
+        "op_impl_port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      }
+     ],
+     "tensor": "s0_out"
+    },
+    {
+     "name": "buffer_s1_out",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s1_d3_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d3_aie",
+        "op_impl_id": "s1_d3_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_s1_out.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s1_d3_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s1_d3_aie",
+        "op_impl_id": "s1_d3_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_s1_out.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_s1_out.out[0]",
+       "target": "ofm[4]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 4,
+        "op_impl_port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      },
+      {
+       "source": "buffer_s1_out.out[1]",
+       "target": "ofm[5]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 5,
+        "op_impl_port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      }
+     ],
+     "tensor": "s1_out"
+    },
+    {
+     "name": "buffer_s2_out",
+     "dimension": [
+      128,
+      8
+     ],
+     "num_buffers": 2,
+     "ctype": "float",
+     "writers": [
+      {
+       "source": "s2_d3_aie.out1[0]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d3_aie",
+        "op_impl_id": "s2_d3_aie",
+        "group": "out1",
+        "port": 0
+       },
+       "target": "buffer_s2_out.in[0]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      },
+      {
+       "source": "s2_d3_aie.out1[1]",
+       "source_type": "op_impl",
+       "source_endpoint": {
+        "op_impl": "s2_d3_aie",
+        "op_impl_id": "s2_d3_aie",
+        "group": "out1",
+        "port": 1
+       },
+       "target": "buffer_s2_out.in[1]",
+       "descriptor": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         4,
+         4
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "staging": null,
+       "dtype": null
+      }
+     ],
+     "readers": [
+      {
+       "source": "buffer_s2_out.out[0]",
+       "target": "ofm[6]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 6,
+        "op_impl_port": 0
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         0,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      },
+      {
+       "source": "buffer_s2_out.out[1]",
+       "target": "ofm[7]",
+       "target_type": "plio",
+       "target_endpoint": {
+        "name": "ofm",
+        "port": 7,
+        "op_impl_port": 1
+       },
+       "descriptor": {
+        "access": "read",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ],
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "boundary_dimension": [
+         128,
+         8
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1
+       },
+       "staging": {
+        "access": "write",
+        "buffer_dimension": [
+         128,
+         8
+        ],
+        "tiling_dimension": [
+         64,
+         8
+        ],
+        "offset": [
+         64,
+         0
+        ],
+        "tile_traversal": [
+         {
+          "dimension": 0,
+          "stride": 4,
+          "wrap": 16
+         },
+         {
+          "dimension": 1,
+          "stride": 4,
+          "wrap": 2
+         }
+        ],
+        "slice_dimension": 0,
+        "inner_dimension": 0,
+        "outer_dimension": 1,
+        "io_boundary_dimension": [
+         128,
+         8
+        ],
+        "io_tiling_dimension": [
+         64,
+         8
+        ]
+       },
+       "dtype": {
+        "format": "bfloat16",
+        "frac": 0,
+        "rounding": "RND",
+        "saturation": "SAT"
+       }
+      }
+     ],
+     "tensor": "s2_out"
+    }
+   ],
+   "direct_edges": [],
+   "graph_input_count": 13,
+   "graph_output_count": 8
+  }
+ }
+}

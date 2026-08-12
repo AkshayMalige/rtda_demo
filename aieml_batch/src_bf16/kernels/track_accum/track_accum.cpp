@@ -1,0 +1,99 @@
+#include "track_accum.h"
+#if TA_OUTPUT_DENSE
+#include "output_dense_aie.h"
+static constexpr int TA_OUT_W = OUT_DENSE_PAD;
+#else
+static constexpr int TA_OUT_W = TA_FEAT;   // emit the mean itself
+#endif
+
+// bf16 IN, float32 OUT and a float32 ACCUMULATOR.
+//
+// The input block is bfloat16 because that is what the dense stack produces, but
+// the sum must not be: adding TA_EVENT (50) values in 8 mantissa bits loses real
+// precision for no speed benefit -- this kernel runs once per 50 tracks and is
+// 0.03% of the event's work. So it widens on load and accumulates in float.
+//
+// The output stays float32 as well. accum.out[0] wires straight to an output
+// PORT (not a shared_buffer), so its type is set here, and keeping it float32
+// means the event mean, the host path, io_extra.json and the notebook are all
+// identical between the fp32 and bf16 builds -- only the arithmetic upstream
+// differs, which is exactly the variable under test.
+void track_accum(adf::input_buffer<bfloat16>& __restrict in,
+                 adf::output_buffer<float>& __restrict out)
+{
+    constexpr int VEC  = 8;                      // 256-bit vector of float (the accumulator)
+    static_assert(TA_FEAT % VEC == 0, "TA_FEAT must be a multiple of the vector width");
+    static_assert(TA_OUT_W % VEC == 0, "output width must be vector-aligned");
+
+    // Event state. Both must reset together: a stale count with a fresh sum (or
+    // vice versa) silently corrupts the following event.
+    alignas(32) static float sum[TA_FEAT] = {};
+    static int seen = 0;
+
+    const bfloat16* __restrict pi = in.data();
+    float* __restrict po = out.data();
+
+    // --- accumulate, dropping padding slots --------------------------------
+    for (int t = 0; t < TA_TRACKS; ++t) {
+        if (seen >= TA_EVENT) break;             // remaining slots are padding
+        const bfloat16* row = pi + t * TA_FEAT;
+        for (int f = 0; f < TA_FEAT; f += VEC) {
+            // WIDEN bf16 -> float, then accumulate in float.
+            //
+            // Not vector::cast_to<float>(): that is a bit REINTERPRET, so a
+            // vector<bfloat16,8> (128 bits) becomes a vector<float,4> and the add
+            // fails on the size mismatch. accum::from_vector is the value
+            // conversion -- it is the same widening the mmul accumulator does.
+            aie::accum<accfloat, VEC> w;
+            w.from_vector(aie::load_v<VEC>(row + f));
+            aie::store_v(sum + f, aie::add(aie::load_v<VEC>(sum + f),
+                                           w.template to_vector<float>()));
+        }
+        ++seen;
+    }
+
+    // --- not finished: emit zeros -------------------------------------------
+    if (seen < TA_EVENT) {
+        const auto z = aie::zeros<float, VEC>();
+        for (int j = 0; j < TA_OUT_W; j += VEC)
+            aie::store_v(po + j, z);
+        return;
+    }
+
+    // --- event complete: mean, then the 128->27 output dense ----------------
+    // Runs once per 50 tracks: 3,456 MACs against ~13.2M for the event. Tiny in
+    // MACs, but it lands entirely in one iteration and stalls the pipeline, so
+    // the shape of the loop below matters more than the operation count suggests.
+    alignas(32) float avg[TA_FEAT];
+    const auto scale = aie::broadcast<float, VEC>(1.0f / float(TA_EVENT));
+    for (int f = 0; f < TA_FEAT; f += VEC)
+        aie::store_v(avg + f, aie::mul(aie::load_v<VEC>(sum + f), scale).to_vector<float>());
+
+#if TA_OUTPUT_DENSE
+    // One dot product per output: two contiguous vector loads per MAC and no
+    // scalar->vector broadcast. The obvious [in][out] weight layout forces a
+    // broadcast of avg[k] in the inner loop; 512 of those cost ~15 us per event,
+    // more than the entire 14-layer pipeline. Hence output_dense_Wt is [out][in].
+    alignas(32) float y[OUT_DENSE_PAD];
+    for (int j = 0; j < OUT_DENSE_PAD; ++j) {
+        aie::accum<accfloat, VEC> acc;
+        acc.from_vector(aie::zeros<float, VEC>());
+        for (int k = 0; k < OUT_DENSE_IN; k += VEC)
+            acc = aie::mac(acc, aie::load_v<VEC>(avg + k),
+                           aie::load_v<VEC>(&output_dense_Wt[j][k]));
+        y[j] = aie::reduce_add(acc.template to_vector<float>()) + output_dense_B[j];
+    }
+    for (int j = 0; j < OUT_DENSE_PAD; j += VEC)
+        aie::store_v(po + j, aie::load_v<VEC>(y + j));
+#else
+    // Emit the 128-wide mean; the host applies the output dense.
+    for (int f = 0; f < TA_FEAT; f += VEC)
+        aie::store_v(po + f, aie::load_v<VEC>(avg + f));
+#endif
+
+    // --- reset for the next event -------------------------------------------
+    const auto z = aie::zeros<float, VEC>();
+    for (int f = 0; f < TA_FEAT; f += VEC)
+        aie::store_v(sum + f, z);
+    seen = 0;
+}

@@ -8,6 +8,7 @@ on a port is the graph's II; divided by BATCH it is the per-track cost.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -80,7 +81,7 @@ def main():
     # independent cross-check on the II. Derived from parameters.h rather than
     # from the port names -- once the roll kernels moved in-graph there are no
     # s{k}_in ports left to count.
-    params = (HERE / 'src' / 'parameters.h').read_text()
+    params = (HERE / os.environ.get('RTDA_SRC', 'src_fp32') / 'parameters.h').read_text()
     # The negative lookbehind matters: parameters.h also has padded_IN_FEAT,
     # which a bare IN_FEAT pattern matches, double-counting every layer.
     ins = [int(m) for m in re.findall(r'(?<![A-Za-z_])IN_FEAT\s*=\s*(\d+)', params)]

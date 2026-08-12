@@ -53,6 +53,27 @@ extern "C" {
 
 template<typename... Ts> struct type_list {};
 
+// ---------------------------------------------------------------------------
+// Weight arrays -> RTP ports, for either precision.
+//
+// The generated headers store weights in the natural storage type for the build:
+// `float` for fp32, but RAW `uint16_t` BIT PATTERNS for bf16 (there is no
+// portable bfloat16 literal). The RTP port, meanwhile, is always typed
+// L*Cfg::weight_t. Passing the array directly works for fp32 and is REJECTED for
+// bf16 --
+//     ERROR: adf::graph::update parameter type uint16 is inconsistent with
+//            RTP port dut.dut.emb_d0_aie.kk[0].in[1] type bfloat16
+// -- after which no weights arrive and the graph deadlocks. (x86simulator still
+// exits 0 and prints "Simulation completed successfully", so this fails quietly.)
+//
+// Reinterpreting is correct rather than lossy: the uint16 IS the bf16 encoding.
+// For fp32 the cast is a no-op.
+// ---------------------------------------------------------------------------
+template<typename Cfg, typename T>
+static inline const typename Cfg::weight_t* as_weights(const T* p) {
+  return reinterpret_cast<const typename Cfg::weight_t*>(p);
+}
+
 class dut_graph : public graph {
 public:
   // Simulation drives the graph from PLIO text files (data/ifm_c*.txt, y_p*.txt).
@@ -258,6 +279,10 @@ static constexpr int SYS_BATCH   = 8;
 static constexpr int SYS_IN_DIM  = 16;   // padded embed input width
 static constexpr int SYS_TRACKS  = 50;   // real tracks per event
 static constexpr int SYS_OUT_W   = 128;  // graph emits the 128-wide event mean
+// The graph's input element type follows the build (float or bfloat16); the
+// OUTPUT is float in both, because track_accum accumulates and emits in float.
+using sys_in_t  = typename L1Cfg::data_t;
+using sys_out_t = float;
 #endif
 
 // No argc/argv: the ADF frontend rejects them on main(). Paths come from the
@@ -271,7 +296,7 @@ int main() {
       int idx = ch * L1Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts1[idx],
-        weights_emb_d0_aie[ch][col],
+        as_weights<L1Cfg>(weights_emb_d0_aie[ch][col]),
         L1Cfg::IN_FEAT_SLICE * L1Cfg::OUT_FEAT_SLICE
       );
     }
@@ -294,7 +319,7 @@ int main() {
       int idx = ch * L2Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts2[idx],
-        weights_emb_d1_aie[ch][col],
+        as_weights<L2Cfg>(weights_emb_d1_aie[ch][col]),
         L2Cfg::IN_FEAT_SLICE * L2Cfg::OUT_FEAT_SLICE
       );
     }
@@ -317,7 +342,7 @@ int main() {
       int idx = ch * L3Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts3[idx],
-        weights_s0_d0_aie[ch][col],
+        as_weights<L3Cfg>(weights_s0_d0_aie[ch][col]),
         L3Cfg::IN_FEAT_SLICE * L3Cfg::OUT_FEAT_SLICE
       );
     }
@@ -340,7 +365,7 @@ int main() {
       int idx = ch * L4Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts4[idx],
-        weights_s0_d1_aie[ch][col],
+        as_weights<L4Cfg>(weights_s0_d1_aie[ch][col]),
         L4Cfg::IN_FEAT_SLICE * L4Cfg::OUT_FEAT_SLICE
       );
     }
@@ -363,7 +388,7 @@ int main() {
       int idx = ch * L5Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts5[idx],
-        weights_s0_d2_aie[ch][col],
+        as_weights<L5Cfg>(weights_s0_d2_aie[ch][col]),
         L5Cfg::IN_FEAT_SLICE * L5Cfg::OUT_FEAT_SLICE
       );
     }
@@ -386,7 +411,7 @@ int main() {
       int idx = ch * L6Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts6[idx],
-        weights_s0_d3_aie[ch][col],
+        as_weights<L6Cfg>(weights_s0_d3_aie[ch][col]),
         L6Cfg::IN_FEAT_SLICE * L6Cfg::OUT_FEAT_SLICE
       );
     }
@@ -409,7 +434,7 @@ int main() {
       int idx = ch * L7Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts7[idx],
-        weights_s1_d0_aie[ch][col],
+        as_weights<L7Cfg>(weights_s1_d0_aie[ch][col]),
         L7Cfg::IN_FEAT_SLICE * L7Cfg::OUT_FEAT_SLICE
       );
     }
@@ -432,7 +457,7 @@ int main() {
       int idx = ch * L8Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts8[idx],
-        weights_s1_d1_aie[ch][col],
+        as_weights<L8Cfg>(weights_s1_d1_aie[ch][col]),
         L8Cfg::IN_FEAT_SLICE * L8Cfg::OUT_FEAT_SLICE
       );
     }
@@ -455,7 +480,7 @@ int main() {
       int idx = ch * L9Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts9[idx],
-        weights_s1_d2_aie[ch][col],
+        as_weights<L9Cfg>(weights_s1_d2_aie[ch][col]),
         L9Cfg::IN_FEAT_SLICE * L9Cfg::OUT_FEAT_SLICE
       );
     }
@@ -478,7 +503,7 @@ int main() {
       int idx = ch * L10Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts10[idx],
-        weights_s1_d3_aie[ch][col],
+        as_weights<L10Cfg>(weights_s1_d3_aie[ch][col]),
         L10Cfg::IN_FEAT_SLICE * L10Cfg::OUT_FEAT_SLICE
       );
     }
@@ -501,7 +526,7 @@ int main() {
       int idx = ch * L11Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts11[idx],
-        weights_s2_d0_aie[ch][col],
+        as_weights<L11Cfg>(weights_s2_d0_aie[ch][col]),
         L11Cfg::IN_FEAT_SLICE * L11Cfg::OUT_FEAT_SLICE
       );
     }
@@ -524,7 +549,7 @@ int main() {
       int idx = ch * L12Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts12[idx],
-        weights_s2_d1_aie[ch][col],
+        as_weights<L12Cfg>(weights_s2_d1_aie[ch][col]),
         L12Cfg::IN_FEAT_SLICE * L12Cfg::OUT_FEAT_SLICE
       );
     }
@@ -547,7 +572,7 @@ int main() {
       int idx = ch * L13Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts13[idx],
-        weights_s2_d2_aie[ch][col],
+        as_weights<L13Cfg>(weights_s2_d2_aie[ch][col]),
         L13Cfg::IN_FEAT_SLICE * L13Cfg::OUT_FEAT_SLICE
       );
     }
@@ -570,7 +595,7 @@ int main() {
       int idx = ch * L14Cfg::CAS_LENGTH + col;
       dut.update(
         dut.wts14[idx],
-        weights_s2_d3_aie[ch][col],
+        as_weights<L14Cfg>(weights_s2_d3_aie[ch][col]),
         L14Cfg::IN_FEAT_SLICE * L14Cfg::OUT_FEAT_SLICE
       );
     }
@@ -608,12 +633,12 @@ int main() {
     std::fprintf(stderr, "[aie] cannot open %s\n", in_path); dut.end(); return 1;
   }
 
-  const size_t in_bytes  = host_in.size() * sizeof(float);
-  const size_t out_bytes = (size_t)N_ITER * SYS_OUT_W * sizeof(float);
-  float* gin  = static_cast<float*>(adf::GMIO::malloc(in_bytes));
-  float* gout = static_cast<float*>(adf::GMIO::malloc(out_bytes));
+  const size_t in_bytes  = host_in.size() * sizeof(sys_in_t);
+  const size_t out_bytes = (size_t)N_ITER * SYS_OUT_W * sizeof(sys_out_t);
+  sys_in_t*  gin  = static_cast<sys_in_t*>(adf::GMIO::malloc(in_bytes));
+  sys_out_t* gout = static_cast<sys_out_t*>(adf::GMIO::malloc(out_bytes));
   if (!gin || !gout) { std::fprintf(stderr, "[aie] GMIO::malloc failed\n"); dut.end(); return 1; }
-  std::memcpy(gin, host_in.data(), in_bytes);
+  for (size_t i = 0; i < host_in.size(); ++i) gin[i] = sys_in_t(host_in[i]);
 
   dut.gmio_x.gm2aie_nb(gin, in_bytes);
   dut.gmio_track.aie2gm_nb(gout, out_bytes);
@@ -626,7 +651,7 @@ int main() {
   int best = N_ITER - 1;
   for (int i = N_ITER - 1; i >= 0; --i) {
     float m = 0.0f;
-    for (int j = 0; j < SYS_OUT_W; ++j) { float v = gout[(size_t)i*SYS_OUT_W+j]; m = v < 0 ? (-v > m ? -v : m) : (v > m ? v : m); }
+    for (int j = 0; j < SYS_OUT_W; ++j) { float v = float(gout[(size_t)i*SYS_OUT_W+j]); m = v < 0 ? (-v > m ? -v : m) : (v > m ? v : m); }
     if (m > 0.0f) { best = i; break; }
   }
   if (FILE* f = std::fopen(out_path, "w")) {

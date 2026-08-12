@@ -32,13 +32,17 @@ Verified byte-for-byte against aie4ml's own writer before the dependency was cut
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-PLAN = HERE / 'aie_pipeline.json'
+# Per-precision: src_<P>/ and aie_pipeline_<P>.json are generated together and
+# describe the same graph, so they must never be mixed. The Makefile exports
+# RTDA_PIPELINE; the default keeps a bare `python aie_io.py` working.
+PLAN = HERE / os.environ.get('RTDA_PIPELINE', 'aie_pipeline_fp32.json')
 # Ports wired in by hand after generation (see the file's own comment).
 EXTRA = HERE / 'io_extra.json'
 # app.cpp creates every PLIO as plio_128_bits.

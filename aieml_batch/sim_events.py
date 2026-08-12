@@ -30,6 +30,7 @@ sequence, not over tracks.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -60,7 +61,9 @@ def main():
                     help='drop the leading flush event. Exact in simulation (a simulator '
                          'is always cold) and 7 iterations cheaper, but then this no '
                          'longer mirrors what the host does on a board.')
-    ap.add_argument('--tol', type=float, default=1e-4)
+    ap.add_argument('--tol', type=float,
+                    default={'fp32': 1e-4, 'bf16': 5e-2}[os.environ.get('RTDA_PRECISION', 'fp32')],
+                    help='default follows RTDA_PRECISION: 1e-4 fp32, 5e-2 bf16')
     ap.add_argument('--seed', type=int, default=1234)
     ap.add_argument('--out', default=None,
                     help='directory to write the results to: the stimulus, the per-event '
@@ -72,13 +75,15 @@ def main():
     n_ev = a.events
     n_tracks = a.tracks if a.tracks is not None else n_ev * make_golden.TRACKS_PER_EVENT
     n_iter = (n_ev + (1 if flush else 0)) * ITER_PER_EVENT
-    workdir = a.workdir or (f'./Work_x86_ev{n_ev}' if a.sim == 'x86' else f'./Work_ev{n_ev}')
+    pr = os.environ.get('RTDA_PRECISION', 'fp32')
+    workdir = a.workdir or (f'./Work_x86_{pr}_ev{n_ev}' if a.sim == 'x86'
+                            else f'./Work_{pr}_ev{n_ev}')
 
     target = 'x86_events' if a.sim == 'x86' else 'sim_events'
     if not (HERE / workdir).exists():
         raise SystemExit(
             f'{workdir} does not exist. Build it first:\n'
-            f'    make {target} EVENTS={n_ev}')
+            f'    make {target} EVENTS={n_ev} PRECISION={pr}')
 
     # The graph is compiled with N_ITER fixed. Feeding fewer iterations happens to
     # work under x86simulator (it stops when the input runs out) but STALLS
@@ -142,7 +147,7 @@ def main():
     if a.out:
         outdir = Path(a.out) if Path(a.out).is_absolute() else HERE / a.out
         outdir.mkdir(parents=True, exist_ok=True)
-        tag = f'{a.sim}_{n_real_ev}ev_{n_tracks}tr'
+        tag = f'{a.sim}_{pr}_{n_real_ev}ev_{n_tracks}tr'
         for e in range(n_real_ev):
             np.savetxt(outdir / f'sim_mean_128_{tag}_ev{e}.txt', measured[e], fmt='%.9e')
         np.savetxt(outdir / f'sim_input_{tag}.txt', tracks.reshape(-1), fmt='%.9e')
@@ -162,7 +167,7 @@ def main():
         np.savez_compressed(outdir / f'sim_{tag}.npz',
                             measured=measured, golden=means, tracks=tracks,
                             frames=np.asarray(nz), n_events=n_real_ev,
-                            n_tracks=n_tracks, flush=flush, sim=a.sim,
+                            n_tracks=n_tracks, flush=flush, sim=a.sim, precision=pr,
                             slots_per_event=make_golden.SLOTS_PER_EVENT,
                             tracks_per_event=make_golden.TRACKS_PER_EVENT,
                             flush_slots=(make_golden.SLOTS_PER_EVENT if flush else 0),

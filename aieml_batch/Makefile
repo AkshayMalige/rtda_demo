@@ -57,19 +57,37 @@ VCD          ?=
 PROFILE      ?=
 AIESIM_ARGS  ?= $(if $(VCD),--dump-vcd=$(if $(filter 1,$(VCD)),foo,$(VCD)),) $(if $(PROFILE),--profile,)
 
+# ==== PRECISION ====
+# Selects a whole generated source tree. src_<P>/ carries parameters.h, the
+# graph, the kernels and the weights ALREADY EMITTED IN THAT DTYPE, so switching
+# precision switches weights and biases with it -- there is nothing else to keep
+# in step. aie_pipeline_<P>.json is the matching PLIO layout for aie_io.
+#
+#   make x86 PRECISION=fp32          the float32 design (default)
+#   make x86 PRECISION=bf16          the bfloat16 design
+#
+# Every build product is suffixed with the precision, so both can exist at once
+# and switching never triggers a rebuild of the other.
+PRECISION    ?= fp32
+SRC          := src_$(PRECISION)
+PIPELINE     := aie_pipeline_$(PRECISION).json
+
 APP          := app
-LIBADF       := libadf.a
-LIBADF_X86   := libadf_x86.a
-WORK         := Work
-WORK_X86     := Work_x86
+LIBADF       := libadf_$(PRECISION).a
+LIBADF_X86   := libadf_x86_$(PRECISION).a
+WORK         := Work_$(PRECISION)
+WORK_X86     := Work_x86_$(PRECISION)
 
 export BATCH SOLVERS INPUT_DIM ITERS WEIGHTS_DIR
+export RTDA_SRC := $(SRC)
+export RTDA_PIPELINE := $(PIPELINE)
+export RTDA_PRECISION := $(PRECISION)
 export RTDA_AIESIM_ARGS := $(strip $(AIESIM_ARGS))
 export AIE_PLATFORM := $(AIE_PLAT_NAME)
 
-SRCS       := $(APP).cpp aie.cfg $(shell find src -type f \( -name '*.h' -o -name '*.cpp' \) 2>/dev/null)
-KERNEL_INC := $(shell test -d src/kernels && find src/kernels -type d -printf '--include=%p ')
-AIE_INCLUDES = --include=src $(KERNEL_INC) $(shell test -d src/weights && echo --include=src/weights)
+SRCS       := $(APP).cpp aie.cfg $(shell find $(SRC) -type f \( -name '*.h' -o -name '*.cpp' \) 2>/dev/null)
+KERNEL_INC := $(shell test -d $(SRC)/kernels && find $(SRC)/kernels -type d -printf '--include=%p ')
+AIE_INCLUDES = --include=$(SRC) $(KERNEL_INC) $(shell test -d $(SRC)/weights && echo --include=$(SRC)/weights)
 
 VPP = source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; v++ --compile --config aie.cfg --mode aie
 
@@ -84,10 +102,10 @@ graph: $(LIBADF)
 
 $(LIBADF): $(SRCS)
 	@$(VPP) --target=hw $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
-	      --aie.workdir=$(WORK) --aie.output-archive=$(LIBADF) 2>&1 | tee log
-	@if grep -q "Compilation Failed" log; then \
+	      --aie.workdir=$(WORK) --aie.output-archive=$(LIBADF) 2>&1 | tee log.$(PRECISION)
+	@if grep -q "Compilation Failed" log.$(PRECISION); then \
 	   echo; echo "*** BUILD FAILED ***"; \
-	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; \
+	   grep -E "^ERROR: \[aiecompiler" log.$(PRECISION) | sort -u | head -5; \
 	   rm -f $(LIBADF); exit 1; fi
 
 # System build: GMIO instead of PLIO, and main() becomes the host-side program
@@ -99,18 +117,18 @@ system_graph:
 	  v++ --compile --config aie.cfg --mode aie --target=hw \
 	      $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
 	      --aie.Xpreproc="-DSYSTEM_BUILD" \
-	      --aie.workdir=$(WORK) --aie.output-archive=$(LIBADF) 2>&1 | tee log
-	@if grep -q "Compilation Failed" log; then \
+	      --aie.workdir=$(WORK) --aie.output-archive=$(LIBADF) 2>&1 | tee log.$(PRECISION)
+	@if grep -q "Compilation Failed" log.$(PRECISION); then \
 	   echo; echo "*** SYSTEM BUILD FAILED ***"; \
-	   grep -E "^ERROR: \[aiecompiler" log | sort -u | head -5; \
+	   grep -E "^ERROR: \[aiecompiler" log.$(PRECISION) | sort -u | head -5; \
 	   rm -f $(LIBADF); exit 1; fi
 
 x86com: $(LIBADF_X86)
 
 $(LIBADF_X86): $(SRCS)
 	@$(VPP) --target=x86sim $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
-	      --aie.workdir=$(WORK_X86) --aie.output-archive=$(LIBADF_X86) 2>&1 | tee log
-	@if grep -q "Compilation Failed" log; then \
+	      --aie.workdir=$(WORK_X86) --aie.output-archive=$(LIBADF_X86) 2>&1 | tee log.x86_$(PRECISION)
+	@if grep -q "Compilation Failed" log.x86_$(PRECISION); then \
 	   echo; echo "*** X86 BUILD FAILED ***"; rm -f $(LIBADF_X86); exit 1; fi
 
 # --- simulate + check ---------------------------------------------------
@@ -174,8 +192,8 @@ x86_events:
 	@echo ">>> x86 build: $(EVENTS) event(s) + 1 flush = $(EV_ITERS) iterations"
 	@$(VPP) --target=x86sim $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
 	      --aie.Xpreproc="-DN_ITER_OVERRIDE=$(EV_ITERS)" \
-	      --aie.workdir=Work_x86_ev$(EVENTS) \
-	      --aie.output-archive=libadf_x86_ev$(EVENTS).a 2>&1 | tee log.x86_ev$(EVENTS)
+	      --aie.workdir=Work_x86_$(PRECISION)_ev$(EVENTS) \
+	      --aie.output-archive=libadf_x86_$(PRECISION)_ev$(EVENTS).a 2>&1 | tee log.x86_ev$(EVENTS)
 	@if grep -q "Compilation Failed" log.x86_ev$(EVENTS); then \
 	   echo; echo "*** BUILD FAILED ***"; \
 	   grep -E "^ERROR: \[aiecompiler" log.x86_ev$(EVENTS) | sort -u | head -5; exit 1; fi
@@ -188,8 +206,8 @@ sim_events:
 	@echo ">>> aie build: $(EVENTS) event(s) + 1 flush = $(EV_ITERS) iterations"
 	@$(VPP) --target=hw $(AIE_INCLUDES) --platform=$(AIE_PLAT) $(APP).cpp \
 	      --aie.Xpreproc="-DN_ITER_OVERRIDE=$(EV_ITERS)" \
-	      --aie.workdir=Work_ev$(EVENTS) \
-	      --aie.output-archive=libadf_ev$(EVENTS).a 2>&1 | tee log.aie_ev$(EVENTS)
+	      --aie.workdir=Work_$(PRECISION)_ev$(EVENTS) \
+	      --aie.output-archive=libadf_$(PRECISION)_ev$(EVENTS).a 2>&1 | tee log.aie_ev$(EVENTS)
 	@if grep -q "Compilation Failed" log.aie_ev$(EVENTS); then \
 	   echo; echo "*** BUILD FAILED ***"; \
 	   grep -E "^ERROR: \[aiecompiler" log.aie_ev$(EVENTS) | sort -u | head -5; exit 1; fi
@@ -226,12 +244,13 @@ verify_io:
 
 # Dump the 92 RTP payloads (~1 MB) for the XRT host. Port names are read from
 # Work/ps/c_rts/aie_control_config.json, so `make system_graph` must run first.
-rtp: sysdata/rtp_manifest.txt
+SYSDATA := sysdata_$(PRECISION)
+rtp: $(SYSDATA)/rtp_manifest.txt
 
-sysdata/rtp_manifest.txt: $(wildcard src/weights/*.h) extract_rtp.py
-	@test -f Work/ps/c_rts/aie_control_config.json || { \
-	   echo "ERROR: Work/ps/c_rts/aie_control_config.json missing - run 'make system_graph' first"; exit 1; }
-	@$(PYTHON) extract_rtp.py
+$(SYSDATA)/rtp_manifest.txt: $(wildcard $(SRC)/weights/*.h) extract_rtp.py
+	@test -f $(WORK)/ps/c_rts/aie_control_config.json || { \
+	   echo "ERROR: $(WORK)/ps/c_rts/aie_control_config.json missing - run 'make system_graph' first"; exit 1; }
+	@RTDA_PRECISION=$(PRECISION) $(PYTHON) extract_rtp.py --work $(WORK) --src $(SRC) --out $(SYSDATA)
 
 # --- utilities ----------------------------------------------------------
 vars:
@@ -247,8 +266,7 @@ vars:
 	@echo "N_ITER in src/parameters.h = $(shell grep -h '^#define N_ITER' src/parameters.h 2>/dev/null | awk '{print $$3}')"
 
 clean:
-	rm -rf $(WORK) $(WORK_X86) $(LIBADF) $(LIBADF_X86) log log.* .Xil .crashReporter
-	rm -rf Work_ev* Work_x86_ev* libadf_ev*.a libadf_x86_ev*.a
+	rm -rf Work_* libadf*.a log log.* .Xil .crashReporter
 	rm -rf aiesimulator_output* x86simulator_output* aiesimulator*.log x86simulator*.log
 	rm -rf Map_Report.csv sol.db diag_report.log *.vcd trdata.aiesim pl_sample_count*
 	rm -rf qemu_rp.log temp .AIE_SIM_CMD_LINE_OPTIONS .io_check_* data

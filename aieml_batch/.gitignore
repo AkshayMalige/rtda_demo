@@ -33,3 +33,4 @@ notebooks/out/
 log.*
 results/hw/
 __pycache__/
+sysdata_*/

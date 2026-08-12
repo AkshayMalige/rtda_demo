@@ -42,10 +42,11 @@ def n_iter() -> int:
     env = os.environ.get('RTDA_N_ITER')
     if env:
         return int(env)
-    for line in (HERE / 'src' / 'parameters.h').read_text().splitlines():
+    src = os.environ.get('RTDA_SRC', 'src_fp32')
+    for line in (HERE / src / 'parameters.h').read_text().splitlines():
         if line.startswith('#define N_ITER'):
             return int(line.split()[-1])
-    raise RuntimeError('N_ITER not found in src/parameters.h')
+    raise RuntimeError(f'N_ITER not found in {src}/parameters.h')
 
 
 def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
@@ -55,7 +56,8 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     own directory (Work_x86_ev<N>) so the two never overwrite each other.
     """
     if workdir is None:
-        workdir = './Work' if sim == 'aie' else './Work_x86'
+        pr = os.environ.get('RTDA_PRECISION', 'fp32')
+        workdir = f'./Work_{pr}' if sim == 'aie' else f'./Work_x86_{pr}'
     exe = 'aiesimulator' if sim == 'aie' else 'x86simulator'
     # The two simulators announce success differently, and both trail the message
     # with unrelated chatter ("IP-INFO: deleting packet ip"), so match on the
@@ -91,6 +93,20 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     rc = proc.wait()
 
     out = ''.join(lines)
+
+    # x86simulator prints "Simulation completed successfully returning zero" and
+    # exits 0 EVEN WHEN IT DEADLOCKS -- it diagnoses the deadlock a few lines
+    # earlier and then reports success anyway. Trusting the marker alone let a
+    # bf16 run with mismatched RTP types look like a pass while every output file
+    # was empty. Treat a diagnosed deadlock or an ERROR line as failure.
+    fatal = [ln for ln in out.splitlines()
+             if 'Detected deadlock' in ln or ln.startswith('ERROR:')]
+    if fatal:
+        raise RuntimeError(
+            f'{exe} reported success but emitted {len(fatal)} error/deadlock line(s):\n'
+            + '\n'.join(fatal[:8])
+            + ('\n  ...' if len(fatal) > 8 else ''))
+
     if rc != 0 or marker not in out:
         why = f'rc={rc}' if rc else f'{marker!r} not found in output'
         interesting = [ln for ln in out.splitlines()

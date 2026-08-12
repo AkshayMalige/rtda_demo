@@ -96,13 +96,13 @@ std::vector<float> read_text(const std::string& path, std::size_t expect = 0)
     return v;
 }
 
-std::vector<float> read_bin(const std::string& path, std::size_t n_floats)
+std::vector<char> read_bin(const std::string& path, std::size_t n_bytes)
 {
     std::ifstream f(path, std::ios::binary);
     if (!f) throw std::runtime_error("cannot open " + path);
-    std::vector<float> v(n_floats);
-    f.read(reinterpret_cast<char*>(v.data()), static_cast<std::streamsize>(n_floats * sizeof(float)));
-    if (static_cast<std::size_t>(f.gcount()) != n_floats * sizeof(float))
+    std::vector<char> v(n_bytes);
+    f.read(v.data(), static_cast<std::streamsize>(n_bytes));
+    if (static_cast<std::size_t>(f.gcount()) != n_bytes)
         throw std::runtime_error(path + ": short read");
     return v;
 }
@@ -113,30 +113,71 @@ std::vector<float> read_bin(const std::string& path, std::size_t n_floats)
 template<typename T, std::size_t N>
 struct alignas(64) aligned_array { T elems[N]; };
 
-// The graph has exactly four RTP payload sizes (checked against the metadata in
-// aieml_batch/extract_rtp.py): 64, 128, 2048 and 4096 floats.
-template<std::size_t N>
-void update_n(xrt::graph& g, const std::string& port, const std::vector<float>& v)
+// The graph has exactly four RTP element counts (checked against the metadata in
+// aieml_batch/extract_rtp.py): 64, 128, 2048 and 4096.
+//
+// The ELEMENT TYPE is per port, not per build: a bf16 design has uint16 weights
+// (raw bf16 bit patterns) and float32 biases side by side, because bias_t stays
+// float in both precisions. So the type comes from the manifest, and one binary
+// serves fp32 and bf16 without a recompile.
+template<typename T, std::size_t N>
+void update_n(xrt::graph& g, const std::string& port, const std::vector<char>& raw)
 {
-    aligned_array<float, N> a{};
-    std::memcpy(a.elems, v.data(), N * sizeof(float));
+    aligned_array<T, N> a{};
+    std::memcpy(a.elems, raw.data(), N * sizeof(T));
     g.update(port, a);
 }
 
-void update_rtp(xrt::graph& g, const std::string& port, const std::vector<float>& v)
+template<typename T>
+void update_typed(xrt::graph& g, const std::string& port, std::size_t n,
+                  const std::vector<char>& raw)
 {
-    switch (v.size()) {
-        case   64: update_n<  64>(g, port, v); break;
-        case  128: update_n< 128>(g, port, v); break;
-        case 2048: update_n<2048>(g, port, v); break;
-        case 4096: update_n<4096>(g, port, v); break;
+    switch (n) {
+        case   64: update_n<T,   64>(g, port, raw); break;
+        case  128: update_n<T,  128>(g, port, raw); break;
+        case 2048: update_n<T, 2048>(g, port, raw); break;
+        case 4096: update_n<T, 4096>(g, port, raw); break;
         default:
-            throw std::runtime_error(port + ": unexpected RTP size " +
-                                     std::to_string(v.size()) + " floats; add a case here");
+            throw std::runtime_error(port + ": unexpected RTP length " +
+                                     std::to_string(n) + " elements; add a case here");
     }
 }
 
-struct RtpEntry { std::string port; std::size_t n; std::string file; };
+void update_rtp(xrt::graph& g, const std::string& port, const std::string& dtype,
+                std::size_t n, const std::vector<char>& raw)
+{
+    if (dtype == "u16")      update_typed<std::uint16_t>(g, port, n, raw);
+    else if (dtype == "f32") update_typed<float>(g, port, n, raw);
+    else throw std::runtime_error(port + ": unknown RTP dtype '" + dtype + "'");
+}
+
+// float32 -> bfloat16, round half to even. Must match aie4ml's weight conversion
+// (op_impls/families/matmul/common.py): truncation is 2x the error and biases
+// every value toward zero, which does not cancel across a network.
+std::uint16_t f32_to_bf16(float f)
+{
+    std::uint32_t u;
+    std::memcpy(&u, &f, sizeof u);
+    return static_cast<std::uint16_t>((u + 0x7FFFu + ((u >> 16) & 1u)) >> 16);
+}
+
+// sysdata/config.txt, written by extract_rtp.py. Tells the host what the graph
+// expects without baking the precision into the binary.
+std::string read_config(const std::string& path, const std::string& key,
+                        const std::string& fallback)
+{
+    std::ifstream f(path);
+    if (!f) return fallback;
+    std::string line;
+    while (std::getline(f, line)) {
+        const auto eq = line.find('=');
+        if (eq != std::string::npos && line.substr(0, eq) == key)
+            return line.substr(eq + 1);
+    }
+    return fallback;
+}
+
+struct RtpEntry { std::string port; std::size_t n; std::string dtype; std::string file; };
 
 std::vector<RtpEntry> read_manifest(const std::string& path)
 {
@@ -148,7 +189,11 @@ std::vector<RtpEntry> read_manifest(const std::string& path)
         if (line.empty() || line[0] == '#') continue;
         std::istringstream is(line);
         RtpEntry e;
-        if (is >> e.port >> e.n >> e.file) out.push_back(e);
+        std::string a, b;
+        if (!(is >> e.port >> e.n >> a)) continue;
+        if (is >> b) { e.dtype = a; e.file = b; }   // new 4-column form
+        else         { e.dtype = "f32"; e.file = a; }  // legacy 3-column, fp32 only
+        out.push_back(e);
     }
     return out;
 }
@@ -194,14 +239,14 @@ int main(int argc, char** argv)
         const auto manifest = read_manifest(join(sysdata, "rtp_manifest.txt"));
         if (manifest.empty()) throw std::runtime_error("empty RTP manifest");
         std::cout << "[host] loading " << manifest.size() << " RTP ports..." << std::endl;
-        std::size_t rtp_floats = 0;
+        std::size_t rtp_bytes = 0;
         for (const auto& e : manifest) {
-            auto payload = read_bin(join(sysdata, e.file), e.n);
-            update_rtp(graph, e.port, payload);
-            rtp_floats += e.n;
+            const std::size_t esz = (e.dtype == "u16") ? 2u : 4u;
+            auto payload = read_bin(join(sysdata, e.file), e.n * esz);
+            update_rtp(graph, e.port, e.dtype, e.n, payload);
+            rtp_bytes += e.n * esz;
         }
         const auto t_rtp = clk::now();
-        const std::size_t rtp_bytes = rtp_floats * sizeof(float);
         std::cout << "[host] RTP loaded: " << rtp_bytes / 1024 << " KB" << std::endl;
 
         // ---- input: 50 real tracks, zero-padded to N_ITER*BATCH slots -------
@@ -250,9 +295,18 @@ int main(int argc, char** argv)
         std::cout << "[host] input: " << file_tracks << " tracks -> " << n_events
                   << " event(s), " << n_iter << " iterations" << std::endl;
 
+        // The graph's input is float32 or bfloat16 depending on how it was built;
+        // the OUTPUT is float32 either way (track_accum accumulates and emits in
+        // float -- see aieml_batch/src_*/kernels/track_accum).
+        const std::string in_dtype =
+            read_config(join(sysdata, "config.txt"), "input_dtype", "float32");
+        const bool in_bf16 = (in_dtype == "bfloat16");
+        const std::size_t in_esz = in_bf16 ? 2u : 4u;
+        std::cout << "[host] graph input dtype: " << in_dtype << std::endl;
+
         const std::size_t slots    = static_cast<std::size_t>(n_iter) * BATCH;
         const std::size_t in_elems = slots * IN_DIM;
-        const std::size_t in_bytes = in_elems * sizeof(float);
+        const std::size_t in_bytes = in_elems * in_esz;
         // Padding slots are zeros here, but note they are NOT ignored downstream
         // by virtue of being zero: every dense layer has a bias, so a zero track
         // still produces a sizeable activation. The AIE accumulator drops them by
@@ -271,7 +325,12 @@ int main(int argc, char** argv)
 
         auto in_bo  = xrt::aie::bo(device, in_bytes,  xrt::bo::flags::normal, 0);
         auto out_bo = xrt::aie::bo(device, out_bytes, xrt::bo::flags::normal, 0);
-        std::memcpy(in_bo.map<float*>(), host_in.data(), in_bytes);
+        if (in_bf16) {
+            auto* dst = in_bo.map<std::uint16_t*>();
+            for (std::size_t i = 0; i < in_elems; ++i) dst[i] = f32_to_bf16(host_in[i]);
+        } else {
+            std::memcpy(in_bo.map<float*>(), host_in.data(), in_bytes);
+        }
 
         std::cout << "[host] running graph: " << n_iter << " iterations x "
                   << BATCH << " tracks (" << file_tracks << " real + "

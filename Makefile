@@ -72,7 +72,14 @@ AIE_WORK_DIR_NAME ?= Work
 # The two designs differ in where the archive lands: aieml/ emits it INSIDE the
 # workdir, aieml_batch/ at the project root (Work/ is only the build scratch).
 ifeq ($(AIE_DIR),aieml_batch)
-  AIE_LIB := $(AIE_DIR)/libadf.a
+  # Precision-suffixed, matching aieml_batch/Makefile's LIBADF. A bare libadf.a
+  # here silently linked a STALE archive from an earlier build: the xclbin then
+  # carried the fp32 graph while sysdata carried bf16 weights, and the first
+  # symptom was on the board --
+  #   adf::graph::update parameter size 4096 bytes is inconsistent with
+  #   RTP port dut.dut.emb_d0_aie.kk[0].in[1] size 8192 bytes
+  # 8192 = 2048 x 4 (fp32 port), 4096 = 2048 x 2 (bf16 payload).
+  AIE_LIB := $(AIE_DIR)/libadf_$(PRECISION).a
 else
   AIE_LIB := $(AIE_DIR)/$(AIE_WORK_DIR_NAME)/libadf.a
 endif
@@ -158,7 +165,7 @@ ifeq ($(AIE_DIR),aieml_batch)
 	@echo ">>> aieml_batch system graph on the SYSTEM toolchain, not its own default."
 	@echo "    The rest of the flow (platform, rootfs, sysroot, XRT) is 2024.2, so the"
 	@echo "    graph must be too -- a 2025.2 libadf.a will not link against a 2024.2 XSA."
-	$(MAKE) -C aieml_batch system_graph WORK=$(AIE_WORK_DIR_NAME) \
+	$(MAKE) -C aieml_batch system_graph WORK=$(AIE_WORK_DIR_NAME) PRECISION=$(PRECISION) \
 	    AIE_VITIS=$(XILINX_VITIS) AIE_PLAT="$(PLATFORM)"
 else
 	$(MAKE) -C aieml graph TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
@@ -182,7 +189,7 @@ $(PL_XOS):
 host:
 ifeq ($(AIE_DIR),aieml_batch)
 	$(MAKE) -C host_batch EMU_PS=$(EMU_PS)
-	$(MAKE) -C aieml_batch rtp   # extract the 92 RTP payloads for the host
+	$(MAKE) -C aieml_batch rtp PRECISION=$(PRECISION)   # 92 RTP payloads + config.txt
 else
 	$(MAKE) -C host EMU_PS=QEMU PRECISION=$(PRECISION)
 endif
@@ -211,7 +218,7 @@ sd_stage:
 ifeq ($(AIE_DIR),aieml_batch)
 	@rm -rf $(SD_STAGE) && mkdir -p $(SD_STAGE)
 	@cp -r data_fp32 $(SD_STAGE)/
-	@cp -r aieml_batch/sysdata $(SD_STAGE)/
+	@cp -r aieml_batch/sysdata_$(PRECISION) $(SD_STAGE)/sysdata
 	@cp -r testdata $(SD_STAGE)/   # multi-event inputs + goldens; see testdata/README.md
 	@echo "SD staging ready: $(SD_STAGE) (data_fp32 + sysdata)"
 endif
