@@ -165,7 +165,12 @@ ifeq ($(AIE_DIR),aieml_batch)
 	@echo ">>> aieml_batch system graph on the SYSTEM toolchain, not its own default."
 	@echo "    The rest of the flow (platform, rootfs, sysroot, XRT) is 2024.2, so the"
 	@echo "    graph must be too -- a 2025.2 libadf.a will not link against a 2024.2 XSA."
-	$(MAKE) -C aieml_batch system_graph WORK=$(AIE_WORK_DIR_NAME) PRECISION=$(PRECISION) \
+	# Do NOT pass WORK here. aieml_batch derives it as Work_$(PRECISION); forcing the
+	# shared AIE_WORK_DIR_NAME built the graph into Work/ while `make rtp` (below)
+	# looked in Work_$(PRECISION) -- hence
+	#   ERROR: Work_bf16/ps/c_rts/aie_control_config.json missing
+	# and it also made the two precisions overwrite each other's system build.
+	$(MAKE) -C aieml_batch system_graph PRECISION=$(PRECISION) \
 	    AIE_VITIS=$(XILINX_VITIS) AIE_PLAT="$(PLATFORM)"
 else
 	$(MAKE) -C aieml graph TARGET=hw PRECISION=$(PRECISION) PLATFORM=$(PLATFORM) WORK_DIR=$(AIE_WORK_DIR_NAME)
