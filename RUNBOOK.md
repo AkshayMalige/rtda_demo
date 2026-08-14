@@ -24,6 +24,100 @@ Four rules. Breaking any of them is what has gone wrong before:
 
 ---
 
+# Everything before the notebooks, in order
+
+The full sequence. **Steps 1-4 need no board and no Vitis licence beyond the
+simulators** and give you every accuracy number; 5-8 add the hardware rows.
+Each line says what it writes, so you can stop anywhere and the notebooks will
+simply omit what is missing.
+
+**The order of 2/3 before 5/6 is not cosmetic.** `make system` rebuilds
+`Work_<P>/` as the GMIO system graph, which has no PLIO debug taps, so the
+simulation targets cannot run afterwards until the graph is rebuilt. If you do
+need to go back, re-run the `fastsim`/`exactsim` line -- it rebuilds its own
+archive -- and then `make system` again before flashing.
+
+```bash
+cd $REPO && source set_envs.sh          # every new shell
+
+# ---- 1. reference data -------------------------------------- ~2 min -------
+make golden TRACKS=50000                # -> testdata/embed_input_50000.txt
+make selftest                           #    + golden_50000.{npz,txt}
+
+# ---- 2. AIE fp32, simulation -------------------------------- ~40 min ------
+make fastsim  FLOW=aie_batch PRECISION=fp32 EVENTS=5   # -> results/aie_fp32/sim/sim_x86_*.npz
+make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # -> results/aie_fp32/sim/sim_aie_*.npz
+make -C aie_batch graph      PRECISION=fp32            # the II number, for the
+make -C aie_batch crosscheck PRECISION=fp32            #   performance table --
+make -C aie_batch report     PRECISION=fp32            #   PRINTED, not saved
+
+# ---- 3. AIE bf16, simulation -------------------------------- ~35 min ------
+make fastsim  FLOW=aie_batch PRECISION=bf16 EVENTS=5   # -> results/aie_bf16/sim/
+make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5
+make -C aie_batch graph      PRECISION=bf16
+make -C aie_batch crosscheck PRECISION=bf16
+make -C aie_batch report     PRECISION=bf16
+
+# ---- 4. PL ap_fixed ----------------------------------------- ~5 min -------
+make -C pl_fixed sweep EVENTS=20        # -> results/pl_fixed/sweep.npz
+make fastsim FLOW=pl_fixed EVENTS=1000  # -> results/pl_fixed/sim/   (50,000 tracks)
+make -C pl_fixed csim EVENTS=3          #    gate: must be 0.000e+00 vs the above
+
+#  >>> THE NOTEBOOKS ALREADY WORK HERE. Everything below adds hardware. <<<
+
+# ---- 5. AIE fp32 on the board ------------------------------- ~1 h + board -
+make system FLOW=aie_batch PRECISION=fp32 TARGET=hw
+cat aie_batch/sd_stage/fp32/sysdata/config.txt         # MUST say precision=fp32
+#   flash aie_batch/package/fp32_hw/sd_card.img, boot, then ON THE BOARD:
+#     RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt \
+#     RTDA_GOLDEN=sd_batch/testdata/golden_50000.txt ./host_batch.exe
+make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw
+
+# ---- 6. AIE bf16 on the board ------------------------------- ~1 h + board -
+make system FLOW=aie_batch PRECISION=bf16 TARGET=hw
+cat aie_batch/sd_stage/bf16/sysdata/config.txt         # MUST say precision=bf16
+#   flash, boot, then ON THE BOARD (no RTDA_GOLDEN for bf16 -- see below):
+#     RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt ./host_batch.exe
+make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=bf16 TARGET=hw
+
+# ---- 7. PL on the board ------------------------------------- ~1.5 h -------
+make system FLOW=pl_fixed TARGET=hw
+#   flash pl_fixed/package/ap16_3_hw/sd_card.img, boot, then ON THE BOARD:
+#     RTDA_INPUT=embed_input_50000.txt RTDA_WARMUP=3 ./host_split.exe system.xclbin
+make collect FROM=/mnt/usb FLOW=pl_fixed TARGET=hw
+
+# ---- 8. optional: hw_emu on QEMU, 5 events ------------------- ~1 h each ----
+make run FLOW=aie_batch PRECISION=fp32 TARGET=hw_emu
+make run FLOW=pl_fixed  TARGET=hw_emu EVENTS=5
+make collect FROM=<wherever the host ran> FLOW=... TARGET=hw_emu
+
+# ---- check, then run the notebooks -----------------------------------------
+make results                            # every run on disk, with its warm-up
+jupyter lab analysis/rtda_reference.ipynb     # MUST be first -- writes the ONNX golden
+jupyter lab analysis/rtda_compare.ipynb
+```
+
+## What each step unlocks in the notebooks
+
+| step | without it |
+|---|---|
+| 1 golden | nothing works -- both notebooks need the stimulus |
+| 2 fp32 sim | no fp32 rows, and no per-track "without warm-up" column |
+| 3 bf16 sim | no bf16 rows |
+| 4 PL | no `pl` series, no precision-sweep data |
+| 5-7 board | the `hw` rows are omitted; §6/§7 of the reference notebook skip |
+| 5 or 6 `make system` | §1 **"link 2" SKIPS** -- it needs `aie_batch/sysdata_<P>/`, which only a system build produces |
+
+`make -C aie_batch report` is informational: the II values it prints are
+carried in `rtda_compare.ipynb` as the constant `II_NS`, so re-run it if the
+graph changes and update that cell.
+
+**Never `RTDA_GOLDEN=` on a bf16 board run.** That check is hard-coded to 1e-4
+and bf16 lands near 5e-4, so it reports a FAIL that is only the tolerance.
+
+
+---
+
 # PHASE 0 — clean
 
 ```bash
