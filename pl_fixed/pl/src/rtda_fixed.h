@@ -33,7 +33,7 @@
 //      generated <32,18> "threw away the low bits of every multiply"; the
 //      measurement says it did not. `make sweep` prints this table.
 //      Corollary: AP_SAT on the accumulator is DEAD LOGIC in the innermost
-//      loop. See the TODO at the bottom of this file.
+//      loop, so it does not have it. See the note at the bottom of this file.
 //
 //  AP_RND_CONV + AP_SAT on the ACTIVATIONS, not the ap_fixed defaults
 //  (AP_TRN + AP_WRP). Truncation costs half an LSB of *bias* -- not noise,
@@ -56,7 +56,9 @@
 //  sharply. alpha and rounding have to move together; only then do the
 //  integer-bit choices pay. Do not "simplify" one of these back out.
 //
-//  For scale, same metric, same stimulus:  AIE bf16 6.0e-04,  AIE fp32 7.5e-07.
+//  All of the above is 20 events. The numbers move with the event count --
+//  they are a max -- so compare only at equal counts; `make fastsim` and
+//  ../analysis/rtda_compare.ipynb both say which count they used.
 // ===========================================================================
 
 #include "ap_fixed.h"
