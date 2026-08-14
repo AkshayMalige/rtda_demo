@@ -48,6 +48,40 @@ def main():
     if not data_dir.exists():
         raise SystemExit('No aiesimulator_output/ -- run `make sim` first.')
 
+    # WHAT AM I ACTUALLY MEASURING?
+    #
+    # aiesimulator_output/ is NOT precision-suffixed the way Work_<P>/ and
+    # libadf_<P>.a are -- every precision and every event count writes into the
+    # same directory. So this script reads whatever ran last, and used to print
+    # it under whatever PRECISION= you happened to pass, with no complaint:
+    # `make report PRECISION=fp32` on a bf16 directory reported the bf16 II as
+    # fp32. run_sim.py now leaves a stamp; refuse rather than mislabel.
+    stamp = {}
+    sf = HERE / 'aiesimulator_output' / 'run_stamp.txt'
+    if sf.exists():
+        for line in sf.read_text().splitlines():
+            if '=' in line:
+                k, v = line.split('=', 1)
+                stamp[k.strip()] = v.strip()
+
+    want = os.environ.get('RTDA_PRECISION')
+    if stamp:
+        print(f"  measuring      : the {stamp.get('sim','?')} run of "
+              f"{stamp.get('precision','?')}, {stamp.get('iterations','?')} iterations, "
+              f"{stamp.get('when','?')}")
+        if want and stamp.get('precision') and stamp['precision'] != want:
+            raise SystemExit(
+                f"\n  REFUSING: you asked for PRECISION={want} but "
+                f"aiesimulator_output/ was produced by a {stamp['precision']} run.\n"
+                f"  These share one output directory. Re-run the simulation for "
+                f"{want} first:\n"
+                f"      make crosscheck PRECISION={want}      # 1 event, the II the docs quote\n"
+                f"      make exactsim   PRECISION={want}      # or a multi-event run\n")
+    else:
+        print('  measuring      : UNKNOWN run -- no aiesimulator_output/run_stamp.txt.')
+        print('                   Produced before stamping existed; re-run the '
+              'simulation to be sure what this is.')
+
     ports = aie_io.load_ports()
     per_port, all_iv = {}, []
     for tensor, plist in ports['outputs'].items():

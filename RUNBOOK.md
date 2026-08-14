@@ -47,15 +47,12 @@ make selftest                           #    + golden_50000.{npz,txt}
 # ---- 2. AIE fp32, simulation -------------------------------- ~40 min ------
 make fastsim  FLOW=aie_batch PRECISION=fp32 EVENTS=5   # -> results/aie_fp32/sim/sim_x86_*.npz
 make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # -> results/aie_fp32/sim/sim_aie_*.npz
-make -C aie_batch graph      PRECISION=fp32            # the II number, for the
-make -C aie_batch crosscheck PRECISION=fp32            #   performance table --
-make -C aie_batch report     PRECISION=fp32            #   PRINTED, not saved
+make -C aie_batch report     PRECISION=fp32            # II, from the run above.
+                                                       #   PRINTED, not saved.
 
 # ---- 3. AIE bf16, simulation -------------------------------- ~35 min ------
 make fastsim  FLOW=aie_batch PRECISION=bf16 EVENTS=5   # -> results/aie_bf16/sim/
 make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5
-make -C aie_batch graph      PRECISION=bf16
-make -C aie_batch crosscheck PRECISION=bf16
 make -C aie_batch report     PRECISION=bf16
 
 # ---- 4. PL ap_fixed ----------------------------------------- ~5 min -------
@@ -176,10 +173,41 @@ The timing number:
 cd aie_batch
 make graph PRECISION=fp32 && make crosscheck PRECISION=fp32 && make report PRECISION=fp32
 ```
-**~12 min.** Prints **II ≈ 4161 ns, 582.5 ns/track, ~1016 GOP/s**.
+**seconds** — it reads the output `exactsim` already produced.
 
-> Write those down. They are not saved to a file, and
+> Write the numbers down. They are not saved to a file, and
 > `analysis/rtda_compare.ipynb` carries them as the constant `II_NS`.
+
+**Which II do you want?** `report` measures whatever aiesimulator run is in
+`aiesimulator_output/`, and the answer depends on the run:
+
+| after | measures | fp32 | bf16 |
+|---|---|---|---|
+| `make exactsim EVENTS=5` | 42 iterations, 6 event tails | — | 1147 ns |
+| `make -C aie_batch crosscheck` | 7 iterations, 1 event | **4161 ns** | **1033 ns** |
+
+The table elsewhere in this runbook quotes the **1-event** numbers, so to
+reproduce those exactly:
+
+```bash
+make -C aie_batch crosscheck PRECISION=<P>   # rebuilds the 1-event graph and reruns
+make -C aie_batch report     PRECISION=<P>
+```
+
+`crosscheck` depends on `graph`, so you never need to run `graph` yourself.
+
+**`aiesimulator_output/` is shared by every precision and every event count** —
+unlike `Work_<P>/` and `libadf_<P>.a`, it is not suffixed. `report` therefore
+reads whatever ran last. It now records and prints which run that was, and
+**refuses** if you ask for a precision that does not match:
+
+```
+REFUSING: you asked for PRECISION=fp32 but aiesimulator_output/ was
+produced by a bf16 run.
+```
+
+Before that guard existed, `make report PRECISION=fp32` on a directory left by
+a bf16 run printed bf16's II under an fp32 label, silently.
 
 ---
 

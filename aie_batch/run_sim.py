@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime
 import fcntl
 import os
 import shlex
@@ -113,7 +114,29 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
                        if any(k in ln for k in ('ERROR', 'Error', 'error', 'FAIL', 'Fatal'))]
         tail = '\n'.join((interesting or out.strip().splitlines())[-15:])
         raise RuntimeError(f'{exe} failed ({why}):\n{tail}')
+
+    _stamp_run(sim, workdir)
     return out
+
+
+def _stamp_run(sim, workdir):
+    """Record what produced <sim>simulator_output/, next to the output itself.
+
+    Both precisions and every event count write into the SAME
+    <sim>simulator_output/ directory -- it is not suffixed the way Work_<P>/ and
+    libadf_<P>.a are. So `make report` reads whatever ran last, and had no way to
+    know what that was: `make report PRECISION=fp32` on a directory left by a
+    bf16 run printed the bf16 II with an fp32 label and no complaint.
+    """
+    d = HERE / f'{"aie" if sim == "aie" else "x86"}simulator_output'
+    if not d.is_dir():
+        return
+    (d / 'run_stamp.txt').write_text(
+        f'precision={os.environ.get("RTDA_PRECISION", "fp32")}\n'
+        f'sim={sim}\n'
+        f'workdir={workdir}\n'
+        f'iterations={os.environ.get("RTDA_N_ITER", n_iter())}\n'
+        f'when={datetime.datetime.now().isoformat(timespec="seconds")}\n')
 
 
 @contextlib.contextmanager
