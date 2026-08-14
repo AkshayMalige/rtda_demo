@@ -137,6 +137,60 @@ else
   fi
 fi
 
+# --- is the packaged HOST the one that matches this card? --------------------
+#
+# Checking that a file exists on the card is only half the question. The other
+# half is whether the binary alongside it will go looking there. A stale
+# host_batch.exe once shipped on a card whose data lived in weights_fp32/ while
+# the binary only knew data_fp32/ -- every path check above PASSED, because
+# they were written against the fixed host and the card carried the old one.
+#
+# The host's search paths are string literals, so they are in the binary. Pull
+# it off the card and confirm it contains the directory the card actually uses.
+check_host_matches() {
+  local exe="$1" ; shift
+  local tmp exe_local
+  tmp=$(mktemp -d); exe_local="$tmp/$exe"
+  if ! mcopy -n -i "$D" "::/$exe" "$exe_local" 2>/dev/null; then
+    say "$exe (staleness check)" "SKIPPED -- could not extract"; rm -rf "$tmp"; return
+  fi
+  # Dump to a file first. `strings ... | grep -q` looks obvious and is WRONG
+  # under `set -o pipefail`: grep -q exits at the first match, strings takes
+  # SIGPIPE, and pipefail reports the pipeline as failed -- so a found string
+  # is scored as not found, and every image looks stale.
+  strings "$exe_local" >"$tmp/strings.txt" 2>/dev/null
+  local want found=""
+  for want in "$@"; do
+    if grep -qF -- "$want" "$tmp/strings.txt"; then found="$want"; break; fi
+  done
+  if [ -n "$found" ]; then
+    say "$exe knows \"$found\"" "ok  binary matches this card"
+  else
+    say "$exe" "STALE -- does not know $*"
+    echo "        The card's layout and the packaged host DISAGREE. On the"
+    echo "        board this aborts with 'cannot locate ...' before any compute."
+    echo "        The binary predates the source it was supposed to be built"
+    echo "        from -- rebuild the host, then repackage."
+    bad
+  fi
+}
+
+command -v strings >/dev/null 2>&1 || echo "  note: binutils 'strings' absent, skipping host staleness check"
+if command -v strings >/dev/null 2>&1; then
+  if [ "$FLOW" = pl_fixed ]; then
+    # The current host autodetects a target-stamped xclbin; the old one took
+    # argv[1] only and had no such literal.
+    check_host_matches host_split.exe "system_hw.xclbin"
+  else
+    # Must know whichever weight directory this card was staged with.
+    if mdir -i "$D" ::/sd_batch/weights_fp32 >/dev/null 2>&1; then
+      check_host_matches host_batch.exe "weights_fp32"
+    else
+      check_host_matches host_batch.exe "data_fp32"
+    fi
+  fi
+fi
+
 echo
 if [ "$FAIL" -eq 0 ]; then
   echo "  PASS -- every path the host opens is present on the image."

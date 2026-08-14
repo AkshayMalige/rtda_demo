@@ -339,7 +339,15 @@ sysgraph:
 host: $(EXEC)
 	@$(MAKE) --no-print-directory rtp PRECISION=$(PRECISION)
 
-$(EXEC):
+# PREREQUISITES ARE NOT OPTIONAL HERE. With a bare `$(EXEC):` make treats an
+# existing host_batch.exe as up to date no matter how old it is, so a `git pull`
+# that rewrites host_batch.cpp is silently ignored and `package` copies the
+# STALE binary onto the card. That is exactly what shipped an image whose data
+# directory was weights_fp32/ and whose host still looked for data_fp32/.
+#
+# Not .PHONY: $(EXEC) gates $(XCLBIN), and a phony prerequisite would re-run
+# the v++ package step on every single invocation.
+$(EXEC): host/host_batch.cpp host/Makefile
 	@$(MAKE) -C host EMU_PS=QEMU
 
 $(BUILD_DIR) $(PKG_DIR):

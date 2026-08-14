@@ -181,7 +181,10 @@ host_x86:
 host_aarch64:
 	@$(MAKE) -C host EMU_PS=QEMU RTDA_VARIANT=$(VARIANT)
 
-$(EXEC):
+# See the note on the same rule in aie_batch/Makefile: without prerequisites an
+# existing host_split.exe is never rebuilt, and `package` puts a stale binary on
+# the card after a multi-hour synthesis.
+$(EXEC): host/host_split.cpp host/Makefile
 	@$(MAKE) -C host EMU_PS=QEMU RTDA_VARIANT=$(VARIANT)
 
 $(BUILD_DIR) $(PKG_DIR):
