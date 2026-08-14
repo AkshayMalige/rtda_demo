@@ -23,7 +23,9 @@ set FW_DIR   [file join $PROJ_DIR firmware]
 
 set part_name "xcve2802-vsvh1760-2MP-e-S"
 set top_fn    "rtda_split_top"
-set prj_name  "rtda_split_hls"
+# Absolute: vitis_hls is invoked from pl_fixed/, so a bare name put the
+# project one directory above this script and `make clean` missed it.
+set prj_name  [file join $PROJ_DIR rtda_split_hls]
 
 if {[llength $argv] > 0} { set command [lindex $argv 0] } else { set command "csim" }
 

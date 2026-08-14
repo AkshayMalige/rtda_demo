@@ -1,125 +1,131 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code working in this repository.
 
-## Project Overview
+## What this is
 
-RTDA (Real-Time Data Analysis) demo targeting the AMD/Xilinx Versal VEK280 platform. It implements a neural network inference pipeline using the AI Engine ML (AIE-ML) array for matrix-vector operations, with PL (Programmable Logic) kernels for data movement and post-processing.
+RTDA track-alignment MLP on an AMD/Xilinx Versal VEK280. One network,
+**three implementations**, compared against one reference on one stimulus.
 
-The network architecture: an **embedding block** (2 dense layers) feeds into **3 chained solver blocks** (each with 4 dense layers). Every dense layer is followed by a fused bias+leaky-ReLU activation. Solver inputs are constructed via a roll-concat operation that doubles the vector width before entering the first dense layer.
+Network: embedding block (2 dense) → 3 chained solver blocks (4 dense each) =
+**14 dense layers**, each with a fused bias + leaky-ReLU **slope 0.1**. A
+roll-concat before each solver pairs every track with its predecessor. **50
+tracks = 1 event**; the event's 128-wide mean goes through a 128→27 dense to
+give **27 outputs per event**.
 
-The project supports dual precision: `float` (32-bit) and `int16` (16-bit quantized), controlled at build time.
+Read `README.md` for the design and the measured numbers, `RUNBOOK.md` for
+commands. This file is the orientation for making changes.
 
-## Environment Setup
+## Two things that cause wrong answers here
 
-```bash
-source set_envs.sh
+**1. The roll convention.** The ONNX reference rolls *circularly* inside an
+event (track 0 pairs with track 49); every hardware implementation *streams*
+(each track pairs with whatever preceded it). They disagree on exactly tracks
+0, 1, 2 by ~1e-1, while tracks 3..49 agree to ~4e-06. So:
+
+- "WITHOUT warm-up" (tracks 3..49) measures **arithmetic**.
+- "WITH warm-up" (all 50) measures the **convention**, ~7e-03 for everything.
+  The reference disagrees with *itself* by 1.556e-02 between the two.
+
+Never compare a run made with `warmup=3` against the all-50 reference. The
+code does not guess: `run_info.txt` records the convention, and both notebooks
+read it.
+
+**2. `model/weights_fp32/` is the only weight directory.** Every flow reads it.
+`archive/data/` was overwritten with random int16 by `gen_int16_data.py` in
+Aug 2026 and is retained only for the archived design; `set_envs.sh` no longer
+exports `DATA_DIR`.
+
+## Layout
+
+```
+model/        mlp_fp32.onnx, weights_fp32/, rtda_ref.py, weights.py
+              rtda_ref.py is THE numpy implementation -- roll='circular'|
+              'streaming', quant='bf16'|fixed(W,I). There used to be four
+              copies of this forward pass and they had drifted.
+testdata/     stimulus + goldens (generated: `make golden`)
+aie_batch/    AIE-ML aie::mmul design, PRECISION=fp32|bf16, + its XRT host
+pl_fixed/     PL-only HLS ap_fixed design + a native bit-accurate model
+analysis/     rtda_reference.ipynb (fp32 end to end), rtda_compare.ipynb (all three)
+results/      aie_fp32/ aie_bf16/ pl_fixed/, each {sim,hw_emu,hw}
+archive/      the retired 1-track GEMV design (aieml/, pl/, host/, dsp_lib/)
 ```
 
-This sources XRT, Vitis 2024.2, PetaLinux, and the aarch64 cross-compilation sysroot. Sets `PLATFORM`, `SYSROOT`, `IMAGE`, `ROOTFS`, and `DATA_DIR`.
+Stale duplicate trees (`aieml_float32/`, `aieml_int16/`, `aieml_batch_fp32/`,
+`hls_projects*/`, `data_backup*/`, `tmp_bkp/`, `hw_out_*/`) are on disk and
+gitignored **on purpose**. Their sources were verified byte-identical to what
+is tracked. Do not build against them and do not delete them without asking.
 
-## Build Commands
+## Commands
 
-All builds are driven from the **top-level Makefile**. There are two categories of targets:
-
-### Component-Level Targets (standalone, no system TARGET needed)
-
-```bash
-# --- AIE Graph ---
-make aie_x86sim  PRECISION=float   # Compile AIE graph for x86 simulation
-make aie_hw      PRECISION=float   # Compile AIE graph for hw (aiesimulator / v++ link)
-make aie_sim_x86 PRECISION=float   # Compile + run x86simulator (fast functional)
-make aie_sim_hw  PRECISION=float   # Compile + run aiesimulator (cycle-accurate)
-
-# --- PL Kernels ---
-make pl_build    PRECISION=float   # Synthesize + export XO files
-make pl_csim     PRECISION=float   # Run C-simulation
-make pl_cosim    PRECISION=float   # Run RTL co-simulation
-
-# --- Host Application ---
-make host_x86     PRECISION=float  # Build for native x86 execution
-make host_aarch64 PRECISION=float  # Build for aarch64 (cross-compile)
-```
-
-### System-Level Targets (use TARGET=hw_emu|hw)
-
-AIE-ML on VEK280 does not support `sw_emu` at the system level. For fast AIE-only testing, use `make aie_sim_x86`.
+The root Makefile is a dispatcher; each flow owns its complete build.
 
 ```bash
-make system TARGET=hw_emu  PRECISION=float  # Full build: hw AIE + PL + aarch64 host + link + package
-make system TARGET=hw      PRECISION=float  # Full build: hw AIE + PL + aarch64 host + link + package
-make run    TARGET=hw_emu  PRECISION=float  # Build + run hw emulation
+source set_envs.sh                                    # required in every shell
+make help
+
+make golden TRACKS=50000                              # stimulus + reference
+
+make fastsim  FLOW=aie_batch PRECISION=fp32 EVENTS=5  # x86simulator
+make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5  # aiesimulator (slow)
+make fastsim  FLOW=pl_fixed EVENTS=1000               # native ap_fixed, ~95 s
+make -C pl_fixed sweep                                # which ap_fixed format?
+make -C pl_fixed csim                                 # Vitis csim vs the native model
+make -C pl_fixed csynth                               # resources + timing
+
+make system FLOW=aie_batch PRECISION=bf16 TARGET=hw
+make run    FLOW=pl_fixed TARGET=hw_emu               # 5 events on QEMU
 ```
 
-### Utilities
+`FLOW=aie_batch|pl_fixed`, `TARGET=hw_emu|hw`, `PRECISION=fp32|bf16`
+(aie_batch), `AP_W`/`AP_I`/`ALPHA125` (pl_fixed).
+
+## Traps that have cost real time
+
+- **`source set_envs.sh` puts PetaLinux's numpy-less python first on PATH.**
+  Never run `./script.py`; go through the `make` target, which pins `$(PYTHON)`.
+- **Run AIE simulations BEFORE `make system FLOW=aie_batch`.** The system build
+  replaces `Work_<P>/` with the GMIO graph, which has no PLIO debug taps.
+  `make link` refuses to link the wrong archive, but the workdir is still gone.
+- **One AIE simulation at a time.** They share `aie_batch/data/` and
+  `<sim>simulator_output/`; a lock refuses a second. Wait, do not work around.
+- **Check `sd_stage/<P>/sysdata/config.txt` before flashing.** A mismatched
+  xclbin/sysdata pair fails on the board with `parameter size 4096 bytes is
+  inconsistent with ... 8192 bytes` (8192 = 2048×4 → fp32; 4096 = 2048×2 → bf16).
+- **`sync` before `umount`** when copying results off the board.
+- **Do not pass paths to HLS as `-DFOO="..."`.** The quotes do not survive Tcl
+  plus the csim makefile Vitis generates, and the path arrives as bare
+  identifiers. The testbench and `nnet_helpers` read `RTDA_STIMULUS`,
+  `RTDA_TB_REFERENCE`, `RTDA_WEIGHTS_DIR` from the environment instead.
+- **Tensor dimensions must be multiples of 16 elements** in the AIE graph or
+  memtile buffer descriptors are exhausted (this is why `INPUT_DIM=16`).
+- **bf16 tolerance is 5e-2, fp32 is 1e-4**, set from `RTDA_PRECISION` which only
+  `make` exports. Invoking `crosscheck.py` by hand FAILs for the wrong reason.
+
+## Changing the PL number format
+
+Everything resolves through `pl_fixed/pl/src/rtda_fixed.h`. Do not put
+`ap_fixed<...>` literals back into the generated `firmware/*/defines.h`.
+
+Order of operations: `make -C pl_fixed sweep` (numpy screening, ~1 min, ranks
+formats and reports clipping) → `make fastsim FLOW=pl_fixed` (the real kernel
+sources; this is the ground truth) → `make -C pl_fixed csynth` (does it still
+fit and close timing?).
+
+The numpy screening model is ~2× optimistic in absolute terms; it is for
+ranking. `make -C pl_fixed validate` prints the gap.
+
+The leaky slope is 0.1, computed as `2^-4 + 2^-5 + 2^-8 + 2^-9` in
+`rtda_leaky.h` so it stays DSP-free. `ALPHA125=1` rebuilds the legacy 0.125
+variant for comparison — it is 33× worse and should not be the default again.
+
+## Verifying a change
 
 ```bash
-make sim                          # Quick AIE sim (alias for aie_sim_x86)
-make print_vars TARGET=hw_emu    # Show all build variable values
-make clean                        # Clean PL + system build artifacts
-make clean_all                    # Clean everything (AIE + PL + Host + system)
-make help                         # Show full usage guide
+python model/rtda_ref.py --self-test              # the reference itself
+make fastsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # PASS ~6.2e-07
+make -C pl_fixed check_weights                    # worst 5.0e-11
+make -C pl_fixed csim EVENTS=3                    # PASS, worst 0.000e+00
 ```
-
-### Target Mapping
-
-The top-level Makefile translates system TARGET into component-specific values:
-
-| System TARGET | AIE TARGET | Host EMU_PS | v++ link/package |
-|---------------|-----------|-------------|------------------|
-| `hw_emu`      | `hw`      | `QEMU`      | `-t hw_emu`      |
-| `hw`          | `hw`      | `QEMU`      | `-t hw`          |
-
-`PRECISION` (float/int16) is passed consistently to all sub-builds. It generates `config_gen.h` which toggles `USE_INT16`, selecting `DATA_TYPE` as either `float` or `int16_t` via `aieml/data_types.h`.
-
-### Sub-Makefile Direct Use
-
-The sub-Makefiles can still be invoked directly if needed:
-
-```bash
-# AIE (aieml/Makefile) — TARGET: x86sim | hw
-cd aieml && make graph TARGET=x86sim PRECISION=float
-cd aieml && make sim   TARGET=x86sim
-
-# PL (pl/Makefile) — TARGET for sim: csim | hw_emu
-cd pl && make kernels DATA_TYPE=float
-cd pl && make sim TARGET=csim DATA_TYPE=float
-
-# Host (host/Makefile) — EMU_PS: X86 | QEMU
-cd host && make EMU_PS=X86 PRECISION=float
-```
-
-Each PL kernel has a TCL script (`<kernel>_project.tcl`) that drives Vitis HLS.
-
-## Architecture
-
-### Key directories
-
-- **aieml/** - AIE-ML graph definition and custom kernels. `graph.h` defines `NeuralNetworkGraph` using DSP library `matrix_vector_mul_graph` for dense layers. `graph.cpp` is the simulation testbench that loads weights/biases via GMIO and runs inference.
-- **common/** - Shared headers: `nn_defs10.h` (layer sizes, cascade lengths), `data_paths.h` (weight/bias file paths), `linker_aieml.cfg` (PL-AIE stream connectivity).
-- **pl/** - Vitis HLS kernels for data movement (mm2s, s2mm) and processing (leaky_relu, leaky_splitter, track_average). Source in `pl/src/`.
-- **data/** - Pre-exported weight/bias text files. Partitioned weights use `_partN.txt` naming.
-- **dsp_lib/** - Vitis DSP Library (L1/L2) providing `matrix_vector_mul_graph` and FFT/FIR primitives.
-
-### Data flow
-
-1. Host sends input vectors (8 elements) via GMIO to AIE
-2. Embed block: dense0 (8->128) -> bias+ReLU -> split (128->64x2) -> dense1 (128->128) -> bias+ReLU
-3. Solver blocks (x3): roll_concat (128->256, via shared_buffer with tiling) -> dense0 (256->128) -> [bias+ReLU -> split -> denseN -> bias+ReLU] x3
-4. Final output (128 elements) exits via GMIO or PL PLIO stream to `track_average_pl`
-
-### int16 quantization details
-
-When `PRECISION=int16`, `GRAPH_INPUT_SIZE` is padded from 8 to 16 elements (256-bit AIE vector alignment). Weight matrices and input vectors are zero-padded accordingly in the testbench (`pad_matrix_rows`, `pad_transaction_stream` from `utils.hpp`).
-
-### Cascade and partitioning
-
-Dense layers use cascade chains for parallelism. Weights are split across cascade tiles:
-- embed_dense0: 1 cascade tile
-- embed_dense1: 2 cascade tiles
-- solver_dense0: 4 cascade tiles (256-wide input)
-- solver_dense1/2/3: 2 cascade tiles each
-
-### PL-AIE connectivity
-
-`common/linker_aieml.cfg` wires the AIE PLIO output to `track_average_pl`'s AXI stream input. The PL kernel accumulates frames and writes averaged results to DDR.
+Then Run All on `analysis/rtda_reference.ipynb`, then `rtda_compare.ipynb`.
+`RUNBOOK.md` has the full expected-values table.

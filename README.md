@@ -1,192 +1,148 @@
-# Real-Time Detector Alignment (RTDA) -- Versal AIE-ML Demo
+# RTDA — real-time track alignment on a VEK280
 
-Neural network inference pipeline targeting the AMD/Xilinx Versal VEK280. The design runs entirely on the AI Engine ML array with a PL post-processing kernel, supporting both **float32** and **int16** precision at build time.
+One neural network, implemented three ways on the same board, compared against
+the same reference on the same data.
 
-## Network Architecture
+The network is a track-alignment MLP: an **embedding block** (2 dense layers)
+feeding **3 chained solver blocks** (4 dense each) = **14 dense layers**, every
+one followed by a fused bias + leaky-ReLU (slope 0.1). A roll-concat between
+blocks pairs each track with its predecessor. **50 tracks make one event**, and
+the event's 128-wide mean goes through a final 128→27 dense to give the
+deliverable: **27 numbers per event**.
 
 ```
-Input (8 floats)
-  |
-  v
-Embed: dense0 (8->128) -> bias+leakyReLU -> split -> dense1 (128->128) -> bias+leakyReLU
-  |
-  v
-Solver-0: roll_concat (128->256) -> dense0 -> [bias+ReLU -> split -> denseN] x3
-  |
-  v
-Solver-1: (same structure)
-  |
-  v
-Solver-2: (same structure) -> PLIO stream -> track_average PL kernel -> DDR
+        6 ──► embed ──► 128 ──► solver0 ──► solver1 ──► solver2 ──► 128
+              2 dense          4 dense     4 dense     4 dense
+                            (each preceded by roll-concat to 256)
+
+        50 tracks ──► mean(128) ──► dense 128→27 ──► 27 outputs / event
 ```
 
-- 3 chained solver blocks, each with 4 dense layers and fused bias+leaky ReLU (alpha=0.1)
-- Roll-concat pairs current frame with previous frame (50-frame window, 3-frame warm-up)
-- `track_average` PL kernel averages groups of output frames before writing to DDR
+---
 
-## Prerequisites
+## The three implementations
 
-- AMD Vitis 2024.2 with AI Engine tools
-- XRT runtime and headers
-- PetaLinux 2024.2 SDK (for cross-compilation)
-- VEK280 base platform (`xilinx_vek280_base_202420_1`)
+| | `aie_batch/` fp32 | `aie_batch/` bf16 | `pl_fixed/` |
+|---|---|---|---|
+| where it runs | AIE-ML array | AIE-ML array | PL fabric only |
+| arithmetic | float32 | bfloat16 | `ap_fixed<16,3>` |
+| shape | matrix × matrix, 8 tracks/iteration | same | 1 track at a time |
+| kernel | `aie::mmul` | `aie::mmul` | hls4ml `nnet::dense` |
+| **ns/track, silicon** | **615** | **245** | ~40,000 |
+| **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **1.99e-04** |
+| resources | 65 compute + 14 memory tiles | same | 43% LUT, 81% DSP, 0 AIE |
 
-## Environment Setup
+¹ max |implementation − ONNX| over the **same 5 events**, warm-up excluded.
+Full scale (largest of the 27) is 0.0857. These are a max over events, so they
+only compare at equal event counts — over its full 1000-event run the PL design
+reads 3.18e-04, and the AIE numbers would rise similarly if per-track taps
+existed at that scale. `analysis/rtda_compare.ipynb` takes the ratio over the
+common count and prints which it used.
+
+**The headline result is the last two columns.** Both are 16 bits per
+activation, and the fixed-point PL design lands **2.0× closer** to the reference
+than bfloat16. That is not surprising once stated: bf16 spends 8 bits on an
+exponent covering ~10³⁸, and every activation in this network lives between
+−1.8 and +1.8. `ap_fixed<16,3>` spends 13 bits on the mantissa of a range that
+was measured, and none on range it does not need. The cost is that a fixed-point
+format has to be *matched* to the network — `make sweep FLOW=pl_fixed` reports
+how much clipping margin is left (currently 2.2×).
+
+The AIE is ~65× faster per track. That is the actual trade.
+
+---
+
+## One thing to understand before reading any number here
+
+**There are two roll conventions and they disagree by 1.5e-02.**
+
+The ONNX reference rolls *circularly* inside a 50-track event: track 0 pairs
+with track 49. That is the physics definition, and it requires buffering all 50
+tracks before computing the first one.
+
+Every hardware implementation *streams*: each track pairs with whatever
+physically preceded it. That is exactly what makes the batched AIE design fast.
+
+The network's receptive field is 4 tracks deep, so **tracks 0, 1 and 2 of every
+event differ** — by ~1e-1 — while tracks 3..49 agree to ~4e-06.
+
+So every table in this repo has two columns:
+
+- **WITHOUT warm-up** (tracks 3..49): measures *arithmetic*. This is the number
+  that says whether an implementation is correct.
+- **WITH warm-up** (all 50 tracks): measures the roll convention, ~7e-03 for
+  everything. **Not an error.** The reference disagrees with *itself* by
+  1.556e-02 between the two conventions.
+
+Mixing them is the easiest way to get a confidently wrong answer here, so the
+code does not guess: the PL kernel takes `warmup` as a runtime argument and
+records it in `run_info.txt`, and the notebooks read that rather than assume.
+
+---
+
+## Layout
+
+```
+model/              THE SOURCE OF TRUTH
+  mlp_fp32.onnx       the pinned reference network
+  weights_fp32/       the 30 exported tensors; matches the ONNX to 7.5e-09
+  rtda_ref.py         the ONE numpy implementation. roll='circular'|'streaming',
+                      plus quant= for bf16 / ap_fixed experiments
+  weights.py          loads the tensors in both packings the flows need
+
+testdata/           stimulus + goldens, generated by `make golden`
+aie_batch/          the AIE-ML design (PRECISION=fp32|bf16) + its XRT host
+pl_fixed/           the PL-only design + its native bit-accurate model
+analysis/           the notebooks that compare them
+results/            aie_fp32/ aie_bf16/ pl_fixed/, each {sim,hw_emu,hw}
+archive/            the retired 1-track GEMV design and its docs
+```
+
+Every flow reads `model/weights_fp32/`. That is what makes the comparison
+meaningful, and it is checked rather than assumed: `analysis/rtda_reference.ipynb`
+re-verifies ONNX == weights == the 92 RTP payloads on every run, and
+`pl_fixed/gen_weights.py --check` does the same for the PL side.
+
+---
+
+## Getting started
 
 ```bash
 source set_envs.sh
+make help
+
+make golden TRACKS=50000                              # stimulus + reference
+
+make fastsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # x86simulator, ~2 min
+make fastsim FLOW=pl_fixed EVENTS=1000                # native ap_fixed, ~90 s
+
+make system FLOW=aie_batch PRECISION=bf16 TARGET=hw   # SD image for the board
+make run    FLOW=pl_fixed TARGET=hw_emu               # 5 events on QEMU
 ```
 
-Sets `XILINX_VITIS`, `PLATFORM`, `SYSROOT`, `DATA_DIR`, and cross-compilation toolchain.
-
-## Build Commands
-
-All commands accept `PRECISION=float` (default) or `PRECISION=int16`.
-
-### Quick Reference
+Then, in order:
 
 ```bash
-# AIE graph
-make aie TARGET=sw_emu PRECISION=float       # x86 functional sim
-make aie TARGET=hw  PRECISION=int16       # hardware model
-make sim TARGET=sw_emu PRECISION=float       # run x86 simulation
-
-# PL kernels
-make pl TARGET=hw_emu PRECISION=float     # synthesize track_average
-
-# Host application
-make host TARGET=sw_emu PRECISION=float   # native x86 build
-make host TARGET=hw_emu PRECISION=int16   # cross-compile for QEMU/aarch64
-
-# Full system
-make all TARGET=hw_emu PRECISION=float    # aie + pl + host + link + package
-make run TARGET=sw_emu                    # run emulation
-
-# Utilities
-make print_vars TARGET=hw_emu PRECISION=int16
-make clean_all
+jupyter lab analysis/rtda_reference.ipynb    # fp32 end to end; writes the ONNX golden
+jupyter lab analysis/rtda_compare.ipynb      # all three implementations
 ```
 
-### Per-Component
+`RUNBOOK.md` is the copy-paste version, with expected values for every step.
 
-```bash
-# AIE only (aieml/)
-cd aieml
-make graph TARGET=sw_emusim PRECISION=float
-make sim   TARGET=sw_emusim
-make clean
+---
 
-# PL only (pl/)
-cd pl
-make sim TARGET=csim DATA_TYPE=float      # C simulation
-make sim TARGET=csim DATA_TYPE=int16
-make kernels DATA_TYPE=float              # synthesize XO
-make clean
+## Where the numbers come from
 
-# Host only (host/)
-cd host
-make EMU_PS=X86 PRECISION=float           # native
-make EMU_PS=QEMU PRECISION=int16          # aarch64 cross
-make clean
-```
-
-### System Link, Package, Run
-
-```bash
-make link    TARGET=hw_emu                # create XSA
-make package TARGET=hw_emu                # generate xclbin
-make run     TARGET=hw_emu                # launch HW emulation
-```
-
-### Hardware (VEK280)
-
-```bash
-make all TARGET=hw PRECISION=float
-# Copy package.hw/ to SD card, boot the board, then:
-cd /mnt/sd-mmcblk0p1
-./host.exe system_hw.xclbin
-```
-
-## Precision Switching (float32 / int16)
-
-Controlled by `PRECISION` at the top level, which propagates to all sub-makes:
-
-| Component | Variable | Mechanism |
-|-----------|----------|-----------|
-| AIE graph | `PRECISION=int16` | Generates `config_gen.h` with `#define USE_INT16`, selects `DATA_TYPE` via `data_types.h` |
-| PL kernel | `DATA_TYPE=int16` | Passes `-DUSE_INT16` to HLS; stream widened to 32-bit for PLIO compatibility |
-| Host app  | `PRECISION=int16` | Passes `-DUSE_INT16`; reads/writes `int16_t` values for RTP and GMIO |
-
-When switching precision, you must:
-1. Replace the `data/` weight and bias files with values in the target format (floats for float32, integers for int16)
-2. Clean and rebuild: `make clean_all && make all TARGET=... PRECISION=...`
-
-### int16 Alignment
-
-For int16, the AIE vector width is 256 bits = 16 elements. `INPUT_SIZE` (8) is padded to `GRAPH_INPUT_SIZE` (16) with zeros. Weight matrices are zero-padded to match. This is handled automatically in the AIE testbench (`graph.cpp`) and host (`host.cpp`).
-
-## Repository Structure
-
-```
-Makefile                      Top-level build orchestrator
-pack.cfg                      Vitis packaging config
-set_envs.sh                   Environment setup script
-aieml/
-  graph.h                     AIE-ML graph: all kernels, ports, connections
-  graph.cpp                   Simulation testbench (GMIO input, PLIO output)
-  graph_layout.hpp            Tile placement and runtime ratios
-  data_types.h                DATA_TYPE selection (float/int16) via config_gen.h
-  bias_relu_fused.cpp         Fused bias + leaky ReLU kernel (vectorized)
-  window_split_128_to_64x2.cpp  128->64x2 window splitter
-  roll_concat.cpp             Stateful frame pairing kernel (3 instances)
-  utils.hpp                   File I/O, padding helpers
-  Makefile                    AIE compile/sim targets
-common/
-  nn_defs10.h                 Network dimensions, cascade lengths, constants
-  data_paths.h                Weight/bias/output file name macros
-  linker_aieml.cfg            v++ linker: AIE PLIO -> track_average PL
-pl/
-  src/track_average_pl.cpp    PL kernel: stream averaging (float32/int16)
-  src/track_average_test.cpp  HLS C-simulation testbench
-  track_average_project.tcl   Vitis HLS project script
-  Makefile                    PL synthesis/sim targets
-host/
-  host.cpp                    XRT host: weight loading, GMIO, graph control
-  Makefile                    Host build (native x86 or aarch64 cross)
-data/
-  embed_input.txt             Input frames (run_count x INPUT_SIZE)
-  embed_dense_*               Embed layer weights and biases
-  solver_{0,1,2}_dense_*      Solver layer weights and biases (partitioned)
-  aieml10_output_aie.txt      AIE simulation output
-  host_output.txt             track_average output
-```
-
-## Key Parameters (common/nn_defs10.h)
-
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `INPUT_SIZE` | 8 | Features per input track |
-| `HIDDEN_SIZE` | 128 | Hidden layer width |
-| `OUTPUT_SIZE` | 128 | Output vector width |
-| `LEAKY_SLOPE` | 0.1 | Leaky ReLU negative slope |
-| `TRACK_AVERAGE_THRESHOLD` | 50 | Frames averaged by track_average PL |
-| `ROLL_CONC_SUBSET_SIZE` | 2 | Roll-concat doubles width (128->256) |
-| `EMBED_DENSE0_CASC_LEN` | 1 | Cascade tiles for embed dense0 |
-| `EMBED_DENSE1_CASC_LEN` | 2 | Cascade tiles for embed dense1 |
-| `SUBSOLVER0_INPUT_PARTS` | 4 | Cascade tiles for solver dense0 (256-wide) |
-| `SUBSOLVER0_LAYER_WEIGHTS_PARTS` | 2 | Cascade tiles for solver dense1/2/3 |
-
-## Ports and Interfaces
-
-- **Input GMIO:** `g.embed_input_gmio` -- host sends input frames via DMA
-- **Output PLIO:** `embed_output` -- streams solver-2 output to `track_average` PL kernel
-- **RTP ports:** Async parameter updates for all weight matrices and bias vectors
-- **PL AXI stream:** 32-bit wide (both float and int16 modes); `track_average` writes averaged results to DDR via AXI master
-
-## Data Files
-
-Weight files use partitioned naming: `solver_0_dense_0_weights_part{0,1,2,3}.txt` for the 4-way cascaded dense0, `solver_0_dense_1_weights_part{0,1}.txt` for 2-way dense1/2/3.
-
-For float32: files contain decimal float values. For int16: files must contain integer values.
-
-All file paths are defined as macros in `common/data_paths.h` and referenced by both the AIE testbench and host application.
+- `615 ns/track` fp32, `245 ns/track` bf16 — measured on silicon over 50,000
+  tracks, `results/aie_*/hw/run_info.txt`.
+- `7.5e-07`, `3.96e-04`, `1.99e-04` — `analysis/rtda_compare.ipynb`, the same 5
+  events, warm-up excluded, against `model/mlp_fp32.onnx`. Only simulation has
+  the per-track taps a warm-up-excluded number needs, and the AIE sims are
+  5-event builds; the PL run is 1000 events but the ratio is taken over the
+  common 5.
+- PL resources — post-route, `WNS +0.186 ns` at 150 MHz. The 108% LUT figure in
+  the HLS *estimate* did not materialise.
+- The PL 1000-event number comes from `pl_fixed/native/`, which compiles the
+  same kernel sources with g++ and is verified bit-identical to Vitis csim
+  (`make csim FLOW=pl_fixed` → 0.000e+00). hw_emu is ~2 ms/event of RTL
+  simulation, which makes it a 5-event tool, not a 1000-event one.
