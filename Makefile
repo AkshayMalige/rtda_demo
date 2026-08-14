@@ -48,7 +48,7 @@ endif
 FLOW_ARGS = TARGET=$(TARGET) PRECISION=$(PRECISION)
 
 .PHONY: help golden selftest fastsim exactsim system run link package repackage \
-        report crosscheck clean clean_all vars notebooks
+        report crosscheck clean clean_all vars notebooks collect results
 
 ############################################################################
 #  Shared, flow-independent
@@ -69,6 +69,66 @@ selftest:
 	    [ -e "$$g" ] && $(REF_PY) model/rtda_ref.py --check-golden $$g; \
 	 done; true
 	@$(MAKE) --no-print-directory -C pl_fixed check_weights
+
+############################################################################
+#  Results
+#
+#  Simulation files itself under results/<impl>/sim/. A board or hw_emu run
+#  cannot: the host writes into whatever directory it ran in, on the board, so
+#  the files have to be carried back by hand.
+#
+#  Which directory they belong in is NOT recoverable from the files -- an fp32
+#  run dropped into results/aie_bf16/hw/ yields a perfectly plausible table in
+#  which bf16 looks as accurate as fp32. Hence this target rather than `cp`.
+#
+#      make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw
+#      make collect FROM=/mnt/usb FLOW=pl_fixed  TARGET=hw
+############################################################################
+FROM ?=
+ifeq ($(FLOW),pl_fixed)
+  IMPL := pl_fixed
+else
+  IMPL := aie_$(PRECISION)
+endif
+RESULT_DIR := results/$(IMPL)/$(TARGET)
+RESULT_FILES := track_means_all.txt track_out_27.txt run_info.txt
+
+collect:
+	@test -n "$(FROM)" || { echo "ERROR: FROM=<dir> is required, e.g."; \
+	  echo "  make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw"; exit 1; }
+	@test "$(TARGET)" = hw -o "$(TARGET)" = hw_emu || { \
+	  echo "ERROR: TARGET must be hw or hw_emu (got '$(TARGET)')"; exit 1; }
+	@for f in $(RESULT_FILES); do \
+	   test -s "$(FROM)/$$f" || { echo "ERROR: $(FROM)/$$f missing or empty."; \
+	     echo "       All of $(RESULT_FILES) must be present -- a partial copy is"; \
+	     echo "       how a truncated run gets mistaken for a good one."; exit 1; }; \
+	 done
+	@mkdir -p $(RESULT_DIR)
+	@cp $(addprefix $(FROM)/,$(RESULT_FILES)) $(RESULT_DIR)/
+	@echo ">>> $(FROM)  ->  $(RESULT_DIR)/"
+	@cd $(RESULT_DIR) && for f in $(RESULT_FILES); do \
+	   printf '    %-22s %8s bytes\n' $$f $$(stat -c %s $$f); done
+	@echo "    run_info says:"
+	@sed -n 's/^/      /p' $(RESULT_DIR)/run_info.txt | head -8
+
+# Everything currently on disk, so a missing or misfiled run is visible.
+results:
+	@for d in results/*/; do \
+	   impl=$$(basename $$d); \
+	   for t in sim hw_emu hw; do \
+	     if [ -f "$$d$$t/run_info.txt" ]; then \
+	       ev=$$(sed -n 's/^events=//p' $$d$$t/run_info.txt); \
+	       wu=$$(sed -n 's/^warmup=//p' $$d$$t/run_info.txt); \
+	       src=$$(sed -n 's/^source=//p' $$d$$t/run_info.txt); \
+	       printf '  %-12s %-7s %6s events  warmup=%-6s %s\n' "$$impl" "$$t" "$$ev" "$${wu:-0 (implied)}" "$$src"; \
+	     elif ls $$d$$t/*.npz >/dev/null 2>&1; then \
+	       for n in $$d$$t/*.npz; do printf '  %-12s %-7s %s\n' "$$impl" "$$t" "$$(basename $$n)"; done; \
+	     fi; \
+	   done; \
+	 done
+	@echo
+	@echo "  (simulation is written automatically; hw/hw_emu must be copied --"
+	@echo "   see 'Where results go' in RUNBOOK.md, or use 'make collect')"
 
 ############################################################################
 #  Per-flow -- everything below just forwards
@@ -134,6 +194,11 @@ help:
 	@echo "                                          xclbin + SD image"
 	@echo "  make run    FLOW=pl_fixed  TARGET=hw_emu"
 	@echo "                                          build and launch on QEMU"
+	@echo ""
+	@echo "Results:"
+	@echo "  make results                            what is on disk right now"
+	@echo "  make collect FROM=/mnt/usb FLOW=... TARGET=hw"
+	@echo "                                          file a board run (sim self-files)"
 	@echo ""
 	@echo "Analysis:"
 	@echo "  jupyter lab analysis/rtda_reference.ipynb   then  analysis/rtda_compare.ipynb"

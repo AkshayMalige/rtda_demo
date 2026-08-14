@@ -137,6 +137,24 @@ jupyter lab analysis/rtda_compare.ipynb      # all three implementations
 
 `RUNBOOK.md` is the copy-paste version, with expected values for every step.
 
+## Where results go
+
+**Simulation files itself under `results/<impl>/sim/`. Hardware does not** --
+the host writes into its own working directory on the board, so those three
+files have to be carried back, and which directory they belong in is not
+recoverable from the files themselves:
+
+```bash
+make results                                    # what is on disk right now
+make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw
+make collect FROM=/mnt/usb FLOW=pl_fixed  TARGET=hw
+```
+
+`collect` refuses a partial copy and prints the destination, each file's size
+and the run's own `run_info.txt`, because an fp32 run dropped into
+`results/aie_bf16/hw/` produces a plausible table in which bf16 looks as
+accurate as fp32. Full detail: "Where results go" in `RUNBOOK.md`.
+
 ---
 
 ## Where the numbers come from

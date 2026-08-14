@@ -545,6 +545,14 @@ int main(int argc, char** argv)
                << "tracks="        << file_tracks      << '\n'
                << "events="        << n_events         << '\n'
                << "tracks_per_event=" << TRACKS_PER_EVENT << '\n'
+               // Always 0: track_accum sums every slot of the event and has no
+               // way to skip the contaminated warm-up head, so this mean is
+               // over all 50 tracks. Written explicitly because the analysis
+               // chooses which reference to compare against from this key, and
+               // an absent key is one more thing a reader has to already know.
+               // The PL flow takes warmup as a runtime argument and writes 3.
+               << "warmup="        << 0                << '\n'
+               << "impl=aie\n"
                << "iterations="    << n_iter           << '\n'
                << "flush_event="   << (flush ? 1 : 0)  << '\n'
                << "rtp_ports="     << manifest.size()  << '\n'

@@ -255,6 +255,70 @@ own `run_info.txt` for its warm-up convention.
 
 ---
 
+# Where results go, and what you have to copy yourself
+
+**Simulation files itself. Hardware does not.** Everything the notebooks read
+lives under `results/<impl>/`, and the rule is simply whether the run happened
+on this machine.
+
+| command | writes | automatic? |
+|---|---|---|
+| `make fastsim FLOW=aie_batch PRECISION=<P>` | `results/aie_<P>/sim/sim_x86_*.npz` | **yes** |
+| `make exactsim FLOW=aie_batch PRECISION=<P>` | `results/aie_<P>/sim/sim_aie_*.npz` | **yes** |
+| `make fastsim FLOW=pl_fixed` | `results/pl_fixed/sim/{track_means_all,track_out_27,run_info}.txt` | **yes** |
+| `make -C pl_fixed sweep` | `results/pl_fixed/sweep.npz` | **yes** |
+| `make golden TRACKS=N` | `testdata/embed_input_N.txt`, `golden_N.{npz,txt}` | **yes** |
+| `make -C aie_batch crosscheck` / `report` / `x86` | nothing — prints to the terminal | n/a |
+| `make -C pl_fixed csim` / `csynth` | nothing under `results/` (HLS reports stay in `pl_fixed/rtda_split_hls/`) | n/a |
+| **any board or hw_emu run** | the host writes into its own working directory | **NO — copy it** |
+
+## Copying a hardware run
+
+Both hosts write the same three files into the directory they are run from
+(the PL host takes `RTDA_OUTDIR=` to change that):
+
+    track_means_all.txt    the 1000 event means -- this is the one that matters
+    track_out_27.txt       the last event through the on-chip output dense
+    run_info.txt           timing, sizes, and the warm-up convention used
+
+They must land in **exactly one** of these, and which one is not guessable from
+the files:
+
+    results/aie_fp32/hw/        AIE, PRECISION=fp32, on the board
+    results/aie_bf16/hw/        AIE, PRECISION=bf16, on the board
+    results/pl_fixed/hw/        PL, on the board
+    results/aie_fp32/hw_emu/    the same three, from QEMU
+    results/pl_fixed/hw_emu/
+
+**Getting this wrong is silent.** An fp32 run dropped into `results/aie_bf16/hw/`
+produces a plausible table in which bf16 looks as accurate as fp32. Use the
+helper rather than `cp`:
+
+```bash
+make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw
+make collect FROM=/mnt/usb FLOW=pl_fixed  TARGET=hw
+```
+
+It refuses if the three files are not all present, and prints the destination
+and each file's size so a truncated copy is visible immediately. (`sync` before
+`umount` on the board -- without it the copy can sit in cache.)
+
+To do it by hand:
+
+```bash
+mkdir -p results/aie_fp32/hw
+cp /mnt/usb/{track_means_all.txt,track_out_27.txt,run_info.txt} results/aie_fp32/hw/
+```
+
+## Checking what you have
+
+```bash
+make results        # every run currently on disk, with its event count and warm-up
+```
+
+
+---
+
 # Expected values
 
 | check | AIE fp32 | AIE bf16 | PL ap_fixed |
