@@ -1,0 +1,795 @@
+<title>AIE-ML, from one multiply to a whole network</title>
+<style>
+/* ── tokens: complete light palette on bare :root ─────────────────── */
+:root{
+  --bg:#FAFBFC; --surface:#FFFFFF; --surface-2:#F1F4F7;
+  --ink:#141B24; --ink-2:#3F4C5A; --ink-3:#6B7A8B;
+  --rule:#DCE3EA; --rule-2:#C3CED8;
+  /* functional colours: each names a ROLE that recurs in every diagram */
+  --data:#0E7C86;    --data-bg:#DCF0F1;    /* input activations  */
+  --wts:#B26A00;     --wts-bg:#FBEBD2;     /* weights            */
+  --acc:#5B45A8;     --acc-bg:#E7E1F7;     /* accumulator/output */
+  --dead:#AEB9C4;    --dead-bg:#EDF1F4;    /* wasted / padding   */
+  --accent:var(--acc);
+  --shadow:0 1px 2px rgba(20,27,36,.06),0 4px 14px rgba(20,27,36,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D131A; --surface:#141C25; --surface-2:#1B242F;
+    --ink:#E6EDF3; --ink-2:#AFBECD; --ink-3:#7C8B9C;
+    --rule:#26313D; --rule-2:#35434F;
+    --data:#4FD1D9; --data-bg:#0E2E33;
+    --wts:#F0B45C; --wts-bg:#33240D;
+    --acc:#AC96F0; --acc-bg:#241C3D;
+    --dead:#4A5763; --dead-bg:#1A222B;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D131A; --surface:#141C25; --surface-2:#1B242F;
+  --ink:#E6EDF3; --ink-2:#AFBECD; --ink-3:#7C8B9C;
+  --rule:#26313D; --rule-2:#35434F;
+  --data:#4FD1D9; --data-bg:#0E2E33;
+  --wts:#F0B45C; --wts-bg:#33240D;
+  --acc:#AC96F0; --acc-bg:#241C3D;
+  --dead:#4A5763; --dead-bg:#1A222B;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:400 17px/1.65 Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 96px}
+main{max-width:64ch}
+h1,h2,h3,.label,.step-n,figcaption,th,.pill,.toc{
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ── masthead ─────────────────────────────────────────────────────── */
+header{border-bottom:1px solid var(--rule);margin-bottom:44px;padding:52px 0 30px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:0 0 14px}
+h1{font-size:clamp(30px,4.4vw,46px);line-height:1.08;letter-spacing:-.022em;font-weight:680;margin:0 0 16px;text-wrap:balance;max-width:20ch}
+.standfirst{font-size:19px;line-height:1.55;color:var(--ink-2);margin:0;max-width:56ch}
+
+/* ── structure ────────────────────────────────────────────────────── */
+section{margin:0 0 12px;padding:36px 0 0;scroll-margin-top:16px}
+h2{font-size:26px;line-height:1.2;letter-spacing:-.015em;font-weight:660;margin:0 0 6px;text-wrap:balance}
+.step-n{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.1em;
+  color:var(--accent);border:1px solid var(--rule-2);border-radius:99px;padding:3px 10px;margin-bottom:12px}
+h3{font-size:18.5px;font-weight:640;letter-spacing:-.005em;margin:30px 0 4px}
+p{margin:0 0 15px}
+main ul,main ol{margin:0 0 15px;padding-left:22px}
+main li{margin:0 0 7px}
+strong{font-weight:640;color:var(--ink)}
+a{color:var(--accent)}
+code{font-size:.86em;background:var(--surface-2);padding:.12em .38em;border-radius:4px;border:1px solid var(--rule)}
+
+/* ── figures: break out wider than the prose column ───────────────── */
+figure{margin:26px 0;max-width:min(100%,900px)}
+figure svg{display:block;width:100%;height:auto;
+  background:var(--surface);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow)}
+figcaption{font-size:13.5px;line-height:1.5;color:var(--ink-3);margin-top:9px;max-width:62ch}
+figcaption b{color:var(--ink-2);font-weight:620}
+
+/* ── callouts ─────────────────────────────────────────────────────── */
+.note{background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0;font-size:16px}
+.note .label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);font-weight:700;margin-bottom:6px}
+.note p:last-child{margin-bottom:0}
+.check{background:var(--surface-2);border:1px dashed var(--rule-2);border-radius:8px;padding:16px 20px;margin:24px 0;font-size:16px}
+.check .label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:700;margin-bottom:6px}
+.check p:last-child{margin-bottom:0}
+details{margin-top:10px}
+summary{cursor:pointer;font-size:14px;color:var(--accent);font-weight:600;
+  font-family:ui-sans-serif,system-ui,sans-serif}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+/* ── code ─────────────────────────────────────────────────────────── */
+pre{background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;
+  padding:15px 17px;overflow-x:auto;font-size:13.5px;line-height:1.6;margin:18px 0}
+pre code{background:none;border:0;padding:0;font-size:inherit}
+.cmt{color:var(--ink-3)}
+
+/* ── tables ───────────────────────────────────────────────────────── */
+.tw{overflow-x:auto;margin:22px 0;border:1px solid var(--rule);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{font-weight:640;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);
+  background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right}
+
+/* ── legend chips ─────────────────────────────────────────────────── */
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0 0 20px;padding:12px 16px;
+  background:var(--surface);border:1px solid var(--rule);border-radius:8px;font-size:13px;
+  font-family:ui-sans-serif,system-ui,sans-serif}
+.chip{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2)}
+.sw{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.14)}
+
+.toc{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--rule);
+  padding:11px 0;margin-bottom:0;font-size:13px;z-index:5;overflow-x:auto;white-space:nowrap}
+.toc a{color:var(--ink-3);text-decoration:none;margin-right:20px;font-weight:560}
+.toc a:hover,.toc a:focus-visible{color:var(--accent)}
+@media (max-width:760px){ body{font-size:16px} .wrap{padding:0 17px 64px} }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">RTDA · aie_batch</p>
+  <h1>AIE-ML, from one multiply to a whole network</h1>
+  <p class="standfirst">Start with a single hardware instruction. Add one idea at a time
+  until you can see the whole 14-layer design — and know how to map your own.
+  No code until you already know what it does.</p>
+</header>
+
+<nav class="toc">
+  <a href="#s1">1 · The atom</a><a href="#s2">2 · The waste</a><a href="#s3">3 · Batching</a>
+  <a href="#s4">4 · Growing</a><a href="#s5">5 · Splitting</a><a href="#s6">6 · Weights</a>
+  <a href="#s7">7 · Free extras</a><a href="#s8">8 · Between layers</a>
+  <a href="#s9">9 · The odd bits</a><a href="#s10">10 · The code</a><a href="#s11">11 · Your model</a>
+</nav>
+
+<main>
+
+<section id="s1">
+<span class="step-n">STEP 1</span>
+<h2>The hardware can do exactly one thing</h2>
+
+<p>Forget neural networks for a minute. The AIE-ML vector unit has one instruction
+that matters to us. It multiplies <strong>a small block of numbers by another small
+block of numbers</strong>.</p>
+
+<p>For float32, the blocks are exactly this size:</p>
+
+<div class="legend">
+  <span class="chip"><span class="sw" style="background:var(--data-bg);border-color:var(--data)"></span>input data</span>
+  <span class="chip"><span class="sw" style="background:var(--wts-bg);border-color:var(--wts)"></span>weights</span>
+  <span class="chip"><span class="sw" style="background:var(--acc-bg);border-color:var(--acc)"></span>result / accumulator</span>
+  <span class="chip"><span class="sw" style="background:var(--dead-bg);border-color:var(--dead)"></span>wasted or padding</span>
+</div>
+
+<figure>
+<svg viewBox="0 0 860 250" role="img" aria-label="A 4 by 8 block of input times an 8 by 4 block of weights gives a 4 by 4 block of results">
+  <style>
+    .cell{stroke-width:1}
+    .lb{font:600 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .lb2{font:400 11px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .op{font:600 26px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .ttl{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+  </style>
+  <!-- A: 4 rows x 8 cols -->
+  <text class="ttl" x="30" y="34">A — your data</text>
+  <text class="lb2" x="30" y="50">4 tracks × 8 features</text>
+  <!-- draw A grid -->
+  <g id="Agrid">
+    <!-- 4 rows, 8 cols, cell 24px -->
+    <g fill="var(--data-bg)" stroke="var(--data)" class="cell">
+      <rect x="30" y="62" width="24" height="24"/><rect x="54" y="62" width="24" height="24"/><rect x="78" y="62" width="24" height="24"/><rect x="102" y="62" width="24" height="24"/><rect x="126" y="62" width="24" height="24"/><rect x="150" y="62" width="24" height="24"/><rect x="174" y="62" width="24" height="24"/><rect x="198" y="62" width="24" height="24"/>
+      <rect x="30" y="86" width="24" height="24"/><rect x="54" y="86" width="24" height="24"/><rect x="78" y="86" width="24" height="24"/><rect x="102" y="86" width="24" height="24"/><rect x="126" y="86" width="24" height="24"/><rect x="150" y="86" width="24" height="24"/><rect x="174" y="86" width="24" height="24"/><rect x="198" y="86" width="24" height="24"/>
+      <rect x="30" y="110" width="24" height="24"/><rect x="54" y="110" width="24" height="24"/><rect x="78" y="110" width="24" height="24"/><rect x="102" y="110" width="24" height="24"/><rect x="126" y="110" width="24" height="24"/><rect x="150" y="110" width="24" height="24"/><rect x="174" y="110" width="24" height="24"/><rect x="198" y="110" width="24" height="24"/>
+      <rect x="30" y="134" width="24" height="24"/><rect x="54" y="134" width="24" height="24"/><rect x="78" y="134" width="24" height="24"/><rect x="102" y="134" width="24" height="24"/><rect x="126" y="134" width="24" height="24"/><rect x="150" y="134" width="24" height="24"/><rect x="174" y="134" width="24" height="24"/><rect x="198" y="134" width="24" height="24"/>
+    </g>
+  </g>
+  <text class="lb" x="16" y="115" transform="rotate(-90 16 115)" text-anchor="middle">M = 4</text>
+  <text class="lb" x="126" y="176" text-anchor="middle">K = 8</text>
+
+  <text class="op" x="248" y="115">×</text>
+
+  <!-- B: 8 rows x 4 cols -->
+  <text class="ttl" x="292" y="34">B — weights</text>
+  <text class="lb2" x="292" y="50">8 features × 4 outputs</text>
+  <g fill="var(--wts-bg)" stroke="var(--wts)" class="cell">
+    <rect x="292" y="62" width="24" height="24"/><rect x="316" y="62" width="24" height="24"/><rect x="340" y="62" width="24" height="24"/><rect x="364" y="62" width="24" height="24"/>
+    <rect x="292" y="86" width="24" height="24"/><rect x="316" y="86" width="24" height="24"/><rect x="340" y="86" width="24" height="24"/><rect x="364" y="86" width="24" height="24"/>
+    <rect x="292" y="110" width="24" height="24"/><rect x="316" y="110" width="24" height="24"/><rect x="340" y="110" width="24" height="24"/><rect x="364" y="110" width="24" height="24"/>
+    <rect x="292" y="134" width="24" height="24"/><rect x="316" y="134" width="24" height="24"/><rect x="340" y="134" width="24" height="24"/><rect x="364" y="134" width="24" height="24"/>
+    <rect x="292" y="158" width="24" height="24"/><rect x="316" y="158" width="24" height="24"/><rect x="340" y="158" width="24" height="24"/><rect x="364" y="158" width="24" height="24"/>
+    <rect x="292" y="182" width="24" height="24"/><rect x="316" y="182" width="24" height="24"/><rect x="340" y="182" width="24" height="24"/><rect x="364" y="182" width="24" height="24"/>
+    <rect x="292" y="206" width="24" height="24"/><rect x="316" y="206" width="24" height="24"/><rect x="340" y="206" width="24" height="24"/><rect x="364" y="206" width="24" height="24"/>
+    <rect x="292" y="230" width="24" height="12"/><rect x="316" y="230" width="24" height="12"/><rect x="340" y="230" width="24" height="12"/><rect x="364" y="230" width="24" height="12"/>
+  </g>
+  <text class="lb" x="278" y="152" transform="rotate(-90 278 152)" text-anchor="middle">K = 8</text>
+  <text class="lb" x="340" y="30" text-anchor="middle"> </text>
+
+  <text class="op" x="414" y="115">=</text>
+
+  <!-- C: 4x4 -->
+  <text class="ttl" x="458" y="34">C — result</text>
+  <text class="lb2" x="458" y="50">4 tracks × 4 outputs</text>
+  <g fill="var(--acc-bg)" stroke="var(--acc)" class="cell">
+    <rect x="458" y="62" width="24" height="24"/><rect x="482" y="62" width="24" height="24"/><rect x="506" y="62" width="24" height="24"/><rect x="530" y="62" width="24" height="24"/>
+    <rect x="458" y="86" width="24" height="24"/><rect x="482" y="86" width="24" height="24"/><rect x="506" y="86" width="24" height="24"/><rect x="530" y="86" width="24" height="24"/>
+    <rect x="458" y="110" width="24" height="24"/><rect x="482" y="110" width="24" height="24"/><rect x="506" y="110" width="24" height="24"/><rect x="530" y="110" width="24" height="24"/>
+    <rect x="458" y="134" width="24" height="24"/><rect x="482" y="134" width="24" height="24"/><rect x="506" y="134" width="24" height="24"/><rect x="530" y="134" width="24" height="24"/>
+  </g>
+  <text class="lb" x="444" y="115" transform="rotate(-90 444 115)" text-anchor="middle">M = 4</text>
+  <text class="lb" x="506" y="176" text-anchor="middle">N = 4</text>
+
+  <!-- annotation -->
+  <text class="lb2" x="600" y="82">One instruction.</text>
+  <text class="lb2" x="600" y="102">32 numbers in from the left,</text>
+  <text class="lb2" x="600" y="122">32 weights in from the top,</text>
+  <text class="lb2" x="600" y="142">16 results out.</text>
+  <text class="lb2" x="600" y="168">That is the whole atom.</text>
+</svg>
+<figcaption><b>The atom.</b> In the code this is <code>aie::mmul&lt;M,K,N&gt;</code> with
+M=4, K=8, N=4. Every single thing in the design is built by stacking copies of
+this one picture.</figcaption>
+</figure>
+
+<p>Three letters, and they never change meaning:</p>
+
+<div class="tw"><table>
+<tr><th>letter</th><th>counts</th><th>in our network</th><th>value</th></tr>
+<tr><td><b>M</b></td><td>rows of data</td><td>how many <b>tracks</b> at once</td><td class="num">4</td></tr>
+<tr><td><b>K</b></td><td>the shared dimension</td><td><b>input features</b></td><td class="num">8</td></tr>
+<tr><td><b>N</b></td><td>columns of weights</td><td><b>output features</b></td><td class="num">4</td></tr>
+</table></div>
+
+<div class="note"><span class="label">The one thing to hold onto</span>
+<p>The hardware does not multiply <em>a vector</em> by a matrix. It multiplies
+<strong>a 4-row block</strong> by a matrix. Whether you have 4 rows of real data or
+not, it computes 4 rows.</p></div>
+</section>
+
+<section id="s2">
+<span class="step-n">STEP 2</span>
+<h2>Why your first design was slow</h2>
+
+<p>Your GEMV design fed the network <strong>one track at a time</strong>. One track is
+one row. So <code>M</code> was effectively 1.</p>
+
+<p>But the instruction still computes 4 rows. The other three get fed nothing useful,
+and their answers are thrown away.</p>
+
+<figure>
+<svg viewBox="0 0 860 200" role="img" aria-label="With one track, three of the four rows of the instruction are wasted">
+  <style>
+    .lb{font:600 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .lb2{font:400 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .ttl{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .big{font:700 30px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+  </style>
+  <text class="ttl" x="30" y="32">GEMV — one track</text>
+  <g stroke-width="1">
+    <g fill="var(--data-bg)" stroke="var(--data)">
+      <rect x="30" y="48" width="24" height="24"/><rect x="54" y="48" width="24" height="24"/><rect x="78" y="48" width="24" height="24"/><rect x="102" y="48" width="24" height="24"/><rect x="126" y="48" width="24" height="24"/><rect x="150" y="48" width="24" height="24"/><rect x="174" y="48" width="24" height="24"/><rect x="198" y="48" width="24" height="24"/>
+    </g>
+    <g fill="var(--dead-bg)" stroke="var(--dead)" stroke-dasharray="3 2">
+      <rect x="30" y="72" width="24" height="24"/><rect x="54" y="72" width="24" height="24"/><rect x="78" y="72" width="24" height="24"/><rect x="102" y="72" width="24" height="24"/><rect x="126" y="72" width="24" height="24"/><rect x="150" y="72" width="24" height="24"/><rect x="174" y="72" width="24" height="24"/><rect x="198" y="72" width="24" height="24"/>
+      <rect x="30" y="96" width="24" height="24"/><rect x="54" y="96" width="24" height="24"/><rect x="78" y="96" width="24" height="24"/><rect x="102" y="96" width="24" height="24"/><rect x="126" y="96" width="24" height="24"/><rect x="150" y="96" width="24" height="24"/><rect x="174" y="96" width="24" height="24"/><rect x="198" y="96" width="24" height="24"/>
+      <rect x="30" y="120" width="24" height="24"/><rect x="54" y="120" width="24" height="24"/><rect x="78" y="120" width="24" height="24"/><rect x="102" y="120" width="24" height="24"/><rect x="126" y="120" width="24" height="24"/><rect x="150" y="120" width="24" height="24"/><rect x="174" y="120" width="24" height="24"/><rect x="198" y="120" width="24" height="24"/>
+    </g>
+  </g>
+  <text class="lb2" x="236" y="64">← your one real track</text>
+  <text class="lb2" x="236" y="106">← empty. computed anyway.</text>
+  <text class="lb2" x="236" y="126">← thrown away.</text>
+
+  <text class="big" x="30" y="182">25%</text>
+  <text class="lb2" x="106" y="182">of the machine doing useful work — for every layer, every track.</text>
+</svg>
+<figcaption><b>Three quarters discarded.</b> This is not a tuning problem. It is the
+shape of the problem not matching the shape of the instruction.</figcaption>
+</figure>
+
+<p>That single fact is the whole 29× speedup. Everything that follows is just the
+bookkeeping needed to fill those rows.</p>
+
+<div class="tw"><table>
+<tr><th>design</th><th>ns per track</th><th></th></tr>
+<tr><td>GEMV, 1 track at a time</td><td class="num">17,770</td><td>your original</td></tr>
+<tr><td>batched, float32</td><td class="num">615</td><td>29× faster</td></tr>
+<tr><td>batched, bfloat16</td><td class="num">245</td><td>72× faster</td></tr>
+</table></div>
+</section>
+
+<section id="s3">
+<span class="step-n">STEP 3</span>
+<h2>Fill the rows: process 4 tracks together</h2>
+
+<p>The fix is embarrassingly simple to state. Instead of pushing track 0 through the
+whole network, then track 1, then track 2 — <strong>push tracks 0,1,2,3 through
+together</strong>.</p>
+
+<p>Nothing about the maths changes. Track 0's answer does not depend on track 1.
+They just ride the same instruction.</p>
+
+<h3>Let's do one, with your real numbers</h3>
+
+<p>Take your embedding layer's first weights and your first two real tracks
+(from <code>model/weights_fp32/</code>):</p>
+
+<p>Let's compute <strong>one output completely</strong> — top-left corner of C,
+meaning track 0's output feature 0. Get a calculator out; this is checkable.</p>
+
+<pre><code>track 0, its 6 features   +0.174  -0.048  +0.227  +0.533  -0.082  -0.082
+weight column 0           -0.339  -0.153  +0.062  -0.116  +0.081  +0.086
+                          ─────────────────────────────────────────────────
+multiply pairwise         -0.0589 +0.0074 +0.0141 -0.0617 -0.0066 -0.0070
+add them up                                                       = -0.1128
+add the bias  (+0.282)                                            = +0.1693
+leaky ReLU: positive, so unchanged                                = +0.1693</code></pre>
+
+<p>That's it. That is one cell of C, and the layer has 128 of them per track.</p>
+
+<p>Now the important part: <code>C[1][0]</code> — <em>track 1's</em> output feature 0 —
+uses <strong>the very same weight column</strong>, just a different row of data. So does
+track 2, and track 3. The hardware loads that column once and uses it four times.</p>
+
+<p><strong>The weights get loaded once and used for all 4 tracks.</strong> That is the
+second win, and it is why bigger batches help even beyond filling the rows.</p>
+
+<div class="check"><span class="label">Check yourself</span>
+<p>Your layer is 6 features wide, but K = 8. What happens to the other 2?</p>
+<details><summary>Answer</summary>
+<p>They are <strong>zero-padded</strong>. The weight matrix gets two rows of zeros, so those
+lanes contribute nothing. The kernel never knows — the padding is done once, when the
+weights are prepared. This is why <code>parameters.h</code> says <code>IN_FEAT = 16</code>
+for a 6-feature input: padded up, and to 16 rather than 8 for a separate memory reason.</p>
+</details></div>
+
+<div class="note"><span class="label">Why 8 tracks, not 4</span>
+<p>The kernel keeps <strong>two</strong> 4-row blocks in flight at once, so the vector unit
+always has independent work while earlier multiplies are still finishing. That means the
+batch must be a multiple of 2×M = 8.</p>
+<p>Ask for a batch of 4 and it gets padded to 8 and does identical work — which is exactly
+why batch 4 and batch 8 were <em>measured</em> to take the same time. <strong>8 tracks
+cost the same as 4.</strong></p></div>
+</section>
+
+<section id="s4">
+<span class="step-n">STEP 4</span>
+<h2>Real layers are bigger than the atom. Tile them.</h2>
+
+<p>Our atom handles 4 tracks × 8 features → 4 outputs. A real layer is 128 features →
+128 outputs. So you cover the big rectangle with copies of the small one.</p>
+
+<p>Two directions, and they behave differently:</p>
+
+<figure>
+<svg viewBox="0 0 860 300" role="img" aria-label="Tiling across output features versus down input features">
+  <style>
+    .lb{font:600 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .lb2{font:400 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .ttl{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .arw{stroke:var(--ink-3);stroke-width:1.5;fill:none;marker-end:url(#ah)}
+  </style>
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/></marker></defs>
+
+  <text class="ttl" x="30" y="30">Across → more output features</text>
+  <g fill="var(--acc-bg)" stroke="var(--acc)" stroke-width="1">
+    <rect x="30" y="46" width="34" height="34"/><rect x="66" y="46" width="34" height="34"/>
+    <rect x="102" y="46" width="34" height="34"/><rect x="138" y="46" width="34" height="34"/>
+    <rect x="174" y="46" width="34" height="34"/><rect x="210" y="46" width="34" height="34"/>
+  </g>
+  <text class="lb2" x="252" y="68">… 32 of them for 128 outputs</text>
+  <text class="lb2" x="30" y="100">Each block is a different set of 4 outputs.</text>
+  <text class="lb2" x="30" y="118">They are <tspan font-weight="700">independent</tspan> — nothing to combine.</text>
+
+  <text class="ttl" x="30" y="168">Down ↓ more input features</text>
+  <g fill="var(--acc-bg)" stroke="var(--acc)" stroke-width="1">
+    <rect x="30" y="184" width="34" height="26"/>
+    <rect x="30" y="212" width="34" height="26"/>
+    <rect x="30" y="240" width="34" height="26"/>
+  </g>
+  <path class="arw" d="M74,197 L104,197"/><path class="arw" d="M74,225 L104,225"/>
+  <text class="lb2" x="112" y="201">partial sum from features 0–7</text>
+  <text class="lb2" x="112" y="229">partial sum from features 8–15</text>
+  <text class="lb2" x="112" y="257">… and so on, 16 of them for 128</text>
+  <text class="lb2" x="30" y="288">These <tspan font-weight="700">must be added together</tspan> — they are pieces of one answer.</text>
+</svg>
+<figcaption><b>Two axes, two behaviours.</b> Going across gives you more outputs
+(independent). Going down gives you more of the <em>same</em> output (must be summed).
+That difference is the single most important idea in the next step.</figcaption>
+</figure>
+
+<p>So a full dense layer is three nested loops: <em>over tracks</em>, <em>over
+output features</em>, and <em>over input features</em>. Only the last one accumulates.</p>
+
+<div class="note"><span class="label">Why the sum stays exact</span>
+<p>When you add up those partial sums, the running total is kept in a
+<strong>wide accumulator</strong> — more bits than the numbers going in. It is only
+rounded back down to float32 once, right at the end.</p>
+<p>That is why the fp32 build matches the reference to <b>7.5e-07</b>. You are not
+losing a little precision at every step.</p></div>
+</section>
+
+<section id="s5">
+<span class="step-n">STEP 5</span>
+<h2>One layer doesn't fit on one tile. Split it.</h2>
+
+<p>An AIE tile is a small processor with its own memory. The memory that holds weights
+is <strong>16 KB</strong>. That is a hard wall.</p>
+
+<p>A 256→128 layer in float32 needs 256 × 128 × 4 bytes = <strong>128 KB</strong> of
+weights. It is 8× too big for one tile. So the layer has to be spread over
+<strong>at least 8 tiles</strong>.</p>
+
+<p>You already know the two directions. Now they get names:</p>
+
+<figure>
+<svg viewBox="0 0 860 330" role="img" aria-label="CAS_NUM splits outputs into independent chains, CAS_LENGTH splits inputs into a cascade">
+  <style>
+    .lb{font:600 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .lb2{font:400 11.5px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .ttl{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .tile{fill:var(--surface-2);stroke:var(--rule-2);stroke-width:1.5}
+    .casc{stroke:var(--acc);stroke-width:2.5;fill:none;marker-end:url(#ah2)}
+  </style>
+  <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--acc)"/></marker></defs>
+
+  <text class="ttl" x="30" y="28">One 256→128 layer = 8 tiles</text>
+
+  <!-- chain 0 -->
+  <text class="lb" x="30" y="62">chain 0</text>
+  <text class="lb2" x="30" y="78">outputs 0–63</text>
+  <g>
+    <rect class="tile" x="118" y="46" width="96" height="44" rx="5"/>
+    <rect class="tile" x="238" y="46" width="96" height="44" rx="5"/>
+    <rect class="tile" x="358" y="46" width="96" height="44" rx="5"/>
+    <rect class="tile" x="478" y="46" width="96" height="44" rx="5"/>
+  </g>
+  <text class="lb2" x="166" y="63" text-anchor="middle">in 0–63</text>
+  <text class="lb2" x="286" y="63" text-anchor="middle">in 64–127</text>
+  <text class="lb2" x="406" y="63" text-anchor="middle">in 128–191</text>
+  <text class="lb2" x="526" y="63" text-anchor="middle">in 192–255</text>
+  <text class="lb2" x="166" y="80" text-anchor="middle">16 KB</text>
+  <text class="lb2" x="286" y="80" text-anchor="middle">16 KB</text>
+  <text class="lb2" x="406" y="80" text-anchor="middle">16 KB</text>
+  <text class="lb2" x="526" y="80" text-anchor="middle">16 KB</text>
+  <path class="casc" d="M216,68 L234,68"/><path class="casc" d="M336,68 L354,68"/><path class="casc" d="M456,68 L474,68"/>
+  <path class="casc" d="M576,68 L610,68"/>
+  <text class="lb2" x="618" y="72">outputs 0–63</text>
+
+  <!-- chain 1 -->
+  <text class="lb" x="30" y="150">chain 1</text>
+  <text class="lb2" x="30" y="166">outputs 64–127</text>
+  <g>
+    <rect class="tile" x="118" y="134" width="96" height="44" rx="5"/>
+    <rect class="tile" x="238" y="134" width="96" height="44" rx="5"/>
+    <rect class="tile" x="358" y="134" width="96" height="44" rx="5"/>
+    <rect class="tile" x="478" y="134" width="96" height="44" rx="5"/>
+  </g>
+  <text class="lb2" x="166" y="151" text-anchor="middle">in 0–63</text>
+  <text class="lb2" x="286" y="151" text-anchor="middle">in 64–127</text>
+  <text class="lb2" x="406" y="151" text-anchor="middle">in 128–191</text>
+  <text class="lb2" x="526" y="151" text-anchor="middle">in 192–255</text>
+  <text class="lb2" x="166" y="168" text-anchor="middle">16 KB</text>
+  <text class="lb2" x="286" y="168" text-anchor="middle">16 KB</text>
+  <text class="lb2" x="406" y="168" text-anchor="middle">16 KB</text>
+  <text class="lb2" x="526" y="168" text-anchor="middle">16 KB</text>
+  <path class="casc" d="M216,156 L234,156"/><path class="casc" d="M336,156 L354,156"/><path class="casc" d="M456,156 L474,156"/>
+  <path class="casc" d="M576,156 L610,156"/>
+  <text class="lb2" x="618" y="160">outputs 64–127</text>
+
+  <!-- annotations -->
+  <path d="M118,196 L574,196" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="4 3" fill="none"/>
+  <text class="lb" x="346" y="216" text-anchor="middle">CAS_LENGTH = 4 — the cascade</text>
+  <text class="lb2" x="346" y="234" text-anchor="middle">each tile does a partial sum and hands it to its neighbour</text>
+  <text class="lb2" x="346" y="250" text-anchor="middle">the running total is passed <tspan font-weight="700">unrounded</tspan></text>
+
+  <path d="M96,46 L96,178" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="4 3" fill="none"/>
+  <text class="lb" x="30" y="282">CAS_NUM = 2</text>
+  <text class="lb2" x="30" y="300">two completely independent chains.</text>
+  <text class="lb2" x="30" y="316">they never talk to each other.</text>
+</svg>
+<figcaption><b>The two names.</b> <code>CAS_NUM</code> = how many independent chains
+(splitting <em>outputs</em>). <code>CAS_LENGTH</code> = how long each chain is
+(splitting <em>inputs</em>). 4 × 2 = 8 tiles, each holding exactly 16 KB.</figcaption>
+</figure>
+
+<h3>A picture for the cascade</h3>
+
+<p>Four people are adding up a long shopping list together. Each takes a quarter of the
+items. Person 1 totals theirs and passes the running total to person 2, who adds theirs
+on top, and so on. Person 4 has the answer.</p>
+
+<p>The <strong>cascade</strong> is a dedicated wire between neighbouring tiles that carries
+that running total. Crucially it carries the <em>full-precision</em> total — nobody rounds
+to the nearest penny before passing it on. So splitting the work across 8 tiles gives
+bit-identical results to doing it on one.</p>
+
+<div class="check"><span class="label">Check yourself</span>
+<p>Why is a 128→128 layer split 2×2 and not 1×4 or 4×1?</p>
+<details><summary>Answer</summary>
+<p>128 × 128 × 4 bytes = 64 KB, so it needs 4 tiles minimum. Any factorisation into 4
+satisfies memory. <strong>2×2 is chosen because it makes the cascade only 2 long instead of
+4</strong> — shorter chain, less latency. 4×1 would mean 4 chains of 1, which needs each tile
+to hold all 128 input features' worth of weights for its outputs, and that's back over 16 KB.</p>
+</details></div>
+
+<div class="note"><span class="label">This is where designs are actually decided</span>
+<p>Not by performance intuition — by <strong>arithmetic</strong>. Weight bytes ÷ 16 KB =
+minimum tiles. In this whole design, every layer but the first sits at
+<em>exactly</em> 16 KB per tile. The tile counts were chosen to hit that wall.</p></div>
+</section>
+
+<section id="s6">
+<span class="step-n">STEP 6</span>
+<h2>Getting the weights in — and in the right order</h2>
+
+<p>Weights are pushed <strong>once, before the run starts</strong>, over RTP ports —
+the same mechanism you already used. They then sit on the tile forever, and every
+iteration is pure compute. Nothing about this part needed to change.</p>
+
+<p>What <em>did</em> change is the <strong>order the numbers are stored in</strong>.</p>
+
+<p>The kernel grabs weights 32 at a time — one whole 8×4 block, in one memory read.
+For that to be a single fast read, those 32 numbers must be <strong>next to each other
+in memory</strong>. But in a normal row-by-row weight matrix, an 8×4 block is scattered
+across 8 different rows.</p>
+
+<figure>
+<svg viewBox="0 0 860 210" role="img" aria-label="Weights rearranged from row-major into block order">
+  <style>
+    .lb{font:600 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .lb2{font:400 11.5px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .ttl{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+  </style>
+  <text class="ttl" x="30" y="28">how you'd write it</text>
+  <text class="lb2" x="30" y="46">row by row — the block is scattered</text>
+  <g stroke="var(--rule-2)" stroke-width="1" fill="var(--surface-2)">
+    <rect x="30" y="58" width="18" height="18"/><rect x="48" y="58" width="18" height="18"/><rect x="66" y="58" width="18" height="18"/><rect x="84" y="58" width="18" height="18"/>
+    <rect x="102" y="58" width="18" height="18"/><rect x="120" y="58" width="18" height="18"/><rect x="138" y="58" width="18" height="18"/><rect x="156" y="58" width="18" height="18"/>
+    <rect x="174" y="58" width="18" height="18"/><rect x="192" y="58" width="18" height="18"/><rect x="210" y="58" width="18" height="18"/><rect x="228" y="58" width="18" height="18"/>
+  </g>
+  <g fill="var(--wts-bg)" stroke="var(--wts)" stroke-width="1.5">
+    <rect x="30" y="58" width="18" height="18"/><rect x="48" y="58" width="18" height="18"/>
+    <rect x="102" y="58" width="18" height="18"/><rect x="120" y="58" width="18" height="18"/>
+    <rect x="174" y="58" width="18" height="18"/><rect x="192" y="58" width="18" height="18"/>
+  </g>
+  <text class="lb2" x="262" y="72">↑ the highlighted cells belong to one block,</text>
+  <text class="lb2" x="262" y="90">but they are spread across the array</text>
+
+  <text class="ttl" x="30" y="136">how it is stored</text>
+  <text class="lb2" x="30" y="154">block by block — one contiguous read</text>
+  <g fill="var(--wts-bg)" stroke="var(--wts)" stroke-width="1.5">
+    <rect x="30" y="166" width="18" height="18"/><rect x="48" y="166" width="18" height="18"/><rect x="66" y="166" width="18" height="18"/><rect x="84" y="166" width="18" height="18"/><rect x="102" y="166" width="18" height="18"/><rect x="120" y="166" width="18" height="18"/>
+  </g>
+  <g stroke="var(--rule-2)" stroke-width="1" fill="var(--surface-2)">
+    <rect x="144" y="166" width="18" height="18"/><rect x="162" y="166" width="18" height="18"/><rect x="180" y="166" width="18" height="18"/><rect x="198" y="166" width="18" height="18"/><rect x="216" y="166" width="18" height="18"/><rect x="234" y="166" width="18" height="18"/>
+  </g>
+  <text class="lb2" x="262" y="180">one block, then the next block, then the next…</text>
+</svg>
+<figcaption><b>Packing the suitcase in unpacking order.</b> The weights are rearranged
+<em>before</em> they're pushed, into exactly the sequence the kernel will read them.
+That rearrangement is <code>pack_mmul</code>, and it lives in the notebook.</figcaption>
+</figure>
+
+<div class="note"><span class="label">Why this matters more than it looks</span>
+<p>If you pack the weights wrongly, the graph still runs, still produces plausible-looking
+numbers, and is <strong>wrong</strong>. There is no crash to tell you.</p>
+<p>That is why this project <em>checks</em> it: the notebook re-packs the weights from
+source and compares against all 92 payloads actually loaded onto the card, expecting
+<b>0.000e+00</b>. Do this for any model you map.</p></div>
+</section>
+
+<section id="s7">
+<span class="step-n">STEP 7</span>
+<h2>Bias and ReLU cost nothing</h2>
+
+<p>In your design these were separate kernels — a bias-add tile, a leaky-ReLU tile,
+each with buffers and connections. Here they vanish, and it's worth seeing how,
+because the trick generalises.</p>
+
+<h3>Bias: start the tally at the bias</h3>
+
+<p>Normally you compute <code>y = W·x</code>, then add <code>b</code>. Instead:
+<strong>set the running total to <code>b</code> before you start multiplying.</strong>
+Then every multiply-accumulate lands on top of it, and when you're done the bias
+is already in there.</p>
+
+<pre><code>C = bias;          <span class="cmt">// start the tally at b, not 0</span>
+C.mac(A, B);       <span class="cmt">// ... and just accumulate as normal</span></code></pre>
+
+<p>Cost: <strong>zero extra instructions</strong>. A whole tile, buffer and hop disappear.</p>
+
+<h3>Leaky ReLU: fold it into the write</h3>
+
+<p>The result has to be converted from the wide accumulator down to float32 anyway
+before being stored. The activation is applied <em>in that same moment</em>, while the
+numbers are already in registers — about three extra vector instructions total.</p>
+
+<div class="note"><span class="label">The general rule</span>
+<p>Anything <strong>elementwise</strong> — bias, ReLU, scale, clamp — should be folded into
+the end of whatever produced the data. Never give it its own kernel.</p>
+<p>A kernel costs you a tile, a buffer, a DMA transfer and a synchronisation point.
+An elementwise operation costs one instruction.</p></div>
+</section>
+
+<section id="s8">
+<span class="step-n">STEP 8</span>
+<h2>Moving data between layers, for free</h2>
+
+<p>Here's a real problem. A dense layer <strong>writes</strong> its results in 4×4 blocks
+(4 tracks × 4 outputs — that's the shape of C). But the next layer wants to
+<strong>read</strong> them in 8×4 blocks (8 features × 4 tracks — the shape of A).</p>
+
+<p>Same numbers, different grouping. Somebody has to regroup them.</p>
+
+<figure>
+<svg viewBox="0 0 860 260" role="img" aria-label="A memtile written in 4 by 4 patches and read in 8 by 4 patches">
+  <style>
+    .lb{font:600 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .lb2{font:400 11.5px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .ttl{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .box{fill:var(--surface-2);stroke:var(--rule-2);stroke-width:1.5}
+    .arw{stroke:var(--ink-3);stroke-width:1.5;fill:none;marker-end:url(#ah3)}
+  </style>
+  <defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/></marker></defs>
+
+  <rect class="box" x="30" y="70" width="120" height="70" rx="6"/>
+  <text class="lb" x="90" y="100" text-anchor="middle">layer N</text>
+  <text class="lb2" x="90" y="118" text-anchor="middle">writes 4×4</text>
+
+  <path class="arw" d="M156,105 L214,105"/>
+
+  <rect x="220" y="46" width="200" height="118" rx="8" fill="var(--data-bg)" stroke="var(--data)" stroke-width="1.5"/>
+  <text class="lb" x="320" y="34" text-anchor="middle">shared buffer (memtile)</text>
+  <!-- write pattern -->
+  <g fill="none" stroke="var(--acc)" stroke-width="1.2">
+    <rect x="234" y="60" width="26" height="26"/><rect x="262" y="60" width="26" height="26"/><rect x="290" y="60" width="26" height="26"/>
+    <rect x="234" y="88" width="26" height="26"/><rect x="262" y="88" width="26" height="26"/><rect x="290" y="88" width="26" height="26"/>
+  </g>
+  <text class="lb2" x="356" y="76">written in</text>
+  <text class="lb2" x="356" y="92">4×4 patches</text>
+  <!-- read pattern -->
+  <g fill="none" stroke="var(--wts)" stroke-width="1.6" stroke-dasharray="4 2">
+    <rect x="234" y="124" width="54" height="26"/><rect x="292" y="124" width="54" height="26"/>
+  </g>
+  <text class="lb2" x="356" y="142">read in 8×4</text>
+
+  <path class="arw" d="M426,105 L484,105"/>
+
+  <rect class="box" x="490" y="70" width="120" height="70" rx="6"/>
+  <text class="lb" x="550" y="100" text-anchor="middle">layer N+1</text>
+  <text class="lb2" x="550" y="118" text-anchor="middle">reads 8×4</text>
+
+  <text class="lb" x="30" y="204">Nobody copies anything.</text>
+  <text class="lb2" x="30" y="224">The DMA engine reads the buffer in whatever pattern each side asks for.</text>
+  <text class="lb2" x="30" y="242">The regrouping happens <tspan font-weight="700">while the data moves</tspan> — no kernel, no cycles, no extra memory.</text>
+</svg>
+<figcaption><b>Tiling is an access pattern, not a copy.</b> A <code>shared_buffer</code>
+is a block of memory between stages with its own DMA engines. "Tiling" describes the
+shape each side reads or writes it in.</figcaption>
+</figure>
+
+<p>You were already circling this idea with your 512 KB tile buffer and manual read/write
+access — that was the right mechanism. What the batched design adds is choosing the
+<em>shapes</em> so they match the atom, which is what makes the reshape free.</p>
+
+<p>The same buffer can also be read from two different <strong>starting offsets</strong> —
+one reader takes features 0–63, another takes 64–127 — which feeds two cascade stages.
+The "splitter" kernel you'd otherwise write by hand is a single number in a config struct.</p>
+</section>
+
+<section id="s9">
+<span class="step-n">STEP 9</span>
+<h2>The two things that aren't dense layers</h2>
+
+<p>Almost everything is handled by the machinery above. Two things aren't, and they're
+the ones you'd still write by hand.</p>
+
+<h3>The roll-concat — and a warning about memory</h3>
+
+<p>Each track needs to be paired with the track before it. The kernel keeps the last
+track of one block in a <strong>static</strong> variable so the next block can reach it.</p>
+
+<div class="note"><span class="label">A static is a state machine. You now own its reset.</span>
+<p>Statics live from when the program is <em>loaded</em>, not from when you press run.
+Two consequences bit this project hard:</p>
+<ul>
+<li>Track 0 pairs with <em>whatever came before it</em>, not with track 49. So the hardware's
+roll is <strong>streaming</strong>, while the ONNX reference is <strong>circular</strong>.
+That single difference is the origin of every "why don't my numbers match" confusion here.</li>
+<li>Running the graph twice without reloading starts with the <em>previous</em> run's leftovers.
+Fixed by pushing one dummy all-zero event through first and discarding it.</li>
+</ul></div>
+
+<h3>The averager — and a rule about rates</h3>
+
+<p>It sums 50 tracks and emits one result. But the graph requires every kernel wired to
+an output to <strong>write something every single iteration</strong>. It can't say "nothing
+this time."</p>
+
+<p>So it writes <strong>zeros</strong> six times out of seven, and the real mean on the
+seventh. That's not a hack — it's how you express a duty cycle in a system with fixed
+data rates.</p>
+
+<div class="note"><span class="label">And one thing deliberately NOT on the AIE</span>
+<p>The final 128→27 layer runs <strong>on the host CPU</strong>. It operates on a single
+averaged vector — one row. That's M=1, the exact shape this whole design exists to avoid.
+It's only 3,456 multiplies, but measured at 15–19 µs on the array versus 4.2 µs for the
+entire 14-layer pipeline. On the host it's free.</p>
+<p><strong>Knowing when not to use the accelerator is part of the skill.</strong></p></div>
+</section>
+
+<section id="s10">
+<span class="step-n">STEP 10</span>
+<h2>Now the code will read</h2>
+
+<p>Everything above has a home. Read them in this order, and each will look like a
+picture you've already seen:</p>
+
+<div class="tw"><table>
+<tr><th>to see…</th><th>open</th></tr>
+<tr><td>the atom, and the three nested loops</td><td><code>src_fp32/kernels/dense_bias_relu/dense_bias_relu.cpp</code></td></tr>
+<tr><td>bias as the starting tally, ReLU at the store</td><td>same file — <code>apply_activation</code></td></tr>
+<tr><td>each layer's shape and tile count</td><td><code>src_fp32/parameters.h</code></td></tr>
+<tr><td>how a layer's tiles are chained</td><td><code>.../dense_bias_relu_graph.h</code></td></tr>
+<tr><td>which layer feeds which</td><td><code>src_fp32/top_graph.h</code></td></tr>
+<tr><td>every buffer and its read/write shapes</td><td><code>src_fp32/graph_plan.h</code></td></tr>
+<tr><td>the roll and the averager</td><td><code>src_fp32/kernels/{roll_concat_batch,track_accum}/</code></td></tr>
+<tr><td>weight packing, readably</td><td><code>analysis/rtda_reference.ipynb</code> §1</td></tr>
+</table></div>
+
+<p>Start with <code>dense_single</code> in the first file. Trace one pass on paper with
+M=4, K=8, N=4. Then open <code>graph_plan.h</code> and draw one buffer with its 4×4 write
+patches and 8×4 read patches on top of each other. That drawing is the moment tiling
+stops being magic.</p>
+</section>
+
+<section id="s11">
+<span class="step-n">STEP 11</span>
+<h2>Mapping your own model</h2>
+
+<p>Someone hands you a network. Do the arithmetic before you write any code — the first
+three steps decide most of the design.</p>
+
+<ol>
+<li><strong>Build a trusted reference first.</strong> A numpy or ONNX model you believe,
+and a fixed stimulus. Without it you cannot tell a mapping bug from a precision effect,
+and you will lose days to that confusion.</li>
+<li><strong>Weight bytes ÷ 16 KB = minimum tiles</strong>, per layer. This is the number
+that decides your design.</li>
+<li><strong>Choose the split.</strong> Prefer more independent chains (<code>CAS_NUM</code>)
+over longer cascades (<code>CAS_LENGTH</code>) when memory lets you — shorter chains,
+less latency.</li>
+<li><strong>Batch = a multiple of 8.</strong> Below that you're padding and paying anyway.</li>
+<li><strong>Make every dimension a multiple of 16 elements.</strong> Pad in the weight
+preparation, never in the kernel.</li>
+<li><strong>Fuse everything elementwise</strong> into the producer.</li>
+<li><strong>Match buffer shapes</strong> to what producer and consumer want, and let the
+DMA do the reshaping.</li>
+<li><strong>Isolate anything stateful</strong> and write down its reset semantics before
+you build.</li>
+<li><strong>Verify the weights actually arrived</strong> — re-pack from source, diff against
+what was loaded, expect bit-exact.</li>
+<li><strong>Measure II, not wall-clock.</strong> II is the array's true throughput;
+wall-clock includes host and DMA costs that don't scale with the array.</li>
+</ol>
+
+<div class="note"><span class="label">The habit that matters most</span>
+<p>When a number surprises you, <strong>measure the decomposition</strong> rather than
+reasoning about it. In the sister PL design in this repo, four changes were made to
+improve accuracy — and measuring them one at a time showed that <em>three of the four
+were individually harmful</em>. Nobody would have guessed that. Only the ablation showed it.</p></div>
+
+<div class="tw"><table>
+<tr><th>hard limit</th><th>value</th><th>what it forces</th></tr>
+<tr><td>weights per tile</td><td class="num">16 KB</td><td>the minimum tile count</td></tr>
+<tr><td>tile data memory</td><td class="num">64 KB</td><td>inputs + outputs + weights + stack</td></tr>
+<tr><td>shared buffer (memtile)</td><td class="num">512 KB</td><td>what fits between stages</td></tr>
+<tr><td>batch granularity</td><td class="num">×8</td><td>4 and 8 cost the same</td></tr>
+<tr><td>any dimension</td><td class="num">×16 elems</td><td>or buffer descriptors run out</td></tr>
+<tr><td>cascade</td><td>adjacent tiles</td><td>constrains placement</td></tr>
+</table></div>
+
+<p style="color:var(--ink-3);font-size:15px;margin-top:32px">
+The dense reference version of this material — with the code excerpts, the exact
+config values and the full per-layer table — is
+<code>docs/aie_ml_batched_design.md</code> in the repo. Read it after this one,
+not before.</p>
+</section>
+
+</main>
+</div>

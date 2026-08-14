@@ -12,6 +12,12 @@ runs 29× faster.
 Everything here is checkable against the files named. Nothing is generic AIE
 advice.
 
+> **This is the reference, not the lesson.** It is dense on purpose and assumes
+> you can read the code alongside it. If the ideas are new, read
+> **`aie_tutorial.html`** in this directory first — it builds the same picture up
+> one step at a time, with diagrams and a worked example, and defers all code to
+> the end. Come back here for the exact numbers.
+
 ---
 
 # Part 0 — The one idea

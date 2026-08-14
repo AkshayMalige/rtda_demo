@@ -137,11 +137,15 @@ jupyter lab analysis/rtda_compare.ipynb      # all three implementations
 
 `RUNBOOK.md` is the copy-paste version, with expected values for every step.
 
-**New to how the AIE design works?** `docs/aie_ml_batched_design.md` explains
-the batched `aie::mmul` mapping from first principles — why matrix-vector wastes
-3/4 of every instruction, what `CAS_LENGTH` and `CAS_NUM` actually split, how
-weights are packed and pushed, how `shared_buffer` tiling does the reshape
-between layers for free, and a recipe for mapping a new model.
+**New to how the AIE design works?** Two documents, in this order:
+
+1. **`docs/aie_tutorial.html`** — start here. Builds up from a single hardware
+   multiply to the whole 14-layer design, one idea at a time, with diagrams and
+   a worked example you can check on a calculator. No code until the last two
+   sections.
+2. **`docs/aie_ml_batched_design.md`** — the reference. The same material with
+   the code excerpts, exact config values and the full per-layer table. Read it
+   after the tutorial, not before.
 
 ## Where results go
 
