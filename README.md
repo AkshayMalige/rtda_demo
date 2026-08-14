@@ -137,6 +137,12 @@ jupyter lab analysis/rtda_compare.ipynb      # all three implementations
 
 `RUNBOOK.md` is the copy-paste version, with expected values for every step.
 
+**New to how the AIE design works?** `docs/aie_ml_batched_design.md` explains
+the batched `aie::mmul` mapping from first principles — why matrix-vector wastes
+3/4 of every instruction, what `CAS_LENGTH` and `CAS_NUM` actually split, how
+weights are packed and pushed, how `shared_buffer` tiling does the reshape
+between layers for free, and a recipe for mapping a new model.
+
 ## Where results go
 
 **Simulation files itself under `results/<impl>/sim/`. Hardware does not** --

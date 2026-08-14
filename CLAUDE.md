@@ -14,7 +14,9 @@ tracks = 1 event**; the event's 128-wide mean goes through a 128→27 dense to
 give **27 outputs per event**.
 
 Read `README.md` for the design and the measured numbers, `RUNBOOK.md` for
-commands. This file is the orientation for making changes.
+commands, and `docs/aie_ml_batched_design.md` for how the AIE mapping works
+(the mmul atom, cascades, weight packing, memtile tiling). This file is the
+orientation for making changes.
 
 ## Two things that cause wrong answers here
 
