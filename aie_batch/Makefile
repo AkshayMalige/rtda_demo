@@ -317,7 +317,11 @@ system:
 
 # system_graph on the system toolchain, plus the marker.
 sysgraph:
-	@rm -f .system_build.* $(LIBADF)
+	# $(SYSMARK), NOT .system_build.* -- the wildcard also deleted the OTHER
+	# precision's marker, so after building fp32 a later `make link
+	# PRECISION=bf16` refused a perfectly valid libadf_bf16.a. The two
+	# precisions are independent everywhere else; the marker must be too.
+	@rm -f $(SYSMARK) $(LIBADF)
 	@$(MAKE) --no-print-directory system_graph PRECISION=$(PRECISION) \
 	         AIE_VITIS=$(SYS_VITIS) AIE_PLAT="$(PLATFORM)"
 	@touch $(SYSMARK)

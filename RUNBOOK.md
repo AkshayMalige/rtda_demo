@@ -325,8 +325,26 @@ poweroff
 Land them in **`results/aie_fp32/hw/`** (bf16 → `results/aie_bf16/hw/`).
 Do not mix them.
 
-Repeat with `PRECISION=bf16`. The build products are stamped
-`<precision>_<target>`, so the second build cannot overwrite the first.
+Repeat with `PRECISION=bf16`. **The two builds are fully independent** -- every
+product is stamped `<precision>_<target>`, so running them back to back loses
+nothing:
+
+```
+build/fp32_hw/design.xsa        build/bf16_hw/design.xsa
+package/fp32_hw/system.xclbin   package/bf16_hw/system.xclbin
+package/fp32_hw/sd_card.img     package/bf16_hw/sd_card.img
+sd_stage/fp32/                  sd_stage/bf16/
+libadf_fp32.a                   libadf_bf16.a
+sysdata_fp32/                   sysdata_bf16/
+```
+
+The one shared file is `host_batch.exe`, and that is deliberate: **one binary
+serves both precisions**, reading `sysdata/config.txt` at run time to decide
+whether to convert the input to bfloat16.
+
+(This is what `HANDOFF.md` listed as issue 3 -- `package.hw` and `build_hw` used
+to carry no precision at all, so the second `make system` overwrote the first
+and the images had to be renamed by hand.)
 
 ### 5b. PL
 
