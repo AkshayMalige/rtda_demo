@@ -142,7 +142,17 @@ jupyter lab analysis/rtda_compare.ipynb      # all three implementations
 **Simulation files itself under `results/<impl>/sim/`. Hardware does not** --
 the host writes into its own working directory on the board, so those three
 files have to be carried back, and which directory they belong in is not
-recoverable from the files themselves:
+recoverable from the files themselves.
+
+**Copy `track_means_all.txt`, `track_out_27.txt` and `run_info.txt` off the
+board into exactly one of:**
+
+| the run | destination |
+|---|---|
+| AIE, `PRECISION=fp32`, board | `results/aie_fp32/hw/` |
+| AIE, `PRECISION=bf16`, board | `results/aie_bf16/hw/` |
+| PL, board | `results/pl_fixed/hw/` |
+| any of the above under QEMU | the same, with `hw_emu/` instead of `hw/` |
 
 ```bash
 make results                                    # what is on disk right now
