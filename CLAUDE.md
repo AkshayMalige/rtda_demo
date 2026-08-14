@@ -116,8 +116,20 @@ The numpy screening model is ~2× optimistic in absolute terms; it is for
 ranking. `make -C pl_fixed validate` prints the gap.
 
 The leaky slope is 0.1, computed as `2^-4 + 2^-5 + 2^-8 + 2^-9` in
-`rtda_leaky.h` so it stays DSP-free. `ALPHA125=1` rebuilds the legacy 0.125
-variant for comparison — it is 33× worse and should not be the default again.
+`rtda_leaky.h` so it stays DSP-free — **verified: csynth gives 1057 DSP, the
+same as the 0.125 design.** `ALPHA125=1` rebuilds the legacy variant for
+comparison; it is 33× worse and should not be the default again.
+
+**Open: LUT.** The realignment took the HLS estimate from 108% to 231% and the
+design has not been placed and routed. `pl_fixed/RESOURCES.md` has the
+breakdown and the two candidate fixes; the first (giving `rtda_weight_t` the
+plain ap_fixed defaults, since weights are compile-time constants) looks free.
+Do not promise the design fits until `make system FLOW=pl_fixed TARGET=hw`
+has run.
+
+Rounding and saturation modes are not free in this design. Keep them on the
+activations, where the error is, and nowhere else — see the notes in
+`rtda_fixed.h`.
 
 ## Verifying a change
 

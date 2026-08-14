@@ -30,7 +30,7 @@ deliverable: **27 numbers per event**.
 | kernel | `aie::mmul` | `aie::mmul` | hls4ml `nnet::dense` |
 | **ns/track, silicon** | **615** | **245** | ~40,000 |
 | **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **2.35e-04** |
-| resources | 65 compute + 14 memory tiles | same | 43% LUT, 81% DSP, 0 AIE |
+| resources ² | 65 compute + 14 memory tiles | same | 80% DSP, 47% BRAM, **231% LUT (est.)** |
 
 ¹ max |implementation − ONNX| over the **same 5 events**, warm-up excluded.
 Full scale (largest of the 27) is 0.0857. These are a max over events, so they
@@ -38,6 +38,14 @@ only compare at equal event counts — over its full 1000-event run the PL desig
 reads 3.54e-04, and the AIE numbers would rise similarly if per-track taps
 existed at that scale. `analysis/rtda_compare.ipynb` takes the ratio over the
 common count and prints which it used.
+
+² HLS estimate, `make -C pl_fixed csynth`. **DSP is 1057 (80%), identical to the
+design before the precision realignment — so leaky-ReLU at slope 0.1 really is
+free**, which was the thing that had to be checked. LUT is not free: the
+estimate went 563k (108%) → 1,206k (231%). For calibration the *old* design
+estimated 108% and placed at 43%, i.e. the estimate ran ~2.5× pessimistic; 231%
+scaled the same way is ~92%, which is not a margin to rely on. **This has not
+been through place and route and may not fit.** See `pl_fixed/RESOURCES.md`.
 
 **The headline result is the last two columns.** Both are 16 bits per
 activation, and the fixed-point PL design lands **1.7× closer** to the reference

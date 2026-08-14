@@ -138,8 +138,13 @@ error** over the same 1000 events. The sweep prints the clipping margin;
 Verify the toolchain agrees with that, and check resources:
 ```bash
 make -C pl_fixed csim   EVENTS=3       # ~3 min   PASS, worst 0.000e+00
-make -C pl_fixed csynth                # ~40 min  DSP must not exceed 1057
+make -C pl_fixed csynth                # ~5 h!    DSP must not exceed 1057
 ```
+`csynth` is slow -- 'Checking Synthesizability' alone is ~100 min. Results and
+the comparison against the pre-realignment design are in `pl_fixed/RESOURCES.md`.
+**DSP comes out at 1057 (80%), unchanged, so alpha=0.1 is free. LUT does not:
+the estimate went 108% -> 231%, and the design has not been through place and
+route.** Read RESOURCES.md before assuming it fits.
 `csim` compares against the native model — same sources, different compiler —
 so it should be **bit-identical**, and a difference means the HLS front end
 changed the semantics of the C++.
