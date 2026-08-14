@@ -104,7 +104,22 @@ inline std::string rtda_weights_dir() {
 
 typedef ap_fixed<RTDA_W, RTDA_I, AP_RND_CONV, AP_SAT>          rtda_act_t;
 typedef ap_fixed<RTDA_W, RTDA_WEIGHT_I, AP_RND_CONV, AP_SAT>   rtda_weight_t;
-typedef ap_fixed<RTDA_ACC_W, RTDA_ACC_I, AP_RND_CONV, AP_SAT>  rtda_accum_t;
+// The accumulator gets the ap_fixed DEFAULTS -- no rounding, no saturation --
+// on purpose, and this is the one place in the design where that is right:
+//
+//   * AP_SAT would be dead logic. 160x headroom (max value 3.22 vs +-512)
+//     means the comparators can never fire, and they would sit in the
+//     innermost loop of all 14 dense layers -- the most expensive location
+//     available.
+//   * AP_RND_CONV buys nothing measurable here: <32,10> trn/wrp scores
+//     1.137e-04 against 1.211e-04 for rnd/sat, which is noise. The rounding
+//     that MATTERS is on the activations, where a truncation bias accumulates
+//     across 14 layers; a 22-fractional-bit accumulator is already far below
+//     the 13-bit activation grid it feeds.
+//
+// Making these AP_RND_CONV/AP_SAT was the first thing tried, and csynth then
+// ran 3h20m without reaching a report (1.4M instructions, 5.8 GB).
+typedef ap_fixed<RTDA_ACC_W, RTDA_ACC_I>                       rtda_accum_t;
 // The 27 deliverables span +-0.05, so they get the narrow range too.
 typedef ap_fixed<RTDA_W, RTDA_WEIGHT_I, AP_RND_CONV, AP_SAT>   rtda_out_t;
 // Only referenced by hls4ml's table-based activations. Leaky ReLU is computed
@@ -133,13 +148,17 @@ typedef ap_fixed<18, 8> rtda_table_t;
 #endif
 
 // ---------------------------------------------------------------------------
-//  TODO, measured but not yet applied
+//  Synthesis cost, learned the hard way
 //
-//  RTDA_ACC_* can drop AP_SAT (use AP_WRP) with NO numerical change: 160x
-//  headroom means the saturation comparators never fire, and they sit in the
-//  innermost loop of every dense layer -- the most expensive place in the
-//  design to put logic. Suspected to be a large part of why this build's
-//  csynth is much heavier than the pre-change one (1.4M instructions, 5.7 GB,
-//  hours). Not changed yet only because a synthesis run was in flight to get
-//  the baseline DSP count; do it, then re-measure with `make csynth`.
+//  The first version of this header put AP_RND_CONV/AP_SAT on EVERY type,
+//  including the 32-bit accumulator, and rtda_leaky.h built its shift-add in a
+//  32-bit saturating accumulator too. csynth then ran 3h20m at 5.8 GB without
+//  reaching a report (1.4M instructions), against a design that had
+//  synthesised fine before.
+//
+//  Both were removable at no numerical cost -- see the notes above and in
+//  rtda_leaky.h. The lesson is narrow but worth keeping: rounding and
+//  saturation modes are not free, and the innermost loop of 14 dense layers is
+//  the worst place to spend them. Put them where the error actually is (the
+//  activations) and nowhere else.
 // ---------------------------------------------------------------------------

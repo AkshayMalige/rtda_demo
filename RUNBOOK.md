@@ -124,12 +124,12 @@ make fastsim FLOW=pl_fixed EVENTS=1000 # ~95 s    the real kernel sources, 50,00
 ```
 → `results/pl_fixed/sim/{track_means_all.txt,track_out_27.txt,run_info.txt}`
 
-Expect **3.181e-04** on the 27 outputs (0.348% of full scale), **0.34× the bf16
+Expect **3.539e-04** on the 27 outputs (0.413% of full scale), **0.38× the bf16
 error** over the same 1000 events. The sweep prints the clipping margin;
 `<16,3>` should show `0.0000%`.
 
 > That 0.34× compares against bf16 *modelled* over the same 1000 events.
-> `analysis/rtda_compare.ipynb` quotes 2.0×, comparing against the *measured*
+> `analysis/rtda_compare.ipynb` quotes 1.7×, comparing against the *measured*
 > AIE bf16 run, which only has the per-track taps a warm-up-excluded number
 > needs for 5 events. Different comparators, both like-for-like; neither is a
 > 1000-event measured bf16, because no such thing exists (the AIE system build
@@ -259,7 +259,7 @@ own `run_info.txt` for its warm-up convention.
 | PL weights vs the model | — | — | 5.0e-11 |
 | ONNX == numpy reference, 50 tracks | 8.831e-07 | same | same |
 | x86 / aiesim, event mean vs golden | ~6e-07 | ~5e-04 | — |
-| **27 outputs, warm-up EXCLUDED** | **7.5e-07** | **4.0e-04** | **3.2e-04** |
+| **27 outputs, warm-up EXCLUDED** | **7.5e-07** | **4.0e-04** | **3.5e-04** |
 | 27 outputs, with warm-up | ~7e-03 | ~7e-03 | n/a |
 | csim vs the native model | — | — | 0.000e+00 |
 | II (aiesimulator) | 4161 ns | 1033 ns | n/a |

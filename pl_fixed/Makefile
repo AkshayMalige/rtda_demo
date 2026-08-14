@@ -241,11 +241,12 @@ vars:
 clean:
 	@$(MAKE) -C pl clean 2>/dev/null || true
 	rm -rf build package native/rtda_native_* native/tb_means.txt _x .Xil *.log *.jou
+	rm -rf rtda_split_hls pl/rtda_split_hls   # vitis_hls puts it in the CWD
 	rm -f $(EXEC)
 
 clean_all: clean
 	@$(MAKE) -C host clean 2>/dev/null || true
-	rm -rf pl/rtda_split_hls pl/ip
+	rm -rf rtda_split_hls pl/rtda_split_hls pl/ip
 
 help:
 	@echo ""

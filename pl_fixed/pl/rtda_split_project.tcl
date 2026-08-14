@@ -23,9 +23,13 @@ set FW_DIR   [file join $PROJ_DIR firmware]
 
 set part_name "xcve2802-vsvh1760-2MP-e-S"
 set top_fn    "rtda_split_top"
-# Absolute: vitis_hls is invoked from pl_fixed/, so a bare name put the
-# project one directory above this script and `make clean` missed it.
-set prj_name  [file join $PROJ_DIR rtda_split_hls]
+# A BARE NAME on purpose: the project lands in the CWD, which is pl_fixed/
+# because ../Makefile invokes vitis_hls from there. Making it absolute so it
+# sat under pl/ instead broke csim -- HLS added the six design files to the
+# project and then linked only the testbench, giving
+# "ld.lld: error: undefined symbol: rtda_split_top". `make clean` removes it
+# from the right place instead.
+set prj_name  "rtda_split_hls"
 
 if {[llength $argv] > 0} { set command [lindex $argv 0] } else { set command "csim" }
 

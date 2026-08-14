@@ -29,18 +29,18 @@ deliverable: **27 numbers per event**.
 | shape | matrix × matrix, 8 tracks/iteration | same | 1 track at a time |
 | kernel | `aie::mmul` | `aie::mmul` | hls4ml `nnet::dense` |
 | **ns/track, silicon** | **615** | **245** | ~40,000 |
-| **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **1.99e-04** |
+| **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **2.35e-04** |
 | resources | 65 compute + 14 memory tiles | same | 43% LUT, 81% DSP, 0 AIE |
 
 ¹ max |implementation − ONNX| over the **same 5 events**, warm-up excluded.
 Full scale (largest of the 27) is 0.0857. These are a max over events, so they
 only compare at equal event counts — over its full 1000-event run the PL design
-reads 3.18e-04, and the AIE numbers would rise similarly if per-track taps
+reads 3.54e-04, and the AIE numbers would rise similarly if per-track taps
 existed at that scale. `analysis/rtda_compare.ipynb` takes the ratio over the
 common count and prints which it used.
 
 **The headline result is the last two columns.** Both are 16 bits per
-activation, and the fixed-point PL design lands **2.0× closer** to the reference
+activation, and the fixed-point PL design lands **1.7× closer** to the reference
 than bfloat16. That is not surprising once stated: bf16 spends 8 bits on an
 exponent covering ~10³⁸, and every activation in this network lives between
 −1.8 and +1.8. `ap_fixed<16,3>` spends 13 bits on the mantissa of a range that
@@ -135,7 +135,7 @@ jupyter lab analysis/rtda_compare.ipynb      # all three implementations
 
 - `615 ns/track` fp32, `245 ns/track` bf16 — measured on silicon over 50,000
   tracks, `results/aie_*/hw/run_info.txt`.
-- `7.5e-07`, `3.96e-04`, `1.99e-04` — `analysis/rtda_compare.ipynb`, the same 5
+- `7.5e-07`, `3.96e-04`, `2.35e-04` — `analysis/rtda_compare.ipynb`, the same 5
   events, warm-up excluded, against `model/mlp_fp32.onnx`. Only simulation has
   the per-track taps a warm-up-excluded number needs, and the AIE sims are
   5-event builds; the PL run is 1000 events but the ratio is taken over the

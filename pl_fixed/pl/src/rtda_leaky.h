@@ -32,17 +32,30 @@
 
 namespace rtda {
 
-// The shifted-sum form of the slope, and proof it is the value we mean.
+// The shifted-sum form of the slope.
+//
+// The intermediate is RTDA_W + 9 bits wide with the SAME integer count, i.e.
+// nine extra fractional bits -- exactly enough that `x >> 9`, the smallest
+// term, is still represented without loss. So the sum of the four terms is
+// EXACT, and one rounding happens on the way back to T. That is an arithmetic
+// guarantee, not a measurement.
+//
+// No saturation and no rounding mode on the intermediate: the result cannot
+// exceed 0.0996 * 4 = 0.4 against a +-2^(RTDA_I-1) range, so it can never
+// overflow, and the sum is exact so there is nothing to round until the cast.
+//
+// This was originally a 32-bit AP_RND_CONV/AP_SAT accumulator, which put 1792
+// instances (128 lanes x 14 activation layers) of wide saturating arithmetic
+// in the design to avoid one DSP. csynth did not finish in 3h20m.
 template <typename T>
 inline T alpha_mul(const T &x) {
 #pragma HLS INLINE
 #ifdef RTDA_ALPHA_125
-    return x >> 3;                                  // 0.125
+    return x >> 3;                                  // 0.125, a bare shift
 #else
-    // 2^-4 + 2^-5 + 2^-8 + 2^-9, accumulated wide then rounded once.
-    typedef ap_fixed<RTDA_ACC_W, RTDA_ACC_I, AP_RND_CONV, AP_SAT> acc_t;
-    acc_t a = (acc_t)x;
-    acc_t s = (a >> 4) + (a >> 5) + (a >> 8) + (a >> 9);
+    typedef ap_fixed<RTDA_W + 9, RTDA_I> mul_t;     // 2^-4+2^-5+2^-8+2^-9
+    mul_t a = (mul_t)x;
+    mul_t s = (a >> 4) + (a >> 5) + (a >> 8) + (a >> 9);
     return (T)s;
 #endif
 }
