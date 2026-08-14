@@ -1,4 +1,12 @@
-# `aieml_batch/` — the batched RTDA MLP on AIE-ML
+# `aie_batch/` — the batched RTDA MLP on AIE-ML
+
+> **Layout note.** This document predates the repo restructure and describes
+> this directory in depth; paths have been updated but the surrounding
+> organisation has moved. `../README.md` is the current overview,
+> `../RUNBOOK.md` the current commands, and `../model/rtda_ref.py` is now the
+> single reference implementation that `crosscheck.py` and `make_golden.py`
+> call into rather than each carrying their own copy.
+
 
 A second implementation of the same network as `aieml/`, built on a different idea:
 process **8 tracks per graph iteration** as a matrix-matrix multiply instead of one
@@ -8,7 +16,7 @@ including the roll-concat, the 50-track average and the event tail — so the de
 
 Measured on silicon (VEK280, `TARGET=hw`, 10,000 tracks):
 
-| | `aieml/` (GEMV) | `aieml_batch/` (GEMM) |
+| | `aieml/` (GEMV) | `aie_batch/` (GEMM) |
 |---|---:|---:|
 | per real track | 17,770 ns | **657.8 ns** (marginal **595.6 ns**) |
 | sustained throughput | ~30 GOP/s | **803 GOP/s** |
@@ -181,10 +189,10 @@ needs only Vitis.
         ├─ make graph  → libadf.a      (aiesimulator)         ├─ make system_graph → libadf.a
         ├─ make x86com → libadf_x86.a  (x86simulator)         ├─ make rtp → sysdata/rtp/*.bin
         ▼                                                     ▼
-  run_sim.py / aie_io.py write data/ifm_c*.txt,        v++ --link (common/linker_batch.cfg,
+  run_sim.py / aie_io.py write data/ifm_c*.txt,        v++ --link (linker_batch.cfg,
   run the simulator, read y_p*.txt back               no PL kernels) → system_hw.xsa
         ▼                                             v++ --package → sd_batch/ + xclbin
-  crosscheck.py  → numpy golden + data_fp32 ref               ▼
+  crosscheck.py  → numpy golden + model/weights_fp32 ref               ▼
   report.py      → II, ns/track, GOP/s                 host_batch/host_batch.cpp (XRT)
   compare_hw.py  → a hardware run vs every reference
 ```
@@ -213,18 +221,18 @@ needs only Vitis.
 |---|---|---|
 | `aie_io.py` | PLIO marshalling. Reads `aie_pipeline.json` + `io_extra.json`, maps logical tensors ↔ `data/ifm_c<p>.txt` / `<sim>simulator_output/data/y_p<p>.txt`. Handles the slicing when a tensor is wider than one port. | no |
 | `run_sim.py` | Writes inputs, invokes `aiesimulator`/`x86simulator`, reads outputs. `run_sim.py ports` prints the layout. | no |
-| `crosscheck.py` | The numerical authority. Rebuilds the full 14-layer chain in numpy from `data_fp32/`, compares golden↔`aieml/` reference and golden↔simulation. Also exports `L()`, `P()`, `lrelu()`, `golden()` that the other scripts import. | no |
+| `crosscheck.py` | The numerical authority. Rebuilds the full 14-layer chain in numpy from `model/weights_fp32/`, compares golden↔`aieml/` reference and golden↔simulation. Also exports `L()`, `P()`, `lrelu()`, `golden()` that the other scripts import. | no |
 | `report.py` | Parses `T <ns>` timestamps out of the PLIO output files → TLAST-to-TLAST II, ns/track, GOP/s. | no |
 | `compare_hw.py` | Compares one hardware `track_mean_128.txt` against **all** references at once, spelling out which differences are convention and which are error. | no |
 | `make_golden.py` | Generates an N-track stimulus **and** the exact golden, simulated over the *slot* sequence the hardware actually sees (padding slots, roll carry across events, flush event). | no |
 | `verify_run.py` | Diffs a multi-event run's `track_mean_128_ev*.txt` against a `golden_*.npz`. | no |
 | `extract_rtp.py` | Dumps the 92 RTP payloads to little-endian `.bin` + a manifest, for the XRT host. Port names come from `Work/ps/c_rts/aie_control_config.json`, not from a naming rule. | no |
 | `sim_events.py` | Multi-event simulation driver (`make x86_events` / `make sim_events`): builds an N-event stimulus, runs the simulator, checks every event mean, and dumps the per-track PLIO taps. | no |
-| `notebooks/rtda_reference.ipynb` | The analysis. Builds an independent reference from the project's ONNX, verifies the weight chain end to end, and splits the warm-up convention out of the arithmetic error. See below. | no |
+| `../analysis/rtda_reference.ipynb` | The analysis. Builds an independent reference from the project's ONNX, verifies the weight chain end to end, and splits the warm-up convention out of the arithmetic error. See below. | no |
 | `gen_graph.py` | Rebuilds `src_<P>/` from ONNX (`make regen PRECISION=<P>`). Also holds the Keras reference and the ONNX construction. | **yes** |
 | `verify_io.py` | Proves `aie_io.py` still reproduces aie4ml's marshalling byte-for-byte. The gate that justified cutting the dependency. | **yes** |
 
-### `notebooks/rtda_reference.ipynb`
+### `../analysis/rtda_reference.ipynb`
 
 The numerical case that this design computes the right function. It does not reuse
 `crosscheck.py`'s golden as its authority — a reference written alongside a design can be
@@ -251,11 +259,10 @@ missing two of them (`pip install onnxruntime matplotlib`); `o2v` has all four a
 | path | what |
 |---|---|
 | `../host_batch/host_batch.cpp` | The XRT host. See [§7](#7-the-host-host_batch). |
-| `../common/linker_batch.cfg` | Empty `[connectivity]` — no PL kernels to wire. |
-| `../data_fp32/` | The float32 weight export. **Never `../data/`**, which is manually swapped to int16. |
+| `linker_batch.cfg` | Empty `[connectivity]` — no PL kernels to wire. |
+| `../model/weights_fp32/` | The float32 weight export. **Never `../data/`**, which is manually swapped to int16. |
 | `../testdata/` | Multi-event stimuli (`embed_input_{100,500,1000,5000,10000}.txt`) and goldens. Gitignored except the README. |
 | `results/` | Captured hw_emu and hardware results with their validation. |
-| `PLAN.md` | The migration plan, phases 1–4, with the bugs found in each. |
 | `../GEMM_FEASIBILITY.md` | The study that justified all of this. |
 
 ---
@@ -270,7 +277,7 @@ missing two of them (`pip install onnxruntime matplotlib`); `o2v` has all four a
 | `SOLVERS` | `3` | Solver blocks. Regen knob. |
 | `INPUT_DIM` | `16` | Width presented to the first dense layer. **Not 6 or 8** — see [§6](#6-padding--every-place-it-happens). Regen knob. |
 | `ITERS` | `7` | Iterations per event; must equal `N_ITER` in `src_<P>/parameters.h`. 7 × 8 = 56 ≥ 50. |
-| `WEIGHTS_DIR` | `../data_fp32` | Where the weight text files come from. |
+| `WEIGHTS_DIR` | `../model/weights_fp32` | Where the weight text files come from. |
 | `AIE_VITIS` | `/tools/Xilinx/2025.2/Vitis` | Toolchain for **standalone** builds. The top-level Makefile overrides this to 2024.2 for system builds. |
 | `AIE_PLAT_NAME` | `xilinx_vek280_base_202520_1` | |
 | `AIE_PLAT` | derived | Full `.xpfm` path. The top-level Makefile overrides it. |
@@ -348,7 +355,7 @@ Set on the board, no rebuild needed:
 
 | variable | effect |
 |---|---|
-| `RTDA_INPUT=<file>` | Input stimulus instead of `data_fp32/embed_input.txt`. Any number of tracks; the host derives the event count. |
+| `RTDA_INPUT=<file>` | Input stimulus instead of `model/weights_fp32/embed_input.txt`. Any number of tracks; the host derives the event count. |
 | `RTDA_GOLDEN=<file>` | Verify on-board against a golden (`n_events n_cols` header, then one 128-float row per event). Avoids copying hundreds of result files off the card. |
 | `RTDA_DUMP_EVENTS=1` | Write `track_mean_128_ev<N>.txt` per event (otherwise only the last). |
 | `RTDA_NO_FLUSH=1` | Disable the leading flush event. **Only correct from a cold start** — see [§8](#the-flush-event). |
@@ -432,7 +439,7 @@ non-zero frames rather than assuming the stride.
 
 ### 5.1 Source files
 
-Weights come from `../data_fp32/` — flat text, one value per line, row-major, already
+Weights come from `../model/weights_fp32/` — flat text, one value per line, row-major, already
 transposed to `[in_features][out_features]` (i.e. `y = x @ W`, ONNX `transB=0`). Large
 matrices are split across `_partN.txt` files that concatenate in order.
 
@@ -476,7 +483,7 @@ for chain in 0 .. CAS_NUM-1:              # independent output-column groups
 Out-of-range rows/columns are zero-filled, which is how the `emb_d0` 8→16 pad is absorbed.
 
 **This is verified, not assumed.** Re-implementing the loop above in numpy from
-`data_fp32/` and diffing against the extracted RTP binaries gives:
+`model/weights_fp32/` and diffing against the extracted RTP binaries gives:
 
 ```
 emb_d1 kk[0] (chain 0, cas 0): max|diff| = 0.000e+00
@@ -652,8 +659,8 @@ would **deadlock**: nothing drains the shim DMA until the graph is running.
 
 | level | what it is | tolerance |
 |---|---|---|
-| **numpy golden** (`crosscheck.py`) | The full 14-layer chain rebuilt from `data_fp32/` with `max(y, 0.1y)` after every dense and `assemble(a) = concat([a, roll(a,1,axis=0)])`. | — |
-| **`data_fp32/aieml10_output_aie.txt`** | A real `aieml/` VEK280 hardware dump, 50 tracks × 128. Validated against the golden to **1.10e-06** (tracks 3..49). | 1e-5 |
+| **numpy golden** (`crosscheck.py`) | The full 14-layer chain rebuilt from `model/weights_fp32/` with `max(y, 0.1y)` after every dense and `assemble(a) = concat([a, roll(a,1,axis=0)])`. | — |
+| **`model/weights_fp32/aieml10_output_aie.txt`** | A real `aieml/` VEK280 hardware dump, 50 tracks × 128. Validated against the golden to **1.10e-06** (tracks 3..49). | 1e-5 |
 | **x86 / aie simulation** | This graph. Agrees with the golden to ~1e-6 on all four stage taps. | 1e-5 |
 | **hw_emu** | Reproduces the simulation to **8.4e-07**. | 1e-5 |
 | **hardware** | Verified against a 200-event golden over 10,000 tracks. | 1e-4 |
@@ -661,7 +668,7 @@ would **deadlock**: nothing drains the shim DMA until the graph is running.
 > **Verifying against a self-written reference catches arithmetic bugs, not specification
 > bugs.** Two real bugs (plain-vs-leaky ReLU, and a missing ReLU after each solver's
 > `dense3`) hid behind a self-consistent Keras reference reporting MSE 6e-13. Always
-> cross-check against `data_fp32/aieml10_output_aie.txt` too.
+> cross-check against `model/weights_fp32/aieml10_output_aie.txt` too.
 
 ### Averaging conventions — read this before calling a difference an error
 
@@ -669,7 +676,7 @@ Three references, three conventions. `compare_hw.py` prints all of them side by 
 
 | | convention | expect |
 |---|---|---|
-| **[A]** `data_fp32/aieml10_output_aie.txt`, `mean(axis=0)` | all 50 tracks | **the apples-to-apples one.** ~5.0e-03 — entirely the warm-up convention |
+| **[A]** `model/weights_fp32/aieml10_output_aie.txt`, `mean(axis=0)` | all 50 tracks | **the apples-to-apples one.** ~5.0e-03 — entirely the warm-up convention |
 | **[B]** `mlp_hls.ipynb`'s `aie_27` | `aie_s2[3:].mean(0) @ out_W + out_B` | larger, definitionally |
 | **[C]** numpy golden | all 50 | as [A] |
 | **[D]** this design's own simulation | all 50 | **~1e-6. If this disagrees, it is a real problem.** |
@@ -706,7 +713,7 @@ rather than approximately.
 ### 9.1 Standalone (simulation only — no XRT, no board)
 
 ```bash
-cd aieml_batch
+cd aie_batch
 
 make x86                  # x86 compile + crosscheck            (~2 min)
 make sim                  # hw compile + aiesimulator + crosscheck + report
@@ -773,7 +780,7 @@ make sim_events EVENTS=2      # aiesimulator instead: cycle-accurate, much slowe
 | `EVENTS` | 2 | Real events to simulate. |
 | `FLUSH` | 1 | Prepend the discarded flush event, mirroring the host. `FLUSH=0` drops it — exact in simulation (a simulator is always cold) and 7 iterations cheaper, but no longer matches a board. |
 | `EV_TRACKS` | `EVENTS × 50` | Real track count. **Keep it a multiple of 50** — see the warning below. Named `EV_TRACKS`, not `TRACKS`: that one belongs to `make golden` and is defaulted, so reusing it here forced `--tracks` onto every simulation run. |
-| `EV_OUT` | `results/sim_events` | Where results are written. |
+| `EV_OUT` | `../results/aie_<precision>/sim` | Where results are written. |
 
 Each run writes, per configuration:
 
@@ -787,7 +794,7 @@ so the numbers can be checked elsewhere (a notebook) rather than only by the bui
 comparison:
 
 ```python
-d = np.load('results/sim_events/sim_x86_50ev_2500tr.npz')
+d = np.load('../results/aie_<precision>/sim/sim_x86_50ev_2500tr.npz')
 d['measured'].shape        # (50, 128)
 ```
 
@@ -816,7 +823,7 @@ iteration count and derives it from the input file. See [§9.5](#95-on-the-board
 ### 9.3 Regenerate from ONNX (only to change topology / batch / precision)
 
 ```bash
-cd aieml_batch
+cd aie_batch
 make regen PRECISION=fp32 # OVERWRITES src_fp32/ and aie_pipeline_fp32.json
 make verify_io            # prove aie_io.py still matches aie4ml byte-for-byte
 make x86                  # then rebuild and re-check
@@ -832,33 +839,33 @@ with a stock aie4ml would silently reintroduce plain ReLU.
 source set_envs.sh                       # XRT + Vitis 2024.2 + sysroot
 
 # hardware emulation
-make system TARGET=hw_emu AIE_DIR=aieml_batch
+make system TARGET=hw_emu FLOW=aie_batch
 cd package.hw_emu && ./launch_hw_emu.sh
 #   in the guest:  sudo su; mount /dev/mmcblk0p1 /mnt; cd /mnt; ./host_batch.exe
 
 # real hardware
-make system TARGET=hw AIE_DIR=aieml_batch
+make system TARGET=hw FLOW=aie_batch
 #   write sd_card.img to the SD card, boot the VEK280
 ```
 
-Individual stages (all take `TARGET=` and `AIE_DIR=aieml_batch`):
+Individual stages (all take `TARGET=` and `FLOW=aie_batch`):
 
 ```bash
-make aie        AIE_DIR=aieml_batch TARGET=hw   # -> aieml_batch/libadf.a  (SYSTEM_BUILD, GMIO)
-make host       AIE_DIR=aieml_batch TARGET=hw   # -> host_batch.exe + sysdata/rtp/*.bin
-make link       AIE_DIR=aieml_batch TARGET=hw   # -> build_hw/system_hw.xsa
-make package    AIE_DIR=aieml_batch TARGET=hw   # -> sd_batch/ staged, then the image
-make repackage  AIE_DIR=aieml_batch TARGET=hw   # force a repackage after changing sd_batch contents
-make print_vars AIE_DIR=aieml_batch TARGET=hw
+make aie        AIE_DIR=aie_batch TARGET=hw   # -> aie_batch/libadf.a  (SYSTEM_BUILD, GMIO)
+make host       AIE_DIR=aie_batch TARGET=hw   # -> host_batch.exe + sysdata/rtp/*.bin
+make link       AIE_DIR=aie_batch TARGET=hw   # -> build_hw/system_hw.xsa
+make package    AIE_DIR=aie_batch TARGET=hw   # -> sd_batch/ staged, then the image
+make repackage  AIE_DIR=aie_batch TARGET=hw   # force a repackage after changing sd_batch contents
+make print_vars AIE_DIR=aie_batch TARGET=hw
 ```
 
-`AIE_DIR=aieml_batch` switches the top-level Makefile to `common/linker_batch.cfg`
-(no PL kernels), `HLS_KERNELS :=` (empty), `aieml_batch/libadf.a` (project root, not
+`FLOW=aie_batch` switches the top-level Makefile to `linker_batch.cfg`
+(no PL kernels), `HLS_KERNELS :=` (empty), `aie_batch/libadf.a` (project root, not
 inside `Work/`), `host_batch/`, and `SD_STAGE := ./sd_batch`. It also forces the graph
 onto the **system** toolchain (2024.2) — a 2025.2 `libadf.a` will not link against a
 2024.2 XSA.
 
-`sd_stage` copies `data_fp32/`, `aieml_batch/sysdata/` and `testdata/` onto the card.
+`sd_stage` copies `model/weights_fp32/`, `aie_batch/sysdata/` and `testdata/` onto the card.
 Note `--package.sd_dir` copies the *directory*, so on the card they land under
 `sd_batch/`; the host probes both layouts.
 
@@ -879,7 +886,7 @@ RTDA_DUMP_EVENTS=1 ./host_batch.exe                       # per-event result fil
 ### 9.6 Generating a golden
 
 ```bash
-cd aieml_batch
+cd aie_batch
 make golden TRACKS=50000
 #   -> ../testdata/embed_input_50000.txt   stimulus, 1000 events
 #   -> ../testdata/golden_50000.npz        event means (128-wide) + the 27-dim projection
@@ -917,10 +924,10 @@ source set_envs.sh
 P=fp32                                    # or bf16
 
 # 1. clean (follows AIE_DIR; leaves src_*/ alone)
-make clean_all AIE_DIR=aieml_batch
+make clean_all FLOW=aie_batch
 
 # 2. reference data - stimulus + streaming golden, precision-independent
-cd aieml_batch
+cd aie_batch
 make golden TRACKS=50000
 
 # 3. simulations. Run BOTH before the system build: `make system` rebuilds
@@ -933,7 +940,7 @@ make report     PRECISION=$P              # <- II, ns/track, GOP/s
 cd ..
 
 # 4. hardware
-make system TARGET=hw AIE_DIR=aieml_batch PRECISION=$P
+make system TARGET=hw AIE_DIR=aie_batch PRECISION=$P
 #    check before flashing:
 cat sd_batch/sysdata/config.txt           # must say precision=$P
 #    then write package.hw/sd_card.img to the SD card and boot
@@ -949,7 +956,7 @@ mkdir -p /mnt/usb && mount /dev/sda1 /mnt/usb
 cp track_means_all.txt run_info.txt /mnt/usb/ && sync && umount /mnt/usb
 ```
 
-Copy those two files to `aieml_batch/results/hw_<P>/`, then run the notebook.
+Copy those two files to `aie_batch/results/hw_<P>/`, then run the notebook.
 
 **What ends up where** — this is the full input set for the notebooks:
 
@@ -957,11 +964,11 @@ Copy those two files to `aieml_batch/results/hw_<P>/`, then run the notebook.
 |---|---|---|
 | `../testdata/embed_input_50000.txt` | step 2 | the stimulus everything is driven by |
 | `../testdata/golden_50000.{npz,txt}` | step 2 | streaming-roll golden (the board's own check) |
-| `results/sim_events/sim_x86_<P>_5ev_250tr.npz` | step 3 | x86 event means **and** per-track taps |
-| `results/sim_events/sim_aie_<P>_5ev_250tr.npz` | step 3 | same, cycle-accurate |
+| `../results/aie_<precision>/sim/sim_x86_<P>_5ev_250tr.npz` | step 3 | x86 event means **and** per-track taps |
+| `../results/aie_<precision>/sim/sim_aie_<P>_5ev_250tr.npz` | step 3 | same, cycle-accurate |
 | `results/hw_<P>/track_means_all.txt` | board | all 1000 event means, one file |
 | `results/hw_<P>/run_info.txt` | board | timing/size, key=value |
-| `notebooks/out/golden_onnx_50000.npz` | the notebook | the ONNX reference (built on first run) |
+| `../analysis/out/golden_onnx_50000.npz` | the notebook | the ONNX reference (built on first run) |
 
 The `make report` output is not written to a file — copy the II / ns-per-track / GOP-per-second
 lines into the notebook's performance section by hand, or keep `log.<P>`.
@@ -969,7 +976,7 @@ lines into the notebook's performance section by hand, or keep `log.<P>`.
 ### 9.8 Clean
 
 ```bash
-cd aieml_batch
+cd aie_batch
 make clean       # build products only: Work/, libadf*.a, simulator output, logs, data/
 make clean_all   # + throughput_info.json, AIECompiler.log, AIESimulator.log
 ```
@@ -1144,7 +1151,7 @@ hand-written kernels. Redo that if you regenerate from scratch.
 
 - `../set_envs.sh` exports `DATA_DIR` and `PLATFORM`; make's `?=` inherits them. This
   project uses `WEIGHTS_DIR`/`AIE_PLAT` for that reason. **Keep names non-colliding.**
-- **Weights come from `data_fp32/`, never `data/`** — the latter is manually swapped
+- **Weights come from `model/weights_fp32/`, never `data/`** — the latter is manually swapped
   between fp32 and int16 payloads, and loading int16 text into a float32 model silently
   yields integer-valued weights and meaningless results.
 - Standalone builds default to **Vitis 2025.2**; system builds are forced to **2024.2** by
