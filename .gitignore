@@ -129,3 +129,7 @@ __pycache__/
 # settings.json is shareable and may be committed; local state is not.
 .claude/settings.local.json
 .claude/projects/
+
+# pl_fixed build products
+pl_fixed/native/rtda_native_*
+pl_fixed/native/tb_means.txt

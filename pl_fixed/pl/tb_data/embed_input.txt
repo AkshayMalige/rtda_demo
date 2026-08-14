@@ -1,1 +1,0 @@
-../../../data/embed_input.txt

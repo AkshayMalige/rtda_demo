@@ -3,8 +3,8 @@
 #include "rtda_split_top.h"
 
 namespace out_fw {
-#include "../../../hls_projects/split_output/firmware/defines.h"
-#include "../../../hls_projects/split_output/firmware/parameters.h"
+#include "../firmware/output/defines.h"
+#include "../firmware/output/parameters.h"
 }
 
 void output_run(hls::stream<hidden_t>& in, hls::stream<out27_t>& out) {

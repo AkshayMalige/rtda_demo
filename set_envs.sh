@@ -33,7 +33,12 @@ export SYSROOT=/opt/petalinux/2024.2/sysroots/cortexa72-cortexa53-xilinx-linux
 
 # === Set Vitis platform path ===
 export PLATFORM=${XILINX_VITIS}/base_platforms/xilinx_vek280_base_202420_1/xilinx_vek280_base_202420_1.xpfm
-export DATA_DIR=/home/synthara/VersalPrjs/LDRD/quant_rtda/rtda_demo/data
+
+# NOTE: DATA_DIR used to point at ./data, which is now archive/data and was
+# overwritten with random int16 by data/gen_int16_data.py in Aug 2026. Nothing
+# in the live flows reads it any more -- weights come from model/weights_fp32/
+# and stimulus from testdata/ -- so it is deliberately not exported. If you
+# need it for something in archive/, set it yourself.
 
 export XILINX_VITIS_DATA_DIR=/home/synthara/VersalPrjs/LDRD/quant_rtda/rtda_demo/.vitis_data
 

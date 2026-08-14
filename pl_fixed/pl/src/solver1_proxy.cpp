@@ -3,8 +3,8 @@
 #include "rtda_split_top.h"
 
 namespace s1_fw {
-#include "../../../hls_projects/split_solver1/firmware/defines.h"
-#include "../../../hls_projects/split_solver1/firmware/parameters.h"
+#include "../firmware/solver1/defines.h"
+#include "../firmware/solver1/parameters.h"
 }
 
 void solver1_run(hls::stream<hidden_t>& curr, hls::stream<hidden_t>& prev, hls::stream<hidden_t>& out) {
@@ -47,13 +47,13 @@ void solver1_run(hls::stream<hidden_t>& curr, hls::stream<hidden_t>& prev, hls::
     nnet::dense<input_t,  layer3_t, config3>(s_curr, layer3_out, w3, b3);
     nnet::dense<input2_t, layer5_t, config5>(s_prev, layer5_out, w5, b5);
     nnet::add<layer3_t, layer5_t, layer7_t, config7>(layer3_out, layer5_out, layer7_out);
-    nnet::leaky_relu<layer7_t,  model_default_t, layer8_t,  LeakyReLU_config8> (layer7_out,  0.125, layer8_out);
+    rtda::leaky_relu<layer7_t, layer8_t, LeakyReLU_config8>(layer7_out, layer8_out);
     nnet::dense<layer8_t,  layer9_t,  config9> (layer8_out,  layer9_out,  w9,  b9);
-    nnet::leaky_relu<layer9_t,  model_default_t, layer11_t, LeakyReLU_config11>(layer9_out,  0.125, layer11_out);
+    rtda::leaky_relu<layer9_t, layer11_t, LeakyReLU_config11>(layer9_out, layer11_out);
     nnet::dense<layer11_t, layer12_t, config12>(layer11_out, layer12_out, w12, b12);
-    nnet::leaky_relu<layer12_t, model_default_t, layer14_t, LeakyReLU_config14>(layer12_out, 0.125, layer14_out);
+    rtda::leaky_relu<layer12_t, layer14_t, LeakyReLU_config14>(layer12_out, layer14_out);
     nnet::dense<layer14_t, layer15_t, config15>(layer14_out, layer15_out, w15, b15);
-    nnet::leaky_relu<layer15_t, model_default_t, result_t,  LeakyReLU_config17>(layer15_out, 0.125, s_out);
+    rtda::leaky_relu<layer15_t, result_t, LeakyReLU_config17>(layer15_out, s_out);
 
     result_t lo = s_out.read();
     hidden_t ho;

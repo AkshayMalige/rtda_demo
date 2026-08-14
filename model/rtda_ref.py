@@ -76,20 +76,40 @@ SLOPE = 0.1
 class Quant:
     """A reduced number format, applied where the hardware applies it."""
 
-    def __init__(self, kind, W=16, I=3, aw=32, ai=10, mode='rnd_sat', alpha=None):
+    def __init__(self, kind, W=16, I=3, aw=32, ai=10, mode='rnd_sat', alpha=None,
+                 wi=1):
         self.kind, self.W, self.I, self.aw, self.ai = kind, W, I, aw, ai
-        self.mode, self.alpha = mode, alpha
+        self.mode, self.alpha, self.wi = mode, alpha, wi
+        self.n_sat = self.n_val = 0        # activations clipped / seen
+        # The PL flow splits solver dense_0 into curr+prev and quantizes each
+        # half before adding; the AIE does one 256-wide GEMM. See forward().
+        self.split_d0 = (kind == 'fixed')
 
     def __repr__(self):
         if self.kind == 'bf16':
             return 'bf16'
-        return (f'ap_fixed<{self.W},{self.I}> acc<{self.aw},{self.ai}> '
-                f'{self.mode} alpha={self.alpha}')
+        return (f'<{self.W},{self.I}> w<{self.W},{self.wi}> acc<{self.aw},{self.ai}> '
+                f'{self.mode} a={self.alpha if self.alpha is not None else 0.1}')
+
+    # -- weights and biases, quantized once at load ------------------------
+    def weight(self, a):
+        if self.kind == 'bf16':
+            return _bf16(a)
+        return _apfixed(a, self.W, self.wi, self.mode)
 
     # -- activations ------------------------------------------------------
     def act(self, a):
         if self.kind == 'bf16':
             return _bf16(a)
+        # Count clipped elements. A format can score well on average while
+        # silently clipping the tail -- <16,2> beats <16,3> on synthetic data
+        # for exactly that reason, and would fall off a cliff the first time a
+        # real activation exceeded 2.0. Saturation should be a number you see,
+        # not a risk you inherit.
+        frac = self.W - self.I
+        hi = 2.0 ** (self.I - 1) - 2.0 ** -frac
+        self.n_sat += int(np.count_nonzero(np.abs(np.asarray(a)) > hi))
+        self.n_val += int(np.asarray(a).size)
         return _apfixed(a, self.W, self.I, self.mode)
 
     # -- dense accumulator ------------------------------------------------
@@ -102,9 +122,14 @@ class Quant:
         return _apfixed(a, self.aw, self.ai, self.mode)
 
 
-def fixed(W=16, I=3, aw=32, ai=10, mode='rnd_sat', alpha=None):
-    """An ap_fixed<W,I> datapath. alpha=None means the exact 0.1."""
-    return Quant('fixed', W, I, aw, ai, mode, alpha)
+def fixed(W=16, I=3, aw=32, ai=10, mode='rnd_sat', alpha=None, wi=1):
+    """An ap_fixed<W,I> datapath, matching pl_fixed/pl/src/rtda_fixed.h.
+
+    wi is the weights' integer-bit count; they all fit in +-1, so 1 is right
+    and gives them W-1 fractional bits rather than sharing the activations'.
+    alpha=None means the exact 0.1, quantized to the grid like everything else.
+    """
+    return Quant('fixed', W, I, aw, ai, mode, alpha, wi)
 
 
 BF16 = Quant('bf16')
@@ -161,12 +186,23 @@ def _lrelu(a, slope=SLOPE):
 
 
 def _dense(x, w, b, q):
+    """One dense layer, quantized where the hardware quantizes.
+
+    Two roundings, not one, and the order matters. hls4ml's nnet::dense
+    accumulates in accum_t and then writes its result into layerN_t -- which is
+    the ACTIVATION type -- so the dense output is already rounded to 13
+    fractional bits before the activation function ever sees it. Folding those
+    two into a single rounding after the leaky ReLU made the model predict 2.3x
+    less error than the design actually produces.
+    """
     y = x @ w + b
-    return y if q is None else q.accum(y)
+    if q is None:
+        return y
+    return q.act(q.accum(y))
 
 
 def _act(a, q, slope=SLOPE):
-    """bias+leaky-ReLU is fused in every implementation; quantize after it."""
+    """bias + leaky ReLU, then the result's own type."""
     a = _lrelu(a, slope)
     return a if q is None else q.act(a)
 
@@ -212,7 +248,15 @@ def forward(x, roll='circular', slope=SLOPE, quant=None, W=None, B=None,
     if W is None or B is None:
         W, B = _weights.load()
     q = quant
+    if q is not None:
+        # Quantize the weights the way the hardware stores them, not just the
+        # activations. Skipping this makes a sweep look better than the design
+        # it is predicting.
+        W = {k: q.weight(v) for k, v in W.items()}
+        B = {k: q.weight(v) for k, v in B.items()}
     alpha = slope if (q is None or q.alpha is None) else q.alpha
+    if q is not None:
+        alpha = _apfixed(alpha, q.W, q.I, q.mode) if q.kind == 'fixed' else alpha
 
     # Keep the caller's input width and pad the WEIGHT to match, rather than
     # narrowing x to 6. The padding columns are exactly zero, so the result is
@@ -235,7 +279,18 @@ def forward(x, roll='circular', slope=SLOPE, quant=None, W=None, B=None,
     cur = emb
     for s in range(SOLVERS):
         pair, carries[s] = _roll_pair(cur, roll, carries[s])
-        z = _act(_dense(pair, W[f's{s}_d0'], B[f's{s}_d0'], q), q, alpha)
+        if q is not None and q.split_d0:
+            # The PL flow does not compute one 256-wide dense. It computes two
+            # 128-wide ones and adds them, and hls4ml rounds each to the
+            # activation type BEFORE the add -- one extra quantization per
+            # solver that the AIE's single 256-wide GEMM does not have.
+            # Modelling it as one dot product made the predicted error 2.3x
+            # better than the design actually achieves.
+            cur_h = _dense(pair[:, :H], W[f's{s}_d0_curr'], B[f's{s}_d0'], q)
+            prv_h = _dense(pair[:, H:], W[f's{s}_d0_prev'], 0.0, q)
+            z = _act(q.act(cur_h + prv_h), q, alpha)
+        else:
+            z = _act(_dense(pair, W[f's{s}_d0'], B[f's{s}_d0'], q), q, alpha)
         for n in (1, 2, 3):
             z = _dense(z, W[f's{s}_d{n}'], B[f's{s}_d{n}'], q)
             z = _act(z, q, alpha) if n < 3 else z

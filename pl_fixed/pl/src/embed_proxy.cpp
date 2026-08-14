@@ -5,8 +5,8 @@
 #include "rtda_split_top.h"  // global nnet includes + canonical types
 
 namespace emb_fw {
-#include "../../../hls_projects/split_embed/firmware/defines.h"
-#include "../../../hls_projects/split_embed/firmware/parameters.h"
+#include "../firmware/embed/defines.h"
+#include "../firmware/embed/parameters.h"
 }
 
 void embed_run(hls::stream<embed_in_t>& in, hls::stream<hidden_t>& out) {
@@ -36,9 +36,9 @@ void embed_run(hls::stream<embed_in_t>& in, hls::stream<hidden_t>& out) {
 
     // Forward pass matching split_embed/firmware/myproject.cpp
     nnet::dense<input_t, layer2_t, config2>(s_in, layer2_out, w2, b2);
-    nnet::leaky_relu<layer2_t, model_default_t, layer4_t, LeakyReLU_config4>(layer2_out, 0.125, layer4_out);
+    rtda::leaky_relu<layer2_t, layer4_t, LeakyReLU_config4>(layer2_out, layer4_out);
     nnet::dense<layer4_t, layer5_t, config5>(layer4_out, layer5_out, w5, b5);
-    nnet::leaky_relu<layer5_t, model_default_t, result_t, LeakyReLU_config7>(layer5_out, 0.125, s_out);
+    rtda::leaky_relu<layer5_t, result_t, LeakyReLU_config7>(layer5_out, s_out);
 
     // result_t (128-wide) == hidden_t (128-wide)
     result_t lo = s_out.read();
