@@ -12,8 +12,10 @@
 //      run_info.txt          key=value: format, timing, sizes
 //
 //  Environment:
-//      RTDA_INPUT    stimulus path        (default ../testdata/embed_input_50000.txt)
-//      RTDA_OUTDIR   where to write       (default .)
+//      RTDA_INPUT    stimulus path   (default: searches embed_input_50000.txt,
+//                                     testdata/, ../testdata/)
+//      RTDA_OUTDIR   where to write   (default: first writable of . then /tmp --
+//                                     the card's FAT partition is often ro)
 //      RTDA_EVENTS   cap the event count  (default: all of them)
 //      RTDA_WARMUP   tracks to skip in the mean (default 3; see below)
 //
@@ -55,6 +57,30 @@ static const char* env_or(const char* k, const char* dflt) {
     return (v && *v) ? v : dflt;
 }
 
+static bool exists(const std::string& p) { std::ifstream f(p); return f.good(); }
+
+// First path that exists, or "" -- the packaged card puts the stimulus at the
+// ROOT, while a build tree has it under testdata/. Defaulting to only one of
+// those means the host works in exactly one of the two places.
+static std::string first_existing(std::initializer_list<const char*> cands) {
+    for (const char* c : cands) if (exists(c)) return c;
+    return "";
+}
+
+// First directory we can actually create a file in.
+//
+// The SD card's FAT partition is frequently mounted READ-ONLY. Writing there is
+// the default because it is the convenient place, but if it fails the run --
+// which by then has already done all the compute -- must not be thrown away.
+static std::string first_writable(std::initializer_list<const char*> cands) {
+    for (const char* c : cands) {
+        const std::string probe = std::string(c) + "/.rtda_write_test";
+        std::ofstream f(probe);
+        if (f.good()) { f.close(); std::remove(probe.c_str()); return c; }
+    }
+    return ".";
+}
+
 // Every write is checked. A full SD partition once produced three 0-byte
 // output files while the AIE host reported success, and cost an hour.
 struct Out {
@@ -74,14 +100,33 @@ struct Out {
 };
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cerr << "usage: " << argv[0] << " <xclbin>\n"
-                  << "  env: RTDA_INPUT RTDA_OUTDIR RTDA_EVENTS RTDA_WARMUP\n";
+
+    // argv[1] optional: match host_batch.exe, which autodetects. A TARGET=hw
+    // build packages system_hw.xclbin, hw_emu packages system_hw_emu.xclbin.
+    std::string xclbin = (argc > 1) ? argv[1]
+                                    : first_existing({"system_hw.xclbin",
+                                                      "system_hw_emu.xclbin"});
+    if (xclbin.empty()) {
+        std::cerr << "ERROR: no xclbin given and none found here.\n"
+                     "       tried system_hw.xclbin, system_hw_emu.xclbin\n"
+                     "       usage: " << argv[0] << " [xclbin]\n";
         return 1;
     }
-    const std::string xclbin = argv[1];
-    const std::string in_path = env_or("RTDA_INPUT", "testdata/embed_input_50000.txt");
-    const std::string outdir = env_or("RTDA_OUTDIR", ".");
+    const bool is_emu = xclbin.find("hw_emu") != std::string::npos;
+    std::string in_path = env_or("RTDA_INPUT", "");
+    if (in_path.empty())
+        in_path = first_existing({"embed_input_50000.txt",              // as packaged
+                                  "testdata/embed_input_50000.txt",     // build tree
+                                  "../testdata/embed_input_50000.txt"});
+    if (in_path.empty()) {
+        std::cerr << "ERROR: no stimulus found. Tried embed_input_50000.txt,\n"
+                     "       testdata/ and ../testdata/. Set RTDA_INPUT=<path>.\n";
+        return 1;
+    }
+    const char* outdir_env = std::getenv("RTDA_OUTDIR");
+    const std::string outdir = (outdir_env && *outdir_env)
+                             ? std::string(outdir_env)
+                             : first_writable({".", "/tmp"});
     const int cap = std::atoi(env_or("RTDA_EVENTS", "0"));
     const int warmup = std::atoi(env_or("RTDA_WARMUP", "3"));
 
@@ -175,7 +220,11 @@ int main(int argc, char* argv[]) {
 
     { Out o(outdir, "run_info.txt");
       o.f << "impl=pl_fixed\n"
-          << "source=hw\n"
+          << "source=" << (is_emu ? "hw_emu" : "hw") << "\n"
+          // Which fixed-point build was this? One string from the Makefile --
+          // not the HLS headers, which the XRT host has no business including.
+          // A result file copied off the board still says what produced it.
+          << "variant=" << RTDA_VARIANT << "\n"
           << "xclbin=" << xclbin << "\n"
           << "input=" << in_path << "\n"
           << "events=" << n_events << "\n"

@@ -1,4 +1,7 @@
-HOST_EXE := ../host.exe
+# host_split.exe, not host.exe: ../Makefile packages $(EXEC) = ./host_split.exe
+# and RUNBOOK/check_image both name it. A mismatch here fails the PACKAGE step,
+# i.e. after the ~6 h synthesis and link have already run.
+HOST_EXE := ../host_split.exe
 HOST_SRC := host_split.cpp
 HOST_OBJ := host_split.o
 HOST_DEP := host_split.d
@@ -7,6 +10,10 @@ HOST_DEP := host_split.d
 #   X86  - native g++ build (for local testing, x86 hw_emu with XRT)
 #   QEMU - aarch64 cross-compile using PetaLinux sysroot (for hw_emu/hw on VEK280)
 EMU_PS ?= QEMU
+
+# Stamped into run_info.txt so a result copied off the board says which
+# fixed-point build produced it. Passed down by ../Makefile.
+RTDA_VARIANT ?= unknown
 
 ifeq ($(EMU_PS),X86)
   CXX      := g++
@@ -21,6 +28,9 @@ else
               -L${SDKTARGETSYSROOT}/usr/lib/ \
               --sysroot=${SDKTARGETSYSROOT}
 endif
+
+# After the block above, which assigns CXXFLAGS with := and would drop this.
+CXXFLAGS += -DRTDA_VARIANT='"$(RTDA_VARIANT)"'
 
 .PHONY: all clean
 

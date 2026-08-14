@@ -72,7 +72,9 @@ STAMP     := $(VARIANT)_$(TARGET)
 BUILD_DIR := build/$(STAMP)
 PKG_DIR   := package/$(STAMP)
 XSA       := $(BUILD_DIR)/design.xsa
-XCLBIN    := $(PKG_DIR)/system.xclbin
+# system_hw.xclbin / system_hw_emu.xclbin, matching aie_batch and what
+# host_split.exe autodetects when given no argument.
+XCLBIN    := $(PKG_DIR)/system_$(TARGET).xclbin
 EXEC      := ./host_split.exe
 LINK_CFG  := link.cfg
 
@@ -175,12 +177,12 @@ exactsim: native/tb_means.txt
 ############################################################################
 host: host_aarch64
 host_x86:
-	@$(MAKE) -C host EMU_PS=X86
+	@$(MAKE) -C host EMU_PS=X86 RTDA_VARIANT=$(VARIANT)
 host_aarch64:
-	@$(MAKE) -C host EMU_PS=QEMU
+	@$(MAKE) -C host EMU_PS=QEMU RTDA_VARIANT=$(VARIANT)
 
 $(EXEC):
-	@$(MAKE) -C host EMU_PS=QEMU
+	@$(MAKE) -C host EMU_PS=QEMU RTDA_VARIANT=$(VARIANT)
 
 $(BUILD_DIR) $(PKG_DIR):
 	@mkdir -p $@

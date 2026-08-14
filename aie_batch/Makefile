@@ -295,9 +295,18 @@ SYS_VITIS   ?= $(XILINX_VITIS)
 STAMP       := $(PRECISION)_$(TARGET)
 BUILD_DIR   := build/$(STAMP)
 PKG_DIR     := package/$(STAMP)
-SD_STAGE    := sd_stage/$(PRECISION)
+# The BASENAME of this path is what --package.sd_dir puts on the card, and the
+# host looks for `sd_batch/`. Staging to sd_stage/<P> made the card directory
+# `fp32`, and every board run aborted with "sysdata not found". The parent path
+# keeps the two precisions apart here; the basename is what the card sees.
+SD_STAGE    := sd_stage/$(PRECISION)/sd_batch
 XSA         := $(BUILD_DIR)/design.xsa
-XCLBIN      := $(PKG_DIR)/system.xclbin
+# system_hw.xclbin / system_hw_emu.xclbin -- NOT system.xclbin. Two things
+# depend on the target being in the name: host_batch.cpp autodetects these two
+# filenames when argv[1] is absent, and it derives `is_emu` from whether the
+# name contains "hw_emu". Dropping the suffix broke the first and silently
+# mislabelled hw_emu runs as silicon in run_info.txt.
+XCLBIN      := $(PKG_DIR)/system_$(TARGET).xclbin
 EXEC        := ./host_batch.exe
 LINK_CFG    := linker_batch.cfg
 # Proof that $(LIBADF) currently holds the GMIO SYSTEM_BUILD graph and not the

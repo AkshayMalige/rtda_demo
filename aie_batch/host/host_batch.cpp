@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <dirent.h>
+#include <unistd.h>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -79,8 +81,27 @@ std::string first_existing(const std::vector<std::string>& cands, const std::str
         std::ifstream f(c);
         if (f.good()) return c;
     }
-    throw std::runtime_error("cannot locate " + what + " (tried: " + [&]{
-        std::string s; for (const auto& c : cands) s += c + " "; return s; }() + ")");
+    // On a board there is no debugger and a rebuild costs hours, so say
+    // everything useful at once: what was wanted, every path tried, where we
+    // are, and what is actually here.
+    std::string msg = "cannot locate " + what + "\n  tried, in order:\n";
+    for (const auto& c : cands) msg += "    " + c + "\n";
+    char cwd[4096] = {0};
+    if (getcwd(cwd, sizeof cwd)) msg += "  working directory: " + std::string(cwd) + "\n";
+    msg += "  what is here:\n";
+    if (DIR* d = opendir(".")) {
+        int n = 0;
+        while (dirent* e = readdir(d)) {
+            const std::string nm = e->d_name;
+            if (nm == "." || nm == "..") continue;
+            msg += "    " + nm + "\n";
+            if (++n >= 30) { msg += "    ...\n"; break; }
+        }
+        closedir(d);
+    }
+    msg += "  If the payload is elsewhere, pass it explicitly:\n"
+           "    ./host_batch.exe <xclbin> <weights_dir> <sysdata_dir>";
+    throw std::runtime_error(msg);
 }
 
 std::vector<float> read_text(const std::string& path, std::size_t expect = 0)
@@ -214,8 +235,14 @@ int main(int argc, char** argv)
         std::string data_dir, sysdata;
         if (argc > 2) data_dir = argv[2];
         else {
-            auto p = first_existing({"data_fp32/embed_input.txt",
-                                     "sd_batch/data_fp32/embed_input.txt"}, "data_fp32");
+            // weights_fp32 is the current name (model/weights_fp32 in the repo);
+            // data_fp32 is what cards flashed before the rename carry. Both are
+            // accepted so an existing card keeps working.
+            auto p = first_existing({"weights_fp32/embed_input.txt",
+                                     "sd_batch/weights_fp32/embed_input.txt",
+                                     "data_fp32/embed_input.txt",
+                                     "sd_batch/data_fp32/embed_input.txt"},
+                                    "the weight directory");
             data_dir = p.substr(0, p.rfind('/'));
         }
         if (argc > 3) sysdata = argv[3];

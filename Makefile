@@ -48,7 +48,7 @@ endif
 FLOW_ARGS = TARGET=$(TARGET) PRECISION=$(PRECISION)
 
 .PHONY: help golden selftest fastsim exactsim system run link package repackage \
-        report crosscheck clean clean_all vars notebooks collect results
+        report crosscheck clean clean_all vars notebooks collect results check_image
 
 ############################################################################
 #  Shared, flow-independent
@@ -92,6 +92,15 @@ else
 endif
 RESULT_DIR := results/$(IMPL)/$(TARGET)
 RESULT_FILES := track_means_all.txt track_out_27.txt run_info.txt
+
+# Does the packaged image actually contain what the host will open?
+#
+# A rename on the Makefile side that the host never learned about produced an
+# image that aborted on the board after a multi-hour build. Everything about
+# that was checkable here in under a second; nothing checked it.
+IMG := $(if $(filter pl_fixed,$(FLOW)),pl_fixed/package/ap$(if $(AP_W),$(AP_W),16)_$(if $(AP_I),$(AP_I),3)_$(TARGET),aie_batch/package/$(PRECISION)_$(TARGET))/sd_card.img
+check_image:
+	@tools/check_image.sh $(IMG) $(FLOW) $(if $(filter pl_fixed,$(FLOW)),-,$(PRECISION)) $(TARGET)
 
 collect:
 	@test -n "$(FROM)" || { echo "ERROR: FROM=<dir> is required, e.g."; \
@@ -196,6 +205,8 @@ help:
 	@echo "                                          build and launch on QEMU"
 	@echo ""
 	@echo "Results:"
+	@echo "  make check_image FLOW=... PRECISION=... TARGET=hw"
+	@echo "                                          verify an SD image before flashing"
 	@echo "  make results                            what is on disk right now"
 	@echo "  make collect FROM=/mnt/usb FLOW=... TARGET=hw"
 	@echo "                                          file a board run (sim self-files)"

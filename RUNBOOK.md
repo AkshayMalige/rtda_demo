@@ -64,7 +64,7 @@ make -C pl_fixed csim EVENTS=3          #    gate: must be 0.000e+00 vs the abov
 
 # ---- 5. AIE fp32 on the board ------------------------------- ~1 h + board -
 make system FLOW=aie_batch PRECISION=fp32 TARGET=hw
-cat aie_batch/sd_stage/fp32/sysdata/config.txt         # MUST say precision=fp32
+make check_image FLOW=aie_batch PRECISION=fp32 TARGET=hw   # <- before flashing
 #   flash aie_batch/package/fp32_hw/sd_card.img, boot, then ON THE BOARD:
 #     RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt \
 #     RTDA_GOLDEN=sd_batch/testdata/golden_50000.txt ./host_batch.exe
@@ -72,12 +72,12 @@ make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw
 
 # ---- 6. AIE bf16 on the board ------------------------------- ~1 h + board -
 make system FLOW=aie_batch PRECISION=bf16 TARGET=hw
-cat aie_batch/sd_stage/bf16/sysdata/config.txt         # MUST say precision=bf16
+make check_image FLOW=aie_batch PRECISION=bf16 TARGET=hw   # <- before flashing
 #   flash, boot, then ON THE BOARD (no RTDA_GOLDEN for bf16 -- see below):
 #     RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt ./host_batch.exe
 make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=bf16 TARGET=hw
 
-# ---- 7. PL on the board ------------------------------------- ~1.5 h -------
+# ---- 7. PL on the board ------------------------- ~6-7 h MEASURED + board -
 make system FLOW=pl_fixed TARGET=hw
 #   flash pl_fixed/package/ap16_3_hw/sd_card.img, boot, then ON THE BOARD:
 #     RTDA_INPUT=embed_input_50000.txt RTDA_WARMUP=3 ./host_split.exe system.xclbin
@@ -292,7 +292,7 @@ make system FLOW=aie_batch PRECISION=fp32 TARGET=hw     # ~1 h
 
 **Before flashing, check the two halves match:**
 ```bash
-cat aie_batch/sd_stage/fp32/sysdata/config.txt      # MUST read: precision=fp32
+cat aie_batch/sd_stage/fp32/sd_batch/sysdata/config.txt      # MUST read: precision=fp32
 ls -la aie_batch/libadf_fp32.a
 ```
 A mismatched pair fails on the board with
@@ -306,7 +306,7 @@ mount /dev/mmcblk0p1 /mnt && mount -o remount,rw /mnt && cd /mnt
 
 RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt \
 RTDA_GOLDEN=sd_batch/testdata/golden_50000.txt \
-./host_batch.exe
+./host_batch.exe          # xclbin, weights and sysdata are auto-detected
 ```
 First line must read `[host] graph input dtype: float32`. Expect the on-board
 check to **PASS at ~1.5e-06**.
@@ -349,14 +349,30 @@ and the images had to be renamed by hand.)
 ### 5b. PL
 
 ```bash
-make system FLOW=pl_fixed TARGET=hw        # ~1.5 h (synthesis + place & route)
+make system FLOW=pl_fixed TARGET=hw        # ~6-7 h: csynth 4h54m MEASURED,
+                                          #   then link/place-and-route
+make check_image FLOW=pl_fixed TARGET=hw   # <- before flashing
 ```
-Flash `pl_fixed/package/ap16_3_hw/sd_card.img`, boot, then:
+Flash `pl_fixed/package/ap16_3_hw/sd_card.img`, boot, then **on the board**:
 ```bash
-RTDA_INPUT=embed_input_50000.txt RTDA_WARMUP=3 ./host_split.exe system.xclbin
+sudo su
+mount /dev/mmcblk0p1 /mnt && mount -o remount,rw /mnt && cd /mnt
+
+RTDA_WARMUP=3 ./host_split.exe        # xclbin and stimulus are auto-detected
 ```
-→ `results/pl_fixed/hw/`. It should match `results/pl_fixed/sim/` to float
-round-off; that is the point of the native model.
+`remount,rw` matters: the card is usually mounted read-only, and the host
+writes its three output files into the current directory. (If it cannot, it
+falls back to `/tmp` and says so rather than losing a finished run.)
+
+Then copy `track_means_all.txt`, `track_out_27.txt` and `run_info.txt` to
+`results/pl_fixed/hw/` on the build machine, however you prefer — USB stick,
+scp, or straight off the card in a reader. `sync` before `umount`.
+
+`run_info.txt` records `variant=ap16_3`, so a copied file still says which
+fixed-point build produced it.
+
+It should match `results/pl_fixed/sim/` to float round-off; that is the point
+of the native model.
 
 **hw_emu is a 5-event tool.** ~2 ms/event of RTL simulation makes 1000 events
 impractical, which is why the native model exists:
