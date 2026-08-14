@@ -31,6 +31,13 @@ PRECISION ?= fp32
 EVENTS    ?= 5
 TRACKS    ?= 50000
 
+# The reference self-test needs numpy + onnx + onnxruntime. Pinned, and not
+# `python3`: set_envs.sh puts PetaLinux's numpy-less interpreter first on PATH,
+# so `python model/rtda_ref.py` in a build shell dies with ModuleNotFoundError.
+# Every python entry point in this repo goes through a make target for exactly
+# this reason.
+REF_PY ?= /home/synthara/miniforge3/envs/envaie2/bin/python
+
 VALID_FLOWS := aie_batch pl_fixed
 ifeq ($(filter $(FLOW),$(VALID_FLOWS)),)
   $(error FLOW=$(FLOW) is not one of: $(VALID_FLOWS))
@@ -40,7 +47,7 @@ endif
 # no-op rather than an error, so the same command line works for both.
 FLOW_ARGS = TARGET=$(TARGET) PRECISION=$(PRECISION)
 
-.PHONY: help golden fastsim exactsim system run link package repackage \
+.PHONY: help golden selftest fastsim exactsim system run link package repackage \
         report crosscheck clean clean_all vars notebooks
 
 ############################################################################
@@ -52,6 +59,16 @@ FLOW_ARGS = TARGET=$(TARGET) PRECISION=$(PRECISION)
 # and both notebooks read the result.
 golden:
 	@$(MAKE) -C aie_batch golden TRACKS=$(TRACKS)
+
+# Does the reference model still agree with the pinned ONNX, and does it still
+# reproduce the committed goldens? Everything else is measured against this, so
+# it is the first thing to run and the first thing to suspect.
+selftest:
+	@$(REF_PY) model/rtda_ref.py --self-test
+	@for g in testdata/golden_*.npz; do \
+	    [ -e "$$g" ] && $(REF_PY) model/rtda_ref.py --check-golden $$g; \
+	 done; true
+	@$(MAKE) --no-print-directory -C pl_fixed check_weights
 
 ############################################################################
 #  Per-flow -- everything below just forwards
@@ -106,6 +123,7 @@ help:
 	@echo ""
 	@echo "Shared:"
 	@echo "  make golden TRACKS=50000                stimulus + streaming golden -> testdata/"
+	@echo "  make selftest                           reference vs ONNX, goldens, PL weights"
 	@echo ""
 	@echo "Per flow (add FLOW=... ; defaults shown):"
 	@echo "  make fastsim  FLOW=aie_batch PRECISION=fp32 EVENTS=5"

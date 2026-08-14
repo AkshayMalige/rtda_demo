@@ -58,10 +58,13 @@ golden_50000.txt          2.0 MB   the same, for the board's RTDA_GOLDEN= check
 
 **Checkpoint:**
 ```bash
-python model/rtda_ref.py --self-test
+make selftest
 ```
-Expect `numpy vs ONNX 3.9e-08  ok`, `tracks 3..49 circular vs streaming 0.0  ok`,
-and `PASS`.
+Expect `numpy vs ONNX 3.9e-08 ok`, `tracks 3..49 circular vs streaming 0.0 ok`,
+`PASS`, then every `golden_*.npz` reproducing at `0.000e+00`, then the 36 PL
+weight tensors at `5.0e-11`.
+
+(Run it through `make`, not as `python model/rtda_ref.py` — rule 4.)
 
 ---
 
@@ -122,7 +125,15 @@ make fastsim FLOW=pl_fixed EVENTS=1000 # ~95 s    the real kernel sources, 50,00
 → `results/pl_fixed/sim/{track_means_all.txt,track_out_27.txt,run_info.txt}`
 
 Expect **3.181e-04** on the 27 outputs (0.348% of full scale), **0.34× the bf16
-error**. The sweep prints the clipping margin; `<16,3>` should show `0.0000%`.
+error** over the same 1000 events. The sweep prints the clipping margin;
+`<16,3>` should show `0.0000%`.
+
+> That 0.34× compares against bf16 *modelled* over the same 1000 events.
+> `analysis/rtda_compare.ipynb` quotes 2.0×, comparing against the *measured*
+> AIE bf16 run, which only has the per-track taps a warm-up-excluded number
+> needs for 5 events. Different comparators, both like-for-like; neither is a
+> 1000-event measured bf16, because no such thing exists (the AIE system build
+> has no per-track taps).
 
 Verify the toolchain agrees with that, and check resources:
 ```bash

@@ -122,7 +122,7 @@ variant for comparison — it is 33× worse and should not be the default again.
 ## Verifying a change
 
 ```bash
-python model/rtda_ref.py --self-test              # the reference itself
+make selftest                                     # reference vs ONNX + goldens + PL weights
 make fastsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # PASS ~6.2e-07
 make -C pl_fixed check_weights                    # worst 5.0e-11
 make -C pl_fixed csim EVENTS=3                    # PASS, worst 0.000e+00

@@ -1,5 +1,40 @@
 # Results
 
+Every run's output, one directory per implementation.
+
+```
+aie_fp32/    sim/  hw_emu/  hw/      AIE-ML, float32
+aie_bf16/    sim/  hw_emu/  hw/      AIE-ML, bfloat16
+pl_fixed/    sim/  hw_emu/  hw/      PL only, ap_fixed<16,3>
+legacy/                              pre-restructure runs, see below
+```
+
+All of it is gitignored -- regenerable by definition. The READMEs are not.
+
+## The file formats, which are the same for every implementation
+
+| file | what |
+|---|---|
+| `track_means_all.txt` | `"<n_events> 128"` header, then one row of 128 floats per event. **The primary output.** The analysis applies the 128->27 output dense itself, so every implementation is compared through one copy of that arithmetic. |
+| `run_info.txt` | `key=value`. Always carries `events`, `tracks`, `warmup`; hardware runs add timing, the PL runs add the ap_fixed format. |
+| `track_out_27.txt` | the last event through the on-chip output dense, for a standalone check |
+| `sim_<sim>_<prec>_<N>ev_<T>tr.npz` | AIE simulation only: event means, the golden, the stimulus, and the per-track taps (`emb_out`, `s0_out`, `s1_out`, `s2_out`) that a warm-up-excluded number needs |
+
+**`warmup` in `run_info.txt` is not decoration.** It says whether the mean is
+over all 50 tracks or over tracks 3..49, and comparing the wrong one against
+the reference reports the roll convention (1.5e-02) as if it were arithmetic
+error (3e-04). The notebooks read it rather than assume. See README.md.
+
+## legacy/
+
+Runs from before the restructure: the pre-precision-tag `sim_*.npz` (which the
+notebooks' discovery would have had to disambiguate by filename), the per-event
+`sim_mean_128_*.txt` text dumps that duplicate what is already inside each npz,
+and `embed_input_2events.txt`. Kept because a `sim_events` run on the
+aiesimulator costs 25 minutes; nothing reads them.
+
+---
+
 ## Reproducibility fix — 2026-08-10
 
 Running the 10k-track test twice back to back originally gave PASS then FAIL, with

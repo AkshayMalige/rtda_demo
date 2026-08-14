@@ -456,8 +456,11 @@ def _self_test():
     #    warm-up" row in the analysis. Not an error; a convention difference.
     ms, _ = hw_golden(x, flush=True)
     gap = np.abs(out27(ms[0], W, B) - y_np).max()
+    # This is ONE event, the 50 real physics tracks. The 1.556e-02 quoted
+    # elsewhere is the max over 1000 synthesised events; both are the same
+    # convention difference, not error.
     print(f'  {"streaming vs circular roll (the WARM-UP GAP)":52s} {gap:.3e}'
-          f'   <- expected ~1.5e-02, not an error')
+          f'   <- the convention, not an error')
 
     # 3. tracks 3..49 must agree between the conventions
     _, per_c = event_means(x, roll='circular')
