@@ -1,16 +1,14 @@
 #!/usr/bin/env python
-"""Cross-check aieml_batch against the aieml/ reference output.
+"""Cross-check the aie_batch graph against the reference model.
 
-Three-way comparison over the real 50-track stimulus in data_fp32/:
+Three-way comparison over the real 50-track stimulus in model/weights_fp32/:
 
-    numpy golden  <->  data_fp32/aieml10_output_aie.txt   (validates the reference)
-    numpy golden  <->  aieml_batch AIE simulation          (validates the new graph)
+    reference  <->  weights_fp32/aieml10_output_aie.txt   (validates the reference)
+    reference  <->  aie_batch AIE simulation              (validates the new graph)
 
-The golden model is the full 14-layer chain rebuilt in numpy from the same weight
-files, with leaky-ReLU max(y, 0.1*y) after every dense layer (LEAKY_SLOPE = 0.1,
-common/nn_defs10.h:40) and the roll-concat expressed as
-    assemble(a) = concat([a, roll(a, 1, axis=0)], axis=-1)
-which is what aieml/roll_concat.cpp computes.
+The reference is `model/rtda_ref.py` with roll='circular' -- one implementation
+of the network, shared with make_golden.py and both notebooks. This file used to
+carry its own copy of the forward pass; it no longer does.
 
 WARM-UP: tracks 0,1,2 are excluded. roll_concat starts with zero-initialised
 history and the network's receptive field is 4 tracks deep, so the first three
@@ -32,25 +30,24 @@ import aie_io
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-# NOT 'DATA_DIR': ../set_envs.sh exports that pointing at data/, which holds int16
-# text. Loading it into a float32 model yields integer weights and garbage.
-D = Path(os.environ.get('WEIGHTS_DIR') or REPO / 'model' / 'weights_fp32')
-H = 128
-N_TRACKS = 50
-WARMUP = 3
-SLOPE = 0.1
+sys.path.insert(0, str(REPO))
+from model import rtda_ref as R          # noqa: E402
+from model import weights as MW          # noqa: E402
+
+# NOT 'DATA_DIR': ../set_envs.sh exports that pointing somewhere else entirely,
+# and a silently wrong weight directory is the most expensive mistake here.
+D = Path(os.environ.get('WEIGHTS_DIR') or MW.DEFAULT_DIR)
+H = R.H
+N_TRACKS = R.TRACKS_PER_EVENT
+WARMUP = R.WARMUP
+SLOPE = R.SLOPE
+
+_W, _B = MW.load(D)
 
 
 def L(n):
-    return np.loadtxt(D / n).astype(np.float32)
-
-
-def P(stem, n, r, c):
-    return np.concatenate([L(f'{stem}_part{i}.txt') for i in range(n)]).reshape(r, c).astype(np.float32)
-
-
-def lrelu(a):
-    return np.maximum(a, SLOPE * a)
+    """Kept for the few callers that still want a raw weight file by name."""
+    return np.loadtxt(D / n)
 
 
 def assemble(a):
@@ -58,22 +55,15 @@ def assemble(a):
     return np.concatenate([a, np.roll(a, 1, axis=0)], axis=-1)
 
 
-def golden():
-    """Full 14-layer chain in numpy. Returns (emb, [s0,s1,s2])."""
-    X = L('embed_input.txt').reshape(-1, 8)
-    h = lrelu(X @ L('embed_dense_0_weights.txt').reshape(8, H) + L('embed_dense_0_bias.txt'))
-    emb = lrelu(h @ P('embed_dense_1_weights', 2, H, H) + L('embed_dense_1_bias.txt'))
-    outs, cur = [], emb
-    for s in range(3):
-        z = lrelu(assemble(cur) @ P(f'solver_{s}_dense_0_weights', 4, 2 * H, H)
-                  + L(f'solver_{s}_dense_0_bias.txt'))
-        for n in (1, 2, 3):
-            z = z @ P(f'solver_{s}_dense_{n}_weights', 2, H, H) + L(f'solver_{s}_dense_{n}_bias.txt')
-            if n < 3:
-                z = lrelu(z)
-        cur = lrelu(z)
-        outs.append(cur)
-    return emb, outs
+def golden(slope=None):
+    """Full 14-layer chain. Returns (emb, [s0,s1,s2]).
+
+    Thin wrapper over model/rtda_ref.py -- this used to be a second copy.
+    """
+    X = MW.stimulus(D)
+    o = R.forward(X, roll='circular', slope=SLOPE if slope is None else slope,
+                  W=_W, B=_B)
+    return o['emb'], [o['s0'], o['s1'], o['s2']]
 
 
 # 1e-4, not 1e-5. float32 on AIE-ML is emulated on the bfloat16 datapath
@@ -144,10 +134,7 @@ def main():
     # whereas the RTDA model uses leaky ReLU slope 0.1. Feeding leaky-derived
     # inputs while comparing against a plain-ReLU golden compares two different
     # networks and fails for the wrong reason.
-    global SLOPE
-    if a.slope is not None:
-        SLOPE = a.slope
-    emb_c, soln_c = golden()
+    emb_c, soln_c = golden(slope=a.slope)
 
     X = np.zeros((N_TRACKS, INPUT_DIM), dtype=np.float32)
     X[:, :8] = L('embed_input.txt').reshape(-1, 8)

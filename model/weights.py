@@ -47,14 +47,24 @@ OUT_DIM = 27
 SOLVERS = 3
 
 
+# float64 throughout. The text files carry 10 significant digits, so float32
+# would discard precision that is actually present, and the reference model has
+# to be the most accurate thing in the repo -- otherwise a `quant=` experiment
+# measures the reference's own error as well as the format's.
+#
+# The scripts this replaced were inconsistent about it: make_golden.py read the
+# embed weights with a bare np.loadtxt (float64) and every other layer through
+# crosscheck.L (float32). That is why regenerating a golden with this loader
+# moves it by ~1e-09 -- three orders below the tightest tolerance anywhere in
+# the project, and five below the board's 1e-4 self-check.
 def _load(d: Path, name: str) -> np.ndarray:
-    return np.loadtxt(d / name).astype(np.float32)
+    return np.loadtxt(d / name)
 
 
 def _parts(d: Path, stem: str, n: int, rows: int, cols: int) -> np.ndarray:
     return np.concatenate(
         [_load(d, f'{stem}_part{i}.txt') for i in range(n)]
-    ).reshape(rows, cols).astype(np.float32)
+    ).reshape(rows, cols)
 
 
 def load(d: Path | str | None = None) -> tuple[dict, dict]:
@@ -96,9 +106,15 @@ def load(d: Path | str | None = None) -> tuple[dict, dict]:
 
 
 def stimulus(d: Path | str | None = None) -> np.ndarray:
-    """The 50 real physics tracks, (50, 8). Columns 6..7 are zero."""
+    """The 50 real physics tracks, (50, 8). Columns 6..7 are zero.
+
+    float64, like everything else here. Round-tripping it through float32 shifts
+    it by 4e-08, and because the synthesised tracks in rtda_ref.synth_tracks are
+    seeded from this array's own mean and std, that drift lands in every one of
+    the 50,000 rather than staying in the first 50.
+    """
     d = Path(d) if d is not None else DEFAULT_DIR
-    return _load(d, 'embed_input.txt').reshape(-1, IN_PADDED)
+    return np.loadtxt(d / 'embed_input.txt').reshape(-1, IN_PADDED)
 
 
 if __name__ == '__main__':
