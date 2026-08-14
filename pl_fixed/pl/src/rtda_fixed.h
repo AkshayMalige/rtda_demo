@@ -158,8 +158,12 @@ typedef ap_fixed<18, 8> rtda_table_t;
 //  reaching a report (1.4M instructions), against a design that had
 //  synthesised fine before.
 //
-//  Both were removable at no numerical cost -- see the notes above and in
-//  rtda_leaky.h. The lesson is narrow but worth keeping: rounding and
+//  Both were removable at no numerical cost, and removing them is measurable
+//  in the tool: the 'Standard Transforms' phase went 384 s -> 45 s and its
+//  allocated memory 3.15 GB -> 1.31 GB, with peak RSS 5.8 GB -> 2.5 GB.
+//
+//  See the notes above and in rtda_leaky.h. The lesson is narrow but worth
+//  keeping: rounding and
 //  saturation modes are not free, and the innermost loop of 14 dense layers is
 //  the worst place to spend them. Put them where the error actually is (the
 //  activations) and nowhere else.
