@@ -25,23 +25,38 @@
 //      max |weight| = 0.688, max |bias| = 0.420, over all 30 tensors.
 //
 //  RTDA_ACC_* = <32,10>  ->  [-512, 512), 22 fractional bits.
-//      A 256-term dot product of numbers of order 1. The generated <32,18> had
-//      only 14 fractional bits, i.e. the accumulator was COARSER than the
-//      product of two 13-bit-fraction operands -- it was throwing away the low
-//      bits of every multiply before summing them.
+//      NOT a lever, and worth saying so. The largest value any dense
+//      accumulator reaches on this network is 3.22, so there is ~160x
+//      headroom, and the fractional bits do not show up in the result:
+//      <32,18> gives 1.09e-04, <32,10> gives 1.21e-04, <40,10> 1.36e-04 --
+//      that spread is noise. An earlier version of this comment claimed the
+//      generated <32,18> "threw away the low bits of every multiply"; the
+//      measurement says it did not. `make sweep` prints this table.
+//      Corollary: AP_SAT on the accumulator is DEAD LOGIC in the innermost
+//      loop. See the TODO at the bottom of this file.
 //
-//  AP_RND_CONV + AP_SAT, not the ap_fixed defaults (AP_TRN + AP_WRP).
-//      Truncation costs half an LSB of *bias* -- not noise, bias -- at each of
-//      14 layers, and it does not cancel. Wrapping turns a small overflow into
-//      a sign flip. Rounding and saturating costs a little fabric and no DSPs.
-//      This is the same class of bug as the fp32->bf16 truncation in aie4ml,
-//      which was worth 8x end to end once fixed.
+//  AP_RND_CONV + AP_SAT on the ACTIVATIONS, not the ap_fixed defaults
+//  (AP_TRN + AP_WRP). Truncation costs half an LSB of *bias* -- not noise,
+//      bias -- at each of 14 layers, and it does not cancel.
 //
-//  MEASURED, on the 27 outputs vs the ONNX reference (model/rtda_ref.py):
-//      ap_fixed<16,6> trn/wrp, alpha=0.125   1.35e-02   <- what this was
-//      ap_fixed<16,3> rnd/sat, alpha=0.1     ~2e-05     <- what it is now
-//      AIE bf16                               2.6e-04
-//      AIE fp32                               7.5e-07
+//  BUT: NO SINGLE ONE OF THESE CHANGES HELPS ON ITS OWN. Three of the four
+//  make it worse. Measured, from the original <16,6> trn_wrp alpha=0.125:
+//
+//      original                       1.393e-02
+//      alpha 0.1 alone                2.234e-02   WORSE
+//      round+saturate alone           1.837e-02   WORSE
+//      activation I=3 alone           1.332e-02
+//      weight I=1 alone               1.666e-02   WORSE
+//      alpha + rounding               1.208e-03
+//        + activation I=3             9.305e-04
+//        + weight I=1     (shipped)   1.085e-04
+//
+//  With alpha=0.125 the design computes a DIFFERENT FUNCTION from the
+//  reference, so improving its precision just resolves the wrong answer more
+//  sharply. alpha and rounding have to move together; only then do the
+//  integer-bit choices pay. Do not "simplify" one of these back out.
+//
+//  For scale, same metric, same stimulus:  AIE bf16 6.0e-04,  AIE fp32 7.5e-07.
 // ===========================================================================
 
 #include "ap_fixed.h"
@@ -116,3 +131,15 @@ typedef ap_fixed<18, 8> rtda_table_t;
 #else
 #define RTDA_ALPHA_VALUE 0.099609375
 #endif
+
+// ---------------------------------------------------------------------------
+//  TODO, measured but not yet applied
+//
+//  RTDA_ACC_* can drop AP_SAT (use AP_WRP) with NO numerical change: 160x
+//  headroom means the saturation comparators never fire, and they sit in the
+//  innermost loop of every dense layer -- the most expensive place in the
+//  design to put logic. Suspected to be a large part of why this build's
+//  csynth is much heavier than the pre-change one (1.4M instructions, 5.7 GB,
+//  hours). Not changed yet only because a synthesis run was in flight to get
+//  the baseline DSP count; do it, then re-measure with `make csynth`.
+// ---------------------------------------------------------------------------

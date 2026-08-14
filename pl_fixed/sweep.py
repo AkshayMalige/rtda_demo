@@ -130,6 +130,50 @@ def main():
     print(f"  rtda_fixed.h default <16,3> rnd_sat alpha=0.1  ->  {dflt['err']:.3e}"
           f"  ({dflt['err']/e_bf16:.2f}x bf16)")
 
+    # ---------------------------------------------------------------------
+    #  ABLATION: what was each change actually worth?
+    #
+    #  Worth printing because the answer is counter-intuitive and was got
+    #  wrong once: NO SINGLE CHANGE HELPS. Three of the four make it worse on
+    #  their own. With alpha=0.125 the design computes a different function
+    #  from the reference, and making a wrong answer more precise just
+    #  resolves the wrong answer better. alpha and rounding have to move
+    #  together; only then do the integer-bit choices pay.
+    # ---------------------------------------------------------------------
+    orig = dict(W=16, I=6, aw=32, ai=18, mode='trn_wrp', alpha=0.125, wi=6)
+
+    def err(**kw):
+        cfg = dict(orig); cfg.update(kw)
+        return err27(tracks, R.fixed(**cfg), W, B, ref27, a.warmup)[0]
+
+    print('\n  ablation, from the original ap_fixed<16,6> trn_wrp alpha=0.125:')
+    steps = [
+        ('original', {}),
+        ('alpha 0.1 alone', dict(alpha=None)),
+        ('round+saturate alone', dict(mode='rnd_sat')),
+        ('activation I=3 alone', dict(I=3)),
+        ('weight I=1 alone', dict(wi=1)),
+        ('alpha + rounding', dict(alpha=None, mode='rnd_sat')),
+        ('  + activation I=3', dict(alpha=None, mode='rnd_sat', I=3)),
+        ('  + weight I=1  (shipped)', dict(alpha=None, mode='rnd_sat', I=3, wi=1)),
+    ]
+    base = err()
+    for name, kw in steps:
+        e = err(**kw)
+        arrow = '' if not kw else ('  better' if e < base else '  WORSE')
+        print(f'    {name:28s} {e:.3e}{arrow}')
+
+    # The accumulator is not a lever: it has ~160x headroom on this network,
+    # so AP_SAT there is dead logic, and its fractional bits do not show up in
+    # the result. Printed so nobody spends effort on it again.
+    print('\n  accumulator width (activations fixed at <16,3> rnd_sat, alpha 0.1):')
+    for aw, ai in ((32, 18), (32, 10), (40, 10)):
+        e = err(alpha=None, mode='rnd_sat', I=3, wi=1, aw=aw, ai=ai)
+        print(f'    accum <{aw},{ai}>  {aw-ai:2d} frac bits      {e:.3e}')
+    o = R.forward(tracks, roll='circular', W=W, B=B)
+    print(f'    -> largest activation {amax:.3f}; the accumulator sees at most a few'
+          f'\n       times that, against a +-{2**(10-1)} range. AP_SAT there never fires.')
+
 
 if __name__ == '__main__':
     main()
