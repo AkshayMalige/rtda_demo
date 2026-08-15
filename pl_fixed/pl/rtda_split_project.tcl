@@ -110,7 +110,16 @@ switch $command {
         file mkdir ${PROJ_DIR}/ip
         csynth_design
         export_design -format xo -output ${PROJ_DIR}/ip/rtda_split.xo
-        export_design -format ip_catalog -output ${PROJ_DIR}/ip/rtda_split_ip
+        # NO ip_catalog export. It is a SECOND full RTL-to-IP run of the same
+        # design -- measured at 1 h 12 m, the same as the xo export it follows --
+        # and nothing consumes its output. ../Makefile links $(PL_XO) and only
+        # $(PL_XO); grep finds rtda_split_ip nowhere else in the tree. It came
+        # from archive/pl/track_average_project.tcl, where a hand-built Vivado
+        # project did need an IP catalog entry.
+        #
+        # If you ever want the IP for a manual block design, run it on its own:
+        #   vitis_hls -e 'open_project rtda_split_hls; open_solution solution1; \
+        #                 export_design -format ip_catalog -output pl/ip/rtda_split_ip'
         puts "***** EXPORT DONE *****"
     }
     default {
