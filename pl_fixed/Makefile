@@ -211,7 +211,16 @@ $(XSA): $(PL_XO) $(LINK_CFG) | $(BUILD_DIR)
 
 link: $(XSA)
 
-$(PL_XO):
+# Everything HLS compiles into the .xo. Without these the rule fires only when
+# the file is absent, so editing rtda_leaky.h and rebuilding would package an
+# xclbin built from the OLD kernel and report it as new -- silently wrong, which
+# is worse than slow. (The same shape of bug shipped a stale host_batch.exe onto
+# an SD card; see the note on $(EXEC) in aie_batch/Makefile.)
+PL_KERNEL_SRC := $(wildcard pl/src/*.cpp) $(wildcard pl/src/*.h) \
+                 $(wildcard pl/firmware/*/*.h) $(wildcard pl/firmware/*/*.cpp) \
+                 $(wildcard pl/firmware/nnet_utils/*.h) pl/rtda_split_project.tcl
+
+$(PL_XO): $(PL_KERNEL_SRC)
 	@$(MAKE) --no-print-directory kernels
 
 # The board needs the stimulus. Unlike the AIE flow there is no sysdata to
@@ -231,7 +240,11 @@ $(XCLBIN): $(XSA) $(EXEC) | $(PKG_DIR)
 
 package: $(XCLBIN)
 
-system: kernels host link package
+# $(PL_XO), NOT `kernels`. `kernels` is .PHONY, so listing it here re-ran the
+# whole 3 h HLS synthesis on every `make system` even when the .xo was present
+# and current -- which is what a TARGET=hw_emu run after a finished TARGET=hw
+# build does, for an artifact that is target-agnostic and already on disk.
+system: $(PL_XO) host link package
 	@echo
 	@echo ">>> SD image ready: $(PKG_DIR)/sd_card.img   ($(VARIANT), $(TARGET))"
 
