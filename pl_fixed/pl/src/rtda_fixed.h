@@ -123,9 +123,25 @@ inline std::string rtda_weights_dir() {
 // ROUTE -- congestion level 6, 469,480 unrouted signals. Timing was never the
 // problem (WNS +0.213 ns).
 //
-// 1024 gives 16 MACs per layer. Four times the latency of a layer that was
-// already 4x slower per track than the AIE implementation, on a design whose
-// purpose is a numerical comparison point, not a throughput record.
+// MEASURED, one 128x128 layer synthesised standalone at each RF:
+//
+//      RF     DSP     LUT        II
+//      256     64     192,647    256
+//      512     32     176,102    512
+//     1024     16     168,239   1024
+//
+// DSP tracks block_factor exactly, so the knob unquestionably works. LUT falls
+// only 12.7% for a 4x cut in multipliers -- the multipliers were never the LUT
+// cost. Instance and Multiplexer dominate and do not scale with them; the same
+// thing shows in the shipped design, where the 6->128 layer has 16x fewer
+// multipliers than a 128x128 one and costs only 24% less.
+//
+// So this is worth roughly 38k real LUT (~7 points of the device), not the 4x
+// it looks like it should be. Kept because the latency it spends is free here:
+// four times an II on a design that exists to be a numerical comparison point
+// puts 50,000 tracks at about 2 s.
+//
+// The LUT problem was never here. See RTDA_LEAKY_LANES in rtda_leaky.h.
 #ifndef RTDA_REUSE_DENSE
 #define RTDA_REUSE_DENSE 1024
 #endif
