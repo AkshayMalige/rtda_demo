@@ -253,7 +253,15 @@ ifeq ($(TARGET),hw_emu)
 	@echo ">>> hw_emu on QEMU -- $(shell expr $$(wc -l < $(STIMULUS)) / 8 / 50 2>/dev/null) events"
 	@echo ">>> from $(STIMULUS). EVENTS= does NOT apply here: the host reads"
 	@echo ">>>   RTDA_EVENTS, which cannot be set inside QEMU, so the file is the cap."
-	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC) $(XCLBIN)
+	@echo ">>> QEMU takes a few minutes to boot. If it drops to a shell prompt,"
+	@echo ">>>   see RUNBOOK.md -- mount the card and run ./host_split.exe there."
+	# NO $(XCLBIN) argument. It is a path on THIS machine
+	# (package/ap16_3_hw_emu/system_hw_emu.xclbin) and -run-app hands its
+	# arguments to the binary running on the EMULATED system, where the xclbin
+	# sits at the root of the mounted card and that path does not exist. The
+	# host autodetects system_hw_emu.xclbin in its working directory, so the
+	# argument was never needed and could only ever be wrong.
+	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC)
 else
 	@echo "TARGET=hw: write $(PKG_DIR)/sd_card.img to the SD card and boot the VEK280."
 	@echo "See ../RUNBOOK.md for the on-board commands."
