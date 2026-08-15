@@ -49,7 +49,20 @@ EVENTS   ?= 5
 # tracks 3..49. See pl/src/rtda_split_top.h for why this is a runtime argument
 # and what WARMUP=0 gives you instead.
 WARMUP   ?= 3
+# hw_emu simulates the RTL, so an event costs minutes rather than microseconds
+# and the 1000-event stimulus is not a run anyone would finish. EVENTS does NOT
+# cap it: the host takes its event count from RTDA_EVENTS, and no environment
+# variable survives the trip into QEMU -- `launch_hw_emu.sh -run-app` starts the
+# binary on the emulated system with its own environment. The cap therefore has
+# to BE the stimulus file, which the host sizes itself from.
+#
+# 100 tracks = 2 events, which is the smallest run that still crosses an event
+# boundary and so still exercises the accumulator reset and the roll carry.
+ifeq ($(TARGET),hw_emu)
+STIMULUS ?= ../testdata/embed_input_100.txt
+else
 STIMULUS ?= ../testdata/embed_input_50000.txt
+endif
 
 # The fixed-point format. Defaults live in pl/src/rtda_fixed.h; anything set
 # here overrides them for both the native model and synthesis, so the two can
@@ -224,7 +237,9 @@ system: kernels host link package
 
 run: system
 ifeq ($(TARGET),hw_emu)
-	@echo ">>> hw_emu on QEMU -- $(EVENTS) events (1000 would take days in RTL)"
+	@echo ">>> hw_emu on QEMU -- $(shell expr $$(wc -l < $(STIMULUS)) / 8 / 50 2>/dev/null) events"
+	@echo ">>> from $(STIMULUS). EVENTS= does NOT apply here: the host reads"
+	@echo ">>>   RTDA_EVENTS, which cannot be set inside QEMU, so the file is the cap."
 	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC) $(XCLBIN)
 else
 	@echo "TARGET=hw: write $(PKG_DIR)/sd_card.img to the SD card and boot the VEK280."

@@ -96,7 +96,9 @@ need "$XCLBIN"
 
 if [ "$FLOW" = pl_fixed ]; then
   need "host_split.exe"
-  need "embed_input_50000.txt"
+  # hw_emu packages the 2-event stimulus -- an event costs minutes in RTL, and
+  # the file is the only way to cap the run once the host is inside QEMU.
+  need_any "embed_input_50000.txt" "embed_input_100.txt"
 else
   need "host_batch.exe"
   # host_batch searches sd_batch/<...>; the basename of --package.sd_dir is

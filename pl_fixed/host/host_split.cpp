@@ -116,6 +116,12 @@ int main(int argc, char* argv[]) {
     std::string in_path = env_or("RTDA_INPUT", "");
     if (in_path.empty())
         in_path = first_existing({"embed_input_50000.txt",              // as packaged
+                                  // hw_emu packages a 2-event stimulus instead:
+                                  // RTDA_EVENTS cannot be set inside QEMU, so the
+                                  // file is what caps the run. Listed after the
+                                  // full one, so an SD card carrying both still
+                                  // does the real thing.
+                                  "embed_input_100.txt",
                                   "testdata/embed_input_50000.txt",     // build tree
                                   "../testdata/embed_input_50000.txt"});
     if (in_path.empty()) {
