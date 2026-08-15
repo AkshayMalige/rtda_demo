@@ -3,6 +3,7 @@
 
 #include "ap_fixed.h"
 #include "ap_int.h"
+#include "rtda_fixed.h"
 
 #include "nnet_utils/nnet_code_gen.h"
 #include "nnet_utils/nnet_helpers.h"
@@ -35,7 +36,7 @@ struct config3 : nnet::dense_config {
     static const unsigned n_out = 128;
     static const unsigned io_type = nnet::io_stream;
     static const unsigned strategy = nnet::resource;
-    static const unsigned reuse_factor = 256;
+    static const unsigned reuse_factor = RTDA_REUSE_DENSE;
     static const unsigned n_zeros = 0;
     static const unsigned n_nonzeros = 16384;
     static const unsigned multiplier_limit = DIV_ROUNDUP(n_in * n_out, reuse_factor) - n_zeros / reuse_factor;
@@ -56,7 +57,7 @@ struct config5 : nnet::dense_config {
     static const unsigned n_out = 128;
     static const unsigned io_type = nnet::io_stream;
     static const unsigned strategy = nnet::resource;
-    static const unsigned reuse_factor = 256;
+    static const unsigned reuse_factor = RTDA_REUSE_DENSE;
     static const unsigned n_zeros = 0;
     static const unsigned n_nonzeros = 16384;
     static const unsigned multiplier_limit = DIV_ROUNDUP(n_in * n_out, reuse_factor) - n_zeros / reuse_factor;
@@ -93,7 +94,7 @@ struct config9 : nnet::dense_config {
     static const unsigned n_out = 128;
     static const unsigned io_type = nnet::io_stream;
     static const unsigned strategy = nnet::resource;
-    static const unsigned reuse_factor = 256;
+    static const unsigned reuse_factor = RTDA_REUSE_DENSE;
     static const unsigned n_zeros = 0;
     static const unsigned n_nonzeros = 16384;
     static const unsigned multiplier_limit = DIV_ROUNDUP(n_in * n_out, reuse_factor) - n_zeros / reuse_factor;
@@ -124,7 +125,7 @@ struct config12 : nnet::dense_config {
     static const unsigned n_out = 128;
     static const unsigned io_type = nnet::io_stream;
     static const unsigned strategy = nnet::resource;
-    static const unsigned reuse_factor = 256;
+    static const unsigned reuse_factor = RTDA_REUSE_DENSE;
     static const unsigned n_zeros = 0;
     static const unsigned n_nonzeros = 16384;
     static const unsigned multiplier_limit = DIV_ROUNDUP(n_in * n_out, reuse_factor) - n_zeros / reuse_factor;
@@ -155,7 +156,7 @@ struct config15 : nnet::dense_config {
     static const unsigned n_out = 128;
     static const unsigned io_type = nnet::io_stream;
     static const unsigned strategy = nnet::resource;
-    static const unsigned reuse_factor = 256;
+    static const unsigned reuse_factor = RTDA_REUSE_DENSE;
     static const unsigned n_zeros = 0;
     static const unsigned n_nonzeros = 16384;
     static const unsigned multiplier_limit = DIV_ROUNDUP(n_in * n_out, reuse_factor) - n_zeros / reuse_factor;

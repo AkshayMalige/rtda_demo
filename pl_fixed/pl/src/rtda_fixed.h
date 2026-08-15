@@ -104,6 +104,32 @@ inline std::string rtda_weights_dir() {
 #define RTDA_ACC_I 10
 #endif
 
+// ---------------------------------------------------------------------------
+// AREA vs THROUGHPUT for the sixteen 128x128 dense layers.
+//
+// hls4ml's reuse factor is how many cycles one dense layer is spread over, so
+// it sets how many multipliers exist: block_factor = 128*128/RF parallel MACs,
+// and the layer's II is RF cycles. It is PURELY a scheduling knob -- each
+// product is truncated into the accumulator independently and fixed-point
+// addition without overflow is exact, so the result is BIT-IDENTICAL at every
+// legal RF. csim must still report 0.000e+00 after changing it.
+//
+// The kernel (dense_resource_rf_gt_nin_rem0) requires RF > n_in, RF % n_in == 0
+// and n_in*n_out % RF == 0, so for 128x128 the legal values are 256, 512,
+// 1024, 2048.
+//
+// RF=256 was what the first hardware build used. It gave 64 MACs per layer and
+// 43,894 LUT per layer; the design placed at 98.87% LUT and then FAILED TO
+// ROUTE -- congestion level 6, 469,480 unrouted signals. Timing was never the
+// problem (WNS +0.213 ns).
+//
+// 1024 gives 16 MACs per layer. Four times the latency of a layer that was
+// already 4x slower per track than the AIE implementation, on a design whose
+// purpose is a numerical comparison point, not a throughput record.
+#ifndef RTDA_REUSE_DENSE
+#define RTDA_REUSE_DENSE 1024
+#endif
+
 typedef ap_fixed<RTDA_W, RTDA_I, AP_RND_CONV, AP_SAT>          rtda_act_t;
 typedef ap_fixed<RTDA_W, RTDA_WEIGHT_I, AP_RND_CONV, AP_SAT>   rtda_weight_t;
 // The accumulator gets the ap_fixed DEFAULTS -- no rounding, no saturation --

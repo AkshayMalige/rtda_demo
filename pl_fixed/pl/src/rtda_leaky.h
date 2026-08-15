@@ -53,30 +53,73 @@ inline T alpha_mul(const T &x) {
 #ifdef RTDA_ALPHA_125
     return x >> 3;                                  // 0.125, a bare shift
 #else
-    typedef ap_fixed<RTDA_W + 9, RTDA_I> mul_t;     // 2^-4+2^-5+2^-8+2^-9
+    typedef ap_fixed<RTDA_W + 9, RTDA_I> mul_t;
     mul_t a = (mul_t)x;
-    mul_t s = (a >> 4) + (a >> 5) + (a >> 8) + (a >> 9);
+    // 0.099609375 = 51/512, and 51 = 3 x 17, so the four-term sum FACTORS into
+    // two adds instead of three:
+    //
+    //     t = a>>5 + a>>4   =  3a/32
+    //     s = t    + t>>4   = 17t/16  =  51a/512
+    //
+    // versus (a>>4)+(a>>5)+(a>>8)+(a>>9) = a(32+16+2+1)/512 = 51a/512.
+    // Same value, and BIT-IDENTICAL rather than merely close: mul_t carries 9
+    // fractional bits more than T, the smallest intermediate here needs 22 of
+    // the 22 it has, so no shift drops a bit and every add is exact.
+    //
+    // This matters because it is not one adder. 128 lanes x 14 activation
+    // layers = 1792 of them, each 25 bits wide -- a third of the leaky ReLU's
+    // 24,708 LUT per layer, which is 29% of a design that failed to route at
+    // 98.87% LUT.
+    mul_t t = (a >> 5) + (a >> 4);
+    mul_t s = t + (t >> 4);
     return (T)s;
 #endif
 }
+
+// How many lanes of the packed beat are built as parallel hardware.
+//
+// THIS IS THE SINGLE MOST EXPENSIVE NUMBER IN THE DESIGN. The stream beat is
+// 128 wide, and a `#pragma HLS PIPELINE` on the outer loop fully unrolls the
+// inner one, so the layer became 128 parallel lanes of compare + shift-adds +
+// saturating cast -- 24,706 LUT of pure combinational Expression, latency 0.
+// Fourteen of those is 29% of a design that failed to route at 98.87% LUT.
+//
+// They finish in ONE cycle and then idle, because the dense layer feeding them
+// has an II of 256 (1024 after RTDA_REUSE_DENSE). Eight lanes over 16 cycles
+// costs nothing anyone can measure and is a sixteenth of the logic.
+//
+// Scheduling only: at any value the arithmetic per element is unchanged, so
+// the result is bit-identical and the native model (which ignores the pragmas)
+// is unaffected. 128 must be divisible by it.
+#ifndef RTDA_LEAKY_LANES
+#define RTDA_LEAKY_LANES 8
+#endif
 
 // One packed beat of an hls4ml io_stream activation layer.
 template <class data_T, class res_T, typename CONFIG_T>
 void leaky_relu(hls::stream<data_T> &data, hls::stream<res_T> &res) {
 RtdaLeakyLoop:
     for (int i = 0; i < CONFIG_T::n_in / res_T::size; i++) {
-#pragma HLS PIPELINE
         data_T in_data = data.read();
         res_T out_data;
         PRAGMA_DATA_PACK(out_data)
 
+        // No PIPELINE on the loop above: it would unroll this one completely
+        // and put all 128 lanes back.
     RtdaLeakyPack:
-        for (int j = 0; j < res_T::size; j++) {
+        for (int j = 0; j < res_T::size; j += RTDA_LEAKY_LANES) {
+#pragma HLS PIPELINE II=1
+        RtdaLeakyLane:
+            for (int k = 0; k < RTDA_LEAKY_LANES; k++) {
 #pragma HLS UNROLL
-            if (in_data[j] > 0)
-                out_data[j] = in_data[j];
-            else
-                out_data[j] = alpha_mul(in_data[j]);
+                const int idx = j + k;
+                if (idx < res_T::size) {
+                    if (in_data[idx] > 0)
+                        out_data[idx] = in_data[idx];
+                    else
+                        out_data[idx] = alpha_mul(in_data[idx]);
+                }
+            }
         }
         res.write(out_data);
     }

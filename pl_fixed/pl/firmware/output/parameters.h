@@ -3,6 +3,7 @@
 
 #include "ap_fixed.h"
 #include "ap_int.h"
+#include "rtda_fixed.h"
 
 #include "nnet_utils/nnet_code_gen.h"
 #include "nnet_utils/nnet_helpers.h"
