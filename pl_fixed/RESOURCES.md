@@ -1,80 +1,184 @@
-# Resources — where the precision realignment landed
+# Resources — why the design stopped fitting, and the leaky ReLU
 
-`make csynth`, Vitis HLS 2024.2, `xcve2802-vsvh1760-2MP-e-S`, 150 MHz.
-These are **HLS estimates**, not place-and-route results. Read the calibration
-note at the bottom before believing any of them.
+## The two builds
 
-## Current design — ap_fixed<16,3>, alpha 0.1
+| | **May 2026** | **Aug 14 2026** |
+|---|---|---|
+| activation type | `ap_fixed<16,6>` plain | `ap_fixed<16,3,AP_RND_CONV,AP_SAT>` |
+| weight type | `ap_fixed<16,6>` plain | `ap_fixed<16,1,AP_RND_CONV,AP_SAT>` |
+| leaky slope | 0.125 | 0.099609375 |
+| **LUT** | **224,344 (43.08%)** | **513,603 (98.87%)** |
+| DSP | 80.56% | 80.56% |
+| **accuracy, 27 outputs** | **2.413e-02 (26.4% FS)** | **3.540e-04 (0.39% FS)** |
+| outcome | routed, ran on hardware | **failed to route** |
 
-| block | BRAM | DSP | FF | LUT |
-|---|---|---|---|---|
-| `embed_run` | 37 (3%) | 68 (5%) | 31,209 (2%) | 130,480 (25%) |
-| `solver0_run` | 162 (13%) | 320 (24%) | 105,941 (10%) | 343,814 (66%) |
-| `solver1_run` | 162 (13%) | 320 (24%) | 105,942 (10%) | 343,814 (66%) |
-| `solver2_run` | 162 (13%) | 320 (24%) | 105,944 (10%) | 343,814 (66%) |
-| `output_run` | 19 (1%) | 27 (2%) | 14,889 (1%) | 15,882 (3%) |
-| **top** | **572 (47%)** | **1057 (80%)** | **393,720 (37%)** | **1,206,105 (231%)** |
+Identical DSP, so the multipliers never changed. The glue grew by 289,259 LUT.
 
-## Against the design before the realignment
+The August build placed fine and met timing (WNS +0.213 ns). It died in routing:
+congestion level 6, 469,480 unrouted signals. At 98.87% LUT there is no fabric
+left to run wires through.
 
-| | before | after | |
+The accuracy column is why the change was made and why going back is not the
+answer. May's design was 68x further from the trained network — it had a 25%
+error in the slope at all 14 layers *and* 10 fractional bits instead of 13.
+
+## The leaky ReLU
+
+The activation after every dense layer:
+
+    if (x > 0)  out = x
+    else        out = alpha * x
+
+**Why 0.125 was chosen.** hls4ml takes alpha as a runtime argument, so
+`alpha * x` is a real multiplier — 128 lanes x 14 layers. With 0.125 the
+synthesiser sees a power of two and turns it into `x >> 3`, which is free: a
+shift is wiring, not gates. At 80% DSP that was a sound call.
+
+Its cost is accuracy. 0.125 is 25% off the trained slope, applied 14 times.
+
+### Getting 0.1 without a DSP
+
+0.1 is not representable in binary. On this design's 13-fractional-bit grid the
+nearest value is
+
+    0.099609375 = 51/512
+
+Split that into a multiply and a divide:
+
+    / 512   =  shift right 9        FREE
+    x 51    =  the only real work
+
+and 51 is a sum of powers of two, so the multiply is adds:
+
+    51 = 32 + 16 + 2 + 1
+    x*51 = (x<<5) + (x<<4) + (x<<1) + x        3 adds, no DSP
+
+`alpha_mul()` in `pl/src/rtda_leaky.h` writes this with the /512 folded into the
+shifts. **Zero DSPs, same as the 0.125 shift it replaced** — confirmed, DSP was
+80.56% before and after.
+
+This is not an approximation of multiplying by 0.1. It is exactly what
+multiplying by the `ap_fixed` representation of 0.1 does, because that
+representation *is* this sum.
+
+### The bug: shifts are free, adds are not
+
+    for (int i = 0; i < CONFIG_T::n_in / res_T::size; i++) {
+    #pragma HLS PIPELINE                      // <-- forces the inner loop
+        ...                                   //     to unroll COMPLETELY
+        for (int j = 0; j < res_T::size; j++) {
+    #pragma HLS UNROLL
+
+`res_T::size` is 128. So every activation was built as **128 parallel copies**
+of compare + three 25-bit adds + a saturating convergent-rounding cast:
+
+    24,706 LUT, all of it Expression, latency 0 — pure combinational
+
+Fourteen of those is 29% of the device.
+
+The waste is the shape of it. Those 128 lanes finish in **one cycle** and then
+sit idle for the **256** the dense layer feeding them takes. The design paid for
+128 lanes of hardware to do 1/256th of the work.
+
+In May the same 128 copies existed. They cost nothing, because each one was a
+wire.
+
+### The fix
+
+Two changes, both in `pl/src/rtda_leaky.h`.
+
+**1. Build 8 lanes, not 128.** Run them 16 times. Sixteen cycles is invisible
+next to the dense layer's 256.
+
+    for (int j = 0; j < res_T::size; j += RTDA_LEAKY_LANES) {
+    #pragma HLS PIPELINE II=1
+        for (int k = 0; k < RTDA_LEAKY_LANES; k++) {
+    #pragma HLS UNROLL
+
+The outer `PIPELINE` had to go — it was what forced the full unroll.
+
+**2. Two adders instead of three.** 51 = 3 x 17, so multiply in two stages
+rather than summing four terms:
+
+    t = x + (x<<1)      // x3     1 add
+    r = t + (t<<4)      // x17    1 add        3 x 17 = 51
+
+Bit-identical, not merely close: `mul_t` carries 9 spare fractional bits, so the
+integer code is `X*512` and both forms reduce to exactly `51X` with no shift
+dropping a bit and no overflow.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| **leaky ReLU, per layer** | 24,708 LUT | **1,068 LUT** |
+| top-level LUT estimate | 1,206,105 | **818,887** |
+| DSP | 1,057 | **289** |
+| HLS runtime | 4 h 54 m | 3 h 12 m |
+
+23x on the activation — better than the 16x the lane count alone predicts,
+because the saturating casts got shared across cycles too.
+
+**The slope is still 0.099609375.** These are scheduling changes; the arithmetic
+per element is untouched. `make fastsim FLOW=pl_fixed EVENTS=1000` produces
+`track_means_all.txt` byte-for-byte identical to the pre-change run, and the
+accuracy stays at 3.540e-04.
+
+## Reuse factor — measured, and mostly a red herring
+
+`RTDA_REUSE_DENSE` in `pl/src/rtda_fixed.h` sets how many cycles a dense layer
+is spread over, so it sets how many multipliers exist. One 128x128 layer
+synthesised standalone at each setting:
+
+| RF | DSP | LUT | II |
 |---|---|---|---|
-| BRAM | 539 (44%) | 572 (47%) | +6% |
-| **DSP** | **1057 (80%)** | **1057 (80%)** | **unchanged** |
-| FF | 308,922 (29%) | 393,720 (37%) | +27% |
-| LUT | 563,386 (108%) | 1,206,105 (231%) | **+114%** |
+| 256 | 64 | 192,647 | 256 |
+| 512 | 32 | 176,102 | 512 |
+| 1024 | **16** | 168,239 | 1024 |
 
-**The DSP row is the one that had to be checked and it is clean.** Leaky ReLU
-at slope 0.1 is computed as `2^-4 + 2^-5 + 2^-8 + 2^-9` (see `pl/src/rtda_leaky.h`),
-and it costs exactly as many multipliers as the 0.125 shift it replaced: none.
+DSP tracks `block_factor = n_in*n_out/RF` exactly, so the knob unquestionably
+works. But **LUT falls only 12.7% for a 4x cut in multipliers** — the
+multipliers were never the LUT cost. `Instance` and `Multiplexer` dominate and
+are flat in the multiplier count.
 
-**The LUT row is the open problem.** The realignment roughly doubled it.
+The same thing shows in the shipped design: the 6->128 layer has 16x fewer
+multipliers than a 128x128 one and costs only 24% less.
 
-## Where the LUTs went, and the obvious next lever
+Worth roughly 38k LUT, ~7 points of the device. Kept because the latency it
+spends is free here — 4x an II on a design that exists as a numerical comparison
+point puts 50,000 tracks at about 2 s.
 
-The report is full of modules like
+## How much to trust an HLS LUT estimate
 
-    cast_ap_fixed_16_3_4_0_0_ap_fixed_16_1_4_0_0_config2_s     116 LUT each
+Two calibration points, both from real place-and-route on this design:
 
-That is a rounding-and-saturating conversion between the ACTIVATION type
-`ap_fixed<16,3,AP_RND_CONV,AP_SAT>` and the WEIGHT type
-`ap_fixed<16,1,AP_RND_CONV,AP_SAT>`, instantiated per lane, per dense layer.
-Activations and weights deliberately use *different* fixed-point formats -- that
-is what buys the accuracy -- and every operand pair therefore needs a converting
-cast.
+| estimate | placed | ratio |
+|---|---|---|
+| 108% | 43.08% | 2.5x |
+| 231% | 98.87% | 2.34x |
 
-Two ways out, not yet tried, in order of how free they look:
+Consistent, so the estimate runs about **2.4x pessimistic** here. 818,887 (157%)
+scaled by that is **63-67%**.
 
-1. **Give `rtda_weight_t` the plain ap_fixed defaults.** The weights are
-   compile-time constants; saturation on them is meaningless and rounding
-   happens once at build time in `gen_weights.py`, not in hardware. The
-   mode only affects the cast on read. This may remove most of the cast logic
-   at zero accuracy cost. Pre-round the literals in `gen_weights.py` so AP_TRN
-   does not shift them.
-2. **Make the weights `<16,3>` as well**, removing the format mismatch outright.
-   Costs accuracy: the ablation in `make sweep` puts weight `I=1` at 8.6x
-   (9.305e-04 -> 1.085e-04), which would take the design back to roughly bf16
-   parity. A real trade, not an obvious win.
+**That is a prediction, not a result.** Place and route is the only way to know.
 
-## Calibration — how much to trust an HLS LUT estimate here
+## Don't wait for route_design to find out
 
-The design *before* the realignment estimated **108% LUT** and placed and routed
-at **43%**, with `WNS +0.186 ns` at 150 MHz. So on this design the HLS estimate
-ran about **2.5x pessimistic**.
+The failed build was already doomed at 21:46, when Vivado finished synthesising
+the kernel and wrote a utilization report saying 99.68%. Nobody read it and the
+build churned until 00:41.
 
-231% scaled by that same factor is ~92%. That is not a margin anyone should
-plan around. **Place and route is the only way to know, and it has not been
-run.** Do that before promising the design fits:
+Post-synthesis LUT tracks post-placement closely (99.68% -> 98.87%), so that
+report is a sound early verdict, and it lands about an hour after HLS finishes —
+roughly a third of the way through.
 
-    make system FLOW=pl_fixed TARGET=hw
+    make system FLOW=pl_fixed TARGET=hw        # one terminal
+    tools/watch_pl_build.sh pl_fixed 80        # another
 
-## Reproducing
+The watcher polls for that report and prints the number. Over threshold, kill
+the make: you lose the HLS hours, not the night.
 
-    make -C pl_fixed csynth          # ~5 h; see the note below
+## Reference
 
-Synthesis is slow: 'Checking Synthesizability' alone takes ~100 min and the
-whole run took 4h54m at ~3.5 GB. An earlier version with AP_RND_CONV/AP_SAT on
-the accumulator and a 32-bit saturating temp in the leaky helper was far worse
--- 1,376,823 instructions at 'HW Transforms' against 584,157 now, 'Standard
-Transforms' 384 s against 45 s, peak RSS 5.8 GB against 3.5 GB -- and did not
-finish in 3h20m. See the notes in `pl/src/rtda_fixed.h`.
+`reference_may2026/` holds the May build's utilization reports. `make clean`
+deletes `_x/`, and that was the project's only known-good place-and-route.
