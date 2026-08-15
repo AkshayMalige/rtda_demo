@@ -94,14 +94,30 @@ def tensor(stem, blk, src, kind, W, B):
     return a.T.copy()          # (n_in, n_out) -> (n_out, n_in)
 
 
+
+# Rewriting a file with identical content still bumps its mtime, and make reads
+# mtimes. `weights` runs on every build, so unconditional writes marked all 72
+# weight headers newer than pl/ip/rtda_split.xo every time -- which re-ran the
+# multi-hour HLS synthesis for a kernel that had not changed. Write only on a
+# real difference.
+def write_if_changed(path, text):
+    try:
+        if path.read_text() == text:
+            return False
+    except (OSError, UnicodeDecodeError):
+        pass
+    path.write_text(text)
+    return True
+
+
 def write_txt(path, a):
-    path.write_text(', '.join(f'{v:.10f}' for v in a.ravel()) + '\n')
+    write_if_changed(path, ', '.join(f'{v:.10f}' for v in a.ravel()) + '\n')
 
 
 def write_h(path, name, a, ctype, comment):
     body = ', '.join(f'{v:.10f}' for v in a.ravel())
     guard = name.upper() + '_H_'
-    path.write_text(
+    write_if_changed(path,
         f'// {comment}\n'
         f'//Min {a.min():.12f}\n//Max {a.max():.12f}\n'
         f'//Number of zeros {int((a == 0).sum())}\n\n'
