@@ -496,30 +496,60 @@ forward over every slot, which at 500,000 tracks is several GB for a reference a
 timing run never reads. It re-checks the seeded prefix chain, so `golden_50000`
 still describes the first 1000 events of the new file.
 
-Put the stimulus and the two binaries on a **USB stick**. Nothing on the SD card
-needs to change: both hosts take the stimulus path from `RTDA_INPUT`, so a 65 MB
-file never has to fit on the FAT partition.
+Then get both onto the cards. Two ways, and neither rebuilds a bitstream:
+
+**Fresh images** (what you want if you are reflashing anyway):
+
+```bash
+make -C aie_batch repackage PRECISION=fp32 TARGET=hw
+make -C aie_batch repackage PRECISION=bf16 TARGET=hw
+
+# The .xo is rebuilt by a hw_emu build and then looks newer than the hw XSA, which
+# makes `make` want a fresh v++ --link -- place and route, hours, for a bitstream
+# that is already built and validated. Touch the XSA to say "this one is current".
+touch pl_fixed/build/ap16_3_hw/design.xsa
+make -C pl_fixed repackage TARGET=hw STIMULUS=../testdata/embed_input_500000.txt
+```
+
+Each is `v++ --package` only, ~1-2 min, and produces
+`{aie_batch/package/fp32_hw,aie_batch/package/bf16_hw,pl_fixed/package/ap16_3_hw}/sd_card.img`.
+
+**Or keep the cards as they are** and put `host_scan.exe` plus the stimulus on a
+USB stick — `host_scan.exe` is an ordinary XRT executable and does not need to live
+on the card. Pass `RTDA_INPUT=/mnt/usb/embed_input_500000.txt` in that case, and
+mind the path note in 7b.
 
 ### 7b. On the board
 
-Same mount dance as Phase 5. Then, per implementation:
+`make repackage` puts `host_scan.exe` **and** `embed_input_500000.txt` on all three
+images, so nothing needs copying and `RTDA_INPUT` does not need setting:
 
 ```bash
-mount /dev/sda1 /mnt/usb                       # the stick
+sudo su
+mount /dev/mmcblk0p1 /mnt && mount -o remount,rw /mnt && cd /mnt
 
-# AIE -- whichever precision is flashed; the host reads sysdata/config.txt
-RTDA_INPUT=/mnt/usb/embed_input_500000.txt \
-RTDA_OUTDIR=/mnt/usb/scan_aie_fp32 \
-  /mnt/usb/host_scan.exe
+./host_scan.exe                      # AIE, either precision
+RTDA_DUMP_CALLS=1 ./host_scan.exe    # PL -- adds the per-call series
 
-# PL
-RTDA_INPUT=/mnt/usb/embed_input_500000.txt \
-RTDA_OUTDIR=/mnt/usb/scan_pl \
-RTDA_DUMP_CALLS=1 \
-  /mnt/usb/host_scan.exe
-
-sync                                            # NOT optional
+sync                                 # NOT optional
 ```
+
+**Do not pass `RTDA_INPUT` from memory: the two flows keep the stimulus in
+different places.** `--package.sd_file` (PL) puts it at the card ROOT;
+`--package.sd_dir` (AIE) copies the directory, so it lands under `sd_batch/`:
+
+| card | where the stimulus is |
+|---|---|
+| PL | `embed_input_500000.txt` |
+| AIE | `sd_batch/testdata/embed_input_500000.txt` |
+
+Each host probes its own layout, 500k before 50k, and prints the file it chose on
+its `[scan] input =` line — which is the reason not to specify one. Handing the
+AIE path to a PL card gets you `cannot open ...`, which looks like a broken image
+and is not.
+
+`RTDA_OUTDIR=<dir>` if you would rather write somewhere other than the current
+directory (a USB stick, say). The card is mounted `rw` above, so `/mnt` works.
 
 **Smoke-test first.** One event, one repeat, no diagnostics — it costs seconds
 and proves the CSV is well formed and the checksum is non-zero before you commit
