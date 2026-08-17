@@ -9,6 +9,7 @@
 #   ./tools/build_all.sh hw               # just the three hw system builds
 #   ./tools/build_all.sh data x86 exact   # a subset, run in the order LISTED BELOW
 #                                         #   (not the order you type them)
+#   ./tools/build_all.sh -v build         # ... and show every tool's output
 #   ./tools/build_all.sh --list           # stages and what they cost
 #   ./tools/build_all.sh --dry-run all    # print the commands, run nothing
 #
@@ -51,6 +52,7 @@ STAMP="$(date +%Y%m%d_%H%M%S)"
 LOGDIR="$REPO/build_logs/$STAMP"
 LOCK="$REPO/.build_all.lock"
 DRYRUN=0
+VERBOSE=0
 
 # stage | description | rough cost
 STAGES=(
@@ -62,7 +64,7 @@ STAGES=(
 )
 
 usage() {
-    echo "usage: $0 [--dry-run] [--list] [all | build | sim | <stage> ...]"
+    echo "usage: $0 [-v|--verbose] [--dry-run] [--list] [all | build | sim | <stage> ...]"
     echo
     printf '  %-8s %-62s %s\n' STAGE WHAT COST
     for s in "${STAGES[@]}"; do
@@ -79,6 +81,12 @@ usage() {
     echo
     echo "  'build' still includes data: the images package the stimulus, so"
     echo "  testdata/ has to exist before the packaging step runs."
+    echo
+    echo "  -v shows every tool's output on the terminal as well as in the log."
+    echo "  Without it you get one line per step and the output goes to the log"
+    echo "  only -- which is what you want for an overnight run. To watch a quiet"
+    echo "  run instead of restarting it verbose:"
+    echo "      tail -f build_logs/<timestamp>/<stage>.log"
     exit 0
 }
 
@@ -87,6 +95,7 @@ for a in "$@"; do
     case "$a" in
         --list|-l|-h|--help) usage ;;
         --dry-run|-n) DRYRUN=1 ;;
+        --verbose|-v) VERBOSE=1 ;;
         all) WANT=(data x86 exact hw_emu hw) ;;
         # Compile everything, run nothing. `data` is in here because the images
         # package the stimulus files -- packaging with an empty testdata/ ships a
@@ -186,11 +195,21 @@ run() {                                   # run <name> <log> <command...>
     fi
     local t0 t1 rc
     t0=$(date +%s)
-    printf '%s  >>> %-40s ' "$(date +%H:%M:%S)" "$name"
-    "$@" >> "$LOGDIR/$log" 2>&1
-    rc=$?
+    if [ $VERBOSE -eq 1 ]; then
+        # Everything on the terminal AND in the log. The step header gets its own
+        # line here: a trailing prefix followed by 40,000 lines of aiecompiler
+        # output is worse than no prefix at all.
+        printf '\n%s%s  >>> %s%s\n' "$C_BAN" "$(date +%H:%M:%S)" "$name" "$C_OFF"
+        "$@" 2>&1 | tee -a "$LOGDIR/$log"
+        rc=${PIPESTATUS[0]}               # tee's status is not the build's
+    else
+        printf '%s  >>> %-40s ' "$(date +%H:%M:%S)" "$name"
+        "$@" >> "$LOGDIR/$log" 2>&1
+        rc=$?
+    fi
     t1=$(date +%s)
     local mins=$(( (t1 - t0) / 60 )) secs=$(( (t1 - t0) % 60 ))
+    [ $VERBOSE -eq 1 ] && printf '%s  <<< %-40s ' "$(date +%H:%M:%S)" "$name"
     if [ $rc -eq 0 ]; then
         printf '%sok%s    %3dm%02ds\n' "$C_OK" "$C_OFF" "$mins" "$secs"
         RESULTS+=("PASS|$name|${mins}m${secs}s|$log")
