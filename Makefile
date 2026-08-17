@@ -49,7 +49,7 @@ FLOW_ARGS = TARGET=$(TARGET) PRECISION=$(PRECISION)
 
 .PHONY: help golden stimulus selftest fastsim exactsim system run link package repackage \
         report crosscheck clean clean_all vars notebooks collect results check_image \
-        scan_host
+        scan_host collect_scan
 
 ############################################################################
 #  Shared, flow-independent
@@ -114,21 +114,49 @@ check_image:
 ############################################################################
 #  The performance scan
 #
-#  A timing run writes scan.csv + scan_meta.txt and NOTHING else -- no
-#  run_info.txt, no track_means_all.txt -- so it cannot be filed as a result run
-#  or mistaken for one later. `make collect` refuses it for exactly that reason.
+#  A separate host per flow, a separate pair of output files, and a separate
+#  collect target -- deliberately. A timing run writes no track_means_all.txt and
+#  no run_info.txt, so it cannot be filed as a result run and cannot be mistaken
+#  for one later. `make collect` and `make collect_scan` therefore look for
+#  different files and refuse each other's.
 #
 #      make scan_host FLOW=aie_batch          # seconds; no xclbin rebuild
 #      make scan_host FLOW=pl_fixed
-#
-#  Copy the results off the board by hand into results/<impl>/<target>/ --
-#  the destinations are listed in "the performance scan" section of RUNBOOK.md.
+#      make collect_scan FROM=/mnt/usb FLOW=pl_fixed TARGET=hw
 ############################################################################
+SCAN_FILES := scan.csv scan_meta.txt
 
 # Builds host_scan.exe only. It talks to the xclbin already on the card, so this
 # needs no graph, no HLS, no link and no package.
 scan_host:
 	@$(MAKE) -C $(FLOW) scan_host $(FLOW_ARGS)
+
+collect_scan:
+	@test -n "$(FROM)" || { echo "ERROR: FROM=<dir> is required, e.g."; \
+	  echo "  make collect_scan FROM=/mnt/usb FLOW=aie_batch PRECISION=bf16 TARGET=hw"; exit 1; }
+	@test "$(TARGET)" = hw -o "$(TARGET)" = hw_emu || { \
+	  echo "ERROR: TARGET must be hw or hw_emu (got '$(TARGET)')"; exit 1; }
+	@for f in $(SCAN_FILES); do \
+	   test -s "$(FROM)/$$f" || { echo "ERROR: $(FROM)/$$f missing or empty."; \
+	     echo "       Both of $(SCAN_FILES) must be present: scan.csv without its"; \
+	     echo "       meta has no xclbin, no revision and no one-time costs, which"; \
+	     echo "       makes the numbers in it unattributable."; exit 1; }; \
+	 done
+	@mkdir -p $(RESULT_DIR)
+	@cp $(addprefix $(FROM)/,$(SCAN_FILES)) $(RESULT_DIR)/
+	@for f in $(FROM)/scan_calls_*.csv; do \
+	   [ -e "$$f" ] && cp "$$f" $(RESULT_DIR)/ || true; done
+	@echo ">>> $(FROM)  ->  $(RESULT_DIR)/"
+	@cd $(RESULT_DIR) && printf '    %-22s %8s bytes  %s measured rows\n' \
+	   scan.csv $$(stat -c %s scan.csv) $$(($$(wc -l < scan.csv) - 1)) && \
+	 printf '    %-22s %8s bytes\n' scan_meta.txt $$(stat -c %s scan_meta.txt)
+	@echo "    scan_meta says:"
+	@sed -n 's/^/      /p' $(RESULT_DIR)/scan_meta.txt | head -8
+	@echo
+	@echo "    A scan.csv whose impl does not match $(IMPL) is in the wrong"
+	@echo "    directory -- the notebook trusts the path, not the file."
+	@awk -F, 'NR==2 {print "    impl in file: " $$1 "   destination: $(IMPL)"}' \
+	    $(RESULT_DIR)/scan.csv
 
 collect:
 	@test -n "$(FROM)" || { echo "ERROR: FROM=<dir> is required, e.g."; \
@@ -236,8 +264,8 @@ help:
 	@echo "  make stimulus TRACKS=500000              10,000 events of stimulus, no golden"
 	@echo "  make scan_host FLOW=aie_batch            build host_scan.exe (seconds)"
 	@echo "  make scan_host FLOW=pl_fixed"
-	@echo "     then copy scan.csv + scan_meta.txt off the board into"
-	@echo "     results/<impl>/hw/   -- see 'PHASE 7' in RUNBOOK.md"
+	@echo "  make collect_scan FROM=/mnt/usb FLOW=... TARGET=hw"
+	@echo "                                          file scan.csv + scan_meta.txt"
 	@echo "  jupyter lab analysis/rtda_scan.ipynb        the plots and the report"
 	@echo ""
 	@echo "Results:"

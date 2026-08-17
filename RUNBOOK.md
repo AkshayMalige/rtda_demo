@@ -638,6 +638,9 @@ schema and the caveats are in `results/README.md`.
 | II (aiesimulator) | 4161 ns | 1033 ns | n/a |
 | ns/track, cycle-accurate | 582.5 | 144.6 | — |
 | ns/track, silicon (50k tracks) | 614.3 | 249.3 | 114,538 ¹ |
+| ns/track, scan @ 10,000 events | 602.8 | 238.6 | 114,418 |
+| non-array time @ 10,000 events | 3.4% | 39.4% | — |
+| scan vs `run_info.txt` @ 1000 ev | 0.13% | 0.33% | 0.04% |
 | GOP/s, silicon | 860 | 2120 | — |
 | RTP weights | 1039 KB | 523 KB | n/a |
 | on-board `RTDA_GOLDEN` check | PASS ~1.5e-06 | do not use | n/a |

@@ -50,10 +50,13 @@ been through place and route and may not fit.** See `pl_fixed/RESOURCES.md`.
 ³ All three from `results/*/hw/run_info.txt`, 1000 events on silicon. **The PL row
 used to read "~40,000" here, which was wrong**: 42,000 ns/track is the *csynth
 fabric estimate* (`TrackLoop` iteration latency 6335 cycles at the linked
-150 MHz), not a measurement. The board reads 114,538. The 2.7× between them is
-real and unattributed by this table — it sits inside a host timer that spans
-kernel enqueue *and* `run.wait()`, so per-call driver cost and slow fabric are
-indistinguishable in it. `analysis/rtda_scan.ipynb` separates them; see below.
+150 MHz), not a measurement. The board reads 114,538, and the performance scan has
+since **attributed the 2.7×: it is the fabric, not the driver.** Sweeping
+tracks-per-call (`n_tracks` is a runtime `s_axilite` argument) fits
+`us_call = 42.4 us + 113.40 us/track` — the per-call cost is 0.7% of one call, and
+reusing the `xrt::run` object instead of building a new one per event changes the
+result by 0.1%. Batching events into one call would not help. See §6 of
+`analysis/rtda_scan.ipynb`.
 
 **The headline result is the last two columns.** Both are 16 bits per
 activation, and the fixed-point PL design lands **1.7× closer** to the reference
@@ -64,7 +67,8 @@ was measured, and none on range it does not need. The cost is that a fixed-point
 format has to be *matched* to the network — `make sweep FLOW=pl_fixed` reports
 how much clipping margin is left (currently 2.2×).
 
-The AIE is ~65× faster per track. That is the actual trade.
+The AIE is **190× faster per track in fp32 and 480× in bf16** (603 and 239 ns
+against 114,418, all at 10,000 events). That is the actual trade.
 
 ---
 
@@ -169,17 +173,40 @@ make scan_host FLOW=pl_fixed
 jupyter lab analysis/rtda_scan.ipynb     # -> analysis/out/scan_report.md
 ```
 
-It is built to settle three things the repo could not previously answer:
+### What it found
 
-1. **The AIE fixed launch cost.** ~583 us is paid per `graph.run()` whatever its
-   size, which is why one event costs 12.7 us/track and 10,000 tracks cost 0.658.
-   The scan sweeps the launch count directly instead of inferring an intercept.
-2. **The PL 2.7× gap** between 114,538 ns/track measured and the 42,000 ns/track
-   csynth estimate. `n_tracks` is a runtime `s_axilite` argument, so one call can
-   process 50 … 1000 tracks; fitting `us_call = fixed + marginal × tracks`
-   separates per-call driver cost from fabric cost.
-3. **Spread.** Every performance figure in this repo before the scan was a single
-   run; these are repeated and reported as min / median / max.
+Measured on silicon, 5 repeats per point, spread ≤ 0.2%. The 1000-event point
+reproduces the shipped `run_info.txt` numbers to 0.13% (fp32), 0.33% (bf16) and
+0.04% (PL), which is what says the scan measures the same thing they did.
+
+| | AIE fp32 | AIE bf16 | PL |
+|---|---|---|---|
+| ns/track, 1 event | 10,803 | 5,632 | 115,654 |
+| ns/track, 10,000 events | **603** | **239** | **114,418** |
+| improvement over that range | 17.9× | 23.6× | **1.0×** |
+| cycle-accurate floor | 582 | 145 | 42,230 (csynth) |
+| non-array time at 10,000 events | **3.4%** | **39.4%** | — |
+
+1. **The PL bottleneck is the fabric, not the driver.** Fitting the
+   tracks-per-call sweep gives `us_call = 42.4 us + 113.40 us/track`: the
+   per-call cost is 0.7% of one call, and `fresh` vs `reuse` of the `xrt::run`
+   object differ by 0.1%. The fabric runs 2.7× slower than csynth's 6335 cycles
+   predicts. **Batching would not help**; PL is flat at ~114 us/track from 1 event
+   to 10,000, the only design here that does not amortise at all.
+2. **fp32 on the AIE is essentially optimal** — 603 ns/track against a 582 ns
+   floor, with only 3.4% of `us_execute` outside the array at 10,000 events.
+3. **bf16 is not compute-bound, and this is new.** Its array is 4× faster than
+   fp32's (ii 1033 vs 4161 ns) but it delivers 2.5×, and 39.4% of its time is
+   outside the array — a fraction that does *not* fall between 1000 and 10,000
+   events, so it is not launch overhead. The suspect is the output DMA: the 27
+   outputs come back as **fp32 in both precisions**, so bf16 halves the input and
+   changes the output not at all, and its output rate saturates at **300 MB/s**
+   against the `output_gmio::create("gmio_track", 64, 256)` declaration of 256
+   MB/s (fp32 sits at 119 MB/s and never approaches it). Not proven — the scan
+   cannot see inside the shim DMA — but it is the reading the numbers support.
+4. **The launch cost is now measured, not inferred**: 499 us per extra
+   `graph.run()` for fp32, reproduced at both 10 and 100 events, against the
+   583 us intercept the old four-point fit implied.
 
 One caveat that the schema, the notebook and `results/README.md` all repeat at the
 point of use: **the AIE has no H2D/D2H split.** Input DMA, compute and output DMA
