@@ -570,17 +570,32 @@ is where, and by then the event sweep is already on the stick.
 
 ### 7c. File and plot
 
-```bash
-make collect_scan FROM=/mnt/usb/scan_aie_fp32 FLOW=aie_batch PRECISION=fp32 TARGET=hw
-make collect_scan FROM=/mnt/usb/scan_pl       FLOW=pl_fixed              TARGET=hw
+Copy the files off the board by hand. **Which directory is not recoverable from
+the files** — the notebook trusts the path — so there is exactly one destination
+per run:
 
-jupyter lab analysis/rtda_scan.ipynb
+| the run was | copy `scan.csv`, `scan_meta.txt` into |
+|---|---|
+| AIE, fp32 card | `results/aie_fp32/hw/` |
+| AIE, bf16 card | `results/aie_bf16/hw/` |
+| PL | `results/pl_fixed/hw/` (plus `scan_calls_10000.csv`) |
+| any of the above under QEMU | the same, with `hw_emu/` instead of `hw/` |
+
+```bash
+mkdir -p results/aie_fp32/hw
+cp <from>/scan.csv <from>/scan_meta.txt results/aie_fp32/hw/
 ```
 
-`collect_scan` refuses a `scan.csv` without its `scan_meta.txt` — the meta is
-where the xclbin, the git revision and the once-paid costs live, and a bare CSV
-is unattributable. It also prints the `impl` recorded in the file next to the
-directory it landed in, because the notebook trusts the path.
+**Copy `scan_meta.txt` too, always.** It carries the xclbin, the git revision and
+the costs paid once per run (xclbin open, RTP load, stimulus read); a `scan.csv`
+without it is a column of numbers nothing can attribute to a build. The notebook
+reads both and prints what it found.
+
+Then:
+
+```bash
+jupyter lab analysis/rtda_scan.ipynb
+```
 
 ### Under QEMU
 

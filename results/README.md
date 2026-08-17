@@ -27,11 +27,15 @@ error (3e-04). The notebooks read it rather than assume. See README.md.
 
 ## The performance scan: `scan.csv` + `scan_meta.txt`
 
-Written by `host_scan.exe` (one per flow, built with `make scan_host FLOW=...`),
-filed with `make collect_scan`. **A scan run writes neither
-`track_means_all.txt` nor `run_info.txt`**, so it cannot be mistaken for a
-result run — and `make collect` will refuse it, because the files it wants are
-not there. The two collect targets are deliberately disjoint.
+Written by `host_scan.exe` (one per flow, built with `make scan_host FLOW=...`)
+and copied off the board by hand into `results/<impl>/{hw,hw_emu}/` — the
+destinations are listed in PHASE 7 of `RUNBOOK.md`. **A scan run writes neither
+`track_means_all.txt` nor `run_info.txt`**, so it cannot be mistaken for a result
+run, and `make collect` refuses it because the files it wants are not there.
+
+Copy `scan_meta.txt` alongside `scan.csv` every time: the CSV has no xclbin, no
+revision and no once-paid costs in it, and without those it is a column of numbers
+attributable to nothing.
 
 `scan.csv` is one row per measured point, with a header. Every implementation
 writes the same 28 columns; a column an implementation cannot measure is left

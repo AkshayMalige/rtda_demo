@@ -122,8 +122,8 @@ archive/            the retired 1-track GEMV design and its docs
 the accuracy files every number above is quoted from. `host_scan.exe` produces
 timing and *only* timing — it writes no `run_info.txt` and no
 `track_means_all.txt`, so a performance run cannot be filed as a result run or
-mistaken for one later. `make collect` and `make collect_scan` look for
-different files and refuse each other's.
+mistaken for one later — `make collect` refuses a scan run outright, because the
+files it wants are not there.
 
 Every flow reads `model/weights_fp32/`. That is what makes the comparison
 meaningful, and it is checked rather than assumed: `analysis/rtda_reference.ipynb`
@@ -164,8 +164,8 @@ speed each. The scan says **where the time goes and how it scales** — 1 / 10 /
 make stimulus TRACKS=500000              # 10,000 events of stimulus, no golden
 make scan_host FLOW=aie_batch            # host_scan.exe, seconds -- no xclbin rebuild
 make scan_host FLOW=pl_fixed
-#   ... run host_scan.exe on the board: RUNBOOK.md PHASE 7 ...
-make collect_scan FROM=<dir> FLOW=pl_fixed TARGET=hw
+#   ... run ./host_scan.exe on the board, then copy scan.csv + scan_meta.txt
+#       into results/<impl>/hw/          -- RUNBOOK.md PHASE 7
 jupyter lab analysis/rtda_scan.ipynb     # -> analysis/out/scan_report.md
 ```
 
