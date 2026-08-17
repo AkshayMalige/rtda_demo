@@ -29,7 +29,11 @@ all: $(HOST_EXE)
 $(HOST_EXE): $(HOST_OBJ)
 	${CXX} -o $@ $^ ${LDFLAGS}
 
-$(HOST_OBJ): $(HOST_SRC)
+# Makefile too: the compile flags live here. RTDA_VARIANT is baked into the
+# object as a -D, so without this a changed variant never forces a recompile
+# and the binary keeps stamping the OLD one into run_info.txt. A board result
+# that misreports which build produced it is worse than one with no label.
+$(HOST_OBJ): $(HOST_SRC) Makefile
 	${CXX} ${CXXFLAGS} -o $@ $<
 
 -include $(HOST_DEPS)

@@ -39,10 +39,26 @@ all: $(HOST_EXE)
 $(HOST_EXE): $(HOST_OBJ)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
-$(HOST_OBJ): $(HOST_SRC)
+# RTDA_VARIANT is baked into the object as a -D. Depending on Makefile catches
+# somebody EDITING the flags, but not the ordinary case: the same Makefile run
+# with a different AP_W/AP_I. Make compares file timestamps and cannot see that
+# a variable changed, so the stale .o was reused and the binary kept stamping
+# the old variant into run_info.txt -- which is how the board wrote
+# `variant=unknown` under a build that was very much ap16_3. A result that
+# misreports what produced it is worse than one carrying no label at all.
+#
+# So make the value BE a file: the stamp's NAME is the variant, and a different
+# variant is therefore a prerequisite that does not exist yet.
+VARIANT_STAMP := .variant.$(RTDA_VARIANT)
+
+$(VARIANT_STAMP):
+	@rm -f .variant.*
+	@touch $@
+
+$(HOST_OBJ): $(HOST_SRC) Makefile $(VARIANT_STAMP)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 -include $(HOST_DEP)
 
 clean:
-	rm -rf $(HOST_OBJ) $(HOST_DEP) .Xil $(HOST_EXE)
+	rm -rf $(HOST_OBJ) $(HOST_DEP) .Xil $(HOST_EXE) .variant.*
