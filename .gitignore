@@ -134,6 +134,9 @@ __pycache__/
 pl_fixed/native/rtda_native_*
 pl_fixed/native/tb_means.txt
 
+# Per-stage logs from tools/build_all.sh, one directory per invocation.
+build_logs/
+
 # --- performance scan -------------------------------------------------
 # Stamp files whose NAME carries a -D value, so Make can see the value change
 # (see the notes in the two host Makefiles). Build state, not source.
@@ -144,3 +147,6 @@ pl_fixed/scan_hw_emu.sh
 # The scan hosts land next to the other host binaries.
 aie_batch/host_scan.exe
 pl_fixed/host_scan.exe
+
+# tools/build_all.sh PID lock -- one build at a time (AIE sims share data/).
+.build_all.lock

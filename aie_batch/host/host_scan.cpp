@@ -406,9 +406,22 @@ int main(int argc, char** argv)
         if (max_events < 1)
             throw std::runtime_error("stimulus has fewer than one complete event");
 
-        // Clip to what the data supports and drop duplicates. A 2-event hw_emu
-        // stimulus collapses the default sweep to {1,2}, which is the right
-        // behaviour: run the largest honest sweep the data allows.
+        // Under emulation, cap the default sweep HARD.
+        //
+        // sd_stage copies the whole of testdata/ onto the card, hw_emu included,
+        // so the 500,000-track stimulus is there and the probe above prefers it.
+        // In RTL simulation the 10,000-event point is not slow, it is unbounded --
+        // you come back the next morning to a QEMU still running. An explicit
+        // RTDA_SCAN_EVENTS overrides this; the cap only replaces the DEFAULT.
+        if (is_emu && std::getenv("RTDA_SCAN_EVENTS") == nullptr) {
+            ev_list = {1, 2};
+            std::cout << "[scan] EMULATION: default sweep capped to 1,2 events.\n"
+                         "[scan]   RTL simulation makes the 10,000-event point unbounded.\n"
+                         "[scan]   Set RTDA_SCAN_EVENTS=... to override." << std::endl;
+        }
+
+        // Clip to what the data supports and drop duplicates: run the largest
+        // honest sweep the data allows rather than refusing.
         {
             std::vector<long> keep;
             for (long e : ev_list) keep.push_back(std::min(e, max_events));

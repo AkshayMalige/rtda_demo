@@ -24,74 +24,128 @@ Four rules. Breaking any of them is what has gone wrong before:
 
 ---
 
-# Everything before the notebooks, in order
+# THE FULL CHAIN, in order
 
-The full sequence. **Steps 1-4 need no board and no Vitis licence beyond the
-simulators** and give you every accuracy number; 5-8 add the hardware rows.
-Each line says what it writes, so you can stop anywhere and the notebooks will
-simply omit what is missing.
+Everything, from an empty tree to both notebooks: accuracy **and** the
+performance scan to 10,000 events. Copy-paste top to bottom.
 
-**The order of 2/3 before 5/6 is not cosmetic.** `make system` rebuilds
-`Work_<P>/` as the GMIO system graph, which has no PLIO debug taps, so the
-simulation targets cannot run afterwards until the graph is rebuilt. If you do
-need to go back, re-run the `fastsim`/`exactsim` line -- it rebuilds its own
-archive -- and then `make system` again before flashing.
+**Two orderings are load-bearing, not cosmetic:**
+
+- **Simulations before `make system`.** `make system` rebuilds `Work_<P>/` as the
+  GMIO system graph, which has no PLIO debug taps, so `fastsim`/`exactsim` cannot
+  run afterwards until the graph is rebuilt. Going back is possible — re-run the
+  `fastsim`/`exactsim` line, it rebuilds its own archive — but then `make system`
+  again before flashing.
+- **`hw_emu` before `hw` for `pl_fixed`.** Both targets consume the same
+  `pl/ip/rtda_split.xo`, and building it is the ~5 h csynth. Do `hw_emu` first and
+  `hw` reuses the `.xo`; do it the other way and you have paid once either way,
+  but `hw_emu` then re-touches the `.xo` and makes the `hw` XSA look stale (see
+  the note in PHASE 7a about `touch`).
+
+**If you just want it all built while you sleep:** `tools/build_all.sh` does
+stages 0-8 below in the right order with logs. See "The unattended build" at the
+end of this file.
 
 ```bash
-cd $REPO && source set_envs.sh          # every new shell
+cd $REPO && source set_envs.sh          # EVERY new shell
 
-# ---- 1. reference data -------------------------------------- ~2 min -------
+# ==== 0. clean slate ============================================ ~1 min =====
+make clean_all                          # Work_*/, libadf*.a, build/, package/,
+                                        #   sd_stage/, _x, logs, simulator output
+rm -rf results/aie_fp32 results/aie_bf16 results/pl_fixed analysis/out
+#   Keeps results/legacy and every README. Skip this line to keep old runs.
+
+# ==== 1. reference data ========================================= ~2 min =====
 make golden TRACKS=50000                # -> testdata/embed_input_50000.txt
-make selftest                           #    + golden_50000.{npz,txt}
+                                        #    + golden_50000.{npz,txt}   ACCURACY
+make stimulus TRACKS=500000             # -> testdata/embed_input_500000.txt
+                                        #    10,000 events, no golden       SCAN
+make selftest                           # reference vs ONNX + goldens + PL weights
 
-# ---- 2. AIE fp32, simulation -------------------------------- ~40 min ------
-make fastsim  FLOW=aie_batch PRECISION=fp32 EVENTS=5   # -> results/aie_fp32/sim/sim_x86_*.npz
-make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # -> results/aie_fp32/sim/sim_aie_*.npz
-make -C aie_batch report     PRECISION=fp32            # II, from the run above.
-                                                       #   PRINTED, not saved.
+# ==== 2. x86 / native simulation ================================ ~5 min =====
+#   Functional only. No Vitis simulator, no board.
+make fastsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # -> results/aie_fp32/sim/sim_x86_*.npz
+make fastsim FLOW=aie_batch PRECISION=bf16 EVENTS=5   # -> results/aie_bf16/sim/
+make -C pl_fixed sweep   EVENTS=20                    # -> results/pl_fixed/sweep.npz
+make fastsim FLOW=pl_fixed EVENTS=1000                # -> results/pl_fixed/sim/  (50,000 tracks)
 
-# ---- 3. AIE bf16, simulation -------------------------------- ~35 min ------
-make fastsim  FLOW=aie_batch PRECISION=bf16 EVENTS=5   # -> results/aie_bf16/sim/
-make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5
-make -C aie_batch report     PRECISION=bf16
+# ==== 3. cycle-/RTL-accurate simulation ========================= ~50 min ====
+#   ONE AT A TIME. They share aie_batch/data/ and <sim>simulator_output/.
+make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5  # aiesimulator  ~25 min
+make -C aie_batch report      PRECISION=fp32          # II -- PRINTED, not saved
+make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5  # aiesimulator  ~20 min
+make -C aie_batch report      PRECISION=bf16
+make -C pl_fixed csim    EVENTS=3                     # ~3 min  gate: 0.000e+00
+# make -C pl_fixed exactsim                           # RTL co-sim -- OPTIONAL,
+#   duration never measured here, and csim already gates the kernel at 0.000e+00
+#   against the native model. Run it when you have changed the RTL, not routinely.
 
-# ---- 4. PL ap_fixed ----------------------------------------- ~5 min -------
-make -C pl_fixed sweep EVENTS=20        # -> results/pl_fixed/sweep.npz
-make fastsim FLOW=pl_fixed EVENTS=1000  # -> results/pl_fixed/sim/   (50,000 tracks)
-make -C pl_fixed csim EVENTS=3          #    gate: must be 0.000e+00 vs the above
+#  >>> BOTH NOTEBOOKS ALREADY WORK HERE. Everything below adds hardware. <<<
 
-#  >>> THE NOTEBOOKS ALREADY WORK HERE. Everything below adds hardware. <<<
+# ==== 4. system build: hw_emu, all three ======================== ~3 h ======
+make system FLOW=aie_batch PRECISION=fp32 TARGET=hw_emu
+make system FLOW=aie_batch PRECISION=bf16 TARGET=hw_emu
+make system FLOW=pl_fixed              TARGET=hw_emu   # ~5 h the FIRST time
+                                                       #   (csynth builds the .xo)
 
-# ---- 5. AIE fp32 on the board ------------------------------- ~1 h + board -
-make system FLOW=aie_batch PRECISION=fp32 TARGET=hw
-make check_image FLOW=aie_batch PRECISION=fp32 TARGET=hw   # <- before flashing
-#   flash aie_batch/package/fp32_hw/sd_card.img, boot, then ON THE BOARD:
-#     RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt \
-#     RTDA_GOLDEN=sd_batch/testdata/golden_50000.txt ./host_batch.exe
-make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw
-
-# ---- 6. AIE bf16 on the board ------------------------------- ~1 h + board -
-make system FLOW=aie_batch PRECISION=bf16 TARGET=hw
-make check_image FLOW=aie_batch PRECISION=bf16 TARGET=hw   # <- before flashing
-#   flash, boot, then ON THE BOARD (no RTDA_GOLDEN for bf16 -- see below):
-#     RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt ./host_batch.exe
-make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=bf16 TARGET=hw
-
-# ---- 7. PL on the board ------------------------- ~6-7 h MEASURED + board -
-make system FLOW=pl_fixed TARGET=hw
-#   flash pl_fixed/package/ap16_3_hw/sd_card.img, boot, then ON THE BOARD:
-#     RTDA_INPUT=embed_input_50000.txt RTDA_WARMUP=3 ./host_split.exe system.xclbin
-make collect FROM=/mnt/usb FLOW=pl_fixed TARGET=hw
-
-# ---- 8. optional: hw_emu on QEMU, 5 events ------------------- ~1 h each ----
+# ==== 5. run hw_emu on QEMU ===================================== ~1 h each ==
+#   Boot takes minutes. The stimulus ON THE IMAGE caps the event count --
+#   no environment survives into the guest.
 make run FLOW=aie_batch PRECISION=fp32 TARGET=hw_emu
-make run FLOW=pl_fixed  TARGET=hw_emu EVENTS=5
-make collect FROM=<wherever the host ran> FLOW=... TARGET=hw_emu
+make run FLOW=aie_batch PRECISION=bf16 TARGET=hw_emu
+make run FLOW=pl_fixed                 TARGET=hw_emu
+#   The host writes into its working directory inside the guest. Copy the three
+#   files out to results/<impl>/hw_emu/ -- see "Where results go".
 
-# ---- check, then run the notebooks -----------------------------------------
+# ==== 6. system build: hw, all three ============================ ~8 h ======
+make system FLOW=aie_batch PRECISION=fp32 TARGET=hw    # ~1 h
+make system FLOW=aie_batch PRECISION=bf16 TARGET=hw    # ~1 h
+make system FLOW=pl_fixed              TARGET=hw       # ~6-7 h MEASURED
+make check_image FLOW=aie_batch PRECISION=fp32 TARGET=hw   # <- before flashing
+make check_image FLOW=aie_batch PRECISION=bf16 TARGET=hw
+make check_image FLOW=pl_fixed              TARGET=hw
+#   -> aie_batch/package/{fp32_hw,bf16_hw}/sd_card.img
+#   -> pl_fixed/package/ap16_3_hw/sd_card.img
+#   All three carry host_batch.exe/host_split.exe, host_scan.exe, and both
+#   stimulus files.
+
+# ==== 7. on the board =================================== flash, boot, run ===
+#   Per card:  sudo su
+#              mount /dev/mmcblk0p1 /mnt && mount -o remount,rw /mnt && cd /mnt
+#
+#   AIE fp32 card:  ACCURACY  RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt \
+#                             RTDA_GOLDEN=sd_batch/testdata/golden_50000.txt \
+#                             ./host_batch.exe          -> PASS ~1.5e-06
+#                   SCAN      ./host_scan.exe
+#
+#   AIE bf16 card:  ACCURACY  RTDA_INPUT=sd_batch/testdata/embed_input_50000.txt \
+#                             ./host_batch.exe          NO RTDA_GOLDEN (see below)
+#                   SCAN      ./host_scan.exe
+#
+#   PL card:        ACCURACY  RTDA_INPUT=embed_input_50000.txt RTDA_WARMUP=3 \
+#                             ./host_split.exe
+#                   SCAN      RTDA_DUMP_CALLS=1 ./host_scan.exe
+#
+#   sync    <- ALWAYS, before pulling the card
+#
+#   host_scan.exe needs no RTDA_INPUT: it probes its own card's layout and
+#   prefers the 500,000-track file. The two flows keep it in different places --
+#   see PHASE 7b.
+
+# ==== 8. file the results ======================================= by hand ====
+#   ACCURACY: track_means_all.txt, track_out_27.txt, run_info.txt
+make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=fp32 TARGET=hw
+make collect FROM=/mnt/usb FLOW=aie_batch PRECISION=bf16 TARGET=hw
+make collect FROM=/mnt/usb FLOW=pl_fixed              TARGET=hw
+#   SCAN: scan.csv, scan_meta.txt (+ scan_calls_*.csv for PL) -- either
+make collect_scan FROM=/mnt/usb FLOW=pl_fixed TARGET=hw
+#   or plain cp into results/<impl>/hw/ ; the destinations are in PHASE 7c.
+
+# ==== 9. the notebooks ========================================== ~5 min =====
 make results                            # every run on disk, with its warm-up
-jupyter lab analysis/rtda_reference.ipynb     # MUST be first -- writes the ONNX golden
-jupyter lab analysis/rtda_compare.ipynb
+jupyter lab analysis/rtda_reference.ipynb   # FIRST -- writes the ONNX golden
+jupyter lab analysis/rtda_compare.ipynb     # accuracy, all three
+jupyter lab analysis/rtda_scan.ipynb        # performance -> out/scan_report.md
 ```
 
 ## What each step unlocks in the notebooks
@@ -378,6 +432,42 @@ of the native model.
 impractical, which is why the native model exists:
 ```bash
 make run FLOW=pl_fixed TARGET=hw_emu EVENTS=5
+```
+
+### 5c. hw_emu on QEMU, all three
+
+```bash
+make system FLOW=pl_fixed              TARGET=hw_emu   # ~5 h the FIRST time
+make system FLOW=aie_batch PRECISION=fp32 TARGET=hw_emu
+make system FLOW=aie_batch PRECISION=bf16 TARGET=hw_emu
+
+make run FLOW=pl_fixed                 TARGET=hw_emu
+make run FLOW=aie_batch PRECISION=fp32 TARGET=hw_emu
+make run FLOW=aie_batch PRECISION=bf16 TARGET=hw_emu
+```
+
+Boot takes minutes. **`launch_emulator -run-app` takes exactly one value and no
+environment reaches the guest**, so nothing can be configured from outside: the
+stimulus packaged onto the image is what caps the run. That is why the PL hw_emu
+image carries `embed_input_100.txt` (2 events) rather than the 50,000-track file.
+
+Both `run` targets pass only the executable. Passing the xclbin as a second token
+— which `aie_batch` did until 2026-08-17 — is rejected outright with
+`unrecognized arguments`, and was never needed: the hosts autodetect
+`system_hw_emu.xclbin` in their working directory.
+
+The hosts write into their working directory inside the guest. Copy the three
+files out to `results/<impl>/hw_emu/`.
+
+**Running `host_scan.exe` under emulation** is possible but capped: both scan
+hosts detect `hw_emu` from the xclbin name and reduce the default sweep to
+`{1, 2}` events, because the images carry the 500,000-track stimulus and in RTL
+simulation the 10,000-event point is not slow, it is unbounded. `RTDA_SCAN_EVENTS`
+overrides it. For the PL there is a wrapper, since no environment survives:
+
+```bash
+make -C pl_fixed package  TARGET=hw_emu SCAN_REPS=1 SCAN_TPC=off   # 38 s
+make -C pl_fixed run_scan TARGET=hw_emu SCAN_REPS=1 SCAN_TPC=off
 ```
 
 ---
@@ -684,3 +774,45 @@ Analysis only, no board, no Vitis: **Phases 0, 1, 2 (fastsim only), 3 (fastsim
 only), 4 (sweep + fastsim), 6**. About **20 minutes**, and it produces every
 accuracy number in the table above. The notebooks omit hardware rows cleanly
 when there is no board data.
+
+---
+
+# The unattended build
+
+`tools/build_all.sh` runs stages 0-6 of the full chain — everything that does not
+need a person — and leaves three `sd_card.img` files behind. Start it and go home.
+
+```bash
+cd $REPO
+./tools/build_all.sh --list          # stages and what they cost
+./tools/build_all.sh --dry-run all   # print the commands, run nothing
+./tools/build_all.sh                 # everything, ~12-14 h
+./tools/build_all.sh x86             # or one stage
+./tools/build_all.sh hw_emu hw       # or a few -- always run in canonical order
+```
+
+| stage | what | cost |
+|---|---|---|
+| `data` | stimulus, goldens, reference self-test | ~3 min |
+| `x86` | x86simulator + the native `ap_fixed` model | ~5 min |
+| `exact` | aiesimulator both precisions + PL csim | ~50 min |
+| `hw_emu` | system build `TARGET=hw_emu`, all three | ~3 h (+~5 h the first time, PL csynth) |
+| `hw` | system build `TARGET=hw`, all three — **the SD images** | ~8 h |
+
+It sources `set_envs.sh` itself, so a bare shell is fine. Three properties worth
+knowing:
+
+- **It is strictly serial, deliberately.** Every run in `aie_batch/` shares
+  `data/` for PLIO input and `<sim>simulator_output/` for output, so two AIE
+  simulations at once collide — and the failure looks like a numerical bug rather
+  than a collision. A lock file also refuses a second copy of the script.
+- **A failing stage does not stop the others.** An overnight run should come back
+  with nine results and one failure, not one failure. The summary says which
+  failed, and every stage has its own log under `build_logs/<timestamp>/`.
+- **It enforces the two orderings** from the top of this file: simulations before
+  `make system`, and `pl_fixed hw_emu` before `pl_fixed hw` so the ~5 h csynth is
+  paid once.
+
+What it deliberately does **not** do: run QEMU, flash anything, or touch the
+board. Those need a person, and an eight-hour build should not be waiting on one.
+When it finishes it prints exactly what is left to do by hand.

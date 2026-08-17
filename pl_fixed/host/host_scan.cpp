@@ -267,9 +267,24 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Clip, then drop duplicates. With a 2-event hw_emu stimulus the default
-    // sweep collapses to {1,2}, which is exactly what should happen: the host
-    // runs the biggest honest sweep the data allows rather than refusing.
+    // Under emulation, cap the default sweep HARD.
+    //
+    // The hw_emu image carries the 500,000-track stimulus (the hw card needs it,
+    // and one packaging list serves both), and the probe above prefers it. In RTL
+    // simulation a single event is seconds to minutes, so the default 10,000-event
+    // point is not slow, it is unbounded -- you come back the next morning to a
+    // QEMU still running. An explicit RTDA_SCAN_EVENTS overrides this; the cap
+    // only replaces the DEFAULT.
+    if (is_emu && std::getenv("RTDA_SCAN_EVENTS") == nullptr) {
+        ev_list = {1, 2};
+        std::cout << "[scan] EMULATION: default sweep capped to 1,2 events.\n"
+                     "[scan]   RTL simulation makes the 10,000-event point unbounded.\n"
+                     "[scan]   Set RTDA_SCAN_EVENTS=... to override.\n";
+    }
+
+    // Clip, then drop duplicates. With a 2-event stimulus the default sweep
+    // collapses to {1,2}, which is exactly what should happen: the host runs the
+    // biggest honest sweep the data allows rather than refusing.
     {
         std::vector<long> keep;
         for (long e : ev_list) keep.push_back(std::min(e, max_events));

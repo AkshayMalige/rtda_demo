@@ -446,8 +446,15 @@ $(XCLBIN): $(LIBADF) $(XSA) $(EXEC) $(SCAN_EXEC) | $(PKG_DIR)
 
 run: system
 ifeq ($(TARGET),hw_emu)
-	@echo ">>> hw_emu on QEMU"
-	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC) $(XCLBIN)
+	@echo ">>> hw_emu on QEMU. Boot takes a few minutes."
+	# NO $(XCLBIN) argument -- the same bug pl_fixed/Makefile already carries a
+	# note about. `launch_emulator -run-app` takes exactly ONE value ("Specify
+	# the application to run"), so a second token is rejected outright with
+	# `unrecognized arguments` and the run never starts. It could only ever have
+	# been wrong anyway: $(XCLBIN) is a path on THIS machine, and the emulated
+	# system sees the xclbin at the root of the mounted card. host_batch.cpp
+	# autodetects system_hw_emu.xclbin in its working directory.
+	$(PKG_DIR)/launch_hw_emu.sh -run-app $(EXEC)
 else
 	@echo "TARGET=hw: write $(PKG_DIR)/sd_card.img to the SD card and boot the VEK280."
 	@echo "See ../RUNBOOK.md for the on-board commands."

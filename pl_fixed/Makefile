@@ -279,9 +279,20 @@ $(PL_XO): $(PL_KERNEL_SRC)
 
 # The board needs the stimulus. Unlike the AIE flow there is no sysdata to
 # stage: the weights are compiled into the bitstream.
-# The stimulus, plus the QEMU scan wrapper (harmless on a hw card, where you have
-# a shell and would not use it).
-SD_FILES := $(abspath $(STIMULUS)) $(abspath $(SCAN_LAUNCH))
+# What goes on the card besides the two hosts.
+#
+# BOTH stimulus files, not just $(STIMULUS): the accuracy host wants the 50,000
+# track file it has a golden for, and the scan host wants the 500,000 track one.
+# Packaging only one meant the hw card could do accuracy or performance but not
+# both without a rebuild -- and which one you got depended on a variable set hours
+# earlier. The 65 MB is free next to a 3.2 GB image.
+#
+# SCAN_STIMULUS is skipped if it has not been generated (make stimulus
+# TRACKS=500000), so a tree that only ever does accuracy still packages.
+SCAN_STIMULUS := ../testdata/embed_input_500000.txt
+SD_FILES := $(abspath $(STIMULUS)) \
+            $(if $(wildcard $(SCAN_STIMULUS)),$(abspath $(SCAN_STIMULUS)),) \
+            $(abspath $(SCAN_LAUNCH))
 
 $(XCLBIN): $(XSA) $(EXEC) $(SCAN_EXEC) $(SCAN_LAUNCH) | $(PKG_DIR)
 	v++ --package -t $(TARGET) \
