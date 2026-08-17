@@ -100,6 +100,17 @@ for a in "$@"; do
 done
 [ ${#WANT[@]} -eq 0 ] && WANT=(data x86 exact hw_emu hw)
 
+# Deduplicate and put into canonical order. `build build x86` is harmless -- each
+# stage runs once regardless -- but without this the banner would count seven
+# stages and announce "STAGE 1/7" for a run of four.
+_dedup=()
+for canon in data x86 exact hw_emu hw; do
+    for w in "${WANT[@]}"; do
+        [ "$w" = "$canon" ] && { _dedup+=("$canon"); break; }
+    done
+done
+WANT=("${_dedup[@]}")
+
 wanted() { for w in "${WANT[@]}"; do [ "$w" = "$1" ] && return 0; done; return 1; }
 
 # ---- environment ----------------------------------------------------------
@@ -124,6 +135,48 @@ fi
 
 mkdir -p "$LOGDIR"
 RESULTS=()
+T_START=$(date +%s)
+STAGE_N=0
+STAGE_TOTAL=${#WANT[@]}
+
+# Colour only when stdout is a terminal. A 13-hour run gets piped to tee or read
+# back from the output file as often as it gets watched live, and escape codes in
+# a file are worse than no colour.
+if [ -t 1 ]; then
+    C_BAN=$'\033[1;36m'; C_OK=$'\033[1;32m'; C_BAD=$'\033[1;31m'
+    C_DIM=$'\033[2m';    C_OFF=$'\033[0m'
+else
+    C_BAN=''; C_OK=''; C_BAD=''; C_DIM=''; C_OFF=''
+fi
+
+BAR='══════════════════════════════════════════════════════════════════════════'
+
+# The stage banner. Deliberately loud: this is the thing you scroll back looking
+# for at 2 a.m. when one of eleven steps failed and you need to know which phase
+# it died in.
+banner() {                                # banner <stage> <description>
+    local st="$1" desc="$2" now el
+    STAGE_N=$((STAGE_N + 1))
+    now=$(date +%H:%M:%S)
+    el=$(( ($(date +%s) - T_START) / 60 ))
+    printf '\n%s%s%s\n' "$C_BAN" "$BAR" "$C_OFF"
+    printf '%s  STAGE %d/%d  ·  %s%s\n' "$C_BAN" "$STAGE_N" "$STAGE_TOTAL" \
+           "$(echo "$st" | tr '[:lower:]' '[:upper:]')" "$C_OFF"
+    printf '%s  %s%s\n' "$C_BAN" "$desc" "$C_OFF"
+    printf '%s  started %s  ·  %dh%02dm into the run%s\n' \
+           "$C_DIM" "$now" $((el / 60)) $((el % 60)) "$C_OFF"
+    printf '%s%s%s\n' "$C_BAN" "$BAR" "$C_OFF"
+}
+
+# Look up a stage's description from the table at the top, so the banner and
+# --list cannot drift apart.
+desc_of() {
+    for s in "${STAGES[@]}"; do
+        IFS='|' read -r n d c <<< "$s"
+        [ "$n" = "$1" ] && { echo "$d  ($c)"; return; }
+    done
+    echo "$1"
+}
 
 run() {                                   # run <name> <log> <command...>
     local name="$1" log="$2"; shift 2
@@ -139,10 +192,10 @@ run() {                                   # run <name> <log> <command...>
     t1=$(date +%s)
     local mins=$(( (t1 - t0) / 60 )) secs=$(( (t1 - t0) % 60 ))
     if [ $rc -eq 0 ]; then
-        printf 'ok    %3dm%02ds\n' "$mins" "$secs"
+        printf '%sok%s    %3dm%02ds\n' "$C_OK" "$C_OFF" "$mins" "$secs"
         RESULTS+=("PASS|$name|${mins}m${secs}s|$log")
     else
-        printf 'FAIL  %3dm%02ds  (rc=%d, see %s)\n' "$mins" "$secs" "$rc" "$log"
+        printf '%sFAIL%s  %3dm%02ds  (rc=%d, see %s)\n' "$C_BAD" "$C_OFF" "$mins" "$secs" "$rc" "$log"
         RESULTS+=("FAIL|$name|${mins}m${secs}s|$log")
     fi
     return 0                              # never abort the remaining stages
@@ -158,7 +211,7 @@ echo "==========================================================================
 
 # ---- 0. data --------------------------------------------------------------
 if wanted data; then
-    echo "--- data ---------------------------------------------------------------"
+    banner data "$(desc_of data)"
     run "golden 50,000 tracks"        data.log make golden   TRACKS=50000
     run "stimulus 500,000 tracks"     data.log make stimulus TRACKS=500000
     run "selftest (ref vs ONNX)"      data.log make selftest
@@ -166,7 +219,7 @@ fi
 
 # ---- 1. x86 / native ------------------------------------------------------
 if wanted x86; then
-    echo "--- x86 ----------------------------------------------------------------"
+    banner x86 "$(desc_of x86)"
     run "x86sim aie fp32"             x86.log make fastsim FLOW=aie_batch PRECISION=fp32 EVENTS=5
     run "x86sim aie bf16"             x86.log make fastsim FLOW=aie_batch PRECISION=bf16 EVENTS=5
     run "pl sweep (format ranking)"   x86.log make -C pl_fixed sweep EVENTS=20
@@ -176,7 +229,7 @@ fi
 # ---- 2. cycle / RTL accurate ----------------------------------------------
 # Strictly serial. See the lock note at the top.
 if wanted exact; then
-    echo "--- exact --------------------------------------------------------------"
+    banner exact "$(desc_of exact)"
     run "aiesimulator fp32"           exact.log make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5
     run "report fp32 (II)"            exact.log make -C aie_batch report PRECISION=fp32
     run "aiesimulator bf16"           exact.log make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5
@@ -188,7 +241,7 @@ fi
 # pl_fixed FIRST: it is the one that pays the csynth, and everything after it
 # reuses the .xo. If it fails, the two AIE builds still happen.
 if wanted hw_emu; then
-    echo "--- hw_emu -------------------------------------------------------------"
+    banner hw_emu "$(desc_of hw_emu)"
     run "system pl_fixed  hw_emu"     hw_emu.log make system FLOW=pl_fixed              TARGET=hw_emu
     run "system aie fp32  hw_emu"     hw_emu.log make system FLOW=aie_batch PRECISION=fp32 TARGET=hw_emu
     run "system aie bf16  hw_emu"     hw_emu.log make system FLOW=aie_batch PRECISION=bf16 TARGET=hw_emu
@@ -196,7 +249,7 @@ fi
 
 # ---- 4. hw system builds --------------------------------------------------
 if wanted hw; then
-    echo "--- hw -----------------------------------------------------------------"
+    banner hw "$(desc_of hw)"
     run "system aie fp32  hw"         hw.log make system FLOW=aie_batch PRECISION=fp32 TARGET=hw
     run "system aie bf16  hw"         hw.log make system FLOW=aie_batch PRECISION=bf16 TARGET=hw
     run "system pl_fixed  hw"         hw.log make system FLOW=pl_fixed              TARGET=hw
