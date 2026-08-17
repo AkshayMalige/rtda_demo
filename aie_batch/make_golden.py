@@ -53,6 +53,13 @@ def main():
     ap.add_argument('--seed', type=int, default=1234)
     ap.add_argument('--no-flush', action='store_true',
                     help='model a guaranteed cold start instead (see golden())')
+    ap.add_argument('--stimulus-only', action='store_true',
+                    help='write the stimulus and skip the golden. golden() runs one '
+                         'un-chunked forward over every slot, so at 500,000 tracks it '
+                         'needs several GB for intermediates the performance scan never '
+                         'looks at. The seeded stream is a prefix chain, so a larger '
+                         'stimulus-only file still starts with -- and is verified '
+                         'against -- the smaller files that DO have goldens.')
     a = ap.parse_args()
 
     outdir = (HERE / a.out).resolve()
@@ -67,9 +74,20 @@ def main():
               f'\n           {a.tracks % TRACKS_PER_EVENT} real tracks and the hardware will NOT match this golden.'
               f'\n           Use a multiple of {TRACKS_PER_EVENT}.')
 
+    # Written in blocks rather than one '\n'.join over the whole array: at 500,000
+    # tracks that join materialises 4 million format strings at once. The bytes are
+    # identical either way -- `make stimulus` re-checks that against the committed
+    # 50,000-track file.
     stim = outdir / f'embed_input_{a.tracks}.txt'
-    stim.write_text('\n'.join(f'{v:.9e}' for v in tracks.ravel()) + '\n')
+    flat = tracks.ravel()
+    with stim.open('w') as f:
+        for i in range(0, flat.size, 1 << 16):
+            f.write(''.join(f'{v:.9e}\n' for v in flat[i:i + (1 << 16)]))
     print(f'  stimulus : {stim.name}  ({stim.stat().st_size/1024:.0f} KB)')
+
+    if a.stimulus_only:
+        print('  golden   : skipped (--stimulus-only)')
+        return
 
     means, s2 = golden(tracks, flush=not a.no_flush)
     y27 = R.out27(means)

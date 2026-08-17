@@ -472,6 +472,109 @@ cp /mnt/usb/{track_means_all.txt,track_out_27.txt,run_info.txt} results/aie_fp32
 make results        # every run currently on disk, with its event count and warm-up
 ```
 
+---
+
+# PHASE 7 — the performance scan
+
+Everything above measures *whether* each implementation is right and quotes one
+speed per implementation. This measures **where the time goes and how it scales**:
+1 / 10 / 100 / 1000 / 10,000 events, five repeats, per-phase breakdown.
+
+It needs **no xclbin rebuild**. A separate host per flow talks to the bitstream
+already on the card, and builds in seconds.
+
+### 7a. Once, on the build machine
+
+```bash
+make stimulus TRACKS=500000       # 10,000 events, ~65 MB, no golden (timing only)
+make scan_host FLOW=aie_batch     # -> aie_batch/host_scan.exe   (seconds)
+make scan_host FLOW=pl_fixed      # -> pl_fixed/host_scan.exe
+```
+
+`make stimulus` skips the reference model — `golden` runs one un-chunked numpy
+forward over every slot, which at 500,000 tracks is several GB for a reference a
+timing run never reads. It re-checks the seeded prefix chain, so `golden_50000`
+still describes the first 1000 events of the new file.
+
+Put the stimulus and the two binaries on a **USB stick**. Nothing on the SD card
+needs to change: both hosts take the stimulus path from `RTDA_INPUT`, so a 65 MB
+file never has to fit on the FAT partition.
+
+### 7b. On the board
+
+Same mount dance as Phase 5. Then, per implementation:
+
+```bash
+mount /dev/sda1 /mnt/usb                       # the stick
+
+# AIE -- whichever precision is flashed; the host reads sysdata/config.txt
+RTDA_INPUT=/mnt/usb/embed_input_500000.txt \
+RTDA_OUTDIR=/mnt/usb/scan_aie_fp32 \
+  /mnt/usb/host_scan.exe
+
+# PL
+RTDA_INPUT=/mnt/usb/embed_input_500000.txt \
+RTDA_OUTDIR=/mnt/usb/scan_pl \
+RTDA_DUMP_CALLS=1 \
+  /mnt/usb/host_scan.exe
+
+sync                                            # NOT optional
+```
+
+**Smoke-test first.** One event, one repeat, no diagnostics — it costs seconds
+and proves the CSV is well formed and the checksum is non-zero before you commit
+to the full sweep:
+
+```bash
+RTDA_SCAN_EVENTS=1 RTDA_SCAN_REPS=1 RTDA_SCAN_TPC=off ./host_scan.exe
+```
+
+Expect the AIE scan to take **seconds** (the whole 10,000-event point is ~0.3 s of
+array time) and the PL scan **~10 minutes** — 11,111 events x 5 repeats x 2 modes
+at ~5.7 ms/event.
+
+Run the PL `tracks_per_call` sweep **last**. It is the only part that drives the
+kernel outside the 50-track shape (legal — `n_tracks` is a runtime `s_axilite`
+argument and `depth=300` is a co-sim hint), but if anything is going to hang, that
+is where, and by then the event sweep is already on the stick.
+
+### 7c. File and plot
+
+```bash
+make collect_scan FROM=/mnt/usb/scan_aie_fp32 FLOW=aie_batch PRECISION=fp32 TARGET=hw
+make collect_scan FROM=/mnt/usb/scan_pl       FLOW=pl_fixed              TARGET=hw
+
+jupyter lab analysis/rtda_scan.ipynb
+```
+
+`collect_scan` refuses a `scan.csv` without its `scan_meta.txt` — the meta is
+where the xclbin, the git revision and the once-paid costs live, and a bare CSV
+is unattributable. It also prints the `impl` recorded in the file next to the
+directory it landed in, because the notebook trusts the path.
+
+### Under QEMU
+
+`launch_emulator -run-app` takes exactly one argument and no environment survives
+into the guest, so the sweep is baked into a generated wrapper that goes on the
+image:
+
+```bash
+make -C pl_fixed package  TARGET=hw_emu SCAN_REPS=1 SCAN_TPC=off   # 38 s
+make -C pl_fixed run_scan TARGET=hw_emu SCAN_REPS=1 SCAN_TPC=off
+```
+
+`run_scan` compares the wrapper on the image against the one the current
+variables would generate and refuses if they differ — otherwise the run silently
+uses the previous settings. The hw_emu stimulus is 100 tracks, so the sweep
+collapses to {1, 2} events by itself: that is validation of the host, not a
+performance measurement.
+
+### What the scan does not measure
+
+No power, no DDR bandwidth ceiling, no multi-CU scaling. And **the AIE has no
+H2D/D2H split** — input DMA, compute and output DMA overlap by design, so
+`us_h2d` there is an *issue* cost and `us_d2h` is the un-overlapped *tail*. The
+schema and the caveats are in `results/README.md`.
 
 ---
 
@@ -489,10 +592,15 @@ make results        # every run currently on disk, with its event count and warm
 | csim vs the native model | — | — | 0.000e+00 |
 | II (aiesimulator) | 4161 ns | 1033 ns | n/a |
 | ns/track, cycle-accurate | 582.5 | 144.6 | — |
-| ns/track, silicon (50k tracks) | 614.3 | 249.3 | ~40,000 |
+| ns/track, silicon (50k tracks) | 614.3 | 249.3 | 114,538 ¹ |
 | GOP/s, silicon | 860 | 2120 | — |
 | RTP weights | 1039 KB | 523 KB | n/a |
 | on-board `RTDA_GOLDEN` check | PASS ~1.5e-06 | do not use | n/a |
+
+¹ From `results/pl_fixed/hw/run_info.txt` (`us_per_track=114.538`). This row read
+"~40,000" until 2026-08-17, which was the **csynth fabric estimate** (6335 cycles
+at 150 MHz = 42.2 us/track) quoted as if it were silicon. The 2.7× between the two
+is real; `analysis/rtda_scan.ipynb` attributes it.
 
 **The ~7e-03 "with warm-up" row is not an error.** It is the roll-concat
 convention: the reference wraps circularly inside an event, the array streams.

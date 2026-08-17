@@ -92,7 +92,7 @@ AIE_INCLUDES = --include=$(SRC) $(KERNEL_INC) $(shell test -d $(SRC)/weights && 
 VPP = source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; v++ --compile --config aie.cfg --mode aie
 
 .PHONY: all graph system_graph rtp compare x86com sim x86 crosscheck crosscheck_ref report analyze \
-        x86_events sim_events golden regen verify_io ports vars clean clean_all help
+        x86_events sim_events golden stimulus regen verify_io ports vars clean clean_all help
 
 .DEFAULT_GOAL := graph
 all: graph
@@ -163,6 +163,40 @@ crosscheck_ref:
 TRACKS ?= 10000
 golden:
 	@$(PYTHON) make_golden.py --tracks $(TRACKS) --out ../testdata
+
+# Stimulus WITHOUT the golden, for the performance scan.
+#
+# `golden` runs the slot-exact numpy model over every slot in one un-chunked
+# forward. At the 500,000 tracks the scan wants that is several GB of
+# intermediates, for a reference a timing-only run never reads.
+#
+# The seeded Family B stream is a prefix chain, which is the property that lets a
+# 500,000-track file still be described by golden_50000 over its first 1000
+# events. That property is CHECKED here, not assumed: every stimulus that has a
+# golden beside it must reproduce byte for byte as a prefix of the new file. If it
+# does not, the seed or the formatting moved and every golden in the tree is now
+# describing a different stimulus.
+#
+#   make stimulus TRACKS=500000
+stimulus:
+	@$(PYTHON) make_golden.py --tracks $(TRACKS) --stimulus-only --out ../testdata
+	@big=../testdata/embed_input_$(TRACKS).txt; fail=0; \
+	 for g in ../testdata/golden_*.txt; do \
+	   n=$${g##*/golden_}; n=$${n%.txt}; \
+	   small=../testdata/embed_input_$$n.txt; \
+	   [ "$$small" = "$$big" ] && continue; \
+	   [ -f "$$small" ] || continue; \
+	   sz=$$(stat -c %s $$small); \
+	   [ $$sz -lt $$(stat -c %s $$big) ] || continue; \
+	   if head -c $$sz $$big | cmp -s - $$small; then \
+	     printf '  prefix OK : %-24s (golden_%s still describes the first %s tracks)\n' \
+	       "$$(basename $$small)" "$$n" "$$n"; \
+	   else \
+	     printf '  PREFIX BROKEN: %s is NOT a prefix of %s\n' \
+	       "$$(basename $$small)" "$$(basename $$big)"; fail=1; \
+	   fi; \
+	 done; \
+	 [ $$fail -eq 0 ] || { echo "  -> the seeded stream changed. Every golden_* is now stale."; exit 1; }
 
 # --- multi-event simulation ---------------------------------------------
 # `make sim` / `make crosscheck` run exactly ONE event: the graph is compiled
@@ -350,6 +384,18 @@ host: $(EXEC)
 $(EXEC): host/host_batch.cpp host/Makefile
 	@$(MAKE) -C host EMU_PS=QEMU
 
+# The performance scan host. Independent of the whole build: it talks to the
+# xclbin that is already on the card, so `make scan_host` is seconds and needs no
+# graph, no link and no package. That is the point -- a scan should never be a
+# reason to rebuild a bitstream.
+SCAN_EXEC := ./host_scan.exe
+
+.PHONY: scan_host
+scan_host: $(SCAN_EXEC)
+
+$(SCAN_EXEC): host/host_scan.cpp host/Makefile
+	@$(MAKE) -C host scan EMU_PS=QEMU
+
 $(BUILD_DIR) $(PKG_DIR):
 	@mkdir -p $@
 
@@ -383,7 +429,7 @@ repackage:
 	@rm -f $(XCLBIN)
 	@$(MAKE) --no-print-directory package PRECISION=$(PRECISION) TARGET=$(TARGET)
 
-$(XCLBIN): $(LIBADF) $(XSA) $(EXEC) | $(PKG_DIR)
+$(XCLBIN): $(LIBADF) $(XSA) $(EXEC) $(SCAN_EXEC) | $(PKG_DIR)
 	@echo ">>> package $(TARGET)"
 	v++ --package -t $(TARGET) \
 	    --platform $(PLATFORM) \
@@ -393,6 +439,7 @@ $(XCLBIN): $(LIBADF) $(XSA) $(EXEC) | $(PKG_DIR)
 	    --package.kernel_image $(IMAGE) \
 	    $(if $(filter hw,$(TARGET)),--package.boot_mode sd,) \
 	    --package.sd_file $(EXEC) \
+	    --package.sd_file $(SCAN_EXEC) \
 	    --package.sd_dir $(SD_STAGE) \
 	    --config $(PACK_CFG) \
 	    $(LIBADF) $(XSA) -o $@
@@ -425,7 +472,7 @@ clean:
 	rm -rf Map_Report.csv sol.db diag_report.log *.vcd trdata.aiesim pl_sample_count*
 	rm -rf qemu_rp.log temp .AIE_SIM_CMD_LINE_OPTIONS .io_check_* data
 	rm -f stamp_*.marker .gen.*.stamp .system_build.*
-	rm -rf build package sd_stage _x host_batch.exe
+	rm -rf build package sd_stage _x host_batch.exe host_scan.exe
 	$(MAKE) -C host clean
 
 # NOTE: does NOT remove src/, app.cpp, aie.cfg or aie_pipeline.json -- those are

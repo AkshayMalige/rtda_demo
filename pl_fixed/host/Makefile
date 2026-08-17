@@ -6,6 +6,14 @@ HOST_SRC := host_split.cpp
 HOST_OBJ := host_split.o
 HOST_DEP := host_split.d
 
+# The performance scan host. A SEPARATE binary on purpose: host_split.exe
+# produces the accuracy numbers the README cites, and nothing about a timing
+# experiment should be able to change them.
+SCAN_EXE := ../host_scan.exe
+SCAN_SRC := host_scan.cpp
+SCAN_OBJ := host_scan.o
+SCAN_DEP := host_scan.d
+
 # EMU_PS: X86 | QEMU
 #   X86  - native g++ build (for local testing, x86 hw_emu with XRT)
 #   QEMU - aarch64 cross-compile using PetaLinux sysroot (for hw_emu/hw on VEK280)
@@ -32,11 +40,21 @@ endif
 # After the block above, which assigns CXXFLAGS with := and would drop this.
 CXXFLAGS += -DRTDA_VARIANT='"$(RTDA_VARIANT)"'
 
-.PHONY: all clean
+# Which commit produced the scan binary. Recorded in scan_meta.txt, because a
+# performance number without the source revision behind it cannot be reproduced
+# or defended six months later.
+RTDA_GIT_HASH := $(shell git -C .. describe --always --dirty 2>/dev/null || echo unknown)
+
+.PHONY: all scan clean
 
 all: $(HOST_EXE)
 
+scan: $(SCAN_EXE)
+
 $(HOST_EXE): $(HOST_OBJ)
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+$(SCAN_EXE): $(SCAN_OBJ)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 # RTDA_VARIANT is baked into the object as a -D. Depending on Makefile catches
@@ -58,7 +76,20 @@ $(VARIANT_STAMP):
 $(HOST_OBJ): $(HOST_SRC) Makefile $(VARIANT_STAMP)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
--include $(HOST_DEP)
+# Same trick for the commit hash, for the same reason: a new commit is a changed
+# -D that Make cannot see, and a scan_meta.txt naming the wrong revision is worse
+# than one naming none.
+GITHASH_STAMP := .githash.$(RTDA_GIT_HASH)
+
+$(GITHASH_STAMP):
+	@rm -f .githash.*
+	@touch $@
+
+$(SCAN_OBJ): $(SCAN_SRC) Makefile $(VARIANT_STAMP) $(GITHASH_STAMP)
+	$(CXX) $(CXXFLAGS) -DRTDA_GIT_HASH='"$(RTDA_GIT_HASH)"' -o $@ $<
+
+-include $(HOST_DEP) $(SCAN_DEP)
 
 clean:
-	rm -rf $(HOST_OBJ) $(HOST_DEP) .Xil $(HOST_EXE) .variant.*
+	rm -rf $(HOST_OBJ) $(HOST_DEP) $(SCAN_OBJ) $(SCAN_DEP) .Xil \
+	       $(HOST_EXE) $(SCAN_EXE) .variant.* .githash.*

@@ -25,6 +25,62 @@ over all 50 tracks or over tracks 3..49, and comparing the wrong one against
 the reference reports the roll convention (1.5e-02) as if it were arithmetic
 error (3e-04). The notebooks read it rather than assume. See README.md.
 
+## The performance scan: `scan.csv` + `scan_meta.txt`
+
+Written by `host_scan.exe` (one per flow, built with `make scan_host FLOW=...`),
+filed with `make collect_scan`. **A scan run writes neither
+`track_means_all.txt` nor `run_info.txt`**, so it cannot be mistaken for a
+result run — and `make collect` will refuse it, because the files it wants are
+not there. The two collect targets are deliberately disjoint.
+
+`scan.csv` is one row per measured point, with a header. Every implementation
+writes the same 28 columns; a column an implementation cannot measure is left
+**empty**, which pandas reads as NaN. That is the whole convention — there are no
+per-implementation variants of this file.
+
+| column | meaning |
+|---|---|
+| `impl` | `aie_fp32` \| `aie_bf16` \| `pl_fixed`. The AIE host derives it from `sysdata/config.txt`, so one binary labels both precisions correctly. |
+| `variant` | `fp32`/`bf16` for AIE, the `ap<W>_<I>` string for PL |
+| `source` | `hw` \| `hw_emu`, from the xclbin name. An emulation run mislabelled as silicon is the failure this exists to prevent. |
+| `events`, `tracks` | the size of the point. `events=0` marks a row that is not an event sweep at all (the PL `tracks_per_call` diagnostic). |
+| `rep` | repeat index. Points are repeated so the notebook can show min/median/max instead of a single number. |
+| `launches` | device invocations for this point: `graph.run()` calls (AIE), kernel calls (PL) |
+| `tracks_per_call` | tracks per invocation |
+| `us_stage` | **host-side** input preparation: slot padding, the bf16 conversion (AIE), the strided repack (PL). Not device time. |
+| `us_h2d` | AIE: time to *issue* the async transfers, not the transfer. PL: `bo_in.sync` to device. |
+| `us_kernel` | AIE: `graph.run` + `graph.wait`. PL: kernel enqueue + `run.wait`. |
+| `us_d2h` | AIE: `out_run.wait()` *after* `graph.wait()` — the un-overlapped tail of the output DMA. PL: both output syncs. |
+| `us_execute` | the three device phases together |
+| `us_total` | wall clock for the whole point, staging and bookkeeping included |
+| `us_call_min/med/p95/max` | per-invocation distribution. PL only — one call per event gives a series; an AIE launch covers many events, so there is nothing to summarise and these are empty. |
+| `us_modelled`, `ii_ns` | AIE only: `ii_ns * iterations`, the array's own time. `us_execute - us_modelled` is the launch and DMA overhead. Empty for PL, whose fabric estimate is a csynth number the host has no access to — the notebook applies it from one place. |
+| `macs_per_track` | 264192, so throughput can be expressed without a wall clock |
+| `in_bytes`, `out_bytes` | total moved for the point |
+| `mean_checksum` | sum of the last event's 128 means. **A smoke value, not an accuracy number** — it exists so "the kernel returned zeros" cannot read as a very fast run. Constant across repeats at a given event count. |
+| `mode` | impl-specific: AIE `gmio`; PL `fresh` (a new `xrt::run` per call, what the shipped host does), `reuse` (one run object, `start`/`wait` only), `tpc` (the tracks-per-call diagnostic) |
+| `notes` | free text; empty in a clean run |
+
+**The AIE has no H2D/D2H split and this file does not pretend otherwise.** Input
+DMA, compute and output DMA overlap by design, and waiting on the input transfer
+before `graph.run()` deadlocks — nothing drains the shim DMA until the graph
+runs. `us_h2d` is therefore an *issue* cost and `us_d2h` is a *tail*. The PL
+design, which is memory-mapped and synchronous, does have real per-phase numbers.
+Comparing the two columns across implementations is the one thing not to do with
+this file.
+
+`scan_meta.txt` is `key=value`, once per run: the costs paid once
+(`us_xclbin_open` ~240 ms, `us_rtp_load` ~6 ms, `us_stimulus_read`) plus
+`xclbin`, `stimulus`, `stimulus_tracks`, `events_list`, `reps`, `git_hash`,
+`date_utc`, `uname`. Keeping them here rather than in every row is the point: in
+the shipped `run_info.txt` the 240 ms xclbin open sits inside a 1143 ms total and
+swamps the 31 ms that is actually the design.
+
+`scan_calls_<events>.csv` appears only with `RTDA_DUMP_CALLS=1`: one row per
+kernel call, for the distribution plot.
+
+Read by `analysis/rtda_scan.ipynb`.
+
 ## legacy/
 
 Runs from before the restructure: the pre-precision-tag `sim_*.npz` (which the
