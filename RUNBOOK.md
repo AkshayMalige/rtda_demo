@@ -786,10 +786,23 @@ need a person — and leaves three `sd_card.img` files behind. Start it and go h
 cd $REPO
 ./tools/build_all.sh --list          # stages and what they cost
 ./tools/build_all.sh --dry-run all   # print the commands, run nothing
+
+./tools/build_all.sh build           # COMPILE ONLY -- no simulator, no QEMU
+./tools/build_all.sh sim             # run the simulators, build no image
 ./tools/build_all.sh                 # everything, ~12-14 h
-./tools/build_all.sh x86             # or one stage
+./tools/build_all.sh hw              # or one stage
 ./tools/build_all.sh hw_emu hw       # or a few -- always run in canonical order
 ```
+
+`build` is `data + hw_emu + hw`: it compiles the AIE graphs, runs HLS, links,
+and packages all three SD images, and runs **no** simulator and **no** QEMU.
+`data` is in there because the images package the stimulus — packaging with an
+empty `testdata/` ships a card the hosts cannot read.
+
+**Do not run `build` and then `sim`.** `make system` replaces `Work_<P>/` with the
+GMIO system graph, so a later `sim` has to rebuild the PLIO one from scratch, and
+then the images are built from a graph the simulations no longer match. If you
+want both, run `all` (or `sim` first, then `build`).
 
 | stage | what | cost |
 |---|---|---|

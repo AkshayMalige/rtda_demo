@@ -4,12 +4,18 @@
 #                 unattended, with a log per stage and a summary at the end.
 #
 #   ./tools/build_all.sh                  # everything: ~12-14 h
-#   ./tools/build_all.sh x86              # just the fast functional sims
+#   ./tools/build_all.sh build            # COMPILE ONLY -- no simulator runs
+#   ./tools/build_all.sh sim              # run the simulators, build no image
 #   ./tools/build_all.sh hw               # just the three hw system builds
 #   ./tools/build_all.sh data x86 exact   # a subset, run in the order LISTED BELOW
 #                                         #   (not the order you type them)
 #   ./tools/build_all.sh --list           # stages and what they cost
 #   ./tools/build_all.sh --dry-run all    # print the commands, run nothing
+#
+# `build` and `sim` in the WRONG order costs you the AIE graph twice: `make
+# system` replaces Work_<P>/ with the GMIO graph, so a later `sim` has to rebuild
+# the PLIO one, and vice versa. If you want both, run `all` (or `sim` then
+# `build`) rather than `build` then `sim`.
 #
 # BUILDS ONLY. It does not run QEMU and it does not touch the board: those need
 # a person, and an eight-hour build should not be waiting on one. After this
@@ -56,7 +62,7 @@ STAGES=(
 )
 
 usage() {
-    echo "usage: $0 [--dry-run] [--list] [all | <stage> ...]"
+    echo "usage: $0 [--dry-run] [--list] [all | build | sim | <stage> ...]"
     echo
     printf '  %-8s %-62s %s\n' STAGE WHAT COST
     for s in "${STAGES[@]}"; do
@@ -64,7 +70,15 @@ usage() {
         printf '  %-8s %-62s %s\n' "$n" "$d" "$c"
     done
     echo
+    echo "  Shorthands:"
+    printf '  %-8s %s\n' "build" "data + hw_emu + hw -- COMPILES ONLY, runs no simulator"
+    printf '  %-8s %s\n' "sim"   "x86 + exact -- runs the simulators, builds no image"
+    printf '  %-8s %s\n' "all"   "every stage"
+    echo
     echo "  Stages always run in the order above, whatever order you type them."
+    echo
+    echo "  'build' still includes data: the images package the stimulus, so"
+    echo "  testdata/ has to exist before the packaging step runs."
     exit 0
 }
 
@@ -74,6 +88,12 @@ for a in "$@"; do
         --list|-l|-h|--help) usage ;;
         --dry-run|-n) DRYRUN=1 ;;
         all) WANT=(data x86 exact hw_emu hw) ;;
+        # Compile everything, run nothing. `data` is in here because the images
+        # package the stimulus files -- packaging with an empty testdata/ ships a
+        # card the hosts cannot read.
+        build) WANT+=(data hw_emu hw) ;;
+        # The mirror image: run every simulator, build no image.
+        sim) WANT+=(x86 exact) ;;
         data|x86|exact|hw_emu|hw) WANT+=("$a") ;;
         *) echo "unknown argument: $a"; usage ;;
     esac
