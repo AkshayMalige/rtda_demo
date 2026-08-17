@@ -162,6 +162,39 @@ scaled by that is **63-67%**.
 
 **That is a prediction, not a result.** Place and route is the only way to know.
 
+## It routed — 2026-08-15, ap16_3
+
+`reference_hw_aug15/kernel_util_routed.rpt`, from the build that is flashed and
+whose board results match the native model to 0.000e+00:
+
+| | routed | of | % | HLS estimate | estimate was |
+|---|---:|---:|---:|---:|---|
+| LUT | 394,548 | 520,704 | **75.95%** | 231% | **3.0x** pessimistic |
+| REG | 585,049 | 1,041,408 | 56.28% | — | |
+| BRAM | 191 | 600 | 31.83% | 47% | 1.5x |
+| DSP | 289 | 1,312 | **22.03%** | 1057 (80%) | **3.7x** pessimistic |
+
+**All timing constraints met, WNS +0.050 ns.** The kernel clock is **150 MHz**:
+in `route_report_timing_summary_0.rpt`, `clkout2_primitive` (150.000 MHz) carries
+1,319,470 endpoints while `clkout1_primitive` (100 MHz) carries 3,236 — the
+kernel is on the fast one, the control path on the slow one.
+
+So the 2.4x calibration above was itself optimistic: LUT came in at 3.0x, DSP at
+3.7x. The rule from three points is that an HLS estimate here is an upper bound
+with a factor of **2.4-3.7** in it — too wide a band to plan with. It tells you
+whether to worry, not whether it fits.
+
+**The DSP number matters for a claim made elsewhere.** README cited 1057 (80%)
+DSP from csynth as evidence that leaky-ReLU at slope 0.1 costs nothing. The
+conclusion survives — 289 of 1312 routed — but the number quoted for it was the
+estimate, not the result.
+
+**And the 150 MHz matters for the performance scan.**
+`analysis/rtda_scan.ipynb` compares measured kernel time against csynth's 6335
+cycles per track, which is 42.23 us/track *only if* the clock really is 150 MHz.
+It is. So the measured 113.40 us/track is a genuine 2.7x on the fabric, not a
+clock-frequency artefact.
+
 ## Don't wait for route_design to find out
 
 The failed build was already doomed at 21:46, when Vivado finished synthesising

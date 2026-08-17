@@ -30,7 +30,7 @@ deliverable: **27 numbers per event**.
 | kernel | `aie::mmul` | `aie::mmul` | hls4ml `nnet::dense` |
 | **ns/track, silicon** ³ | **615** | **245** | **114,538** |
 | **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **2.35e-04** |
-| resources ² | 65 compute + 14 memory tiles | same | 80% DSP, 47% BRAM, **231% LUT (est.)** |
+| resources ² | 65 compute + 14 memory tiles | same | **76% LUT, 56% REG, 32% BRAM, 22% DSP** (routed) |
 
 ¹ max |implementation − ONNX| over the **same 5 events**, warm-up excluded.
 Full scale (largest of the 27) is 0.0857. These are a max over events, so they
@@ -39,13 +39,23 @@ reads 3.54e-04, and the AIE numbers would rise similarly if per-track taps
 existed at that scale. `analysis/rtda_compare.ipynb` takes the ratio over the
 common count and prints which it used.
 
-² HLS estimate, `make -C pl_fixed csynth`. **DSP is 1057 (80%), identical to the
-design before the precision realignment — so leaky-ReLU at slope 0.1 really is
-free**, which was the thing that had to be checked. LUT is not free: the
-estimate went 563k (108%) → 1,206k (231%). For calibration the *old* design
-estimated 108% and placed at 43%, i.e. the estimate ran ~2.5× pessimistic; 231%
-scaled the same way is ~92%, which is not a margin to rely on. **This has not
-been through place and route and may not fit.** See `pl_fixed/RESOURCES.md`.
+² **Post-route, from the shipped `ap16_3` build** (`kernel_util_routed.rpt`):
+LUT 394,548 (75.95%), REG 585,049 (56.28%), BRAM 191 (31.83%), DSP 289 (22.03%),
+**all timing constraints met** at WNS **+0.050 ns**. The kernel clock is
+**150 MHz** — verified in the routed timing summary, where `clkout2_primitive`
+carries 1,319,470 endpoints against 3,236 on the 100 MHz control clock.
+
+**It fits, comfortably, and this table said otherwise until 2026-08-17.** The old
+entry quoted the HLS *estimate* — 80% DSP and 231% LUT — with the warning "this
+has not been through place and route and may not fit". It has, and it does. The
+estimate was pessimistic by **3.0× on LUT** (231% → 76%) and **3.7× on DSP**
+(1057 → 289), against the ~2.4× `pl_fixed/RESOURCES.md` had calibrated from two
+earlier points. Treat an HLS LUT estimate on this design as an upper bound with a
+factor of three in it, and route before believing either number.
+
+The thing that had to be checked still holds: leaky-ReLU at slope 0.1 is free.
+It is computed as `2^-4 + 2^-5 + 2^-8 + 2^-9` in `rtda_leaky.h` precisely so it
+costs no DSP, and the routed design uses 289 of 1312.
 
 ³ All three from `results/*/hw/run_info.txt`, 1000 events on silicon. **The PL row
 used to read "~40,000" here, which was wrong**: 42,000 ns/track is the *csynth
