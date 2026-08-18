@@ -44,9 +44,22 @@ set TB_EVENTS [env_or RTDA_EVENTS 2]
 set TB_WARMUP [env_or RTDA_WARMUP 3]
 set REFERENCE [file normalize "$PROJ_DIR/../native/tb_means.txt"]
 
+# The HLS clock, which is NOT the kernel clock. ../Makefile's KERNEL_FREQ only
+# reaches `v++ --link --clock.defaultFreqHz`; it never reached here, so this
+# period was hardcoded at 6.667 ns (150 MHz) and every experiment that raised
+# KERNEL_FREQ was re-timing RTL that HLS had scheduled for 150 MHz. The shipped
+# build closes at WNS +0.050 ns, so that leaves no headroom at all.
+#
+# Raising the frequency for real means scheduling for it here as well, which
+# costs pipeline registers and therefore LUT. ../../freq_sweep/ drives both
+# together. The default is unchanged, so a build that does not set
+# RTDA_HLS_PERIOD is bit-identical to what shipped.
+set HLS_PERIOD [env_or RTDA_HLS_PERIOD 6.667]
+
 puts "*****  format defines : $AP_DEFS"
 puts "*****  stimulus       : $STIMULUS"
 puts "*****  tb events      : $TB_EVENTS   warmup: $TB_WARMUP"
+puts "*****  hls period     : $HLS_PERIOD ns ([format %.3f [expr {1000.0/$HLS_PERIOD}]] MHz)"
 
 set cflags "-I${FW_DIR} -I${PROJ_DIR}/src -std=c++14 $AP_DEFS"
 # Paths are NOT passed as -D string macros. Their quotes do not survive Tcl
@@ -78,7 +91,7 @@ if {$command eq "cosim_only"} {
 } else {
     open_solution -flow_target vitis "solution1"
     set_part $part_name
-    create_clock -period 6.667 -name default
+    create_clock -period $HLS_PERIOD -name default
     config_compile -name_max_length 80
     set_clock_uncertainty 0.5 default
 }

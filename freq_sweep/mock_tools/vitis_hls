@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+"""Fake `vitis_hls`. Accepts the real argv shape: vitis_hls <script.tcl> <command>."""
+import os, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import mockgen
+
+cmd = sys.argv[2] if len(sys.argv) > 2 else 'csim'
+period = float(os.environ.get('RTDA_HLS_PERIOD', '6.667'))
+root = Path.cwd()
+print(f'[mock vitis_hls] {cmd}  period={period} ns  cwd={root}')
+if cmd in ('csynth', 'kernels', 'cosim'):
+    ok = mockgen.write_hls(root, period)
+    if not ok:
+        print('[mock vitis_hls] TIMING VIOLATION -- no .xo written')
+        sys.exit(1)
+sys.exit(0)

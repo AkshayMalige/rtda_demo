@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+"""Fake `v++`. Handles --link (writes a report tree) and --package (no-op)."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import mockgen
+
+argv = sys.argv[1:]
+root = Path.cwd()
+if '--link' in argv:
+    hz = None
+    out = None
+    for i, a in enumerate(argv):
+        if a == '--clock.defaultFreqHz' and i + 1 < len(argv):
+            hz = float(argv[i + 1])
+        if a == '-o' and i + 1 < len(argv):
+            out = argv[i + 1]
+    if hz is None:
+        print('[mock v++] ERROR: no --clock.defaultFreqHz', file=sys.stderr); sys.exit(2)
+    if not (root / 'pl' / 'ip' / 'rtda_split.xo').is_file():
+        print('[mock v++] ERROR: no .xo to link', file=sys.stderr); sys.exit(2)
+    mhz = hz / 1e6
+    print(f'[mock v++] link at {mhz:.3f} MHz  cwd={root}')
+    mockgen.write_link_reports(root, mhz)
+    if out and mockgen.model(mhz)['routes']:
+        p = Path(out); p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b'mock xsa\n')
+    sys.exit(0 if mockgen.model(mhz)['routes'] else 1)
+print('[mock v++] ignoring', ' '.join(argv[:3]))
+sys.exit(0)

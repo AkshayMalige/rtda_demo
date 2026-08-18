@@ -154,3 +154,8 @@ pl_fixed/host_scan.exe
 # csim reference stamp -- keyed on EVENTS/stimulus so a stale reference cannot
 # be reused (see the note in pl_fixed/Makefile).
 pl_fixed/native/.tb.*
+
+# freq_sweep: build trees live outside the repo ($ROOT), but the harvested
+# reports and the resume state land in results/ and are regenerated.
+freq_sweep/results/*
+!freq_sweep/results/README.md
