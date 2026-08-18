@@ -150,3 +150,7 @@ pl_fixed/host_scan.exe
 
 # tools/build_all.sh PID lock -- one build at a time (AIE sims share data/).
 .build_all.lock
+
+# csim reference stamp -- keyed on EVENTS/stimulus so a stale reference cannot
+# be reused (see the note in pl_fixed/Makefile).
+pl_fixed/native/.tb.*

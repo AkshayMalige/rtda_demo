@@ -799,10 +799,28 @@ and packages all three SD images, and runs **no** simulator and **no** QEMU.
 `data` is in there because the images package the stimulus — packaging with an
 empty `testdata/` ships a card the hosts cannot read.
 
-**Do not run `build` and then `sim`.** `make system` replaces `Work_<P>/` with the
-GMIO system graph, so a later `sim` has to rebuild the PLIO one from scratch, and
-then the images are built from a graph the simulations no longer match. If you
-want both, run `all` (or `sim` first, then `build`).
+**`build` then `sim` is safe.** Verified, not assumed — the `EVENTS` simulation
+targets write their own workdir and archive:
+
+| target | workdir | archive |
+|---|---|---|
+| `make fastsim … EVENTS=5` | `Work_x86_<P>_ev5` | `libadf_x86_<P>_ev5.a` |
+| `make exactsim … EVENTS=5` | `Work_<P>_ev5` | `libadf_<P>_ev5.a` |
+| `make system` | `Work_<P>` | `libadf_<P>.a` |
+
+Different names, and neither simulation target has a prerequisite that pulls in
+`graph`. Nothing in the simulation path references `package/` or `sd_card.img` at
+all, so **running the sims after the images are built cannot disturb them.**
+
+The ordering rule in CLAUDE.md is real but narrower than it sounds: it applies to
+the *single-event* targets `make sim`, `make x86` and `make crosscheck`, which use
+`Work_<P>` — the workdir the system build owns. Those clash. The `EVENTS` variants,
+which are what this chain and `build_all.sh` use, do not.
+
+**What DOES destroy an image**, and the only things that do:
+`make system`, `make package`, `make repackage`, `make clean`, `make clean_all`.
+Once the images are built, do not run any of those until you have flashed and
+collected everything you need.
 
 | stage | what | cost |
 |---|---|---|

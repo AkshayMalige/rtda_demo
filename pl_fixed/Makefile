@@ -162,16 +162,36 @@ validate: $(NATIVE)
 # ahead of /usr/bin/make. Vitis HLS's post-check compilation then fails on
 # Ubuntu 22.04.
 SAFE_PATH := /usr/bin:/usr/local/bin:$(PATH)
+# csim and cosim are TARGET-AGNOSTIC -- they simulate the kernel, not a card. But
+# STIMULUS is chosen by TARGET, which defaults to hw_emu, so they used to inherit
+# the 100-track QEMU file: `make csim EVENTS=3` then died with
+#   "embed_input_100.txt has only 800 values, need 1200"
+# because 3 events needs 1200 and 100 tracks is 800. The simulation targets pick
+# their own stimulus, big enough for any sane EVENTS.
+SIM_STIMULUS ?= ../testdata/embed_input_50000.txt
+
 HLS_ENV   := RTDA_AP_DEFS="$(AP_DEFS)" \
-             RTDA_STIMULUS="$(abspath $(STIMULUS))" \
+             RTDA_STIMULUS="$(abspath $(SIM_STIMULUS))" \
              RTDA_TB_REFERENCE="$(CURDIR)/native/tb_means.txt" \
              RTDA_WEIGHTS_DIR="$(CURDIR)/pl/weights" \
              RTDA_EVENTS=$(EVENTS) RTDA_WARMUP=$(WARMUP)
 
 # csim compares against the native model, so build that reference first --
 # it can then never be stale with respect to the format being synthesised.
-native/tb_means.txt: $(NATIVE)
-	@$(NATIVE) $(STIMULUS) native $(EVENTS) $(WARMUP) >/dev/null
+# The reference has to match the stimulus AND the event count the testbench will
+# use. Depending on $(NATIVE) alone meant a reference built earlier -- for a
+# different EVENTS, or from a different stimulus -- was silently reused, and csim
+# then reported a "mismatch" that was entirely the reference being stale. Make
+# cannot see that a variable changed, so the value becomes a file name.
+TB_STAMP := native/.tb.$(EVENTS)ev.$(WARMUP)wu.$(VARIANT).$(notdir $(SIM_STIMULUS))
+
+$(TB_STAMP):
+	@mkdir -p native
+	@rm -f native/.tb.* native/tb_means.txt
+	@touch $@
+
+native/tb_means.txt: $(NATIVE) $(SIM_STIMULUS) $(TB_STAMP)
+	@$(NATIVE) $(SIM_STIMULUS) native $(EVENTS) $(WARMUP) >/dev/null
 	@mv native/track_means_all.txt native/tb_means.txt
 	@rm -f native/track_out_27.txt native/run_info.txt
 	@echo ">>> csim reference: native/tb_means.txt ($(EVENTS) events, $(VARIANT))"
