@@ -39,11 +39,24 @@
 *{box-sizing:border-box}
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font:400 17px/1.65 Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
+  font:400 18.5px/1.68 Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
   -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:1180px;margin:0 auto;padding:0 24px 96px}
-main{max-width:64ch}
+/* Use the whole window, but never run prose to the full width: a 200-character
+   line is unreadable no matter how much screen you own. So the PAGE goes wide,
+   the TEXT column stays at a comfortable measure, and figures break out of it. */
+.wrap{max-width:1760px;margin:0 auto;padding:0 40px 120px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media (min-width:1120px){
+  .cols{grid-template-columns:250px minmax(0,1fr);gap:56px;align-items:start}
+}
+/* The MEASURE is applied to the text elements, not to the main container.
+   Capping the container instead would cap the figures with it -- they are its
+   children -- and the diagrams are exactly what should use the extra width. */
+main{max-width:none}
+main p, main ul, main ol, main h2, main h3, main pre,
+main .note, main .why, main .check, main .tldr{max-width:80ch}
+main figure, main .tw, main .grid2{max-width:min(100%,1320px)}
 h1,h2,h3,.label,.step-n,figcaption,th,.pill,.toc{
   font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
@@ -69,7 +82,8 @@ a{color:var(--accent)}
 code{font-size:.86em;background:var(--surface-2);padding:.12em .38em;border-radius:4px;border:1px solid var(--rule)}
 
 /* ── figures: break out wider than the prose column ───────────────── */
-figure{margin:26px 0;max-width:min(100%,900px)}
+/* was capped at 900px; the diagrams are the reason to have a wide window */
+figure{margin:30px 0}
 figure svg{display:block;width:100%;height:auto;
   background:var(--surface);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow)}
 figcaption{font-size:13.5px;line-height:1.5;color:var(--ink-3);margin-top:9px;max-width:62ch}
@@ -112,11 +126,44 @@ td.num{text-align:right}
 .chip{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2)}
 .sw{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.14)}
 
-.toc{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--rule);
-  padding:11px 0;margin-bottom:0;font-size:13px;z-index:5;overflow-x:auto;white-space:nowrap}
+/* ── the "why" box: reasoning, as opposed to .note (a caveat) ─────── */
+.why{background:linear-gradient(0deg,var(--surface),var(--surface));
+  border:1px solid var(--rule);border-left:3px solid var(--data);
+  border-radius:0 8px 8px 0;padding:18px 22px;margin:26px 0;font-size:17px}
+.why .label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--data);font-weight:700;margin-bottom:7px;
+  font-family:ui-sans-serif,system-ui,sans-serif}
+.why p:last-child{margin-bottom:0}
+.why ul{margin:8px 0 0;padding-left:22px}
+
+/* a short "in one line" answer that sits right under a heading */
+.tldr{font-size:17px;color:var(--ink-2);border-left:3px solid var(--rule-2);
+  padding:2px 0 2px 16px;margin:0 0 20px}
+
+/* side-by-side cards for "option A vs option B" comparisons */
+.grid2{display:grid;grid-template-columns:1fr;gap:16px;margin:24px 0}
+@media (min-width:900px){ .grid2{grid-template-columns:1fr 1fr} }
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:9px;padding:16px 18px}
+.card h4{font:640 15px ui-sans-serif,system-ui,sans-serif;margin:0 0 8px;color:var(--ink)}
+.card p:last-child{margin-bottom:0}
+.card.bad{border-color:var(--dead);background:var(--dead-bg)}
+
+/* ── sidebar table of contents ────────────────────────────────────── */
+.toc{font-size:13.5px;font-family:ui-sans-serif,system-ui,sans-serif;
+  border-bottom:1px solid var(--rule);padding:11px 0;margin-bottom:0;
+  position:sticky;top:0;background:var(--bg);z-index:5;overflow-x:auto;white-space:nowrap}
 .toc a{color:var(--ink-3);text-decoration:none;margin-right:20px;font-weight:560}
 .toc a:hover,.toc a:focus-visible{color:var(--accent)}
-@media (max-width:760px){ body{font-size:16px} .wrap{padding:0 17px 64px} }
+@media (min-width:1120px){
+  .toc{position:sticky;top:24px;border-bottom:0;white-space:normal;overflow:visible;
+    padding:0;background:none;display:flex;flex-direction:column;gap:2px}
+  .toc a{margin:0;padding:6px 12px;border-radius:6px;border-left:2px solid transparent;
+    line-height:1.35}
+  .toc a:hover{background:var(--surface);border-left-color:var(--accent)}
+  .toc .toc-h{font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-3);font-weight:700;padding:0 12px 8px}
+}
+@media (max-width:760px){ body{font-size:17px} .wrap{padding:0 17px 64px} }
 </style>
 
 <div class="wrap">
@@ -128,7 +175,10 @@ td.num{text-align:right}
   No code until you already know what it does.</p>
 </header>
 
+<div class="cols">
 <nav class="toc">
+  <span class="toc-h">Contents</span>
+  <a href="#s0">0 · Where this is going</a>
   <a href="#s1">1 · The atom</a><a href="#s2">2 · The waste</a><a href="#s3">3 · Batching</a>
   <a href="#s4">4 · Growing</a><a href="#s5">5 · Splitting</a><a href="#s6">6 · Weights</a>
   <a href="#s7">7 · Free extras</a><a href="#s8">8 · Between layers</a>
@@ -136,6 +186,81 @@ td.num{text-align:right}
 </nav>
 
 <main>
+
+<section id="s0" style="padding-top:8px">
+<h2>Where this is going</h2>
+
+<p>Eleven steps, and they build in one direction: from a single machine instruction
+up to a 14-layer network. Each step exists because the previous one ran into a wall.
+Here is the whole argument on one line each, so you always know which wall you are
+standing at.</p>
+
+<figure>
+<svg viewBox="0 0 1000 400" role="img" aria-label="The chain of problems and fixes from the atom to the whole network">
+  <style>
+    .n{font:700 12px ui-sans-serif,system-ui,sans-serif;fill:var(--acc)}
+    .t{font:700 14px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .d{font:400 12.5px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .w{font:400 12.5px ui-sans-serif,system-ui,sans-serif;fill:var(--wts)}
+    .ar{stroke:var(--rule-2);stroke-width:1.5;fill:none;marker-end:url(#a0)}
+  </style>
+  <defs><marker id="a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--rule-2)"/></marker></defs>
+
+  <g>
+    <rect x="24" y="26" width="952" height="46" rx="7" fill="var(--data-bg)" stroke="var(--data)" stroke-width="1.5"/>
+    <text class="n" x="42" y="46">STEP 1</text>
+    <text class="t" x="110" y="46">The chip does one thing: a 4×8 block times an 8×4 block.</text>
+    <text class="d" x="110" y="64">Everything else in this document is a consequence of that sentence.</text>
+  </g>
+  <path class="ar" d="M500,74 L500,90"/>
+  <g>
+    <rect x="24" y="94" width="952" height="46" rx="7" fill="var(--surface)" stroke="var(--rule)"/>
+    <text class="n" x="42" y="114">STEP 2–3</text>
+    <text class="w" x="110" y="114">WALL: one track only fills 1 of the 4 rows. 75% wasted.</text>
+    <text class="d" x="110" y="132">FIX: push 8 tracks through together. This is the 29× on its own.</text>
+  </g>
+  <path class="ar" d="M500,142 L500,158"/>
+  <g>
+    <rect x="24" y="162" width="952" height="46" rx="7" fill="var(--surface)" stroke="var(--rule)"/>
+    <text class="n" x="42" y="182">STEP 4</text>
+    <text class="w" x="110" y="182">WALL: a real layer is 512 atoms, not one.</text>
+    <text class="d" x="110" y="200">FIX: tile it. Across = independent outputs; down = partial sums to add.</text>
+  </g>
+  <path class="ar" d="M500,210 L500,226"/>
+  <g>
+    <rect x="24" y="230" width="952" height="46" rx="7" fill="var(--surface)" stroke="var(--rule)"/>
+    <text class="n" x="42" y="250">STEP 5</text>
+    <text class="w" x="110" y="250">WALL: 128 KB of weights will not fit in a 16 KB tile.</text>
+    <text class="d" x="110" y="268">FIX: split over 8 tiles — chains (independent) and cascades (chained sums).</text>
+  </g>
+  <path class="ar" d="M500,278 L500,294"/>
+  <g>
+    <rect x="24" y="298" width="952" height="46" rx="7" fill="var(--surface)" stroke="var(--rule)"/>
+    <text class="n" x="42" y="318">STEP 6–8</text>
+    <text class="w" x="110" y="318">WALL: the pieces are in the wrong order, in the wrong shape, in the wrong tile.</text>
+    <text class="d" x="110" y="336">FIX: pre-pack the weights, fold bias/ReLU into the maths, let the DMA reshape.</text>
+  </g>
+  <path class="ar" d="M500,346 L500,362"/>
+  <g>
+    <rect x="24" y="366" width="952" height="30" rx="7" fill="var(--acc-bg)" stroke="var(--acc)" stroke-width="1.5"/>
+    <text class="t" x="110" y="386">STEP 9–11 · the two odd kernels, the code, and how to map your own model.</text>
+    <text class="n" x="42" y="386">FINISH</text>
+  </g>
+</svg>
+<figcaption><b>The spine of the argument.</b> Every step is a wall followed by a fix.
+If you lose the thread, come back here and find which wall you were at.</figcaption>
+</figure>
+
+<div class="note"><span class="label">How to read this if it starts feeling abstract</span>
+<p>Three colours are used consistently in every diagram, and they always mean the same
+thing: <b style="color:var(--data)">input data</b>,
+<b style="color:var(--wts)">weights</b>,
+<b style="color:var(--acc)">results and accumulators</b>. Grey is waste or padding.</p>
+<p>And whenever a number appears — 4, 8, 16 KB, 512 — it comes from one of two places:
+either the size of a piece of hardware, or a division you can do yourself. Nothing here
+is a tuning constant somebody guessed.</p></div>
+</section>
 
 <section id="s1">
 <span class="step-n">STEP 1</span>
@@ -236,6 +361,98 @@ this one picture.</figcaption>
 <p>The hardware does not multiply <em>a vector</em> by a matrix. It multiplies
 <strong>a 4-row block</strong> by a matrix. Whether you have 4 rows of real data or
 not, it computes 4 rows.</p></div>
+
+<h3>Why 4×8×4? Why not 8×16×8, or bigger?</h3>
+
+<p class="tldr">Because it is not a dial you can turn. It is the shape the silicon
+implements, and the compiler offers you a short menu of them — not a range.</p>
+
+<p>This is the first question everyone asks, and the honest answer has two halves.
+The first half is simply: <strong>you don't choose it.</strong> The AIE-ML vector unit
+has a matrix-multiply instruction wired into the silicon, and that instruction has a
+fixed operand geometry. The library exposes the handful of shapes the hardware
+actually implements, per data type. You pick from that list. There is no
+<code>mmul&lt;8,16,8&gt;</code> to pick unless the hardware has one.</p>
+
+<p>The second half is more interesting: <strong>why is the list short, and why are the
+entries that size?</strong> Because the three numbers are not free parameters — each one
+is pinned by a different physical resource.</p>
+
+<figure>
+<svg viewBox="0 0 1000 300" role="img" aria-label="M is set by the multiplier rows, K by the vector register width, N by the accumulator register">
+  <style>
+    .h{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .s{font:400 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .v{font:700 22px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .bx{fill:var(--surface-2);stroke:var(--rule-2);stroke-width:1.5}
+  </style>
+  <rect class="bx" x="24" y="40" width="300" height="220" rx="9"/>
+  <text class="v" x="44" y="78">M = 4</text>
+  <text class="h" x="44" y="104">set by the multiplier array</text>
+  <text class="s" x="44" y="128">The unit has physical rows of</text>
+  <text class="s" x="44" y="146">multipliers. Four of them.</text>
+  <text class="s" x="44" y="164">You cannot ask for a fifth,</text>
+  <text class="s" x="44" y="182">and you pay for all four</text>
+  <text class="s" x="44" y="200">whether you fill them or not.</text>
+  <text class="s" x="44" y="228" font-weight="700" fill="var(--data)">This is the one Step 2 is about.</text>
+
+  <rect class="bx" x="348" y="40" width="300" height="220" rx="9"/>
+  <text class="v" x="368" y="78">K = 8</text>
+  <text class="h" x="368" y="104">set by the register width</text>
+  <text class="s" x="368" y="128">A is 4×8 = 32 numbers and B is</text>
+  <text class="s" x="368" y="146">8×4 = 32 numbers. Each side is</text>
+  <text class="s" x="368" y="164">exactly one vector register's</text>
+  <text class="s" x="368" y="182">worth, loaded in one go.</text>
+  <text class="s" x="368" y="200">Bigger K = more than one load,</text>
+  <text class="s" x="368" y="218">and the instruction stalls.</text>
+
+  <rect class="bx" x="672" y="40" width="304" height="220" rx="9"/>
+  <text class="v" x="692" y="78">N = 4</text>
+  <text class="h" x="692" y="104">set by the accumulator file</text>
+  <text class="s" x="692" y="128">C is 4×4 = 16 accumulators,</text>
+  <text class="s" x="692" y="146">and they are WIDE — more bits</text>
+  <text class="s" x="692" y="164">than the inputs, to keep the</text>
+  <text class="s" x="692" y="182">sum exact.</text>
+  <text class="s" x="692" y="200">Accumulator registers are the</text>
+  <text class="s" x="692" y="218">scarcest thing on the tile.</text>
+  <text class="s" x="692" y="246" font-weight="700" fill="var(--acc)">Step 4 spends four of them at once.</text>
+</svg>
+<figcaption><b>Three numbers, three different reasons.</b> Nothing here is a
+performance preference — each dimension is the size of a piece of hardware.</figcaption>
+</figure>
+
+<p>So "why not bigger" becomes three separate questions with three answers:
+there are only four multiplier rows; a wider K would need more than one register
+load per operand; and a wider N would need more accumulator registers, which is
+exactly the resource the kernel is already spending to keep the pipeline full
+(you'll see it hold <em>four</em> accumulators live in Step 4).</p>
+
+<div class="why"><span class="label">The evidence that it really is fixed</span>
+<p>This design is built twice — once in float32, once in bfloat16. bf16 is
+<em>half the width</em>, so the obvious guess is that it gets a bigger atom: twice as
+many numbers should fit in the same register.</p>
+<p><strong>It doesn't.</strong> Both precisions use the same <code>(4, 8, 4)</code>.
+You can read that decision in <code>aie_batch/gen_graph.py</code>:</p>
+<pre><code><span class="cmt"># On AIE-ML both use the SAME aie::mmul microtile, (4,8,4) -- see</span>
+<span class="cmt"># op_impls/families/matmul/common.py MICROTILE_OPTIONS -- so BATCH stays 8</span>
+<span class="cmt"># and the whole batching argument is unchanged by the precision switch.</span></code></pre>
+<p>The name to notice is <strong><code>MICROTILE_OPTIONS</code></strong> — a list, not a
+formula. And the practical consequence is the useful part: because the atom does not
+change with precision, <strong>everything you learn in this tutorial stays true when
+you switch to bf16.</strong> Only the speed changes.</p></div>
+
+<div class="check"><span class="label">Check yourself</span>
+<p>If bf16 uses the same 4×8×4 atom as fp32 — same number of multiplies per
+instruction — why is the bf16 design 2.5× faster?</p>
+<details><summary>Answer</summary>
+<p>Because the atom is the same <em>shape</em>, not the same <em>speed</em>. The
+instruction issues faster for the narrower type: the measured initiation interval
+drops from <b>4161 ns</b> per iteration (fp32) to <b>1033 ns</b> (bf16), roughly 4×.
+Halving the input bytes also halves what has to be moved into the tile.</p>
+<p>The design gets 2.5× rather than 4× — and finding out where the other 1.5× went
+is exactly what the performance scan in <code>analysis/rtda_scan.ipynb</code> was
+built for. It turns out bf16 is no longer compute-bound at all.</p>
+</details></div>
 </section>
 
 <section id="s2">
@@ -277,6 +494,18 @@ and their answers are thrown away.</p>
 <figcaption><b>Three quarters discarded.</b> This is not a tuning problem. It is the
 shape of the problem not matching the shape of the instruction.</figcaption>
 </figure>
+
+<div class="why"><span class="label">Why no compiler flag fixes this</span>
+<p>The instinct on seeing "25% utilisation" is to look for a switch. There isn't one,
+and it is worth understanding why, because it tells you what kind of problem this is.</p>
+<p>The compiler's job is to schedule the instructions you asked for. You asked for a
+matrix × vector. It compiled a matrix × vector — correctly, efficiently, using the only
+matrix instruction the chip has. <strong>The waste is in the shape of the request, not
+in the translation of it.</strong> No amount of optimising a 1-row multiply turns it into
+a 4-row multiply; only feeding it four rows does that, and only <em>you</em> know where
+to find four rows.</p>
+<p>Which is the general lesson: on this device the compiler cannot restructure your
+dataflow. Matching the hardware's shape is your job, and it is nearly all of the job.</p></div>
 
 <p>That single fact is the whole 29× speedup. Everything that follows is just the
 bookkeeping needed to fill those rows.</p>
@@ -347,10 +576,188 @@ cost the same as 4.</strong></p></div>
 <span class="step-n">STEP 4</span>
 <h2>Real layers are bigger than the atom. Tile them.</h2>
 
-<p>Our atom handles 4 tracks × 8 features → 4 outputs. A real layer is 128 features →
-128 outputs. So you cover the big rectangle with copies of the small one.</p>
+<p class="tldr">A layer is a big rectangle. The atom is a small rectangle. Cover one
+with copies of the other — but the two directions you can move in mean different
+things, and that difference decides the whole design.</p>
 
-<p>Two directions, and they behave differently:</p>
+<p>Our atom handles 4 tracks × 8 features → 4 outputs. A real layer is 128 features →
+128 outputs. Those are not close, so let's be exact about how far apart they are.</p>
+
+<h3>How many atoms is one layer, actually?</h3>
+
+<p>Take the 128→128 layer. For <strong>one</strong> block of 4 tracks:</p>
+
+<div class="tw"><table>
+<tr><th>question</th><th>arithmetic</th><th>answer</th></tr>
+<tr><td>How many atoms across? (outputs)</td><td>128 outputs ÷ N=4</td><td class="num">32</td></tr>
+<tr><td>How many atoms down? (inputs)</td><td>128 features ÷ K=8</td><td class="num">16</td></tr>
+<tr><td>Atoms for 4 tracks</td><td>32 × 16</td><td class="num">512</td></tr>
+<tr><td>Multiply-accumulates in those</td><td>512 × (4×8×4)</td><td class="num">65,536</td></tr>
+<tr><td>Sanity check: 4 tracks × 128 × 128</td><td>the same number</td><td class="num">65,536</td></tr>
+</table></div>
+
+<p>The last two rows agreeing is the point of the table. <strong>Tiling does not add
+work.</strong> It is the same multiplies, in a different order — an order the hardware
+can actually execute.</p>
+
+<div class="why"><span class="label">STOP. An atom is a moment in time, not a piece of hardware.</span>
+<p>This is the single most important sentence in the document, and if the rest has felt
+like it doesn't add up, this is almost certainly why.</p>
+<p><strong>512 atoms does not mean 512 tiles.</strong> It means <em>512 executions of
+one instruction</em> — a loop. One tile can run all 512, one after another, in about
+half a microsecond. A tile is a small processor; running a loop is what it does.</p>
+<p>So the two numbers you are juggling live in different dimensions:</p>
+<ul>
+<li><strong>Atoms are TIME.</strong> How many times the instruction issues. Decided by
+the layer's shape ÷ the atom's shape.</li>
+<li><strong>Tiles are SPACE.</strong> How many processors hold a piece of the problem.
+Decided by one thing only — whether the weights fit in 16 KB.</li>
+</ul>
+<p>They are almost independent. Splitting a layer over 8 tiles does not change how many
+atoms there are; it changes <em>who runs which ones</em>, and they run at the same time
+instead of one after another.</p></div>
+
+<figure>
+<svg viewBox="0 0 1000 330" role="img" aria-label="One tile running 512 atoms sequentially versus four tiles running 128 each in parallel">
+  <style>
+    .h{font:700 13.5px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .s{font:400 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .sb{font:700 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .tl{fill:var(--surface-2);stroke:var(--rule-2);stroke-width:1.5}
+    .at{fill:var(--acc-bg);stroke:var(--acc);stroke-width:0.8}
+  </style>
+
+  <text class="h" x="24" y="26">IF the weights fitted: 1 tile, 512 atoms, one after another</text>
+  <rect class="tl" x="24" y="40" width="120" height="52" rx="6"/>
+  <text class="sb" x="84" y="62" text-anchor="middle">one tile</text>
+  <text class="s" x="84" y="80" text-anchor="middle">64 KB weights</text>
+  <g class="at">
+    <rect x="160" y="52" width="10" height="28"/><rect x="173" y="52" width="10" height="28"/>
+    <rect x="186" y="52" width="10" height="28"/><rect x="199" y="52" width="10" height="28"/>
+    <rect x="212" y="52" width="10" height="28"/><rect x="225" y="52" width="10" height="28"/>
+    <rect x="238" y="52" width="10" height="28"/><rect x="251" y="52" width="10" height="28"/>
+  </g>
+  <text class="s" x="272" y="70">… 512 of these, in a loop, on the SAME tile →</text>
+  <text class="sb" x="700" y="70" fill="var(--acc)">time ────────────────────►</text>
+  <text class="s" x="24" y="112">This would work perfectly. The instruction count is identical. It is simply not allowed:</text>
+  <text class="s" x="24" y="130" font-weight="700" fill="var(--wts)">64 KB of weights will not fit in a tile's 16 KB. That, and only that, is why we split.</text>
+
+  <line x1="24" y1="152" x2="976" y2="152" stroke="var(--rule)" stroke-width="1"/>
+
+  <text class="h" x="24" y="180">SO: 4 tiles, 128 atoms each, all four at once</text>
+  <g>
+    <rect class="tl" x="24" y="196" width="120" height="34" rx="6"/>
+    <rect class="tl" x="24" y="234" width="120" height="34" rx="6"/>
+    <rect class="tl" x="24" y="272" width="120" height="34" rx="6"/>
+    <rect class="tl" x="24" y="310" width="120" height="14" rx="6"/>
+  </g>
+  <text class="s" x="84" y="218" text-anchor="middle">tile A · 16 KB</text>
+  <text class="s" x="84" y="256" text-anchor="middle">tile B · 16 KB</text>
+  <text class="s" x="84" y="294" text-anchor="middle">tile C · 16 KB</text>
+  <g class="at">
+    <rect x="160" y="203" width="10" height="20"/><rect x="173" y="203" width="10" height="20"/><rect x="186" y="203" width="10" height="20"/><rect x="199" y="203" width="10" height="20"/>
+    <rect x="160" y="241" width="10" height="20"/><rect x="173" y="241" width="10" height="20"/><rect x="186" y="241" width="10" height="20"/><rect x="199" y="241" width="10" height="20"/>
+    <rect x="160" y="279" width="10" height="20"/><rect x="173" y="279" width="10" height="20"/><rect x="186" y="279" width="10" height="20"/><rect x="199" y="279" width="10" height="20"/>
+  </g>
+  <text class="s" x="220" y="217">… 128 atoms, in a loop</text>
+  <text class="s" x="220" y="255">… 128 atoms, in a loop</text>
+  <text class="s" x="220" y="293">… 128 atoms, in a loop</text>
+  <text class="s" x="430" y="217">(tile D too — 4 in total)</text>
+  <text class="sb" x="430" y="255" fill="var(--acc)">Same 512 atoms.</text>
+  <text class="sb" x="430" y="273" fill="var(--acc)">Now running four-wide,</text>
+  <text class="sb" x="430" y="291" fill="var(--acc)">so roughly a quarter the time.</text>
+  <text class="s" x="660" y="217">Splitting for MEMORY</text>
+  <text class="s" x="660" y="235">bought us SPEED as a</text>
+  <text class="s" x="660" y="253">side effect. That is the</text>
+  <text class="s" x="660" y="271">only reason the tile count</text>
+  <text class="s" x="660" y="289">and the speed look related.</text>
+</svg>
+<figcaption><b>Time versus space.</b> The atom count never changes. The tile count is
+forced by the 16 KB weight limit — and once you have been forced into 4 tiles, you get
+4× the throughput whether you wanted it or not.</figcaption>
+</figure>
+
+<h3>So how many tiles does the whole network use?</h3>
+
+<p>Now the budget question, with the real numbers from this repo. The VEK280 carries an
+<strong>XCVE2802</strong>, whose AIE-ML array is <strong>304 engines — 8 rows ×
+38 columns</strong>. This design's 14 dense layers use <strong>65</strong> of them,
+plus 4 more for the two hand-written kernels, plus 13 memory tiles:</p>
+
+<div class="tw"><table>
+<tr><th>layer</th><th>in → out</th><th>weights</th><th>÷ 16 KB</th><th>split (chains × cascade)</th><th>tiles</th><th>atoms per tile, per 4 tracks</th></tr>
+<tr><td>L1 embed d0</td><td>16 → 128</td><td class="num">8 KB</td><td class="num">fits</td><td>1 × 1</td><td class="num">1</td><td class="num">64</td></tr>
+<tr><td>L2 embed d1</td><td>128 → 128</td><td class="num">64 KB</td><td class="num">4</td><td>2 × 2</td><td class="num">4</td><td class="num">128</td></tr>
+<tr><td>L3 solver d0</td><td>256 → 128</td><td class="num">128 KB</td><td class="num">8</td><td>2 × 4</td><td class="num">8</td><td class="num">128</td></tr>
+<tr><td>L4–L6 solver d1–d3</td><td>128 → 128</td><td class="num">64 KB</td><td class="num">4</td><td>2 × 2</td><td class="num">4 each</td><td class="num">128</td></tr>
+<tr><td colspan="5">…solver block repeats three times…</td><td class="num">65</td><td>total</td></tr>
+</table></div>
+
+<p><strong>Every tile in the design runs 128 atoms per 4 tracks.</strong> That is not a
+coincidence — it falls straight out of the 16 KB rule. A tile holds a 64×64 weight
+slice, and a 64×64 slice is (64÷8) × (64÷4) = 8 × 16 = 128 atoms. The memory limit fixes
+the slice; the slice fixes the work.</p>
+
+<div class="check"><span class="label">Check yourself</span>
+<p>65 tiles out of 304. Why not use all 304 and go ~4× faster again?</p>
+<details><summary>Answer</summary>
+<p>Because there is nothing left to split. Splitting is driven by the 16 KB weight
+limit, and every layer already sits <em>exactly</em> at 16 KB per tile — you cannot
+divide a layer further without tiles that hold less than they could.</p>
+<p>You could of course run <strong>more copies of the whole network</strong> side by side
+on the spare tiles, and process four independent track streams at once. That is a
+throughput win, not a latency win, and this design did not need it: the array is already
+faster than the host can feed it. The performance scan shows the fp32 design spending
+only 3.4% of its time outside the array — there is no headroom to reclaim by adding
+tiles, because the array is not what you are waiting for.</p>
+</details></div>
+
+<figure>
+<svg viewBox="0 0 1000 340" role="img" aria-label="A 128 by 128 layer covered by a 32 by 16 grid of atoms">
+  <style>
+    .h{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .s{font:400 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .sb{font:700 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+  </style>
+  <text class="h" x="30" y="28">One 128→128 layer, for one block of 4 tracks</text>
+
+  <!-- the big rectangle, drawn as a 32 x 16 grid of small atoms -->
+  <g fill="var(--acc-bg)" stroke="var(--acc)" stroke-width="0.5" opacity="0.55">
+    <!-- 16 rows x 32 cols of 18x13 cells starting at 60,52 -->
+    <g id="atoms"></g>
+  </g>
+  <!-- drawn explicitly: 16 rows -->
+  <g fill="var(--acc-bg)" stroke="var(--acc)" stroke-width="0.5">
+    <rect x="60" y="52" width="576" height="208" fill="var(--acc-bg)" stroke="var(--acc)" stroke-width="1.5"/>
+  </g>
+  <!-- grid lines every 18 across (32 cols) and 13 down (16 rows) -->
+  <g stroke="var(--acc)" stroke-width="0.4" opacity="0.5">
+    <path d="M78,52 v208 M96,52 v208 M114,52 v208 M132,52 v208 M150,52 v208 M168,52 v208 M186,52 v208 M204,52 v208 M222,52 v208 M240,52 v208 M258,52 v208 M276,52 v208 M294,52 v208 M312,52 v208 M330,52 v208 M348,52 v208 M366,52 v208 M384,52 v208 M402,52 v208 M420,52 v208 M438,52 v208 M456,52 v208 M474,52 v208 M492,52 v208 M510,52 v208 M528,52 v208 M546,52 v208 M564,52 v208 M582,52 v208 M600,52 v208 M618,52 v208"/>
+    <path d="M60,65 h576 M60,78 h576 M60,91 h576 M60,104 h576 M60,117 h576 M60,130 h576 M60,143 h576 M60,156 h576 M60,169 h576 M60,182 h576 M60,195 h576 M60,208 h576 M60,221 h576 M60,234 h576 M60,247 h576"/>
+  </g>
+  <!-- highlight one atom -->
+  <rect x="60" y="52" width="18" height="13" fill="var(--data-bg)" stroke="var(--data)" stroke-width="2"/>
+  <text class="sb" x="30" y="290" fill="var(--data)">▲ one atom: 4 tracks × 8 features → 4 outputs</text>
+
+  <text class="sb" x="348" y="284" text-anchor="middle">32 atoms across  →  128 output features</text>
+  <text class="sb" x="40" y="156" transform="rotate(-90 40 156)" text-anchor="middle">16 atoms down → 128 inputs</text>
+
+  <text class="h" x="676" y="72">512 atoms</text>
+  <text class="s" x="676" y="94">for four tracks.</text>
+  <text class="s" x="676" y="124">Across: independent.</text>
+  <text class="s" x="676" y="142">Each column of atoms is a</text>
+  <text class="s" x="676" y="160">different set of 4 outputs.</text>
+  <text class="s" x="676" y="190">Down: NOT independent.</text>
+  <text class="s" x="676" y="208">All 16 in a column are pieces</text>
+  <text class="s" x="676" y="226">of the SAME output, and must</text>
+  <text class="s" x="676" y="244">be added together.</text>
+</svg>
+<figcaption><b>The whole layer, to scale.</b> 512 small rectangles cover one big one.
+The highlighted cell is the single instruction from Step 1 — that is how much of a
+layer one instruction is.</figcaption>
+</figure>
+
+<p>Two directions, and this is the part that matters:</p>
 
 <figure>
 <svg viewBox="0 0 860 300" role="img" aria-label="Tiling across output features versus down input features">
@@ -393,6 +800,19 @@ That difference is the single most important idea in the next step.</figcaption>
 <p>So a full dense layer is three nested loops: <em>over tracks</em>, <em>over
 output features</em>, and <em>over input features</em>. Only the last one accumulates.</p>
 
+<div class="why"><span class="label">Why this distinction is the whole design</span>
+<p>Everything in Step 5 falls out of it. Ask what happens if you put two atoms on
+two <em>different tiles</em>:</p>
+<ul>
+<li><strong>Two atoms from across</strong> (different outputs) — the tiles never need to
+talk. Split them anywhere, on any two tiles, in any order. Free.</li>
+<li><strong>Two atoms from down</strong> (same output, different input slice) — one tile
+holds half an answer and the other holds the rest. Somebody has to <em>add them</em>,
+which means a wire between the tiles and a rule about who goes first.</li>
+</ul>
+<p>So "how do I split a layer that doesn't fit" has two very different answers with
+two different costs, and picking between them is the actual engineering.</p></div>
+
 <div class="note"><span class="label">Why the sum stays exact</span>
 <p>When you add up those partial sums, the running total is kept in a
 <strong>wide accumulator</strong> — more bits than the numbers going in. It is only
@@ -405,14 +825,50 @@ losing a little precision at every step.</p></div>
 <span class="step-n">STEP 5</span>
 <h2>One layer doesn't fit on one tile. Split it.</h2>
 
-<p>An AIE tile is a small processor with its own memory. The memory that holds weights
-is <strong>16 KB</strong>. That is a hard wall.</p>
+<p class="tldr">The limit is not speed. It is that the weights physically do not fit
+in the tile's memory — so the number of tiles is decided by division, before any
+performance thinking happens at all.</p>
 
-<p>A 256→128 layer in float32 needs 256 × 128 × 4 bytes = <strong>128 KB</strong> of
-weights. It is 8× too big for one tile. So the layer has to be spread over
-<strong>at least 8 tiles</strong>.</p>
+<p>An AIE tile is a small processor with its own private memory. Of that, the budget
+for weights is <strong>16 KB</strong>. That is a wall, not a guideline: exceed it and
+the design does not compile.</p>
 
-<p>You already know the two directions. Now they get names:</p>
+<p>Now weigh a real layer against it. Weights are one number per (input, output) pair,
+so a 256→128 layer holds 256 × 128 = 32,768 of them, at 4 bytes each in float32:</p>
+
+<figure>
+<svg viewBox="0 0 1000 260" role="img" aria-label="A 128 KB layer against the 16 KB per-tile wall, requiring 8 tiles">
+  <style>
+    .h{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .s{font:400 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .sb{font:700 13px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .big{font:700 20px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+  </style>
+  <text class="h" x="30" y="28">What one 256→128 layer weighs</text>
+
+  <rect x="30" y="46" width="800" height="46" fill="var(--wts-bg)" stroke="var(--wts)" stroke-width="1.5" rx="5"/>
+  <text class="big" x="430" y="76" text-anchor="middle">128 KB of weights</text>
+
+  <text class="sb" x="30" y="126">what one tile can hold:</text>
+  <rect x="30" y="140" width="100" height="40" fill="var(--data-bg)" stroke="var(--data)" stroke-width="1.5" rx="5"/>
+  <text class="sb" x="80" y="165" text-anchor="middle">16 KB</text>
+
+  <g fill="var(--dead-bg)" stroke="var(--dead)" stroke-width="1.2" stroke-dasharray="4 3">
+    <rect x="134" y="140" width="100" height="40" rx="5"/><rect x="238" y="140" width="100" height="40" rx="5"/>
+    <rect x="342" y="140" width="100" height="40" rx="5"/><rect x="446" y="140" width="100" height="40" rx="5"/>
+    <rect x="550" y="140" width="100" height="40" rx="5"/><rect x="654" y="140" width="100" height="40" rx="5"/>
+    <rect x="758" y="140" width="72" height="40" rx="5"/>
+  </g>
+  <text class="s" x="430" y="206" text-anchor="middle">128 ÷ 16 = you need eight of them. There is no version of this that fits on one.</text>
+  <text class="s" x="430" y="232" text-anchor="middle" font-weight="700" fill="var(--ink-2)">The tile count is a division, not a decision.</text>
+</svg>
+<figcaption><b>Arithmetic first, architecture second.</b> Every layer in this design
+was sized this way — weight bytes ÷ 16 KB — before anyone thought about latency.</figcaption>
+</figure>
+
+<p>Eight tiles, then. But <em>which</em> eight — and split which way? You already know
+there are two directions, and from Step 4 you know they cost different things. Now they
+get their names:</p>
 
 <figure>
 <svg viewBox="0 0 860 330" role="img" aria-label="CAS_NUM splits outputs into independent chains, CAS_LENGTH splits inputs into a cascade">
@@ -497,19 +953,78 @@ that running total. Crucially it carries the <em>full-precision</em> total — n
 to the nearest penny before passing it on. So splitting the work across 8 tiles gives
 bit-identical results to doing it on one.</p>
 
+<h3>Why 2 chains and not 4? Work the options, all three of them</h3>
+
+<p>A 128→128 layer is 64 KB of weights, so it needs 4 tiles. There are exactly three
+ways to arrange 4 tiles, and it is worth checking all of them rather than being told the
+answer — because the winner is <em>not</em> the one the latency rule picks.</p>
+
+<div class="tw"><table>
+<tr><th>arrangement</th><th>what each tile holds</th><th>bytes per tile</th><th>fits 16 KB?</th><th>cascade depth</th><th>DMA streams out of the memtile</th></tr>
+<tr><td><b>1 × 4</b> — one chain, 4 deep</td><td>32 inputs × 128 outputs</td><td class="num">16 KB</td><td>yes</td><td class="num">4 — worst</td><td class="num">1</td></tr>
+<tr><td><b>2 × 2</b> — two chains, 2 deep</td><td>64 inputs × 64 outputs</td><td class="num">16 KB</td><td>yes</td><td class="num">2</td><td class="num">2</td></tr>
+<tr><td><b>4 × 1</b> — four chains, no cascade</td><td>128 inputs × 32 outputs</td><td class="num">16 KB</td><td>yes</td><td class="num">1 — best</td><td class="num">4 — too many</td></tr>
+</table></div>
+
+<p>All three fit the memory <em>exactly</em>. So memory does not decide this one — it
+already did its job by saying "4 tiles".</p>
+
+<p>On latency alone, <strong>4 × 1 should win</strong>: no cascade at all, nothing waiting
+for a neighbour. And it is chosen against anyway, for a reason that has nothing to do
+with either arithmetic:</p>
+
+<div class="why"><span class="label">The real limit: a memory tile has 6 outgoing DMA channels</span>
+<p>Every chain has to be fed. Four independent chains means four separate streams out of
+the shared buffer that holds the layer's input — and a memory tile has only
+<strong>6 outgoing (MM2S) channels</strong> in total, shared with everything else that
+needs to read that buffer. Ask for 4 chains on the 128-wide layers and you run out.</p>
+<p>It is written down in <code>aie_batch/gen_graph.py</code>, in as many words:</p>
+<pre><code><span class="cmt"># cas_num is capped at 2 on the 128-wide layers: the default of 4</span>
+<span class="cmt"># saturates the 6 MM2S DMA channels of a memory tile.</span></code></pre>
+<p>So 2 × 2 is the compromise: the best cascade depth still reachable within the channel
+budget. <strong>The rule picked 4 × 1; a countable resource elsewhere overruled it.</strong></p>
+<p>That pattern — a clean principle, overruled by some other resource you have to go and
+count — is most of what designing for this device feels like. It is also why "why is it
+2?" almost never has an answer in the layer's own arithmetic.</p></div>
+
 <div class="check"><span class="label">Check yourself</span>
-<p>Why is a 128→128 layer split 2×2 and not 1×4 or 4×1?</p>
+<p>The 256→128 layer (L3) uses 2 × 4 = 8 tiles, so its cascade is 4 deep — the depth we
+just called "worst". Why is that acceptable there?</p>
 <details><summary>Answer</summary>
-<p>128 × 128 × 4 bytes = 64 KB, so it needs 4 tiles minimum. Any factorisation into 4
-satisfies memory. <strong>2×2 is chosen because it makes the cascade only 2 long instead of
-4</strong> — shorter chain, less latency. 4×1 would mean 4 chains of 1, which needs each tile
-to hold all 128 input features' worth of weights for its outputs, and that's back over 16 KB.</p>
+<p>Because it has no choice. 256 × 128 × 4 B = 128 KB needs 8 tiles, and chains are
+capped at 2 by the same DMA limit — so 8 ÷ 2 = a cascade 4 deep. The options were 2 × 4
+or nothing.</p>
+<p>Note what that means for the whole design: the deepest cascade in the network is
+set by the widest layer, and the widest layer exists because the roll-concat doubles
+128 features into 256. The cost of that concatenation shows up here, four tiles away
+from where it was introduced.</p>
 </details></div>
+
+<div class="why"><span class="label">So which split do you pick? Two rules, and a real constraint</span>
+<p>Memory tells you <em>how many</em> tiles. It does not tell you the shape. For that:</p>
+<ul>
+<li><strong>Prefer more chains, shorter cascades.</strong> A cascade of 4 means the last
+tile cannot finish until three others have gone before it — that latency is on every
+single pass. Independent chains have no such ordering.</li>
+<li><strong>But chains are capped at 2 here, and not for a tidy reason.</strong> Each
+chain has to be fed from the shared buffer, and a memory tile has only
+<strong>6 outgoing DMA channels</strong>. Ask for 4 chains on the 128-wide layers and
+you run out of channels. The code says so out loud:
+<code>cas_num is capped at 2 on the 128-wide layers: the default of 4 saturates the
+6 MM2S DMA channels of a memory tile</code>.</li>
+</ul>
+<p>That is the shape of nearly every decision on this device: a clean rule, overruled
+by a countable hardware resource somewhere else.</p></div>
 
 <div class="note"><span class="label">This is where designs are actually decided</span>
 <p>Not by performance intuition — by <strong>arithmetic</strong>. Weight bytes ÷ 16 KB =
 minimum tiles. In this whole design, every layer but the first sits at
-<em>exactly</em> 16 KB per tile. The tile counts were chosen to hit that wall.</p></div>
+<em>exactly</em> 16 KB per tile. The tile counts were chosen to hit that wall.</p>
+<p>One deliberate exception worth knowing about: the cascade lengths in this project
+are <strong>pinned by hand</strong>, not chosen by the tool. bf16 halves the weight
+bytes, so the resolver would happily give it shorter cascades than fp32 — and then the
+two builds would differ in <em>parallelism</em> as well as precision, and no comparison
+between them would mean anything. Pinning keeps precision the only variable.</p></div>
 </section>
 
 <section id="s6">
@@ -522,10 +1037,26 @@ iteration is pure compute. Nothing about this part needed to change.</p>
 
 <p>What <em>did</em> change is the <strong>order the numbers are stored in</strong>.</p>
 
+<p class="tldr">The numbers are the same. Only their order in memory changes — and it
+changes to match the order the kernel will ask for them in.</p>
+
 <p>The kernel grabs weights 32 at a time — one whole 8×4 block, in one memory read.
 For that to be a single fast read, those 32 numbers must be <strong>next to each other
 in memory</strong>. But in a normal row-by-row weight matrix, an 8×4 block is scattered
 across 8 different rows.</p>
+
+<div class="why"><span class="label">Why not just let the hardware gather them?</span>
+<p>Because a "gather" is not one operation. Reading 32 contiguous numbers is a single
+instruction. Reading 4 numbers from each of 8 different rows is eight separate reads
+plus the address arithmetic to work out where each row starts — and it happens
+<em>inside the innermost loop</em>, the one that runs 512 times per layer per 4 tracks.</p>
+<p>So you have a choice about where to pay the cost of the mismatch: once, on the host,
+before the run starts — or several times per atom, forever. The rearrangement is the
+same work either way. <strong>Doing it once is free; doing it in the loop is the
+design.</strong></p>
+<p>This is the same trade as the bias in Step 7 and the reshape in Step 8, and it is
+worth naming: <em>move work out of the inner loop and into setup wherever the shape
+lets you.</em></p></div>
 
 <figure>
 <svg viewBox="0 0 860 210" role="img" aria-label="Weights rearranged from row-major into block order">
@@ -609,11 +1140,29 @@ An elementwise operation costs one instruction.</p></div>
 <span class="step-n">STEP 8</span>
 <h2>Moving data between layers, for free</h2>
 
+<p class="tldr">Layer N writes its answers in one shape; layer N+1 wants them in
+another. On a CPU you would write a loop to shuffle them. Here you write a number,
+and the shuffle happens inside a transfer that was going to occur anyway.</p>
+
 <p>Here's a real problem. A dense layer <strong>writes</strong> its results in 4×4 blocks
 (4 tracks × 4 outputs — that's the shape of C). But the next layer wants to
 <strong>read</strong> them in 8×4 blocks (8 features × 4 tracks — the shape of A).</p>
 
 <p>Same numbers, different grouping. Somebody has to regroup them.</p>
+
+<div class="why"><span class="label">Why the regrouping is genuinely free, not just cheap</span>
+<p>The data has to travel from the producing tile to the consuming tile regardless —
+they are different processors with different private memories. That journey is made by
+a <strong>DMA engine</strong>, and a DMA engine does not read straight through from
+start to finish. It walks the buffer following a pattern you give it: so many elements,
+then skip so far, then so many more.</p>
+<p>So the reshape rides along inside a movement that was already happening and already
+paid for. Nothing reads the data an extra time; nothing writes a second copy; no tile
+spends a cycle on it. You are choosing the <em>itinerary</em> of a trip, not adding a
+trip.</p>
+<p>That is why the sentence "tiling is an access pattern, not a copy" is worth
+memorising. A copy costs memory and cycles. A pattern costs a few numbers in a config
+struct.</p></div>
 
 <figure>
 <svg viewBox="0 0 860 260" role="img" aria-label="A memtile written in 4 by 4 patches and read in 8 by 4 patches">
@@ -705,6 +1254,20 @@ this time."</p>
 seventh. That's not a hack — it's how you express a duty cycle in a system with fixed
 data rates.</p>
 
+<div class="why"><span class="label">Why the graph insists on that, and where the 7 comes from</span>
+<p>The whole array runs on a static schedule. Buffers, DMA descriptors and
+synchronisation are all laid out at compile time, on the promise that every kernel
+consumes and produces a fixed number of items per iteration. That promise is what makes
+the schedule computable at all — and it is what lets the design run with no runtime
+arbitration. A kernel that sometimes emitted nothing would break the arithmetic the
+scheduler was built from.</p>
+<p>The 7 is just the event size divided by the batch: <strong>50 tracks per event, padded
+to 56 slots, at 8 tracks per iteration = 7 iterations</strong>. So one event mean emerges
+every 7th iteration, and the other 6 have to say <em>something</em>. They say zero.</p>
+<p>The reader downstream then has to know which frame is real — which is why the host
+scans for non-zero frames rather than assuming a position, and why the number 7 shows up
+as <code>N_ITER</code> in <code>parameters.h</code>.</p></div>
+
 <div class="note"><span class="label">And one thing deliberately NOT on the AIE</span>
 <p>The final 128→27 layer runs <strong>on the host CPU</strong>. It operates on a single
 averaged vector — one row. That's M=1, the exact shape this whole design exists to avoid.
@@ -792,4 +1355,5 @@ not before.</p>
 </section>
 
 </main>
+</div>
 </div>
