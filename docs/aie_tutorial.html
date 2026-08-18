@@ -611,7 +611,7 @@ half a microsecond. A tile is a small processor; running a loop is what it does.
 <li><strong>Atoms are TIME.</strong> How many times the instruction issues. Decided by
 the layer's shape ÷ the atom's shape.</li>
 <li><strong>Tiles are SPACE.</strong> How many processors hold a piece of the problem.
-Decided by one thing only — whether the weights fit in 16 KB.</li>
+Decided by one thing only — whether a tile's weight slice fits in one 16 KB bank.</li>
 </ul>
 <p>They are almost independent. Splitting a layer over 8 tiles does not change how many
 atoms there are; it changes <em>who runs which ones</em>, and they run at the same time
@@ -640,7 +640,7 @@ instead of one after another.</p></div>
   <text class="s" x="272" y="70">… 512 of these, in a loop, on the SAME tile →</text>
   <text class="sb" x="700" y="70" fill="var(--acc)">time ────────────────────►</text>
   <text class="s" x="24" y="112">This would work perfectly. The instruction count is identical. It is simply not allowed:</text>
-  <text class="s" x="24" y="130" font-weight="700" fill="var(--wts)">64 KB of weights will not fit in a tile's 16 KB. That, and only that, is why we split.</text>
+  <text class="s" x="24" y="130" font-weight="700" fill="var(--wts)">64 KB of weights will not fit in ONE 16 KB BANK -- and one array must live in one bank.</text>
 
   <line x1="24" y1="152" x2="976" y2="152" stroke="var(--rule)" stroke-width="1"/>
 
@@ -829,9 +829,77 @@ losing a little precision at every step.</p></div>
 in the tile's memory — so the number of tiles is decided by division, before any
 performance thinking happens at all.</p>
 
-<p>An AIE tile is a small processor with its own private memory. Of that, the budget
-for weights is <strong>16 KB</strong>. That is a wall, not a guideline: exceed it and
-the design does not compile.</p>
+<p>An AIE-ML tile is a small processor with its own private memory, and that memory
+is <strong>64 KB</strong> — not 16. So why does every number in this section divide by
+16 KB?</p>
+
+<p>Because the 64 KB is <strong>banked</strong>: four banks of 16 KB. And the rule is
+not "the weights must fit in the tile", it is <strong>"one weight array must fit in one
+bank"</strong>. That is a wall, not a guideline — it is a <code>static_assert</code> in
+the kernel, so exceeding it does not run slowly, it fails to compile:</p>
+
+<pre><code>static_assert(OUT_FEAT_SLICE * IN_FEAT_SLICE * sizeof(weight_t) &lt;= 16384,
+              "Weight size per tile must not exceed one AIE-ML memory bank (16 KiB)");</code></pre>
+
+<p>The other three banks are not spare. They hold the input block arriving, the output
+block leaving, the ping-pong copies that let the DMA fill one while the vector unit reads
+the other, and the stack. Weights get one bank; the working data gets the rest.</p>
+
+<figure>
+<svg viewBox="0 0 1000 300" role="img" aria-label="One AIE-ML tile has 64 KB of data memory in four banks of 16 KB; weights occupy one bank">
+  <style>
+    .h{font:700 13.5px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+    .s{font:400 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-3)}
+    .sb{font:700 12px ui-sans-serif,system-ui,sans-serif;fill:var(--ink-2)}
+    .bk{stroke-width:1.5;rx:6}
+  </style>
+  <text class="h" x="24" y="28">One AIE-ML tile — 64 KB of data memory, in 4 banks of 16 KB</text>
+
+  <rect x="24" y="44" width="620" height="150" rx="10" fill="none" stroke="var(--rule-2)" stroke-width="2" stroke-dasharray="5 4"/>
+  <text class="s" x="34" y="212">one tile's data memory · 64 KB total</text>
+
+  <rect class="bk" x="44" y="66" width="140" height="106" fill="var(--wts-bg)" stroke="var(--wts)"/>
+  <text class="sb" x="114" y="92" text-anchor="middle" fill="var(--wts)">BANK 0</text>
+  <text class="sb" x="114" y="112" text-anchor="middle">16 KB</text>
+  <text class="s" x="114" y="134" text-anchor="middle">weights</text>
+  <text class="s" x="114" y="152" text-anchor="middle">64 × 64 slice</text>
+
+  <rect class="bk" x="196" y="66" width="140" height="106" fill="var(--data-bg)" stroke="var(--data)"/>
+  <text class="sb" x="266" y="92" text-anchor="middle" fill="var(--data)">BANK 1</text>
+  <text class="sb" x="266" y="112" text-anchor="middle">16 KB</text>
+  <text class="s" x="266" y="134" text-anchor="middle">input block</text>
+  <text class="s" x="266" y="152" text-anchor="middle">(ping)</text>
+
+  <rect class="bk" x="348" y="66" width="140" height="106" fill="var(--data-bg)" stroke="var(--data)"/>
+  <text class="sb" x="418" y="92" text-anchor="middle" fill="var(--data)">BANK 2</text>
+  <text class="sb" x="418" y="112" text-anchor="middle">16 KB</text>
+  <text class="s" x="418" y="134" text-anchor="middle">input block</text>
+  <text class="s" x="418" y="152" text-anchor="middle">(pong)</text>
+
+  <rect class="bk" x="500" y="66" width="124" height="106" fill="var(--acc-bg)" stroke="var(--acc)"/>
+  <text class="sb" x="562" y="92" text-anchor="middle" fill="var(--acc)">BANK 3</text>
+  <text class="sb" x="562" y="112" text-anchor="middle">16 KB</text>
+  <text class="s" x="562" y="134" text-anchor="middle">outputs,</text>
+  <text class="s" x="562" y="152" text-anchor="middle">stack</text>
+
+  <text class="h" x="672" y="72">The rule is per BANK,</text>
+  <text class="h" x="672" y="92">not per tile.</text>
+  <text class="s" x="672" y="120">A tile has 64 KB, but one</text>
+  <text class="s" x="672" y="138">weight array has to sit inside</text>
+  <text class="s" x="672" y="156">a single 16 KB bank.</text>
+  <text class="s" x="672" y="186">So "the layer needs 8 tiles"</text>
+  <text class="s" x="672" y="204">really means "the weights need</text>
+  <text class="s" x="672" y="222">8 banks, and you cannot take</text>
+  <text class="s" x="672" y="240">four banks from one tile —</text>
+  <text class="s" x="672" y="258">the other three are busy."</text>
+
+  <path d="M114,240 L114,262 L562,262 L562,240" fill="none" stroke="var(--rule-2)" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text class="s" x="338" y="282" text-anchor="middle">while the vector unit reads bank 0 and bank 1, the DMA is filling bank 2 — that is why they are separate banks</text>
+</svg>
+<figcaption><b>64 KB, four ways.</b> The weights get one bank. The rest is working
+data, which is why a tile cannot simply hand its whole 64 KB to a bigger weight
+slice.</figcaption>
+</figure>
 
 <p>Now weigh a real layer against it. Weights are one number per (input, output) pair,
 so a 256→128 layer holds 256 × 128 = 32,768 of them, at 4 bytes each in float32:</p>
@@ -849,7 +917,7 @@ so a 256→128 layer holds 256 × 128 = 32,768 of them, at 4 bytes each in float
   <rect x="30" y="46" width="800" height="46" fill="var(--wts-bg)" stroke="var(--wts)" stroke-width="1.5" rx="5"/>
   <text class="big" x="430" y="76" text-anchor="middle">128 KB of weights</text>
 
-  <text class="sb" x="30" y="126">what one tile can hold:</text>
+  <text class="sb" x="30" y="126">what ONE BANK holds (a tile has 4 of them):</text>
   <rect x="30" y="140" width="100" height="40" fill="var(--data-bg)" stroke="var(--data)" stroke-width="1.5" rx="5"/>
   <text class="sb" x="80" y="165" text-anchor="middle">16 KB</text>
 
@@ -859,7 +927,7 @@ so a 256→128 layer holds 256 × 128 = 32,768 of them, at 4 bytes each in float
     <rect x="550" y="140" width="100" height="40" rx="5"/><rect x="654" y="140" width="100" height="40" rx="5"/>
     <rect x="758" y="140" width="72" height="40" rx="5"/>
   </g>
-  <text class="s" x="430" y="206" text-anchor="middle">128 ÷ 16 = you need eight of them. There is no version of this that fits on one.</text>
+  <text class="s" x="430" y="206" text-anchor="middle">128 ÷ 16 = eight banks, on eight different tiles. One tile cannot use four banks for one array.</text>
   <text class="s" x="430" y="232" text-anchor="middle" font-weight="700" fill="var(--ink-2)">The tile count is a division, not a decision.</text>
 </svg>
 <figcaption><b>Arithmetic first, architecture second.</b> Every layer in this design
@@ -1339,8 +1407,9 @@ were individually harmful</em>. Nobody would have guessed that. Only the ablatio
 
 <div class="tw"><table>
 <tr><th>hard limit</th><th>value</th><th>what it forces</th></tr>
-<tr><td>weights per tile</td><td class="num">16 KB</td><td>the minimum tile count</td></tr>
-<tr><td>tile data memory</td><td class="num">64 KB</td><td>inputs + outputs + weights + stack</td></tr>
+<tr><td>tile data memory</td><td class="num">64 KB</td><td>4 banks of 16 KB</td></tr>
+<tr><td><b>weight array, per tile</b></td><td class="num"><b>16 KB</b></td><td><b>one bank</b> — this is what sets the minimum tile count</td></tr>
+<tr><td>the other 3 banks</td><td class="num">48 KB</td><td>input block, output block, ping-pong copies, stack</td></tr>
 <tr><td>shared buffer (memtile)</td><td class="num">512 KB</td><td>what fits between stages</td></tr>
 <tr><td>batch granularity</td><td class="num">×8</td><td>4 and 8 cost the same</td></tr>
 <tr><td>any dimension</td><td class="num">×16 elems</td><td>or buffer descriptors run out</td></tr>
