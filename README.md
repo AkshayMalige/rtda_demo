@@ -30,7 +30,7 @@ deliverable: **27 numbers per event**.
 | kernel | `aie::mmul` | `aie::mmul` | hls4ml `nnet::dense` |
 | **ns/track, silicon** ³ | **615** | **245** | **114,538** |
 | **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **2.35e-04** |
-| resources ² | 65 compute + 14 memory tiles | same | **76% LUT, 56% REG, 32% BRAM, 22% DSP** (routed) |
+| resources ² | 69 compute + 13 memory tiles ⁴ | 69 compute + 15 memory tiles ⁴ | **76% LUT, 56% REG, 32% BRAM, 22% DSP** (routed) |
 
 ¹ max |implementation − ONNX| over the **same 5 events**, warm-up excluded.
 Full scale (largest of the 27) is 0.0857. These are a max over events, so they
@@ -67,6 +67,17 @@ tracks-per-call (`n_tracks` is a runtime `s_axilite` argument) fits
 reusing the `xrt::run` object instead of building a new one per event changes the
 result by 0.1%. Batching events into one call would not help. See §6 of
 `analysis/rtda_scan.ipynb`.
+
+⁴ From each build's own `Work_<P>/reports/app_mapping_analysis_report.txt`, not
+from prose. **69 compute tiles = 65 dense + 3 `roll_concat_batch` + 1
+`track_accum`**, identical in both precisions because the cascade lengths are
+pinned by hand so the two trees stay structurally the same. **This row read
+"65 compute + 14 memory tiles, same" until 2026-08-18** — 65 is the *dense* count
+and misses the four hand-written kernels, and the two builds do not use the same
+number of memory tiles. Both map the same **18 `shared_buffer` objects**; the
+mapper packs them into 13 memtiles for fp32 and 15 for bf16. That difference is a
+packing heuristic, not a capacity effect — the largest shared buffer is 4 KB
+against a memtile's 512 KB — so do not read anything into it.
 
 **The headline result is the last two columns.** Both are 16 bits per
 activation, and the fixed-point PL design lands **1.7× closer** to the reference
@@ -205,7 +216,21 @@ reproduces the shipped `run_info.txt` numbers to 0.13% (fp32), 0.33% (bf16) and
    to 10,000, the only design here that does not amortise at all.
 2. **fp32 on the AIE is essentially optimal** — 603 ns/track against a 582 ns
    floor, with only 3.4% of `us_execute` outside the array at 10,000 events.
-3. **bf16 is not compute-bound, and this is new.** Its array is 4× faster than
+   Optimal *as scheduled*: the floor is the array's own II, and finding 3 is about
+   why that II is what it is. Nothing is left on the table around the array; the
+   remaining fp32 headroom is inside it.
+3. **fp32's array is 4× slower because AIE-ML has no fp32 multiplier.** This is
+   architecture, not tuning. AM020: *"32-bit floating-point vector data path is
+   not directly supported but can be emulated via decomposition into multiple
+   multiplications of 16 × 16-bit."* One `aie::mmul<4,8,4,float,float>` expands
+   into **nine** bfloat16 `mul_4x8_8x4` calls in the default `accuracy_safe` mode
+   — counted in `$XILINX_VITIS/aietools/data/aie_ml/lib/me_vmult_float_emulated.h`
+   — plus the split and double the operand bytes. Two supported modes trade
+   accuracy for passes: `-DAIE_FP32_EMULATION_ACCURACY_FAST` is 6, `..._LOW` is 3.
+   **This build sets neither and pays the full nine.** Trying FAST and measuring
+   both II and error against the reference is the cheapest untaken experiment in
+   this repo. Detail: `docs/aie_ml_batched_design.md` Part 1a.
+4. **bf16 is not compute-bound, and this is new.** Its array is 4× faster than
    fp32's (ii 1033 vs 4161 ns) but it delivers 2.5×, and 39.4% of its time is
    outside the array — a fraction that does *not* fall between 1000 and 10,000
    events, so it is not launch overhead. The suspect is the output DMA: the 27
@@ -214,7 +239,7 @@ reproduces the shipped `run_info.txt` numbers to 0.13% (fp32), 0.33% (bf16) and
    against the `output_gmio::create("gmio_track", 64, 256)` declaration of 256
    MB/s (fp32 sits at 119 MB/s and never approaches it). Not proven — the scan
    cannot see inside the shim DMA — but it is the reading the numbers support.
-4. **The launch cost is now measured, not inferred**: 499 us per extra
+5. **The launch cost is now measured, not inferred**: 499 us per extra
    `graph.run()` for fp32, reproduced at both 10 and 100 events, against the
    583 us intercept the old four-point fit implied.
 
@@ -230,13 +255,33 @@ transfer numbers.
 
 **New to how the AIE design works?** Two documents, in this order:
 
-1. **`docs/aie_tutorial.html`** — start here. Builds up from a single hardware
-   multiply to the whole 14-layer design, one idea at a time, with diagrams and
-   a worked example you can check on a calculator. No code until the last two
-   sections.
+1. **`docs/aie_tutorial.html`** — start here. Thirteen steps from a single
+   hardware instruction to the whole 14-layer design, one idea at a time, with
+   diagrams and a worked example you can check on a calculator. Ends with a
+   file-by-file map of `aie_batch/src_<P>/` and a hand-written skeleton for
+   mapping your own model. No code until the last two sections.
 2. **`docs/aie_ml_batched_design.md`** — the reference. The same material with
    the code excerpts, exact config values and the full per-layer table. Read it
    after the tutorial, not before.
+
+Both were re-grounded on 2026-08-18 against **AM020** (the Versal AIE-ML
+Architecture Manual), the `aie_api` and `me_vmult` headers in the Vitis install,
+and each build's own mapping report — replacing several plausible-sounding
+explanations that were not in any of them. The corrections that change how you
+would design something:
+
+- **fp32 is emulated in bf16, at 9 multiplies to 1** (see finding 3 above). The
+  old text explained the fp32/bf16 gap as "narrower type, fewer bytes".
+- **The atom is 4×8×4 because the vector unit does 128 bf16 MACs/cycle** and each
+  operand is exactly one 512-bit register — not because of "four rows of
+  multipliers". And 4×8×4 is the only shape AIE-ML issues natively for *either*
+  precision; bf16's larger shapes are library-emulated.
+- **A dense kernel's input buffer lives in the neighbouring tile**, not its own —
+  `adf::bank(tileCol - 1, ...)` in `dense_bias_relu_graph.h`, because four banks
+  are not enough for weights, outputs, stack and input at once.
+- **`CAS_NUM` is capped at 2 by the memory tile's 6 MM2S channels**, not by
+  cascade latency — which is why 4×1, the best arrangement on latency, is not
+  used.
 
 ## Where results go
 
@@ -279,6 +324,13 @@ accurate as fp32. Full detail: "Where results go" in `RUNBOOK.md`.
   the per-track taps a warm-up-excluded number needs, and the AIE sims are
   5-event builds; the PL run is 1000 events but the ratio is taken over the
   common 5.
+- AIE tile counts — `aie_batch/Work_<P>/reports/app_mapping_analysis_report.txt`,
+  the compiler's own block and shared-buffer mapping tables. 69 `CR(x,y)` cores
+  and 13 (fp32) / 15 (bf16) `MT(x,y)` memory tiles holding 18 shared buffers.
+  Cross-checked against the 69 `PT` rows of `aie_batch/Map_Report.csv`.
+- `ii 4161 ns` (fp32) and `1033 ns` (bf16) — `make -C aie_batch crosscheck`,
+  tabulated in `RUNBOOK.md`. The 9× fp32 emulation factor behind the first number
+  is counted in the Vitis headers, not measured here.
 - PL resources — post-route, `WNS +0.186 ns` at 150 MHz. The 108% LUT figure in
   the HLS *estimate* did not materialise.
 - The PL 1000-event number comes from `pl_fixed/native/`, which compiles the
