@@ -64,6 +64,20 @@ else
 STIMULUS ?= ../testdata/embed_input_50000.txt
 endif
 
+# STIMULUS is for RUNS ON A CARD (or QEMU pretending to be one), and only those.
+# Every SIMULATION target -- fastsim, validate, csim, cosim -- uses SIM_STIMULUS
+# instead, because none of them is a card and none should inherit the hw_emu cap.
+#
+# They used to use $(STIMULUS), which defaults to the 100-track hw_emu file, and
+# that file is testdata Family A: ONE REAL EVENT REPEATED. The reference every
+# comparison here uses is Family B (synthesised, seed 1234), so event 0 agreed
+# EXACTLY and event 1 could not -- a clean 2.07e-02 that reads like a
+# fixed-point bug and is not one. See testdata/README.md for the two families.
+#
+# `make csim` was fixed this way already; fastsim and validate were left behind
+# and shipped the 2.07e-02 into results/pl_fixed/sim and into both notebooks.
+SIM_STIMULUS ?= ../testdata/embed_input_50000.txt
+
 # The fixed-point format. Defaults live in pl/src/rtda_fixed.h; anything set
 # here overrides them for both the native model and synthesis, so the two can
 # never disagree about what was built.
@@ -143,15 +157,19 @@ $(NATIVE): native/run_model.cpp $(KSRCS) $(KHDRS) | weights
 	    -I $(SRC) -I pl/firmware -I $(HLS_INC) \
 	    native/run_model.cpp $(KSRCS) -o $@
 
+# SIM_STIMULUS, not STIMULUS: this is a native g++ run with no card and no
+# QEMU in it, and compare.py scores it against synth_tracks() -- the Family B
+# stream. Feeding it the Family A hw_emu file compares one event's answer
+# against another event's question.
 fastsim: $(NATIVE)
 	@mkdir -p $(RESULTS)/sim
-	@$(NATIVE) $(STIMULUS) $(RESULTS)/sim $(EVENTS) $(WARMUP)
+	@$(NATIVE) $(SIM_STIMULUS) $(RESULTS)/sim $(EVENTS) $(WARMUP)
 	@$(PYTHON) compare.py --dir $(RESULTS)/sim --events $(EVENTS) --warmup $(WARMUP)
 
 # Does the numpy screening model actually predict the real datapath?
 validate: $(NATIVE)
 	@mkdir -p $(RESULTS)/sim
-	@$(NATIVE) $(STIMULUS) $(RESULTS)/sim $(EVENTS) $(WARMUP) >/dev/null
+	@$(NATIVE) $(SIM_STIMULUS) $(RESULTS)/sim $(EVENTS) $(WARMUP) >/dev/null
 	@$(PYTHON) compare.py --dir $(RESULTS)/sim --events $(EVENTS) \
 	    --warmup $(WARMUP) --vs-model
 
@@ -162,13 +180,8 @@ validate: $(NATIVE)
 # ahead of /usr/bin/make. Vitis HLS's post-check compilation then fails on
 # Ubuntu 22.04.
 SAFE_PATH := /usr/bin:/usr/local/bin:$(PATH)
-# csim and cosim are TARGET-AGNOSTIC -- they simulate the kernel, not a card. But
-# STIMULUS is chosen by TARGET, which defaults to hw_emu, so they used to inherit
-# the 100-track QEMU file: `make csim EVENTS=3` then died with
-#   "embed_input_100.txt has only 800 values, need 1200"
-# because 3 events needs 1200 and 100 tracks is 800. The simulation targets pick
-# their own stimulus, big enough for any sane EVENTS.
-SIM_STIMULUS ?= ../testdata/embed_input_50000.txt
+# csim and cosim are TARGET-AGNOSTIC -- they simulate the kernel, not a card --
+# and so they use SIM_STIMULUS, defined with STIMULUS at the top of this file.
 
 HLS_ENV   := RTDA_AP_DEFS="$(AP_DEFS)" \
              RTDA_STIMULUS="$(abspath $(SIM_STIMULUS))" \
@@ -369,7 +382,8 @@ vars:
 	@echo "VARIANT  = $(VARIANT)   (AP_W=$(AP_W) AP_I=$(AP_I) ALPHA125=$(ALPHA125))"
 	@echo "AP_DEFS  = $(AP_DEFS)   (empty => the defaults in $(SRC)/rtda_fixed.h)"
 	@echo "EVENTS   = $(EVENTS)    WARMUP = $(WARMUP)"
-	@echo "STIMULUS = $(STIMULUS)"
+	@echo "STIMULUS = $(STIMULUS)      (runs on a card / QEMU)"
+	@echo "SIM_STIMULUS = $(SIM_STIMULUS)   (fastsim, validate, csim, cosim)"
 	@echo "RESULTS  = $(RESULTS)"
 	@echo "XSA      = $(XSA)"
 	@echo "XCLBIN   = $(XCLBIN)"
