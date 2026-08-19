@@ -50,14 +50,22 @@ void output_run (hls::stream<hidden_t>&, hls::stream<out27_t>&);
 // ---------------------------------------------------------------------------
 //  Top level.
 //
-//  mean128  the event mean BEFORE the final dense. This is the primary output:
-//           it is what the AIE flow's host also writes (track_means_all.txt),
-//           so the analysis notebooks apply the 128->27 dense themselves and
-//           every implementation is compared in exactly one place.
-//  result27 the same thing through the output dense, for a standalone check.
+//  ONE CALL COVERS n_events EVENTS. It used to cover exactly one, and the host
+//  looped -- 1000 events meant 1000 kernel starts, where the AIE flow runs
+//  everything in a single graph.run(). The two implementations now differ in
+//  their arithmetic and their fabric, not in how the host drives them.
 //
-//  n_tracks and warmup are RUNTIME arguments, not #defines, because the two
-//  useful conventions need both:
+//  track_data  n_events * tracks_per_event * INPUT_SIZE floats, event-major.
+//  mean128     n_events * HIDDEN floats. The event mean BEFORE the final dense,
+//              one row per event. This is the primary output: it is what the
+//              AIE flow's host also writes (track_means_all.txt), so the
+//              analysis notebooks apply the 128->27 dense themselves and every
+//              implementation is compared in exactly one place.
+//  result27    n_events * OUT_DIM floats, the same thing through the output
+//              dense, one row per event, for a standalone check.
+//
+//  tracks_per_event and warmup are RUNTIME arguments, not #defines, because the
+//  two useful conventions need both:
 //    warmup=3  average tracks 3..49 -- comparable to the ONNX reference, whose
 //              circular roll disagrees with a streaming one on exactly the
 //              first three tracks of an event.
@@ -65,10 +73,19 @@ void output_run (hls::stream<hidden_t>&, hls::stream<out27_t>&);
 //              since its accumulator cannot skip the contaminated head.
 //  Rebuilding the bitstream to switch between them is not acceptable when the
 //  whole point is to compare against both.
+//
+//  reset is per EVENT, not per call:
+//    reset=true   zero the roll history at the start of every event, so events
+//                 are independent. This is what the hosts pass, and what
+//                 warmup=3 assumes. It is also what the old one-event-per-call
+//                 form did implicitly, by virtue of being a fresh call.
+//    reset=false  let the history run on across event boundaries and across
+//                 calls -- the AIE's never-reset carry.
 // ---------------------------------------------------------------------------
 extern "C" void rtda_split_top(const float* track_data,
                                float*       mean128,
                                float*       result27,
-                               int          n_tracks,
+                               int          n_events,
+                               int          tracks_per_event,
                                int          warmup,
                                bool         reset);

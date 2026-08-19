@@ -89,23 +89,32 @@ int main() {
                 n_events, warmup, RTDA_W, RTDA_I, (double)RTDA_ALPHA_VALUE);
     std::printf("reference: %s (native model, %d events)\n\n", refp.c_str(), ref_ev);
 
-    std::vector<float> track(MAX_TRACKS * INPUT_SIZE);
-    std::vector<float> mean(HIDDEN), out27(OUT_DIM);
+    // Stage every event, then ONE call -- the kernel loops over events itself.
+    // Exercising the multi-event path is the point: a testbench that still
+    // called it once per event would pass without ever running the event loop
+    // this design now depends on.
+    std::vector<float> track((size_t)n_cmp * MAX_TRACKS * INPUT_SIZE);
+    std::vector<float> mean((size_t)n_cmp * HIDDEN);
+    std::vector<float> out27((size_t)n_cmp * OUT_DIM);
+
+    for (int ev = 0; ev < n_cmp; ev++) {
+        const float* base = raw.data() + (size_t)ev * MAX_TRACKS * STRIDE;
+        float* dst = track.data() + (size_t)ev * MAX_TRACKS * INPUT_SIZE;
+        for (int j = 0; j < MAX_TRACKS; j++)
+            for (int i = 0; i < INPUT_SIZE; i++)
+                dst[j * INPUT_SIZE + i] = base[j * STRIDE + i];
+    }
+
+    rtda_split_top(track.data(), mean.data(), out27.data(),
+                   n_cmp, MAX_TRACKS, warmup, true);
 
     float worst = 0.0f;
     int worst_ev = 0;
     for (int ev = 0; ev < n_cmp; ev++) {
-        const float* base = raw.data() + (size_t)ev * MAX_TRACKS * STRIDE;
-        for (int j = 0; j < MAX_TRACKS; j++)
-            for (int i = 0; i < INPUT_SIZE; i++)
-                track[j * INPUT_SIZE + i] = base[j * STRIDE + i];
-
-        rtda_split_top(track.data(), mean.data(), out27.data(),
-                       MAX_TRACKS, warmup, true);
-
         float d = 0.0f;
         for (int k = 0; k < HIDDEN; k++)
-            d = std::max(d, std::fabs(mean[k] - ref[(size_t)ev * HIDDEN + k]));
+            d = std::max(d, std::fabs(mean[(size_t)ev * HIDDEN + k]
+                                      - ref[(size_t)ev * HIDDEN + k]));
         std::printf("  event %3d   max|diff| vs native = %.3e\n", ev, d);
         if (d > worst) { worst = d; worst_ev = ev; }
     }

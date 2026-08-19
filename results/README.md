@@ -49,7 +49,7 @@ per-implementation variants of this file.
 | `source` | `hw` \| `hw_emu`, from the xclbin name. An emulation run mislabelled as silicon is the failure this exists to prevent. |
 | `events`, `tracks` | the size of the point. `events=0` marks a row that is not an event sweep at all (the PL `tracks_per_call` diagnostic). |
 | `rep` | repeat index. Points are repeated so the notebook can show min/median/max instead of a single number. |
-| `launches` | device invocations for this point: `graph.run()` calls (AIE), kernel calls (PL) |
+| `launches` | device invocations for this point: `graph.run()` calls (AIE), kernel calls (PL). For PL this is the event count in `fresh`/`reuse` and **1** in `single`. |
 | `tracks_per_call` | tracks per invocation |
 | `us_stage` | **host-side** input preparation: slot padding, the bf16 conversion (AIE), the strided repack (PL). Not device time. |
 | `us_h2d` | AIE: time to *issue* the async transfers, not the transfer. PL: `bo_in.sync` to device. |
@@ -62,7 +62,7 @@ per-implementation variants of this file.
 | `macs_per_track` | 264192, so throughput can be expressed without a wall clock |
 | `in_bytes`, `out_bytes` | total moved for the point |
 | `mean_checksum` | sum of the last event's 128 means. **A smoke value, not an accuracy number** — it exists so "the kernel returned zeros" cannot read as a very fast run. Constant across repeats at a given event count. |
-| `mode` | impl-specific: AIE `gmio`; PL `fresh` (a new `xrt::run` per call, what the shipped host does), `reuse` (one run object, `start`/`wait` only), `tpc` (the tracks-per-call diagnostic) |
+| `mode` | impl-specific: AIE `gmio`; PL `fresh` (a new `xrt::run` per event, what the shipped host used to do), `reuse` (one run object per event, `start`/`wait` only), `single` (**every event staged, ONE sync, ONE kernel start** — what the shipped host does now, and the same shape as the AIE's single `graph.run()`), `tpc` (the tracks-per-call diagnostic) |
 | `notes` | free text; empty in a clean run |
 
 **The AIE has no H2D/D2H split and this file does not pretend otherwise.** Input

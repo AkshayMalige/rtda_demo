@@ -71,33 +71,41 @@ int main(int argc, char** argv) {
                 "tracks %d..%d\n",
                 n_events, n_events * MAX_TRACKS, warmup, warmup, MAX_TRACKS - 1);
 
-    std::vector<float> track(MAX_TRACKS * INPUT_SIZE);
-    std::vector<float> mean(HIDDEN), out27(OUT_DIM);
+    // ONE call covers every event; the kernel loops over them internally. The
+    // per-event progress print went with the loop -- there is no longer a point
+    // between events for the host to print at.
+    std::vector<float> track((size_t)n_events * MAX_TRACKS * INPUT_SIZE);
+    std::vector<float> mean((size_t)n_events * HIDDEN);
+    std::vector<float> out27((size_t)n_events * OUT_DIM);
     std::vector<std::vector<float>> all_means(n_events,
                                               std::vector<float>(HIDDEN));
     std::vector<float> last27(OUT_DIM);
 
+    // t0 before the repack, as it was when the repack sat inside the timed
+    // loop -- host_seconds in run_info.txt stays comparable across this change.
     const auto t0 = std::chrono::steady_clock::now();
     for (int ev = 0; ev < n_events; ev++) {
         const float* base = raw.data() + (size_t)ev * MAX_TRACKS * STRIDE;
+        float* dst = track.data() + (size_t)ev * MAX_TRACKS * INPUT_SIZE;
         for (int j = 0; j < MAX_TRACKS; j++)
             for (int i = 0; i < INPUT_SIZE; i++)
-                track[j * INPUT_SIZE + i] = base[j * STRIDE + i];
-
-        // reset=true: each event starts from a zero roll history, matching what
-        // the XRT host does. The AIE instead carries across events; that shows
-        // up only in the first three tracks, which is exactly what warmup skips.
-        rtda_split_top(track.data(), mean.data(), out27.data(),
-                       MAX_TRACKS, warmup, true);
-
-        all_means[ev].assign(mean.begin(), mean.end());
-        if (ev + 1 == n_events) last27.assign(out27.begin(), out27.end());
-        if (n_events > 20 && (ev % (n_events / 20) == 0))
-            std::printf("\r[native] %5d / %d events", ev, n_events), std::fflush(stdout);
+                dst[j * INPUT_SIZE + i] = base[j * STRIDE + i];
     }
+
+    // reset=true: each event starts from a zero roll history, matching what
+    // the XRT host does. The AIE instead carries across events; that shows
+    // up only in the first three tracks, which is exactly what warmup skips.
+    rtda_split_top(track.data(), mean.data(), out27.data(),
+                   n_events, MAX_TRACKS, warmup, true);
+
+    for (int ev = 0; ev < n_events; ev++)
+        all_means[ev].assign(mean.begin() + (size_t)ev * HIDDEN,
+                             mean.begin() + (size_t)(ev + 1) * HIDDEN);
+    last27.assign(out27.begin() + (size_t)(n_events - 1) * OUT_DIM,
+                  out27.begin() + (size_t)n_events * OUT_DIM);
+
     const auto t1 = std::chrono::steady_clock::now();
     const double secs = std::chrono::duration<double>(t1 - t0).count();
-    if (n_events > 20) std::printf("\r");
     std::printf("[native] done in %.1f s (%.2f ms/event)\n",
                 secs, 1e3 * secs / n_events);
 

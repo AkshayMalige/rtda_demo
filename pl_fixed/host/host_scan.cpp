@@ -237,9 +237,14 @@ int main(int argc, char* argv[]) {
     const bool dump_calls = std::atoi(env_or("RTDA_DUMP_CALLS", "0")) != 0;
 
     std::vector<long> ev_list = parse_list(env_or("RTDA_SCAN_EVENTS", "1,10,100,1000,10000"));
-    const std::string modes_s = env_or("RTDA_SCAN_MODES", "fresh,reuse");
+    const std::string modes_s = env_or("RTDA_SCAN_MODES", "fresh,reuse,single");
     const bool do_fresh = modes_s.find("fresh") != std::string::npos;
     const bool do_reuse = modes_s.find("reuse") != std::string::npos;
+    // "single" is the one-call form: every event staged, ONE sync, ONE kernel
+    // start. Added ALONGSIDE fresh/reuse rather than replacing them -- the
+    // existing rows stay comparable and the difference between the two shapes
+    // becomes a measured number instead of a claim.
+    const bool do_single = modes_s.find("single") != std::string::npos;
 
     const std::string tpc_s = env_or("RTDA_SCAN_TPC", "50,100,500,1000");
     std::vector<long> tpc_list = (tpc_s == "off" || tpc_s == "0")
@@ -324,12 +329,17 @@ int main(int argc, char* argv[]) {
     std::cout << "[scan] xclbin open + kernel: " << (us_open / 1e3) << " ms\n";
 
     // One allocation for the whole scan, sized for the largest call. The kernel
-    // reads only n_tracks*6 floats, so an oversized input BO changes nothing for
-    // the 50-track points -- and reallocating per point would put allocator time
-    // inside the measurement.
-    auto bo_in = xrt::bo(device, (size_t)tpc_max * INPUT_SIZE * sizeof(float), kernel.group_id(0));
-    auto bo_mean = xrt::bo(device, HIDDEN * sizeof(float), kernel.group_id(1));
-    auto bo_out = xrt::bo(device, OUT_DIM * sizeof(float), kernel.group_id(2));
+    // reads only what its arguments ask for, so an oversized input BO changes
+    // nothing for the 50-track points -- and reallocating per point would put
+    // allocator time inside the measurement.
+    //
+    // mode=single hands the kernel every event at once, so the input has to hold
+    // ev_max*50 tracks and the outputs ev_max results, not one event's worth.
+    const long ev_max_alloc = ev_list.empty() ? 1 : *std::max_element(ev_list.begin(), ev_list.end());
+    const size_t in_tracks = (size_t)std::max(tpc_max, ev_max_alloc * N_TRACKS);
+    auto bo_in = xrt::bo(device, in_tracks * INPUT_SIZE * sizeof(float), kernel.group_id(0));
+    auto bo_mean = xrt::bo(device, (size_t)ev_max_alloc * HIDDEN * sizeof(float), kernel.group_id(1));
+    auto bo_out = xrt::bo(device, (size_t)ev_max_alloc * OUT_DIM * sizeof(float), kernel.group_id(2));
     float* p_in = bo_in.map<float*>();
     float* p_mean = bo_mean.map<float*>();
     float* p_out = bo_out.map<float*>();
@@ -417,10 +427,12 @@ int main(int argc, char* argv[]) {
     // every call (only the BO CONTENTS change), so set_arg happens once and the
     // per-call cost is start()+wait() and nothing else.
     for (long ev_count : ev_list) {
-        for (int mi = 0; mi < 2; mi++) {
-            const bool reuse = (mi == 1);
-            if (reuse && !do_reuse) continue;
-            if (!reuse && !do_fresh) continue;
+        for (int mi = 0; mi < 3; mi++) {
+            const bool reuse  = (mi == 1);
+            const bool single = (mi == 2);
+            if (mi == 0 && !do_fresh)  continue;
+            if (reuse  && !do_reuse)   continue;
+            if (single && !do_single)  continue;
 
             for (long rep = 0; rep < reps; rep++) {
                 double t_stage = 0, t_h2d = 0, t_krn = 0, t_d2h = 0;
@@ -433,56 +445,94 @@ int main(int argc, char* argv[]) {
                     r.set_arg(0, bo_in);
                     r.set_arg(1, bo_mean);
                     r.set_arg(2, bo_out);
-                    r.set_arg(3, (int)N_TRACKS);
-                    r.set_arg(4, (int)warmup);
-                    r.set_arg(5, (int)1);
+                    r.set_arg(3, (int)1);          // n_events: one per call here
+                    r.set_arg(4, (int)N_TRACKS);   // tracks_per_event
+                    r.set_arg(5, (int)warmup);
+                    r.set_arg(6, (int)1);          // reset
                 }
 
                 const auto t_all0 = clk::now();
-                for (long ev = 0; ev < ev_count; ev++) {
+                if (single) {
+                    // Every event staged, ONE sync, ONE kernel start. The whole
+                    // point of this mode: the same shape as the AIE flow's
+                    // single graph.run().
                     const auto ts0 = clk::now();
-                    const float* base = raw.data() + (size_t)ev * N_TRACKS * STRIDE;
-                    for (int j = 0; j < N_TRACKS; j++)
-                        for (int i = 0; i < INPUT_SIZE; i++)
-                            p_in[j * INPUT_SIZE + i] = base[j * STRIDE + i];
+                    for (long ev = 0; ev < ev_count; ev++) {
+                        const float* base = raw.data() + (size_t)ev * N_TRACKS * STRIDE;
+                        float* dst = p_in + (size_t)ev * N_TRACKS * INPUT_SIZE;
+                        for (int j = 0; j < N_TRACKS; j++)
+                            for (int i = 0; i < INPUT_SIZE; i++)
+                                dst[j * INPUT_SIZE + i] = base[j * STRIDE + i];
+                    }
                     const auto t0 = clk::now();
                     bo_in.sync(XCL_BO_SYNC_BO_TO_DEVICE);
                     const auto t1 = clk::now();
-                    if (reuse) {
-                        r.start();
-                        r.wait();
-                    } else {
-                        // reset=1: every event starts from a zero roll history, so
-                        // events are independent of what ran before. Same call
-                        // host_split.cpp makes, so the numbers are comparable.
-                        auto run = kernel(bo_in, bo_mean, bo_out,
-                                          (int)N_TRACKS, (int)warmup, (int)1);
-                        run.wait();
-                    }
+                    auto run = kernel(bo_in, bo_mean, bo_out,
+                                      (int)ev_count, (int)N_TRACKS, (int)warmup, (int)1);
+                    run.wait();
                     const auto t2 = clk::now();
                     bo_mean.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
                     bo_out.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
                     const auto t3 = clk::now();
 
-                    t_stage += us(t0 - ts0);
-                    t_h2d   += us(t1 - t0);
-                    t_krn   += us(t2 - t1);
-                    t_d2h   += us(t3 - t2);
-                    series.push_back(us(t2 - t1));
+                    t_stage = us(t0 - ts0);
+                    t_h2d   = us(t1 - t0);
+                    t_krn   = us(t2 - t1);
+                    t_d2h   = us(t3 - t2);
+                    series.push_back(us(t2 - t1));   // one call, so one sample
+                } else {
+                    for (long ev = 0; ev < ev_count; ev++) {
+                        const auto ts0 = clk::now();
+                        const float* base = raw.data() + (size_t)ev * N_TRACKS * STRIDE;
+                        for (int j = 0; j < N_TRACKS; j++)
+                            for (int i = 0; i < INPUT_SIZE; i++)
+                                p_in[j * INPUT_SIZE + i] = base[j * STRIDE + i];
+                        const auto t0 = clk::now();
+                        bo_in.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+                        const auto t1 = clk::now();
+                        if (reuse) {
+                            r.start();
+                            r.wait();
+                        } else {
+                            // reset=1: every event starts from a zero roll history, so
+                            // events are independent of what ran before. Same call
+                            // host_split.cpp makes, so the numbers are comparable.
+                            auto run = kernel(bo_in, bo_mean, bo_out,
+                                              (int)1, (int)N_TRACKS, (int)warmup, (int)1);
+                            run.wait();
+                        }
+                        const auto t2 = clk::now();
+                        bo_mean.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+                        bo_out.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+                        const auto t3 = clk::now();
+
+                        t_stage += us(t0 - ts0);
+                        t_h2d   += us(t1 - t0);
+                        t_krn   += us(t2 - t1);
+                        t_d2h   += us(t3 - t2);
+                        series.push_back(us(t2 - t1));
+                    }
                 }
                 const double t_total = us(clk::now() - t_all0);
 
                 // Cheap smoke value. NOT an accuracy number -- it exists so that
                 // "the kernel returned zeros" cannot be read as a very fast run.
+                // The LAST event's mean, in both shapes. Per-event calls leave it
+                // at offset 0 because every call overwrites the same 128 floats;
+                // the single call leaves all ev_count of them side by side, so
+                // reading offset 0 there would checksum the FIRST event and the
+                // two modes would disagree for no reason.
+                const float* chk_row = single ? p_mean + (size_t)(ev_count - 1) * HIDDEN
+                                              : p_mean;
                 double chk = 0;
-                for (int k = 0; k < HIDDEN; k++) chk += p_mean[k];
+                for (int k = 0; k < HIDDEN; k++) chk += chk_row[k];
 
                 Row row;
                 row.events = ev_count;
                 row.tracks = ev_count * N_TRACKS;
                 row.rep = rep;
-                row.launches = ev_count;
-                row.tracks_per_call = N_TRACKS;
+                row.launches = single ? 1 : ev_count;
+                row.tracks_per_call = single ? ev_count * N_TRACKS : N_TRACKS;
                 row.us_stage = t_stage;
                 row.us_h2d = t_h2d;
                 row.us_kernel = t_krn;
@@ -493,7 +543,7 @@ int main(int argc, char* argv[]) {
                 row.in_bytes = ev_count * N_TRACKS * INPUT_SIZE * (long)sizeof(float);
                 row.out_bytes = ev_count * (HIDDEN + OUT_DIM) * (long)sizeof(float);
                 row.mean_checksum = chk;
-                row.mode = reuse ? "reuse" : "fresh";
+                row.mode = single ? "single" : (reuse ? "reuse" : "fresh");
                 out_rows.push_back(row);
 
                 std::cout << "[scan] " << std::setw(6) << ev_count << " ev  "
@@ -503,7 +553,7 @@ int main(int argc, char* argv[]) {
                           << std::setprecision(3) << (t_total / row.tracks) << " us/track, "
                           << "call med " << row.call.med << " us\n" << std::defaultfloat;
 
-                if (ev_count == ev_max && rep == 0 && reuse == false) {
+                if (ev_count == ev_max && rep == 0 && mi == 0) {   // fresh only
                     dump_series = series;
                     dump_events = ev_count;
                 }
@@ -530,7 +580,11 @@ int main(int argc, char* argv[]) {
             const auto t0 = clk::now();
             bo_in.sync(XCL_BO_SYNC_BO_TO_DEVICE);
             const auto t1 = clk::now();
-            auto run = kernel(bo_in, bo_mean, bo_out, (int)tpc, (int)warmup, (int)1);
+            // n_events=1: this mode deliberately drives ONE call over `tpc`
+            // tracks, producing a single mean. It is a timing probe, not an
+            // event sweep -- hence events=0 on the row it writes.
+            auto run = kernel(bo_in, bo_mean, bo_out,
+                              (int)1, (int)tpc, (int)warmup, (int)1);
             run.wait();
             const auto t2 = clk::now();
             bo_mean.sync(XCL_BO_SYNC_BO_FROM_DEVICE);

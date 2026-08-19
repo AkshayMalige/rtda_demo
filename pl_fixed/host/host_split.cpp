@@ -164,9 +164,15 @@ int main(int argc, char* argv[]) {
     auto uuid = device.load_xclbin(xclbin);
     auto kernel = xrt::kernel(device, uuid, "rtda_split_top");
 
-    auto bo_in = xrt::bo(device, N_TRACKS * INPUT_SIZE * sizeof(float), kernel.group_id(0));
-    auto bo_mean = xrt::bo(device, HIDDEN * sizeof(float), kernel.group_id(1));
-    auto bo_out = xrt::bo(device, OUT_DIM * sizeof(float), kernel.group_id(2));
+    // ONE buffer per direction, sized for the WHOLE run, and one kernel start
+    // for all of it -- the same shape as the AIE flow's single graph.run().
+    // The kernel loops over events internally (pl/src/rtda_split_top.h).
+    auto bo_in = xrt::bo(device, (size_t)n_events * N_TRACKS * INPUT_SIZE * sizeof(float),
+                         kernel.group_id(0));
+    auto bo_mean = xrt::bo(device, (size_t)n_events * HIDDEN * sizeof(float),
+                           kernel.group_id(1));
+    auto bo_out = xrt::bo(device, (size_t)n_events * OUT_DIM * sizeof(float),
+                          kernel.group_id(2));
     float* p_in = bo_in.map<float*>();
     float* p_mean = bo_mean.map<float*>();
     float* p_out = bo_out.map<float*>();
@@ -176,34 +182,40 @@ int main(int argc, char* argv[]) {
     double t_h2d = 0, t_krn = 0, t_d2h = 0;
 
     const auto t_start = clk::now();
+
+    // Stage every event first. This is host memcpy, not device time, and it is
+    // outside the H2D/kernel/D2H accounting below for the same reason it always
+    // was -- run_info.txt's ms_total still covers it.
     for (int ev = 0; ev < n_events; ev++) {
         const float* base = raw.data() + (size_t)ev * N_TRACKS * STRIDE;
+        float* dst = p_in + (size_t)ev * N_TRACKS * INPUT_SIZE;
         for (int j = 0; j < N_TRACKS; j++)
             for (int i = 0; i < INPUT_SIZE; i++)
-                p_in[j * INPUT_SIZE + i] = base[j * STRIDE + i];
-
-        auto t0 = clk::now();
-        bo_in.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-        auto t1 = clk::now();
-        // reset=1: each event starts from a zero roll history, so events are
-        // independent and reproducible regardless of what ran before.
-        auto run = kernel(bo_in, bo_mean, bo_out, (int)N_TRACKS, (int)warmup, (int)1);
-        run.wait();
-        auto t2 = clk::now();
-        bo_mean.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-        bo_out.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-        auto t3 = clk::now();
-
-        t_h2d += ms(t1 - t0); t_krn += ms(t2 - t1); t_d2h += ms(t3 - t2);
-        means[ev].assign(p_mean, p_mean + HIDDEN);
-        if (ev + 1 == n_events) last27.assign(p_out, p_out + OUT_DIM);
-
-        if (n_events > 20 && ev % (n_events / 20) == 0) {
-            std::cout << "\r[host] " << ev << " / " << n_events << " events" << std::flush;
-        }
+                dst[j * INPUT_SIZE + i] = base[j * STRIDE + i];
     }
+
+    auto t0 = clk::now();
+    bo_in.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    auto t1 = clk::now();
+    // reset=1: each event starts from a zero roll history, so events are
+    // independent and reproducible regardless of what ran before. The kernel
+    // now applies this per event rather than getting it from a fresh call.
+    auto run = kernel(bo_in, bo_mean, bo_out,
+                      (int)n_events, (int)N_TRACKS, (int)warmup, (int)1);
+    run.wait();
+    auto t2 = clk::now();
+    bo_mean.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    bo_out.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    auto t3 = clk::now();
+
+    t_h2d = ms(t1 - t0); t_krn = ms(t2 - t1); t_d2h = ms(t3 - t2);
+    for (int ev = 0; ev < n_events; ev++)
+        means[ev].assign(p_mean + (size_t)ev * HIDDEN,
+                         p_mean + (size_t)(ev + 1) * HIDDEN);
+    last27.assign(p_out + (size_t)(n_events - 1) * OUT_DIM,
+                  p_out + (size_t)n_events * OUT_DIM);
+
     const double total = ms(clk::now() - t_start);
-    if (n_events > 20) std::cout << "\r";
 
     const long n_tracks = (long)n_events * N_TRACKS;
     std::cout << "[host] " << n_events << " events in " << total << " ms\n"
