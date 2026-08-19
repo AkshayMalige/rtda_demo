@@ -44,17 +44,21 @@ set TB_EVENTS [env_or RTDA_EVENTS 2]
 set TB_WARMUP [env_or RTDA_WARMUP 3]
 set REFERENCE [file normalize "$PROJ_DIR/../native/tb_means.txt"]
 
-# The HLS clock, which is NOT the kernel clock. ../Makefile's KERNEL_FREQ only
-# reaches `v++ --link --clock.defaultFreqHz`; it never reached here, so this
-# period was hardcoded at 6.667 ns (150 MHz) and every experiment that raised
-# KERNEL_FREQ was re-timing RTL that HLS had scheduled for 150 MHz. The shipped
-# build closes at WNS +0.050 ns, so that leaves no headroom at all.
+# The HLS clock. It used to be hardcoded at 6.667 ns (150 MHz) while
+# ../Makefile's KERNEL_FREQ reached only `v++ --link --clock.defaultFreqHz`, so
+# every experiment that raised KERNEL_FREQ was re-timing RTL that HLS had
+# scheduled for 150 MHz.
 #
-# Raising the frequency for real means scheduling for it here as well, which
-# costs pipeline registers and therefore LUT. ../../freq_sweep/ drives both
-# together. The default is unchanged, so a build that does not set
-# RTDA_HLS_PERIOD is bit-identical to what shipped.
-set HLS_PERIOD [env_or RTDA_HLS_PERIOD 6.667]
+# ../Makefile now DERIVES this from KERNEL_FREQ and passes it in, so the two
+# move together and cannot drift. The default below is the same 180 MHz, and
+# matters only for a bare `vitis_hls rtda_split_project.tcl` with no Makefile;
+# ../../freq_sweep/ still overrides it to walk the HLS clock on its own.
+#
+# 5.5556 ns = 180 MHz. NOTE: the last routed build was 150 MHz at WNS
+# +0.050 ns -- 0.75% of that period. Scheduling for 180 costs pipeline
+# registers and therefore LUT, and the design was already at 75.95%. Nothing
+# has been synthesised at this default yet; see ../RESOURCES.md.
+set HLS_PERIOD [env_or RTDA_HLS_PERIOD 5.5556]
 
 puts "*****  format defines : $AP_DEFS"
 puts "*****  stimulus       : $STIMULUS"

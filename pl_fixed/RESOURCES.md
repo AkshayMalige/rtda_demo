@@ -179,6 +179,18 @@ in `route_report_timing_summary_0.rpt`, `clkout2_primitive` (150.000 MHz) carrie
 1,319,470 endpoints while `clkout1_primitive` (100 MHz) carries 3,236 — the
 kernel is on the fast one, the control path on the slow one.
 
+> **The default is now 180 MHz, and nothing has been built at it.** `KERNEL_FREQ`
+> in `../Makefile` moved to 180 MHz and now derives the HLS period as well, so
+> both clocks move together. Everything in this file -- the 75.95% LUT, the
+> +0.050 ns, the 150 MHz -- is the **2026-08-15 build at 150 MHz** and stays the
+> only routed result until a 180 MHz build replaces it. Read it as the baseline
+> the new default has to beat, not as a description of the new default.
+>
+> +0.050 ns is 0.75% of a 6.667 ns period. 180 MHz removes 1.111 ns of it, so
+> HLS has to re-pipeline to hold the schedule, which costs LUT on a design
+> already at 75.95% -- and the 2026-08-14 build failed to route at 98.87%.
+> `../../freq_sweep/` exists to find where that stops working.
+
 So the 2.4x calibration above was itself optimistic: LUT came in at 3.0x, DSP at
 3.7x. The rule from three points is that an HLS estimate here is an upper bound
 with a factor of **2.4-3.7** in it — too wide a band to plan with. It tells you

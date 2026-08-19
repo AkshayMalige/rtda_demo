@@ -38,7 +38,20 @@ PLATFORM       ?= xilinx_vek280_base_202420_1
 EDGE_COMMON_SW ?= /home/synthara/versal_common/xilinx-versal-common-v2024.2
 IMAGE          ?= $(EDGE_COMMON_SW)/Image
 ROOTFS         ?= $(EDGE_COMMON_SW)/rootfs.ext4
-KERNEL_FREQ    ?= 150000000
+# 180 MHz. ONE knob: this drives BOTH the v++ link (--clock.defaultFreqHz)
+# and the Vitis HLS schedule (RTDA_HLS_PERIOD -> create_clock in
+# pl/rtda_split_project.tcl). Keeping them separate is exactly how the design
+# came to be SCHEDULED for 150 MHz while the link was told something else --
+# see ../freq_sweep/README.md. Raising this costs LUT, because HLS pipelines
+# harder to hold the tighter period.
+KERNEL_FREQ    ?= 180000000
+# The HLS period in ns, derived so the two cannot drift. An explicit
+# RTDA_HLS_PERIOD in the environment still wins -- that is how freq_sweep
+# walks the HLS clock independently of the link.
+# $(strip ...): a line continuation inside $(if ...) leaves a leading space in
+# the expansion, and the value goes to the TCL as a quoted string.
+HLS_PERIOD_NS  ?= $(strip $(if $(RTDA_HLS_PERIOD),$(RTDA_HLS_PERIOD),\
+                  $(shell awk 'BEGIN{printf "%.4f", 1000000000.0/$(KERNEL_FREQ)}')))
 VITIS_HLS      ?= vitis_hls
 # numpy only; see aie_batch/Makefile for why this is pinned and not `python3`.
 PYTHON         ?= /home/synthara/miniforge3/bin/python
@@ -187,6 +200,7 @@ HLS_ENV   := RTDA_AP_DEFS="$(AP_DEFS)" \
              RTDA_STIMULUS="$(abspath $(SIM_STIMULUS))" \
              RTDA_TB_REFERENCE="$(CURDIR)/native/tb_means.txt" \
              RTDA_WEIGHTS_DIR="$(CURDIR)/pl/weights" \
+             RTDA_HLS_PERIOD="$(HLS_PERIOD_NS)" \
              RTDA_EVENTS=$(EVENTS) RTDA_WARMUP=$(WARMUP)
 
 # csim compares against the native model, so build that reference first --
