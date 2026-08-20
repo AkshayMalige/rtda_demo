@@ -49,7 +49,7 @@ WNS     ?= 0.0
 
 SWEEP_ARGS = --fmin $(FMIN) --fmax $(FMAX) --step $(STEP) \
              --root $(ROOT) --out $(OUT) --wns-threshold $(WNS) \
-             $(if $(YES),--yes,)
+             $(if $(YES),--yes,) $(if $(PRUNE),--prune,)
 
 .PHONY: all help test dryrun mock smoke sweep report vars clean clean_all
 
@@ -79,13 +79,13 @@ dryrun:
 # so the search can be rehearsed against several shapes of reality --
 # including the awkward one where routing dies before timing does.
 mock:
-	@rm -rf $(OUT)/state.json
-	@$(PYTHON) sweep_freq.py $(SWEEP_ARGS) --mock --check-isolation --fresh
+	@$(PYTHON) sweep_freq.py $(SWEEP_ARGS) --out $(OUT)/_mock \
+	   --root $(ROOT)/_mock --mock --check-isolation --fresh
 
 mock_cliff:
-	@rm -rf $(OUT)/state.json
 	@MOCK_FMAX_MHZ=240 MOCK_CLIFF_MHZ=185 \
-	  $(PYTHON) sweep_freq.py $(SWEEP_ARGS) --mock --check-isolation --fresh
+	  $(PYTHON) sweep_freq.py $(SWEEP_ARGS) --out $(OUT)/_mock \
+	   --root $(ROOT)/_mock --mock --check-isolation --fresh
 
 ############################################################################
 #  4. The one thing a mock cannot prove
@@ -135,6 +135,8 @@ help:
 	@echo "  make sweep YES=1                THE REAL RUN   ~4 h per step, serial"
 	@echo "  make sweep FMIN=150 FMAX=200    narrower grid"
 	@echo "  make report                     read the last result"
+	@echo ""
+	@echo "  Builds are KEPT at $(ROOT)/f<MHz>/pl_fixed/ -- add PRUNE=1 to delete them."
 	@echo ""
 	@echo "  Run test, dryrun and mock first. Together they cost a minute."
 	@echo "  Builds go to $(ROOT), never into this repo."

@@ -184,8 +184,20 @@ def build_point(mhz, args, logdir) -> dict:
         tree = Path(args.root) / f'f{mhz:g}' / 'pl_fixed'
         if not args.dry_run and tree.is_dir():
             found = R.read_point(tree, mhz, args.wns_threshold, args.lut_warn)
-            if found['verdict'] in (R.PASS, R.MARGINAL) or found['reason'] not in (
-                    '', 'no_reports'):
+            # ONLY a build that ran to a conclusion may be recovered. The first
+            # version accepted any non-empty reason, so a run stopped with
+            # Ctrl-C mid-csynth -- no .xo yet, because it had not got that far
+            # -- was recorded as a genuine FAIL and the ladder stopped there.
+            # An interrupted build is not a result; it has to be redone.
+            complete = (
+                found['verdict'] in (R.PASS, R.MARGINAL)
+                or found['reason'] in ('route_unrouted', 'place_congestion',
+                                       'timing_wns', 'clock_mismatch')
+                or (found['reason'] == 'hls_period_miss'
+                    and 'SYNTHESIS DONE' in (
+                        (tree / 'vitis_hls.log').read_text(errors='replace')
+                        if (tree / 'vitis_hls.log').is_file() else '')))
+            if complete:
                 found.update(mhz=mhz, period_ns=period, seconds=0.0,
                              stage='recovered', log=str(log), tree=str(tree),
                              note=(found.get('note') or '')
@@ -205,7 +217,8 @@ def build_point(mhz, args, logdir) -> dict:
                 rec['reason'] = 'hls_period_miss'
                 rec['note'] = f'csynth exited {rc}'
             rec.update(mhz=mhz, period_ns=period, seconds=time.time() - t0,
-                       stage='csynth', log=str(log), tree=str(tree))
+                       stage='csynth', log=str(log), tree=str(tree),
+                       mock=bool(args.mock))
             return rec
 
         rc, t_link = run_step('link', ['make', 'link', f'KERNEL_FREQ={hz}',
@@ -221,7 +234,8 @@ def build_point(mhz, args, logdir) -> dict:
             rec['verdict'], rec['reason'] = R.FAIL, 'toolerror'
             rec['note'] = f'v++ exited {rc} despite clean reports'
         rec.update(mhz=mhz, period_ns=period, seconds=time.time() - t0,
-                   stage='link', log=str(log), tree=str(tree), rc=rc)
+                   stage='link', log=str(log), tree=str(tree), rc=rc,
+                   mock=bool(args.mock))
         return rec
     except Exception as exc:                          # noqa: BLE001
         return {'mhz': mhz, 'period_ns': period, 'verdict': R.UNKNOWN,
@@ -230,12 +244,16 @@ def build_point(mhz, args, logdir) -> dict:
 
 
 def harvest(rec, outdir: Path, dry: bool, keep_build: bool):
-    """Copy the reports out, then delete the build tree.
+    """Copy the reports next to the results. The build tree STAYS.
 
-    RESOURCES.md exists because `make clean` ate the only copy of a shipped
-    build's reports; reference_may2026/ is a hand-made rescue of the previous
-    ones. ~3.5 GB of Vivado project per point is not worth keeping, ~40 MB of
-    reports is, and the choice must not be left to whoever cleans up later.
+    An earlier version deleted the tree after copying ~40 MB of reports out of
+    it. That threw away four hours of work to reclaim 3.5 GB on a disk with
+    1.5 TB free -- and the reports are a summary, while the project is the
+    evidence: you cannot open a summary in Vitis, re-run implementation from
+    it, or look at a schematic. Builds are kept unless --prune is passed.
+
+    The copy still happens, because RESOURCES.md exists partly because
+    `make clean` once ate the only copy of a shipped build's reports.
     """
     tree = Path(rec.get('tree', ''))
     dst = outdir / f'f{rec["mhz"]:g}'
@@ -259,6 +277,13 @@ def harvest(rec, outdir: Path, dry: bool, keep_build: bool):
     (dst / 'point.json').write_text(json.dumps(rec, indent=2, default=str))
     if not keep_build and tree.parent.is_dir():
         shutil.rmtree(tree.parent, ignore_errors=True)
+    elif tree.is_dir():
+        (dst / 'BUILD_TREE.txt').write_text(
+            f'The full Vivado/HLS project for this point is kept at:\n\n'
+            f'  {tree}\n\n'
+            f'  _x/link/vivado/vpl/prj/   the Vivado project\n'
+            f'  rtda_split_hls/           the Vitis HLS project\n'
+            f'  build/                    design.xsa\n')
 
 
 # ---------------------------------------------------------------------------
@@ -418,8 +443,11 @@ def main():
     ap.add_argument('--lut-warn', type=float, default=90.0)
     ap.add_argument('--timeout-hls', type=float, default=6 * 3600)
     ap.add_argument('--timeout-link', type=float, default=8 * 3600)
-    ap.add_argument('--keep-build', action='store_true',
-                    help='keep the ~3.5 GB Vivado tree per point')
+    ap.add_argument('--prune', dest='keep_build', action='store_false',
+                    default=True,
+                    help='delete each build tree after copying its reports out. '
+                         'Off by default -- a finished build is worth more than '
+                         'the 3.5 GB it occupies')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--mock', action='store_true',
                     help='fake vitis_hls/v++ -- rehearses the whole search in ~1 min')
@@ -474,9 +502,16 @@ def main():
     before = manifest(REPO / 'pl_fixed') if args.check_isolation else None
 
     recs: list[dict] = []
-    if args.resume and state_f.is_file() and not args.dry_run:
+    if args.resume and state_f.is_file():
         try:
             recs = json.loads(state_f.read_text())
+            wrong = [r for r in recs if bool(r.get('mock')) != bool(args.mock)
+                     and r.get('stage') != 'shipped']
+            if wrong:
+                say(f'{C["y"]}discarding {len(wrong)} point(s) from a '
+                    f'{"mock" if not args.mock else "real"} run{C["0"]} -- this is a '
+                    f'{"MOCK" if args.mock else "REAL"} sweep and the two must not mix')
+                recs = [r for r in recs if r not in wrong]
             say(f'resuming: {len(recs)} point(s) already done '
                 f'({", ".join(f"{r['mhz']:.0f}" for r in recs)})\n')
         except (OSError, ValueError):
@@ -487,7 +522,8 @@ def main():
         shipped = R.read_point(REPO / 'pl_fixed', SHIPPED_MHZ, args.wns_threshold)
         if shipped['verdict'] in (R.PASS, R.MARGINAL):
             shipped.update(mhz=SHIPPED_MHZ, period_ns=1000.0 / SHIPPED_MHZ,
-                           seconds=0.0, note='from the shipped build already on disk')
+                           seconds=0.0, stage='shipped', mock=bool(args.mock),
+                           note='from the shipped build already on disk')
             recs.append(shipped)
             say(f'seeded {SHIPPED_MHZ:.0f} MHz = {shipped["verdict"]} from the existing '
                 f'build (WNS {shipped["wns"]:+.3f} ns, LUT {shipped["lut_pct"]:.2f}%)\n')

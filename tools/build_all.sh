@@ -30,10 +30,10 @@
 #                                 debug taps. Run it first and the aiesimulator
 #                                 stages can no longer run.
 #   one AIE simulation at a time  every run in aie_batch/ shares data/ for PLIO
-#                                 input and <sim>simulator_output/ for output.
-#                                 A lock refuses a second. This script is
+#                                 INPUT. A lock refuses a second. This script is
 #                                 strictly serial for that reason -- do not add
-#                                 `&` or `-j`.
+#                                 `&` or `-j`. (Outputs are per configuration
+#                                 since 2026-08-19 and no longer collide.)
 #   pl_fixed hw_emu BEFORE hw     both consume pl/ip/rtda_split.xo and building
 #                                 it is the ~5 h csynth. Doing hw_emu first means
 #                                 hw reuses it.
