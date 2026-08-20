@@ -65,10 +65,13 @@ def main():
             print(f'  {name:16s} identical')
 
     # --- output reader round-trip, if a simulation has run -----------------
+    import run_sim
     for sim in ('aie', 'x86'):
-        if (HERE / f'{sim}simulator_output' / 'data').exists():
+        # run_sim owns where a run's output lands; do not rebuild the name here.
+        simout = run_sim.output_dir(sim)
+        if (simout / 'data').exists():
             from aie4ml.simulation import collect_outputs
-            mine = aie_io.read_outputs(ports, HERE, sim=sim)
+            mine = aie_io.read_outputs(ports, simout)
             theirs_out = collect_outputs(HERE, sim, layout)
             for t in sorted(mine):
                 d = np.abs(np.asarray(mine[t]) - np.asarray(theirs_out[t])).max()

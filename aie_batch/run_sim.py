@@ -50,6 +50,43 @@ def n_iter() -> int:
     raise RuntimeError(f'N_ITER not found in {src}/parameters.h')
 
 
+def default_workdir(sim: str) -> str:
+    pr = os.environ.get('RTDA_PRECISION', 'fp32')
+    return f'./Work_{pr}' if sim == 'aie' else f'./Work_x86_{pr}'
+
+
+def output_dir(sim: str, workdir: str | None = None) -> Path:
+    """Where this run's simulator output goes. THE definition -- everything else
+    asks here rather than composing the name itself.
+
+    Both simulators default to a bare `<sim>simulator_output/` in the cwd, so
+    every precision and every event count wrote into ONE directory and each run
+    destroyed the last. Work_<P>_ev<N>/ and libadf_<P>_ev<N>.a were already
+    suffixed; this was the one artefact that never got the same treatment, which
+    is how the fp32 aiesimulator output came to be overwritten by a bf16 run.
+
+    The tag is taken FROM THE WORKDIR, so the output can never end up labelled
+    differently from the build that produced it:
+
+        Work_x86_fp32_ev5 -> x86simulator_output_fp32_ev5
+        Work_bf16_ev5     -> aiesimulator_output_bf16_ev5
+        Work_fp32         -> aiesimulator_output_fp32      (crosscheck, no _ev)
+
+    RTDA_SIMOUT overrides, the same way RTDA_PRECISION and RTDA_SRC do; the
+    Makefile exports it so `make` and a bare `python sim_events.py` agree.
+    """
+    env = os.environ.get('RTDA_SIMOUT')
+    if env:
+        return HERE / env
+    name = Path(workdir or default_workdir(sim)).name       # drop './'
+    for prefix in ('Work_x86_', 'Work_'):                   # longest first
+        if name.startswith(prefix):
+            name = name[len(prefix):]
+            break
+    stem = 'aiesimulator_output' if sim == 'aie' else 'x86simulator_output'
+    return HERE / (f'{stem}_{name}' if name else stem)
+
+
 def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     """Run the compiled graph. Assumes `make graph` / `make x86com` already ran.
 
@@ -57,8 +94,7 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     own directory (Work_x86_ev<N>) so the two never overwrite each other.
     """
     if workdir is None:
-        pr = os.environ.get('RTDA_PRECISION', 'fp32')
-        workdir = f'./Work_{pr}' if sim == 'aie' else f'./Work_x86_{pr}'
+        workdir = default_workdir(sim)
     exe = 'aiesimulator' if sim == 'aie' else 'x86simulator'
     # The two simulators announce success differently, and both trail the message
     # with unrelated chatter ("IP-INFO: deleting packet ip"), so match on the
@@ -72,7 +108,11 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     # Do NOT add --output-time-stamp=no here, whatever aieml/ does: report.py reads
     # the `T <ns>` markers out of the PLIO output files to get the II, and that flag
     # suppresses them.
-    cmd = [exe, f'--pkg-dir={workdir}', *extra]
+    # --output-dir is what keeps one configuration from destroying the last;
+    # both simulators take it (aiesimulator -o, x86simulator -o). Relative to
+    # cwd=HERE, which is where the simulator runs.
+    outd = output_dir(sim, workdir)
+    cmd = [exe, f'--pkg-dir={workdir}', f'--output-dir={outd.name}', *extra]
     if sim == 'aie':
         cmd += shlex.split(os.environ.get('RTDA_AIESIM_ARGS', ''))
 
@@ -120,15 +160,15 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
 
 
 def _stamp_run(sim, workdir):
-    """Record what produced <sim>simulator_output/, next to the output itself.
+    """Record what produced this run's output directory, next to the output.
 
-    Both precisions and every event count write into the SAME
-    <sim>simulator_output/ directory -- it is not suffixed the way Work_<P>/ and
-    libadf_<P>.a are. So `make report` reads whatever ran last, and had no way to
-    know what that was: `make report PRECISION=fp32` on a directory left by a
-    bf16 run printed the bf16 II with an fp32 label and no complaint.
+    The directory is now suffixed per configuration (see output_dir), so it is no
+    longer possible for a bf16 run to be read as an fp32 one by overwriting it.
+    The stamp stays anyway: it still identifies a directory produced by hand, by
+    an older revision, or with RTDA_SIMOUT pointed somewhere deliberate, and
+    report.py still refuses on a mismatch rather than mislabelling.
     """
-    d = HERE / f'{"aie" if sim == "aie" else "x86"}simulator_output'
+    d = output_dir(sim, workdir)
     if not d.is_dir():
         return
     (d / 'run_stamp.txt').write_text(
@@ -144,11 +184,11 @@ def _exclusive():
     """Serialise simulator runs in this directory.
 
     app.cpp hard-codes its PLIO paths as `data/ifm_c<n>.txt`, relative to the
-    simulator's cwd, so EVERY run in this directory shares one input directory --
-    and the output goes to <sim>simulator_output/, also shared. Two concurrent
-    runs (two terminals, or a background job) overwrite each other's inputs
-    mid-flight and produce plausible-looking wrong numbers, or a confusing
-    mid-simulation failure. Fail fast and say why instead.
+    simulator's cwd, so EVERY run in this directory shares one INPUT directory.
+    (The output no longer is -- see output_dir -- but that does not make
+    concurrent runs safe.) Two of them, from two terminals or a background job,
+    overwrite each other's inputs mid-flight and produce plausible-looking wrong
+    numbers, or a confusing mid-simulation failure. Fail fast and say why.
     """
     lock = HERE / '.sim.lock'
     with lock.open('w') as fh:
@@ -157,7 +197,7 @@ def _exclusive():
         except BlockingIOError:
             raise RuntimeError(
                 'another simulation is already running in this directory.\n'
-                f'  {HERE} shares data/ and <sim>simulator_output/ across all runs, so they\n'
+                f'  {HERE} shares data/ (the PLIO inputs) across all runs, so they\n'
                 '  cannot overlap. Wait for it to finish, or check for a stray process:\n'
                 '      ps -ef | grep -E "x86simulator|aie2simmsm|sim_events"') from None
         try:
@@ -173,7 +213,7 @@ def run(feed: dict, sim: str = 'aie', workdir: str | None = None,
     with _exclusive():
         aie_io.write_inputs(feed, ports, HERE, iterations=iterations or n_iter())
         simulate(sim, workdir=workdir)
-        return aie_io.read_outputs(ports, HERE, sim=sim)
+        return aie_io.read_outputs(ports, output_dir(sim, workdir))
 
 
 def main():
@@ -196,7 +236,7 @@ def main():
         aie_io.write_inputs(feed, ports, HERE, iterations=n_iter())
         print(f'wrote data/ifm_c*.txt for {len(ports["inputs"])} tensors, {n_iter()} iterations')
     else:
-        for t, arr in aie_io.read_outputs(ports, HERE, sim=a.sim).items():
+        for t, arr in aie_io.read_outputs(ports, output_dir(a.sim)).items():
             print(f'  {t:10s} {arr.shape}  sum={arr.sum():.6f}')
 
 

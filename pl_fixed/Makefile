@@ -307,6 +307,7 @@ $(BUILD_DIR) $(PKG_DIR):
 $(XSA): $(PL_XO) $(LINK_CFG) | $(BUILD_DIR)
 	@command -v v++ >/dev/null || { echo "ERROR: v++ not on PATH -- source ../set_envs.sh"; exit 1; }
 	v++ --link -t $(TARGET) --save-temps --platform $(PLATFORM) \
+	    --temp_dir _x/$(STAMP) \
 	    --config $(LINK_CFG) --clock.defaultFreqHz $(KERNEL_FREQ) \
 	    $(PL_XO) -o $@
 

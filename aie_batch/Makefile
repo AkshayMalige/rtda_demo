@@ -78,6 +78,29 @@ LIBADF_X86   := libadf_x86_$(PRECISION).a
 WORK         := Work_$(PRECISION)
 WORK_X86     := Work_x86_$(PRECISION)
 
+# WHERE THIS CONFIGURATION'S SIMULATOR OUTPUT GOES.
+# Both simulators default to a bare <sim>simulator_output/ in the cwd, so every
+# precision and every event count wrote into ONE directory and each run
+# destroyed the last -- which is how the fp32 aiesimulator output was lost to a
+# bf16 run. Work_<P>_ev<N>/ and libadf_<P>_ev<N>.a were already suffixed; this
+# is the artefact that never got the same treatment.
+#
+# run_sim.output_dir() is AUTHORITATIVE: it derives the name from the workdir,
+# so the output can never be labelled differently from the build that produced
+# it. The two variables below exist only for the Make-side targets (analyze) and
+# must agree with that rule.
+#
+# RTDA_SIMOUT is deliberately NOT exported here. It names ONE directory, and a
+# single value cannot serve both simulators -- exporting it would send the x86
+# and aie runs to the same place, which is the bug this whole change removes.
+# Set it per-invocation if you want a run to land somewhere specific.
+#
+# Note the two shapes: the *_events targets build Work_<P>_ev<N>, while
+# crosscheck uses Work_<P>. Their outputs are suffixed to match.
+SIM_TAG      := $(PRECISION)_ev$(EVENTS)
+X86SIM_OUT   := x86simulator_output_$(SIM_TAG)
+AIESIM_OUT   := aiesimulator_output_$(SIM_TAG)
+
 export BATCH SOLVERS INPUT_DIM ITERS WEIGHTS_DIR
 export RTDA_SRC := $(SRC)
 export RTDA_PIPELINE := $(PIPELINE)
@@ -263,15 +286,26 @@ MEAN ?= ../results/aie_$(PRECISION)/hw_emu/track_mean_128.txt
 compare:
 	@$(PYTHON) compare_hw.py $(MEAN) --sim x86
 
+# Which aiesimulator output to read: this configuration's EVENTS run if it is
+# there, else the crosscheck one (Work_<P>, no _ev). `report` and `analyze`
+# resolve it identically -- one rule, used twice.
+AIESIM_PICK = d="$(AIESIM_OUT)"; test -d "$$d" || d="aiesimulator_output_$(PRECISION)";
+
 report:
-	@$(PYTHON) report.py --batch $(BATCH) --iters $(ITERS)
+	@$(AIESIM_PICK) $(PYTHON) report.py --batch $(BATCH) --iters $(ITERS) --dir "$$d"
 
 ports:
 	@$(PYTHON) run_sim.py ports
 
 analyze:
 	@source $(AIE_VITIS)/settings64.sh >/dev/null 2>&1; \
-	  vitis_analyzer aiesimulator_output/default.aierun_summary
+	  $(AIESIM_PICK) \
+	  test -d "$$d" || { echo "No aiesimulator output for PRECISION=$(PRECISION)."; \
+	    echo "Tried $(AIESIM_OUT)/ and aiesimulator_output_$(PRECISION)/."; \
+	    echo "Present:"; ls -d aiesimulator_output_* 2>/dev/null || echo "  (none)"; \
+	    exit 1; }; \
+	  echo ">>> analyzing $$d"; \
+	  vitis_analyzer $$d/default.aierun_summary
 
 # --- optional: regenerate the graph from ONNX (needs aie4ml) -------------
 regen:
@@ -407,6 +441,7 @@ $(XSA): $(LIBADF) $(LINK_CFG) | $(BUILD_DIR)
 	  echo "       Run: make system PRECISION=$(PRECISION) TARGET=$(TARGET)"; exit 1; }
 	@echo ">>> link  AIE_LIB=$(LIBADF)  CFG=$(LINK_CFG)  TARGET=$(TARGET)"
 	v++ --link -t $(TARGET) --platform $(PLATFORM) --save-temps \
+	    --temp_dir _x/$(STAMP) \
 	    --config $(LINK_CFG) $(LIBADF) -o $@
 
 link: $(XSA)
@@ -479,7 +514,7 @@ clean:
 	rm -rf Map_Report.csv sol.db diag_report.log *.vcd trdata.aiesim pl_sample_count*
 	rm -rf qemu_rp.log temp .AIE_SIM_CMD_LINE_OPTIONS .io_check_* data
 	rm -f stamp_*.marker .gen.*.stamp .system_build.*
-	rm -rf build package sd_stage _x host_batch.exe host_scan.exe
+	rm -rf build package sd_stage _x host_batch.exe host_scan.exe   # _x/<stamp>/
 	$(MAKE) -C host clean
 
 # NOTE: does NOT remove src/, app.cpp, aie.cfg or aie_pipeline.json -- those are

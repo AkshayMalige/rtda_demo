@@ -227,3 +227,9 @@ the make: you lose the HLS hours, not the night.
 
 `reference_may2026/` holds the May build's utilization reports. `make clean`
 deletes `_x/`, and that was the project's only known-good place-and-route.
+
+Since 2026-08-19 the `v++ --link --save-temps` output is per configuration --
+`_x/<variant>_<target>/`, e.g. `_x/ap16_3_hw/` -- matching `build/<stamp>/` and
+`package/<stamp>/`. It used to be a single `_x/`, so an hw_emu link destroyed the
+hw one's reports. `make clean` still removes the lot; harvest anything worth
+keeping before running it.

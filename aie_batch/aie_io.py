@@ -196,9 +196,15 @@ def write_inputs(feed: Dict[str, np.ndarray], ports, out_dir: Path, iterations: 
                 _fmt(tile.flatten(order='C'), p.vals_per_line, p.is_float))
 
 
-def read_outputs(ports, out_dir: Path, sim: str = 'aie') -> Dict[str, np.ndarray]:
-    """Read <sim>simulator_output/data/y_p<port>.txt back into logical tensors."""
-    data_dir = Path(out_dir) / f'{sim}simulator_output' / 'data'
+def read_outputs(ports, sim_out: Path) -> Dict[str, np.ndarray]:
+    """Read <sim_out>/data/y_p<port>.txt back into logical tensors.
+
+    Takes the simulator output DIRECTORY, not the directory above it plus a
+    simulator name to rebuild it from. That name is suffixed per configuration
+    now (run_sim.output_dir) and there must be exactly one place that knows how
+    it is spelled -- rebuilding it here as well is how it drifts.
+    """
+    data_dir = Path(sim_out) / 'data'
     result: Dict[str, np.ndarray] = {}
 
     for tensor, plist in ports['outputs'].items():
@@ -207,7 +213,7 @@ def read_outputs(ports, out_dir: Path, sim: str = 'aie') -> Dict[str, np.ndarray
             path = data_dir / f'y_p{p.port}.txt'
             if not path.exists():
                 raise FileNotFoundError(f'Expected simulator output {path} not found. '
-                                        f'Did the {sim} simulation run?')
+                                        f'Did the simulation run for this configuration?')
             # Streams may carry TLAST / "T <a> <b>" markers; drop them.
             toks, clean, i = path.read_text().split(), [], 0
             while i < len(toks):

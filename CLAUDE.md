@@ -89,8 +89,12 @@ make run    FLOW=pl_fixed TARGET=hw_emu               # 5 events on QEMU
 - **Run AIE simulations BEFORE `make system FLOW=aie_batch`.** The system build
   replaces `Work_<P>/` with the GMIO graph, which has no PLIO debug taps.
   `make link` refuses to link the wrong archive, but the workdir is still gone.
-- **One AIE simulation at a time.** They share `aie_batch/data/` and
-  `<sim>simulator_output/`; a lock refuses a second. Wait, do not work around.
+- **One AIE simulation at a time.** They share `aie_batch/data/`, the PLIO
+  *inputs*; a lock refuses a second. Wait, do not work around. The *outputs* are
+  per configuration -- `<sim>simulator_output_<P>_ev<N>/`, derived from the
+  workdir by `run_sim.output_dir()`, which is the only place that name is
+  spelled. They used to share one directory, and a bf16 run destroyed the fp32
+  one.
 - **Check `sd_stage/<P>/sysdata/config.txt` before flashing.** A mismatched
   xclbin/sysdata pair fails on the board with `parameter size 4096 bytes is
   inconsistent with ... 8192 bytes` (8192 = 2048×4 → fp32; 4096 = 2048×2 → bf16).

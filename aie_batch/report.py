@@ -42,22 +42,34 @@ def main():
     ap.add_argument('--batch', type=int, default=8)
     ap.add_argument('--iters', type=int, default=7)
     ap.add_argument('--event', type=int, default=50, help='real tracks per event')
+    ap.add_argument('--dir', default=None,
+                    help='simulator output directory; default is the one this '
+                         'configuration would have written (run_sim.output_dir)')
     a = ap.parse_args()
 
-    data_dir = HERE / 'aiesimulator_output' / 'data'
+    # run_sim owns the naming rule; ask it rather than spelling the directory
+    # out again here. --dir overrides for a directory produced by hand.
+    import run_sim
+    simout = Path(a.dir) if a.dir else run_sim.output_dir('aie')
+    data_dir = simout / 'data'
     if not data_dir.exists():
-        raise SystemExit('No aiesimulator_output/ -- run `make sim` first.')
+        raise SystemExit(
+            f'No {simout.name}/ -- run the aie simulation for this configuration:\n'
+            f'    make exactsim PRECISION={os.environ.get("RTDA_PRECISION", "fp32")}')
 
     # WHAT AM I ACTUALLY MEASURING?
     #
-    # aiesimulator_output/ is NOT precision-suffixed the way Work_<P>/ and
-    # libadf_<P>.a are -- every precision and every event count writes into the
-    # same directory. So this script reads whatever ran last, and used to print
-    # it under whatever PRECISION= you happened to pass, with no complaint:
+    # The output directory IS suffixed per configuration now, so this reads the
+    # run belonging to the PRECISION/EVENTS asked for rather than whatever ran
+    # last. Before that, every precision wrote into one aiesimulator_output/ and
     # `make report PRECISION=fp32` on a bf16 directory reported the bf16 II as
-    # fp32. run_sim.py now leaves a stamp; refuse rather than mislabel.
+    # fp32 without complaint.
+    #
+    # The stamp check below stays. It is no longer the only defence, but a
+    # directory can still be produced by hand, by an older revision, or with
+    # RTDA_SIMOUT pointed somewhere deliberate -- refuse rather than mislabel.
     stamp = {}
-    sf = HERE / 'aiesimulator_output' / 'run_stamp.txt'
+    sf = simout / 'run_stamp.txt'
     if sf.exists():
         for line in sf.read_text().splitlines():
             if '=' in line:
@@ -72,13 +84,13 @@ def main():
         if want and stamp.get('precision') and stamp['precision'] != want:
             raise SystemExit(
                 f"\n  REFUSING: you asked for PRECISION={want} but "
-                f"aiesimulator_output/ was produced by a {stamp['precision']} run.\n"
-                f"  These share one output directory. Re-run the simulation for "
-                f"{want} first:\n"
+                f"{simout.name}/ was produced by a {stamp['precision']} run.\n"
+                f"  Re-run the simulation for {want}, or pass --dir to point at\n"
+                f"  the directory you meant:\n"
                 f"      make crosscheck PRECISION={want}      # 1 event, the II the docs quote\n"
                 f"      make exactsim   PRECISION={want}      # or a multi-event run\n")
     else:
-        print('  measuring      : UNKNOWN run -- no aiesimulator_output/run_stamp.txt.')
+        print(f'  measuring      : UNKNOWN run -- no {simout.name}/run_stamp.txt.')
         print('                   Produced before stamping existed; re-run the '
               'simulation to be sure what this is.')
 

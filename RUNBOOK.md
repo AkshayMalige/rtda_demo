@@ -16,8 +16,8 @@ Four rules. Breaking any of them is what has gone wrong before:
    (`make link` now refuses if the archive is the wrong one, but the workdir is
    still gone.)
 3. **One AIE simulation at a time.** Every run in `aie_batch/` shares `data/`
-   for PLIO input and `<sim>simulator_output/` for output; a lock refuses a
-   second one. Do not work around it, wait.
+   for PLIO input; a lock refuses a second one. Do not work around it, wait.
+   (Outputs no longer collide -- they are per configuration.)
 4. **Never run `./script.py` directly.** `set_envs.sh` puts PetaLinux's
    numpy-less python first on PATH. The `make` targets pin an interpreter that
    has numpy.
@@ -70,7 +70,7 @@ make -C pl_fixed sweep   EVENTS=20                    # -> results/pl_fixed/swee
 make fastsim FLOW=pl_fixed EVENTS=1000                # -> results/pl_fixed/sim/  (50,000 tracks)
 
 # ==== 3. cycle-/RTL-accurate simulation ========================= ~50 min ====
-#   ONE AT A TIME. They share aie_batch/data/ and <sim>simulator_output/.
+#   ONE AT A TIME. They share aie_batch/data/ (the PLIO inputs).
 make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5  # aiesimulator  ~25 min
 make -C aie_batch report      PRECISION=fp32          # II -- PRINTED, not saved
 make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5  # aiesimulator  ~20 min
@@ -232,8 +232,8 @@ make graph PRECISION=fp32 && make crosscheck PRECISION=fp32 && make report PRECI
 > Write the numbers down. They are not saved to a file, and
 > `analysis/rtda_compare.ipynb` carries them as the constant `II_NS`.
 
-**Which II do you want?** `report` measures whatever aiesimulator run is in
-`aiesimulator_output/`, and the answer depends on the run:
+**Which II do you want?** `report` measures the aiesimulator run belonging to
+the PRECISION/EVENTS you ask for, and the answer depends on the run:
 
 | after | measures | fp32 | bf16 |
 |---|---|---|---|
@@ -250,15 +250,22 @@ make -C aie_batch report     PRECISION=<P>
 
 `crosscheck` depends on `graph`, so you never need to run `graph` yourself.
 
-**`aiesimulator_output/` is shared by every precision and every event count** —
-unlike `Work_<P>/` and `libadf_<P>.a`, it is not suffixed. `report` therefore
-reads whatever ran last. It now records and prints which run that was, and
-**refuses** if you ask for a precision that does not match:
+**The output directory is suffixed per configuration**, the same way
+`Work_<P>_ev<N>/` and `libadf_<P>_ev<N>.a` are:
+`aiesimulator_output_<P>_ev<N>/`, or `aiesimulator_output_<P>/` for the
+`crosscheck` (1-event) build. `report` reads the one belonging to the precision
+you asked for and says so if it is not there:
 
 ```
-REFUSING: you asked for PRECISION=fp32 but aiesimulator_output/ was
-produced by a bf16 run.
+No aiesimulator_output_fp32/ -- run the aie simulation for this configuration:
+    make exactsim PRECISION=fp32
 ```
+
+It was one shared directory until 2026-08-19, so every precision overwrote the
+last and `report` read whatever ran most recently. Each run still leaves a
+`run_stamp.txt` and `report` still **refuses** on a mismatch — a backstop for a
+directory produced by hand or with `RTDA_SIMOUT` pointed somewhere deliberate.
+Pass `--dir` to read a specific one.
 
 Before that guard existed, `make report PRECISION=fp32` on a directory left by
 a bf16 run printed bf16's II under an fp32 label, silently.
@@ -834,9 +841,10 @@ It sources `set_envs.sh` itself, so a bare shell is fine. Three properties worth
 knowing:
 
 - **It is strictly serial, deliberately.** Every run in `aie_batch/` shares
-  `data/` for PLIO input and `<sim>simulator_output/` for output, so two AIE
-  simulations at once collide — and the failure looks like a numerical bug rather
-  than a collision. A lock file also refuses a second copy of the script.
+  `data/` for PLIO input, so two AIE simulations at once collide — and the
+  failure looks like a numerical bug rather than a collision. A lock file also
+  refuses a second copy of the script. (Outputs are per configuration and do
+  not collide; the inputs are why this is serial.)
 - **A failing stage does not stop the others.** An overnight run should come back
   with nine results and one failure, not one failure. The summary says which
   failed, and every stage has its own log under `build_logs/<timestamp>/`.
