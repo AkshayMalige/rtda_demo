@@ -214,7 +214,7 @@ def _pad_rows(w, n):
     if n < w.shape[0]:
         raise ValueError(f'input has {n} columns, fewer than the {w.shape[0]} '
                          f'real features')
-    out = np.zeros((n, w.shape[1]))
+    out = np.zeros((n, w.shape[1]), dtype=w.dtype)
     out[:w.shape[0]] = w
     return out
 
@@ -228,25 +228,37 @@ def _roll_pair(cur, roll, carry=None):
         prev = np.roll(cur, 1, axis=0)
         return np.hstack([cur, prev]), None
     if roll == 'streaming':
-        head = np.zeros((1, cur.shape[1])) if carry is None else carry.reshape(1, -1)
+        head = (np.zeros((1, cur.shape[1]), dtype=cur.dtype) if carry is None
+                else carry.reshape(1, -1))
         prev = np.vstack([head, cur[:-1]])
         return np.hstack([cur, prev]), cur[-1].copy()
     raise ValueError(f"roll must be 'circular' or 'streaming', not {roll!r}")
 
 
 def forward(x, roll='circular', slope=SLOPE, quant=None, W=None, B=None,
-            carry=None):
+            carry=None, dtype=None):
     """Run the 14 dense layers over rows of `x`.
 
     x     (n, 6) or (n, 8) or (n, 16) -- extra columns are padding and ignored
     roll  'circular' (one event, ONNX) or 'streaming' (hardware)
     carry only for roll='streaming': the previous chunk's last row per solver,
           as a list of 3 arrays, so long runs can be processed in pieces
+    dtype the numpy type the whole chain runs in. None means float64, which is
+          what every golden was generated with -- leave it alone unless you
+          mean it. float32 exists for the CPU baseline in cpu/: it is the fair
+          comparison against fp32 hardware and it is ~2.2x faster here, because
+          float64 GEMM runs at half the SIMD width. Passing float32 weights
+          alone does NOT work: x, the _pad_rows zero-extension and the
+          _roll_pair zero head all default to float64 and drag the chain back
+          up. All four move together or none of them do.
 
     Returns dict with 'emb', 's0', 's1', 's2' -- each (n, 128) -- and 'carry'.
     """
     if W is None or B is None:
         W, B = _weights.load()
+    if dtype is not None:
+        W = {k: np.asarray(v, dtype=dtype) for k, v in W.items()}
+        B = {k: np.asarray(v, dtype=dtype) for k, v in B.items()}
     q = quant
     if q is not None:
         # Quantize the weights the way the hardware stores them, not just the
@@ -265,7 +277,7 @@ def forward(x, roll='circular', slope=SLOPE, quant=None, W=None, B=None,
     # width the caller (and the hardware) actually uses is what keeps a
     # regenerated testdata/golden_<N>.npz bit-identical to the committed one,
     # and with it the board's RTDA_GOLDEN check and every captured hw result.
-    x = np.asarray(x, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float64 if dtype is None else dtype)
     w_e0 = _pad_rows(W['emb_d0'], x.shape[1])
     if q is not None:
         x = q.act(x)                      # the input is quantized on the way in
@@ -301,7 +313,7 @@ def forward(x, roll='circular', slope=SLOPE, quant=None, W=None, B=None,
     return out
 
 
-def out27(mean128, W=None, B=None, quant=None):
+def out27(mean128, W=None, B=None, quant=None, dtype=None):
     """The deliverable: the 128-wide event mean through the final dense.
 
     Orientation matters and has bitten people: W['out'] is [128][27] and the
@@ -309,7 +321,10 @@ def out27(mean128, W=None, B=None, quant=None):
     """
     if W is None or B is None:
         W, B = _weights.load()
-    m = np.asarray(mean128, dtype=np.float64)
+    if dtype is not None:
+        W = {k: np.asarray(v, dtype=dtype) for k, v in W.items()}
+        B = {k: np.asarray(v, dtype=dtype) for k, v in B.items()}
+    m = np.asarray(mean128, dtype=np.float64 if dtype is None else dtype)
     if quant is not None:
         m = quant.act(m)
     y = m @ W['out'] + B['out']

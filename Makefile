@@ -38,7 +38,10 @@ TRACKS    ?= 50000
 # this reason.
 REF_PY ?= /home/synthara/miniforge3/envs/envaie2/bin/python
 
-VALID_FLOWS := aie_batch pl_fixed
+# cpu is not a build: it is the same network through model/rtda_ref.py on the
+# host, so the accelerators have something other than each other to be
+# compared against. It needs neither XRT nor Vitis.
+VALID_FLOWS := aie_batch pl_fixed cpu
 ifeq ($(filter $(FLOW),$(VALID_FLOWS)),)
   $(error FLOW=$(FLOW) is not one of: $(VALID_FLOWS))
 endif
@@ -94,12 +97,17 @@ selftest:
 #      make collect FROM=/mnt/usb FLOW=pl_fixed  TARGET=hw
 ############################################################################
 FROM ?=
-ifeq ($(FLOW),pl_fixed)
-  IMPL := pl_fixed
-else
+ifeq ($(FLOW),aie_batch)
   IMPL := aie_$(PRECISION)
+else
+  IMPL := $(FLOW)
 endif
-RESULT_DIR := results/$(IMPL)/$(TARGET)
+# The CPU flow has no hw/hw_emu axis -- it lands in results/cpu/native/.
+ifeq ($(FLOW),cpu)
+  RESULT_DIR := results/cpu/native
+else
+  RESULT_DIR := results/$(IMPL)/$(TARGET)
+endif
 RESULT_FILES := track_means_all.txt track_out_27.txt run_info.txt
 
 # Does the packaged image actually contain what the host will open?

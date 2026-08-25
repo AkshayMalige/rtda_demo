@@ -58,6 +58,7 @@ VERBOSE=0
 STAGES=(
   "data|stimulus, goldens and the reference self-test|~3 min"
   "x86|x86simulator + the native ap_fixed model (functional)|~5 min"
+  "cpu|host-CPU baseline: correctness + the 1..10000 event scan|~1 min"
   "exact|aiesimulator both precisions + PL csim (cycle/RTL accurate)|~50 min"
   "hw_emu|system build, TARGET=hw_emu, all three|~3 h (+5 h first PL csynth)"
   "hw|system build, TARGET=hw, all three -- the SD images|~8 h"
@@ -74,7 +75,7 @@ usage() {
     echo
     echo "  Shorthands:"
     printf '  %-8s %s\n' "build" "data + hw_emu + hw -- COMPILES ONLY, runs no simulator"
-    printf '  %-8s %s\n' "sim"   "x86 + exact -- runs the simulators, builds no image"
+    printf '  %-8s %s\n' "sim"   "x86 + cpu + exact -- runs the simulators, builds no image"
     printf '  %-8s %s\n' "all"   "every stage"
     echo
     echo "  Stages always run in the order above, whatever order you type them."
@@ -96,24 +97,24 @@ for a in "$@"; do
         --list|-l|-h|--help) usage ;;
         --dry-run|-n) DRYRUN=1 ;;
         --verbose|-v) VERBOSE=1 ;;
-        all) WANT=(data x86 exact hw_emu hw) ;;
+        all) WANT=(data x86 cpu exact hw_emu hw) ;;
         # Compile everything, run nothing. `data` is in here because the images
         # package the stimulus files -- packaging with an empty testdata/ ships a
         # card the hosts cannot read.
         build) WANT+=(data hw_emu hw) ;;
         # The mirror image: run every simulator, build no image.
-        sim) WANT+=(x86 exact) ;;
-        data|x86|exact|hw_emu|hw) WANT+=("$a") ;;
+        sim) WANT+=(x86 cpu exact) ;;
+        data|x86|cpu|exact|hw_emu|hw) WANT+=("$a") ;;
         *) echo "unknown argument: $a"; usage ;;
     esac
 done
-[ ${#WANT[@]} -eq 0 ] && WANT=(data x86 exact hw_emu hw)
+[ ${#WANT[@]} -eq 0 ] && WANT=(data x86 cpu exact hw_emu hw)
 
 # Deduplicate and put into canonical order. `build build x86` is harmless -- each
 # stage runs once regardless -- but without this the banner would count seven
 # stages and announce "STAGE 1/7" for a run of four.
 _dedup=()
-for canon in data x86 exact hw_emu hw; do
+for canon in data x86 cpu exact hw_emu hw; do
     for w in "${WANT[@]}"; do
         [ "$w" = "$canon" ] && { _dedup+=("$canon"); break; }
     done
@@ -243,6 +244,16 @@ if wanted x86; then
     run "x86sim aie bf16"             x86.log make fastsim FLOW=aie_batch PRECISION=bf16 EVENTS=5
     run "pl sweep (format ranking)"   x86.log make -C pl_fixed sweep EVENTS=20
     run "pl native model, 1000 ev"    x86.log make fastsim FLOW=pl_fixed EVENTS=1000
+fi
+
+# ---- 1b. the host-CPU baseline --------------------------------------------
+# Needs no card, no XRT and no Vitis, and it is the only stage that can run
+# while a hardware build is going -- though it should not, because it measures
+# the machine it runs on.
+if wanted cpu; then
+    banner cpu "$(desc_of cpu)"
+    run "cpu correctness (chunk+threads)" cpu.log make fastsim FLOW=cpu EVENTS=200
+    run "cpu scan 1..10000 events"        cpu.log make scan_host FLOW=cpu
 fi
 
 # ---- 2. cycle / RTL accurate ----------------------------------------------

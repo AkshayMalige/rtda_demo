@@ -6,10 +6,16 @@ Every run's output, one directory per implementation.
 aie_fp32/    sim/  hw_emu/  hw/      AIE-ML, float32
 aie_bf16/    sim/  hw_emu/  hw/      AIE-ML, bfloat16
 pl_fixed/    sim/  hw_emu/  hw/      PL only, ap_fixed<16,3>
+cpu/         native/                 host-CPU baseline, fp32, 1..32 threads
 legacy/                              pre-restructure runs, see below
 ```
 
 All of it is gitignored -- regenerable by definition. The READMEs are not.
+
+Because it is gitignored, a fresh clone has none of it and the notebooks fall
+back rather than fail. `tools/sync_results.sh [SRC_TREE]` copies a build tree's
+artefacts in (~1.7 MB, plus the 63 MB scan stimulus) so the analysis can be run
+without one.
 
 ## The file formats, which are the same for every implementation
 
@@ -44,9 +50,9 @@ per-implementation variants of this file.
 
 | column | meaning |
 |---|---|
-| `impl` | `aie_fp32` \| `aie_bf16` \| `pl_fixed`. The AIE host derives it from `sysdata/config.txt`, so one binary labels both precisions correctly. |
-| `variant` | `fp32`/`bf16` for AIE, the `ap<W>_<I>` string for PL |
-| `source` | `hw` \| `hw_emu`, from the xclbin name. An emulation run mislabelled as silicon is the failure this exists to prevent. |
+| `impl` | `aie_fp32` \| `aie_bf16` \| `pl_fixed` \| `cpu`. The AIE host derives it from `sysdata/config.txt`, so one binary labels both precisions correctly. |
+| `variant` | `fp32`/`bf16` for AIE, the `ap<W>_<I>` string for PL, `fp32_t<N>` for the CPU -- the thread count rides here so that `mode` keeps meaning the same thing for every flow |
+| `source` | `hw` \| `hw_emu`, from the xclbin name. An emulation run mislabelled as silicon is the failure this exists to prevent. `native` for the CPU, which has no device and therefore no target axis. |
 | `events`, `tracks` | the size of the point. `events=0` marks a row that is not an event sweep at all (the PL `tracks_per_call` diagnostic). |
 | `rep` | repeat index. Points are repeated so the notebook can show min/median/max instead of a single number. |
 | `launches` | device invocations for this point: `graph.run()` calls (AIE), kernel calls (PL). For PL this is the event count in `fresh`/`reuse` and **1** in `single`. |
@@ -84,6 +90,23 @@ swamps the 31 ms that is actually the design.
 kernel call, for the distribution plot.
 
 Read by `analysis/rtda_scan.ipynb`.
+
+## cpu/native/
+
+The host-CPU baseline, written by `make scan_host FLOW=cpu` (`cpu/scan_cpu.py`)
+and read by `analysis/rtda_scan.ipynb` section 8. Same `scan.csv` schema as the
+two XRT hosts.
+
+It is **not** like-for-like with them and the notebook says so on the figure:
+the accelerator rows include XRT buffer syncs and kernel launches driven by the
+VEK280's quad-A72 PS, while the CPU has no device transfer at all and runs on
+the 32-core EPYC the build machine is. `us_h2d` and `us_d2h` are 0 for that
+reason, not because they were not measured.
+
+`scan_meta.txt` carries what makes the number reproducible and what would
+otherwise be invisible: `dtype`, `chunk_events`, `warmup_run`, `blas_threads`
+and `malloc_mmap_threshold`. That last one is load-bearing -- see
+`cpu/README.md`.
 
 ## legacy/
 

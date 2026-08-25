@@ -69,6 +69,16 @@ make fastsim FLOW=aie_batch PRECISION=bf16 EVENTS=5   # -> results/aie_bf16/sim/
 make -C pl_fixed sweep   EVENTS=20                    # -> results/pl_fixed/sweep.npz
 make fastsim FLOW=pl_fixed EVENTS=1000                # -> results/pl_fixed/sim/  (50,000 tracks)
 
+# ==== 2b. the host-CPU baseline ================================= ~1 min =====
+#   No card, no XRT, no Vitis. Section 8 of rtda_scan.ipynb.
+#   Do NOT run this while a hardware build is going: it measures this machine.
+make fastsim   FLOW=cpu                 # chunk + threads bit-identical, fp32 price
+make scan_host FLOW=cpu                 # -> results/cpu/native/{scan.csv,scan_meta.txt}
+#   Expected @10000 events, fp32, EPYC 9354P:
+#     1T 305.9   2T 153.6   4T 77.4   8T 40.0   16T 21.9   32T 15.9  us/event
+#   against AIE-ML fp32 30.1, bf16 11.9, FPGA fixed<16,3> 4733.
+#   If 32T is WORSE than 16T, the allocator re-exec did not take -- see cpu/README.md.
+
 # ==== 3. cycle-/RTL-accurate simulation ========================= ~50 min ====
 #   ONE AT A TIME. They share aie_batch/data/ (the PLIO inputs).
 make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5  # aiesimulator  ~25 min
@@ -80,7 +90,12 @@ make -C pl_fixed csim    EVENTS=3                     # ~3 min  gate: 0.000e+00
 #   duration never measured here, and csim already gates the kernel at 0.000e+00
 #   against the native model. Run it when you have changed the RTL, not routinely.
 
-#  >>> BOTH NOTEBOOKS ALREADY WORK HERE. Everything below adds hardware. <<<
+#  >>> ALL THREE NOTEBOOKS ALREADY WORK HERE. Everything below adds hardware. <<<
+#
+#  Or, without building anything at all: tools/sync_results.sh [SRC_TREE] copies
+#  another tree's results, power reports, csynth report and scan stimulus in.
+#  Run rtda_reference.ipynb FIRST -- it writes analysis/out/golden_onnx_50000.npz,
+#  which rtda_compare.ipynb requires and must not be restored from a backup.
 
 # ==== 4. system build: hw_emu, all three ======================== ~3 h ======
 make system FLOW=aie_batch PRECISION=fp32 TARGET=hw_emu
