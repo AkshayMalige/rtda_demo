@@ -71,11 +71,20 @@ across 50 tiny kernels. `graph` replays them as one: 558 → 139 µs.
 
 ## The result has a shape nothing else here has
 
-**This GPU is fastest at 1,000 events, not 10,000** — every other
-implementation in the repo improves monotonically with run size. The L40S has
-96 MB of L2; one `(n,128)` fp32 activation is 25.6 MB at 1,000 events and
-256 MB at 10,000, so all 14 layers drop out of cache into GDDR6. fp32 degrades
-2.2×, bf16 3.0×, tf32 3.1×.
+**This GPU stops improving long before 10,000 events** — every other
+implementation in the repo is monotone. The cause was tested, not assumed: a
+cache effect must bite at a fixed number of *bytes*, so fp32 and tf32 (shared
+float32 storage) must turn at the same run size and bf16 at twice it. Measured:
+
+| variant | best at | µs/event | one `(n,128)` activation |
+|---|---|---|---|
+| bf16 | 1,000 events | 0.99 | 12.8 MB |
+| fp32 | 500 events | 2.54 | 12.8 MB |
+| tf32 | 500 events | 1.84 | 12.8 MB |
+
+Same 12.8 MB peak for all three, and bf16's turn point exactly 2.0× fp32's.
+The L40S has 96 MB of L2 and each of the 14 layers reads and writes one of these
+tensors, so several are live at once; past that they stream from GDDR6.
 
 Score this flow on its **best** point, not its largest run. `rtda_scan.ipynb`
 §8 does exactly that, and for every other implementation the two coincide.

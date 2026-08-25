@@ -211,12 +211,14 @@ to plot them. Never use it for a number.
 Only `mode=single` is comparable to the other flows. `fresh` and `graph` are
 diagnostics, like `pl_fixed`'s `reuse` and `tpc`.
 
-**Score the GPU on its best point, not its largest run.** Measured on an L40S it
-is fastest at 1000 events and 2.2x (fp32) to 3.1x (tf32) worse at 10000: the card
-has 96 MB of L2 and one (n,128) fp32 activation is 25.6 MB at 1000 events but
-256 MB at 10000, so all 14 layers fall out of cache. Every other implementation
-here is monotone, so `rtda_scan.ipynb` §8 takes the minimum across the sweep and
-that changes nothing for them.
+**Score the GPU on its best point, not its largest run.** It is the only
+non-monotone curve here. Measured on an L40S, and tested rather than assumed:
+fp32 and tf32 peak at 500 events, bf16 at 1000 -- all three at the SAME 12.8 MB
+(n,128) activation, and bf16's turn point is exactly 2.0x fp32's because its
+tensors are half the size. That is a cache effect, not a run-size effect: 96 MB
+of L2, and each of the 14 layers reads and writes one of those tensors. By 10000
+events it is 2.3x (fp32) to 3.0x (bf16) off its own best. `rtda_scan.ipynb` §8
+takes the minimum across the sweep, which changes nothing for the others.
 
 The small-batch floor is **device-side** per-kernel launch, not host dispatch --
 cuda events put the GPU at 95% busy at one event, host ~25 us of ~558. `mode=graph`
