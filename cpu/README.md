@@ -90,7 +90,7 @@ hosts emit, so it drops into the existing notebook machinery.
   `rtda_scan.ipynb` keeps working unchanged
 - `us_call_*` is the per-chunk distribution
 
-Read by `analysis/rtda_scan.ipynb` §9.
+Read by `analysis/rtda_scan.ipynb` §8.
 
 ## The shape of the result, and one artefact worth knowing
 

@@ -79,6 +79,22 @@ make scan_host FLOW=cpu                 # -> results/cpu/native/{scan.csv,scan_m
 #   against AIE-ML fp32 30.1, bf16 11.9, FPGA fixed<16,3> 4733.
 #   If 32T is WORSE than 16T, the allocator re-exec did not take -- see cpu/README.md.
 
+# ==== 2c. the GPU baseline ============ another machine, ~5 min of your time =
+#   The GPU is not in this box. Package it, run it there, bring back two files.
+make -C gpu selftest                    # torch vs rtda_ref at fp64 -> ~1.4e-15
+                                        #   NO GPU NEEDED. This is the gate.
+make -C gpu tarball                     # -> gpu/rtda_gpu.tar.gz  (1.4 MB)
+#   scp gpu/rtda_gpu.tar.gz gpuserver:~/ ; then on that machine:
+#     tar xzf rtda_gpu.tar.gz && cd rtda_gpu
+#     nvidia-smi --query-gpu=index,name,memory.used,utilization.gpu --format=csv
+#     python gpu/scan_gpu.py --check --gpu <IDLE>    # fp32 must be ~1e-6.
+#                                                   #   ~1e-3 means TF32 leaked in.
+#     python gpu/scan_gpu.py --gpu <IDLE>           # the sweep, ~2 min
+#   PICK AN IDLE CARD. scan_gpu.py refuses a busy one -- a shared GPU ruins this
+#   measurement and whatever else is running on it. Full instructions travel
+#   inside the tarball as README.md.
+make collect_scan FLOW=gpu FROM=<unpacked>/results/gpu/native
+
 # ==== 3. cycle-/RTL-accurate simulation ========================= ~50 min ====
 #   ONE AT A TIME. They share aie_batch/data/ (the PLIO inputs).
 make exactsim FLOW=aie_batch PRECISION=fp32 EVENTS=5  # aiesimulator  ~25 min

@@ -51,6 +51,9 @@ aie_batch/    AIE-ML aie::mmul design, PRECISION=fp32|bf16, + its XRT host
 pl_fixed/     PL-only HLS ap_fixed design + a native bit-accurate model
 cpu/          the host-CPU baseline: the SAME rtda_ref.forward, threaded.
               No XRT, no Vitis, no card -- `make -C cpu scan_host`, ~40 s.
+gpu/          the NVIDIA baseline. rtda_torch.py is the ONE second copy of the
+              forward pass; it is gated against rtda_ref at fp64 every run.
+              Runs on another machine -- `make -C gpu tarball`.
 analysis/     rtda_reference.ipynb (fp32 end to end), rtda_compare.ipynb (all three),
               rtda_scan.ipynb (latency scaling; section 8 is the CPU baseline)
 results/      aie_fp32/ aie_bf16/ pl_fixed/, each {sim,hw_emu,hw}; cpu/native/
@@ -84,10 +87,15 @@ make run    FLOW=pl_fixed TARGET=hw_emu               # 5 events on QEMU
 
 make fastsim   FLOW=cpu                               # CPU baseline correctness
 make scan_host FLOW=cpu                               # 1..10000 events x 1..32 threads
+
+make -C gpu selftest                                  # torch vs rtda_ref, NO GPU needed
+make -C gpu tarball                                   # 1.4 MB bundle for the GPU server
+make collect_scan FLOW=gpu FROM=<dir>                 # file what comes back
+
 tools/sync_results.sh [SRC_TREE]                      # pull a build tree's artefacts
 ```
 
-`FLOW=aie_batch|pl_fixed|cpu`, `TARGET=hw_emu|hw`, `PRECISION=fp32|bf16`
+`FLOW=aie_batch|pl_fixed|cpu|gpu`, `TARGET=hw_emu|hw`, `PRECISION=fp32|bf16`
 (aie_batch), `AP_W`/`AP_I`/`ALPHA125` (pl_fixed).
 
 ## Traps that have cost real time
@@ -175,6 +183,34 @@ Measured, 10000 events, fp32, on the EPYC 9354P: 305.9 us/event at 1 thread,
 match the fp32 design and 32 do not reach bf16**; `pl_fixed` at 4733 us/event
 is slower than a single CPU thread.
 
+## The GPU baseline
+
+`gpu/rtda_torch.py` is the **only second copy of the forward pass** in this
+repo. `cpu/` has none -- it calls `R.forward` -- but torch cannot execute numpy
+on a card. `rtda_ref.py` exists because four copies once drifted, so the defence
+here is a gate, not care: every `--check` compares torch fp64 against rtda_ref
+fp64 and must land at ~1e-15 (measured 1.4e-15). If you touch either file, that
+number is what tells you whether they still agree.
+
+Three traps, all handled in `scan_gpu.py`, all easy to reintroduce:
+
+- **CUDA is asynchronous.** `perf_counter()` around a torch call times the
+  *launch*. Every phase is bracketed by `torch.cuda.synchronize()` and the
+  kernel phase is cross-checked with CUDA events.
+- **TF32.** Torch can run "float32" matmuls at ~10-bit mantissa on this
+  hardware -- ~1e-3 error where fp32 gives ~1e-6, worse than bf16, still
+  labelled fp32. Both backend flags are set per variant and recorded;
+  `variant=tf32` measures it deliberately.
+- **A busy card.** The preflight refuses a GPU with memory in use. It protects
+  the measurement and whoever else is on it.
+
+`--allow-cpu` runs the sweep with no GPU to exercise the harness. Those rows are
+stamped, refuse to be written to `results/gpu/native/`, and the notebook refuses
+to plot them. Never use it for a number.
+
+Only `mode=single` is comparable to the other flows. `fresh` and `graph` are
+diagnostics, like `pl_fixed`'s `reuse` and `tpc`.
+
 ## Running the notebooks without a build tree
 
 `results/` is gitignored, so a fresh clone has no scan, power or csynth
@@ -192,6 +228,7 @@ make fastsim FLOW=aie_batch PRECISION=fp32 EVENTS=5   # PASS ~6.2e-07
 make -C pl_fixed check_weights                    # worst 5.0e-11
 make -C pl_fixed csim EVENTS=3                    # PASS, worst 0.000e+00
 make fastsim FLOW=cpu                             # chunk + threads bit-identical
+make -C gpu selftest                              # torch vs rtda_ref, ~1.4e-15
 ```
 Then Run All on `analysis/rtda_reference.ipynb`, then `rtda_compare.ipynb`.
 `RUNBOOK.md` has the full expected-values table.

@@ -7,6 +7,7 @@ aie_fp32/    sim/  hw_emu/  hw/      AIE-ML, float32
 aie_bf16/    sim/  hw_emu/  hw/      AIE-ML, bfloat16
 pl_fixed/    sim/  hw_emu/  hw/      PL only, ap_fixed<16,3>
 cpu/         native/                 host-CPU baseline, fp32, 1..32 threads
+gpu/         native/                 NVIDIA baseline, fp32/bf16/tf32
 legacy/                              pre-restructure runs, see below
 ```
 
@@ -50,9 +51,9 @@ per-implementation variants of this file.
 
 | column | meaning |
 |---|---|
-| `impl` | `aie_fp32` \| `aie_bf16` \| `pl_fixed` \| `cpu`. The AIE host derives it from `sysdata/config.txt`, so one binary labels both precisions correctly. |
+| `impl` | `aie_fp32` \| `aie_bf16` \| `pl_fixed` \| `cpu` \| `gpu`. The AIE host derives it from `sysdata/config.txt`, so one binary labels both precisions correctly. |
 | `variant` | `fp32`/`bf16` for AIE, the `ap<W>_<I>` string for PL, `fp32_t<N>` for the CPU -- the thread count rides here so that `mode` keeps meaning the same thing for every flow |
-| `source` | `hw` \| `hw_emu`, from the xclbin name. An emulation run mislabelled as silicon is the failure this exists to prevent. `native` for the CPU, which has no device and therefore no target axis. |
+| `source` | `hw` \| `hw_emu`, from the xclbin name. An emulation run mislabelled as silicon is the failure this exists to prevent. `native` for the CPU and GPU, which have no bitstream and therefore no target axis. |
 | `events`, `tracks` | the size of the point. `events=0` marks a row that is not an event sweep at all (the PL `tracks_per_call` diagnostic). |
 | `rep` | repeat index. Points are repeated so the notebook can show min/median/max instead of a single number. |
 | `launches` | device invocations for this point: `graph.run()` calls (AIE), kernel calls (PL). For PL this is the event count in `fresh`/`reuse` and **1** in `single`. |

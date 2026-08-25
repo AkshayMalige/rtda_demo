@@ -1,7 +1,7 @@
 # results/cpu/native/
 
 The CPU baseline's scan output. Written by `make -C cpu scan_host`
-(`cpu/scan_cpu.py`), read by `analysis/rtda_scan.ipynb` §9.
+(`cpu/scan_cpu.py`), read by `analysis/rtda_scan.ipynb` §8.
 
 | file | content |
 |---|---|

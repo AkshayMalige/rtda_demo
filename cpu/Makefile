@@ -102,5 +102,5 @@ help:
 	@echo "         SCAN_EVENTS=1,10,100,1000,10000  SCAN_REPS=5"
 	@echo ""
 	@echo "  Results land in results/cpu/native/ and are read by"
-	@echo "  analysis/rtda_scan.ipynb section 9."
+	@echo "  analysis/rtda_scan.ipynb section 8."
 	@echo ""

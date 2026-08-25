@@ -38,10 +38,12 @@ TRACKS    ?= 50000
 # this reason.
 REF_PY ?= /home/synthara/miniforge3/envs/envaie2/bin/python
 
-# cpu is not a build: it is the same network through model/rtda_ref.py on the
-# host, so the accelerators have something other than each other to be
-# compared against. It needs neither XRT nor Vitis.
-VALID_FLOWS := aie_batch pl_fixed cpu
+# cpu and gpu are not builds: they are the same network on the host and on an
+# NVIDIA card, so the accelerators have something other than each other to be
+# compared against. Neither needs XRT or Vitis. gpu usually runs on a DIFFERENT
+# machine -- `make -C gpu tarball` packages it and `make collect_scan FLOW=gpu`
+# files the results that come back.
+VALID_FLOWS := aie_batch pl_fixed cpu gpu
 ifeq ($(filter $(FLOW),$(VALID_FLOWS)),)
   $(error FLOW=$(FLOW) is not one of: $(VALID_FLOWS))
 endif
@@ -102,9 +104,9 @@ ifeq ($(FLOW),aie_batch)
 else
   IMPL := $(FLOW)
 endif
-# The CPU flow has no hw/hw_emu axis -- it lands in results/cpu/native/.
-ifeq ($(FLOW),cpu)
-  RESULT_DIR := results/cpu/native
+# cpu and gpu have no hw/hw_emu axis -- they land in results/<flow>/native/.
+ifneq ($(filter $(FLOW),cpu gpu),)
+  RESULT_DIR := results/$(FLOW)/native
 else
   RESULT_DIR := results/$(IMPL)/$(TARGET)
 endif
@@ -139,10 +141,14 @@ SCAN_FILES := scan.csv scan_meta.txt
 scan_host:
 	@$(MAKE) -C $(FLOW) scan_host $(FLOW_ARGS)
 
+# TARGET is meaningless for cpu and gpu -- they have no hw/hw_emu axis -- but
+# FLOW=gpu is the one case where results are genuinely produced on another
+# machine and carried back, so it is exactly the flow that needs this target.
 collect_scan:
 	@test -n "$(FROM)" || { echo "ERROR: FROM=<dir> is required, e.g."; \
-	  echo "  make collect_scan FROM=/mnt/usb FLOW=aie_batch PRECISION=bf16 TARGET=hw"; exit 1; }
-	@test "$(TARGET)" = hw -o "$(TARGET)" = hw_emu || { \
+	  echo "  make collect_scan FROM=/mnt/usb FLOW=aie_batch PRECISION=bf16 TARGET=hw"; \
+	  echo "  make collect_scan FROM=~/rtda_gpu/results/gpu/native FLOW=gpu"; exit 1; }
+	@test -n "$(filter $(FLOW),cpu gpu)" -o "$(TARGET)" = hw -o "$(TARGET)" = hw_emu || { \
 	  echo "ERROR: TARGET must be hw or hw_emu (got '$(TARGET)')"; exit 1; }
 	@for f in $(SCAN_FILES); do \
 	   test -s "$(FROM)/$$f" || { echo "ERROR: $(FROM)/$$f missing or empty."; \
@@ -234,6 +240,8 @@ clean:
 clean_all:
 	@$(MAKE) -C aie_batch clean_all
 	@$(MAKE) -C pl_fixed  clean_all
+	@$(MAKE) -C cpu       clean_all
+	@$(MAKE) -C gpu       clean_all
 	@rm -rf _x .Xil _ide *.xclbin *.xsa *.log emconfig.json
 
 vars:
