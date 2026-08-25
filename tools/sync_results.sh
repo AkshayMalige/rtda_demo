@@ -57,6 +57,10 @@ results/pl_fixed/sim/run_info.txt
 results/pl_fixed/sim/track_means_all.txt
 results/pl_fixed/sim/track_out_27.txt
 results/pl_fixed/sweep.npz
+results/cpu/native/scan.csv
+results/cpu/native/scan_meta.txt
+results/gpu/native/scan.csv
+results/gpu/native/scan_meta.txt
 results/aie_fp32/sim/sim_aie_fp32_5ev_250tr.npz
 results/aie_fp32/sim/sim_x86_fp32_5ev_250tr.npz
 results/aie_bf16/sim/sim_aie_bf16_5ev_250tr.npz
