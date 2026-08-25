@@ -59,12 +59,26 @@ recorded in `notes`.
 | `fresh` | one H2D + forward + D2H per event | batching decomposition, as `pl_fixed` measures it |
 | `graph` | same maths, ~50 launches replayed as one | dispatch-cost diagnostic |
 
-Why `graph` exists: one forward pass is a **fixed** ~50 kernel launches — three
-per dense × 14, plus the roll-concat's slice and join × 3 — and that count does
-not grow with batch size, while each launch costs the host a few microseconds.
-At one event the arithmetic is ~1 µs and the launches are ~250, so a plain
-reading says "the GPU is bad at small batches" when the card is actually idle
-waiting for Python. `graph` makes that a measurement rather than a caption.
+Why `graph` exists: one forward pass is a **fixed** ~50 kernels — three per
+dense × 14, plus the roll-concat's slice and join × 3 — and that count does not
+grow with batch size, so it is a floor per call.
+
+**It also corrected a wrong prediction, which is the point of having it.** The
+floor was expected to be the host issuing those launches. Measured on an L40S it
+is not: CUDA events put the GPU at **95% busy at one event**, with the host
+contributing ~25 µs of ~558. The cost is *device-side* per-kernel launch latency
+across 50 tiny kernels. `graph` replays them as one: 558 → 139 µs.
+
+## The result has a shape nothing else here has
+
+**This GPU is fastest at 1,000 events, not 10,000** — every other
+implementation in the repo improves monotonically with run size. The L40S has
+96 MB of L2; one `(n,128)` fp32 activation is 25.6 MB at 1,000 events and
+256 MB at 10,000, so all 14 layers drop out of cache into GDDR6. fp32 degrades
+2.2×, bf16 3.0×, tf32 3.1×.
+
+Score this flow on its **best** point, not its largest run. `rtda_scan.ipynb`
+§8 does exactly that, and for every other implementation the two coincide.
 
 Only `single` is plotted beside the other implementations, for the same reason
 `primary()` excludes `pl_fixed`'s `reuse` and `tpc`.

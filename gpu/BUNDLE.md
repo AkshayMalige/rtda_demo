@@ -74,8 +74,9 @@ three call shapes:
 - `fresh` — one copy + forward + copy back per event. The batching
   decomposition, as `pl_fixed` measures it. Skipped above 1000 events.
 - `graph` — identical maths with the ~50 kernel launches captured once and
-  replayed as one. A diagnostic: it separates "the fixed cost is Python driving
-  the card" from "the fixed cost is the hardware".
+  replayed as one. A diagnostic separating "the fixed cost is Python driving the
+  card" from "the fixed cost is the hardware". On an L40S the answer was the
+  hardware: the GPU is 95% busy even at one event.
 
 Useful overrides: `--variants fp32`, `--modes single`, `--events 1,100,10000`,
 `--reps 3`.

@@ -22,14 +22,24 @@ WHAT IS MEASURED, and why it matches the other flows
       mode=graph    identical maths, but the ~50 kernel launches are captured
                     once with a CUDA graph and replayed as one.  DIAGNOSTIC.
 
-    Why mode=graph has to exist: one forward pass is ~50 kernel launches (3 per
-    dense x 14, plus the roll-concat's slice and join x 3). That count is FIXED
-    -- it does not grow with batch size -- and each launch costs the host a few
-    microseconds. At 1 event the arithmetic is ~1 us and the launches are ~250,
-    so a plain reading says "the GPU is bad at small batches" when the truth is
-    "the card is idle waiting for Python". mode=graph turns that from a caption
-    into a measurement. It is NOT plotted on the comparison figure, because no
-    other implementation got a tuned variant there either.
+    Why mode=graph has to exist: one forward pass is ~50 kernels (3 per dense
+    x 14, plus the roll-concat's slice and join x 3). That count is FIXED -- it
+    does not grow with batch size -- so it is a floor per call.
+
+    MEASURED ON AN L40S, and it overruled the guess. The floor was expected to
+    be the host issuing those launches. It is not: the cuda-event column puts
+    the GPU at 95% busy even at ONE event, with the host contributing ~25 us out
+    of ~558. The cost is DEVICE-side per-kernel launch latency across 50 tiny
+    kernels. mode=graph replays them as one and takes 558 -> 139 us. Same fix,
+    different cause -- which is exactly why the control is measured rather than
+    reasoned about. It is NOT plotted on the comparison figure, because no other
+    implementation got a tuned variant there either.
+
+    THE OTHER MEASURED SURPRISE: this GPU is fastest at 1000 events, not 10000.
+    An L40S has 96 MB of L2 and one (n,128) fp32 activation is 25.6 MB at 1000
+    events but 256 MB at 10000, so all 14 layers fall out of cache into GDDR6.
+    fp32 degrades 2.2x, bf16 3.0x. Score this flow on its BEST point, not its
+    largest run, or the number reported is a cache cliff.
 
 THREE WAYS TO GET A WRONG GPU NUMBER, all handled here
 

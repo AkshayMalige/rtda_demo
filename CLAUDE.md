@@ -211,6 +211,18 @@ to plot them. Never use it for a number.
 Only `mode=single` is comparable to the other flows. `fresh` and `graph` are
 diagnostics, like `pl_fixed`'s `reuse` and `tpc`.
 
+**Score the GPU on its best point, not its largest run.** Measured on an L40S it
+is fastest at 1000 events and 2.2x (fp32) to 3.1x (tf32) worse at 10000: the card
+has 96 MB of L2 and one (n,128) fp32 activation is 25.6 MB at 1000 events but
+256 MB at 10000, so all 14 layers fall out of cache. Every other implementation
+here is monotone, so `rtda_scan.ipynb` §8 takes the minimum across the sweep and
+that changes nothing for them.
+
+The small-batch floor is **device-side** per-kernel launch, not host dispatch --
+cuda events put the GPU at 95% busy at one event, host ~25 us of ~558. `mode=graph`
+takes it 558 -> 139 us. That prediction was wrong before it was measured, which is
+why the control is in the sweep rather than in a comment.
+
 ## Running the notebooks without a build tree
 
 `results/` is gitignored, so a fresh clone has no scan, power or csynth
