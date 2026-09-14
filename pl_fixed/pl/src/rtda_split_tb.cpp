@@ -93,9 +93,18 @@ int main() {
     // Exercising the multi-event path is the point: a testbench that still
     // called it once per event would pass without ever running the event loop
     // this design now depends on.
-    std::vector<float> track((size_t)n_cmp * MAX_TRACKS * INPUT_SIZE);
-    std::vector<float> mean((size_t)n_cmp * HIDDEN);
-    std::vector<float> out27((size_t)n_cmp * OUT_DIM);
+    //
+    // Allocated at LEAST the m_axi depth= of each port in rtda_split_top.cpp
+    // (300000 / 128000 / 27000), not just what n_cmp events need. cosim's
+    // wrapper dumps `depth` elements from each pointer, whatever the call uses:
+    // with EVENTS=1 it read 1.2 MB out of a 1.2 KB vector and SIGSEGV'd in
+    // DUMP_INPUTS. csim never reads depth, which is why it always passed. The
+    // kernel only touches the first n_cmp events; the tail stays zero on both
+    // the C and RTL sides. Keep these in step with the pragmas.
+    constexpr size_t DEPTH_TRACK = 300000, DEPTH_MEAN = 128000, DEPTH_OUT27 = 27000;
+    std::vector<float> track(std::max((size_t)n_cmp * MAX_TRACKS * INPUT_SIZE, DEPTH_TRACK));
+    std::vector<float> mean(std::max((size_t)n_cmp * HIDDEN, DEPTH_MEAN));
+    std::vector<float> out27(std::max((size_t)n_cmp * OUT_DIM, DEPTH_OUT27));
 
     for (int ev = 0; ev < n_cmp; ev++) {
         const float* base = raw.data() + (size_t)ev * MAX_TRACKS * STRIDE;

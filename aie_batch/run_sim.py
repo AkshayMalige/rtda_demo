@@ -124,7 +124,13 @@ def simulate(sim: str = 'aie', extra=(), workdir: str | None = None):
     quiet = os.environ.get('RTDA_QUIET')
     print(f'  $ {" ".join(cmd)}', flush=True)
     lines = []
-    proc = subprocess.Popen(cmd, cwd=HERE, text=True,
+    #
+    # errors='replace': with --profile, aiesimulator's shutdown chatter carries a
+    # non-UTF-8 byte (0x8a). A strict decode raised mid-shutdown, this process
+    # died, the pipe closed, and aiesimulator was killed while still writing --
+    # after every PLIO frame, the VCD and all 69 profiles were already on disk,
+    # but before sim_events could check accuracy or write run_stamp.txt.
+    proc = subprocess.Popen(cmd, cwd=HERE, text=True, errors='replace',
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             bufsize=1)
     for line in proc.stdout:
