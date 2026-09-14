@@ -416,6 +416,168 @@ class Graphed:
 
 
 # ---------------------------------------------------------------------------
+#  Power
+# ---------------------------------------------------------------------------
+#
+#  WHAT "DYNAMIC" MEANS HERE, and why it is not the number on the box.
+#
+#  rtda_compare.ipynb plots Vivado's DYNAMIC power for the VEK280 designs --
+#  21.7 W for AIE fp32 against a 9.55 W device static that is excluded. To put
+#  a GPU on that axis the same subtraction has to happen, so:
+#
+#       dynamic = mean draw under sustained load  -  mean draw at idle
+#
+#  Quoting the L40S's 350 W board limit, or even its raw draw, against Vivado's
+#  dynamic figure would be comparing two different quantities and the GPU would
+#  lose by a factor that is mostly definition.
+#
+#  A single forward pass is far too short to measure (600 us at one event), so
+#  each point runs a SUSTAINED LOOP for --power-seconds and samples throughout.
+#  The achieved us/event is recorded from that same loop, so energy per event is
+#  self-consistent rather than being latency from one run times power from
+#  another.
+#
+#  Sampling is nvidia-smi streaming at 100 ms, which needs nothing installed.
+#  It is a board-sensor reading with its own lag and quantisation -- treat a
+#  few watts as noise and a factor of two as real, exactly as the Vivado side
+#  of the same plot is treated.
+
+
+class PowerSampler:
+    """Streams power.draw / clocks.sm / temperature from nvidia-smi in a thread."""
+
+    def __init__(self, phys_index):
+        self.idx = str(phys_index)
+        self.proc = None
+        self.rows = []
+        self._t = None
+
+    def __enter__(self):
+        import threading
+        try:
+            self.proc = subprocess.Popen(
+                ['nvidia-smi', f'--id={self.idx}',
+                 '--query-gpu=power.draw,clocks.sm,temperature.gpu',
+                 '--format=csv,noheader,nounits', '-lms', '100'],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        except Exception:                                  # noqa: BLE001
+            self.proc = None
+            return self
+
+        def pump():
+            for line in self.proc.stdout:
+                f = [c.strip() for c in line.split(',')]
+                try:
+                    self.rows.append((float(f[0]), float(f[1]), float(f[2])))
+                except (ValueError, IndexError):
+                    pass
+        self._t = threading.Thread(target=pump, daemon=True)
+        self._t.start()
+        return self
+
+    def __exit__(self, *exc):
+        if self.proc:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=5)
+            except Exception:                              # noqa: BLE001
+                self.proc.kill()
+        return False
+
+    def mark(self):
+        return len(self.rows)
+
+    def since(self, k):
+        """(n, mean_w, max_w, mean_sm_mhz, max_temp) for samples after mark k."""
+        w = self.rows[k:]
+        if not w:
+            return 0, None, None, None, None
+        p = [r[0] for r in w]
+        return (len(w), sum(p) / len(p), max(p),
+                sum(r[1] for r in w) / len(w), max(r[2] for r in w))
+
+
+def power_mode(a, dev, info, note):
+    """Sustained-load power per (variant, events). Writes power.csv."""
+    phys = os.environ.get('CUDA_VISIBLE_DEVICES', '0').split(',')[0]
+    raw, us_read, src = stimulus(Path(a.cache))
+    avail = raw.shape[0] // TRACKS_PER_EVENT
+    events = sorted({min(int(e), avail) for e in a.events.split(',') if e.strip()})
+    outdir = Path(a.outdir)
+
+    cols = ('impl,variant,source,stimulus,events,tracks,mode,seconds,iters,'
+            'samples,idle_w,mean_w,max_w,dynamic_w,sm_mhz,temp_c,'
+            'us_per_event,mj_per_event,notes')
+    rows = []
+
+    with PowerSampler(phys) as ps:
+        if ps.proc is None:
+            print('ERROR: could not start nvidia-smi sampling.', file=sys.stderr)
+            return 1
+        print(f'  measuring idle for {a.idle_seconds:.0f} s '
+              '(the baseline that gets subtracted)...')
+        k = ps.mark(); time.sleep(a.idle_seconds)
+        n, idle_w, idle_max, idle_mhz, idle_t = ps.since(k)
+        if not n:
+            print('ERROR: nvidia-smi produced no samples.', file=sys.stderr)
+            return 1
+        print(f'    idle {idle_w:.1f} W  ({n} samples, {idle_mhz:.0f} MHz, {idle_t:.0f} C)\n')
+        print(f'  {"variant":>8} {"events":>7} {"iters":>7} {"us/event":>10} '
+              f'{"mean W":>8} {"dyn W":>8} {"mJ/event":>9} {"MHz":>6} {"C":>4}')
+
+        for variant in a.variants:
+            set_tf32(variant)
+            dt = T.TORCH_DTYPE[variant]
+            W, B = T.load_weights(a.weights, device=dev, dtype=dt)
+            for ev in events:
+                host = stage(raw, ev, dt)
+                x = host.to(dev)
+                with torch.no_grad():
+                    for _ in range(3):                     # warm, untimed
+                        T.event_means(x, W, B, warmup=a.warmup)
+                _sync()
+
+                k = ps.mark()
+                t0 = time.perf_counter()
+                iters = 0
+                with torch.no_grad():
+                    while time.perf_counter() - t0 < a.power_seconds:
+                        T.event_means(x, W, B, warmup=a.warmup)
+                        iters += 1
+                _sync()
+                secs = time.perf_counter() - t0
+                n, mean_w, max_w, mhz, temp = ps.since(k)
+                if not n:
+                    continue
+                us_ev = secs * 1e6 / (iters * ev)
+                dyn = mean_w - idle_w
+                mj = dyn * us_ev / 1000.0
+                rows.append(('gpu', variant, 'native', STIM_NAME, ev,
+                             ev * TRACKS_PER_EVENT, 'sustained',
+                             round(secs, 3), iters, n,
+                             round(idle_w, 2), round(mean_w, 2), round(max_w, 2),
+                             round(dyn, 2), round(mhz, 0), round(temp, 0),
+                             round(us_ev, 4), round(mj, 6), note))
+                write_text(outdir / 'power.csv', '\n'.join(
+                    [cols] + [','.join(fmt(v) for v in r) for r in rows]) + '\n')
+                print(f'  {variant:>8} {ev:>7} {iters:>7} {us_ev:>10.2f} '
+                      f'{mean_w:>8.1f} {dyn:>8.1f} {mj:>9.4f} {mhz:>6.0f} {temp:>4.0f}')
+                del x
+                torch.cuda.empty_cache()
+
+        k = ps.mark(); time.sleep(a.idle_seconds)
+        n2, idle2, _, _, t2 = ps.since(k)
+
+    print(f'\n  idle after the run: {idle2:.1f} W at {t2:.0f} C '
+          f'(before: {idle_w:.1f} W at {idle_t:.0f} C)')
+    if idle2 - idle_w > 5:
+        print('  NOTE: the idle baseline moved by more than 5 W. The card was still\n'
+              '  cooling down, so dynamic power here is slightly UNDER-stated.')
+    print(f'\n[gpu] {len(rows)} rows -> {outdir / "power.csv"}')
+    return 0
+
+
+# ---------------------------------------------------------------------------
 #  --check
 # ---------------------------------------------------------------------------
 
@@ -465,6 +627,10 @@ def main():
                          'so it can never be mistaken for a GPU measurement.')
     ap.add_argument('--check', action='store_true')
     ap.add_argument('--check-events', type=int, default=40)
+    ap.add_argument('--power', action='store_true',
+                    help='sustained-load power per (variant, events) -> power.csv')
+    ap.add_argument('--power-seconds', type=float, default=5.0)
+    ap.add_argument('--idle-seconds', type=float, default=5.0)
     a = ap.parse_args()
     a.variants = [v.strip() for v in a.variants.split(',') if v.strip()]
     a.modes = [m.strip() for m in a.modes.split(',') if m.strip()]
@@ -497,6 +663,11 @@ def main():
 
     if a.check:
         return check(a, dev)
+    if a.power:
+        if not have_cuda:
+            print('ERROR: --power needs a real GPU.', file=sys.stderr)
+            return 1
+        return power_mode(a, dev, info, note)
 
     raw, us_read, src = stimulus(Path(a.cache))
     avail = raw.shape[0] // TRACKS_PER_EVENT

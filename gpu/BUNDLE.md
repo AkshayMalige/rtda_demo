@@ -81,9 +81,29 @@ three call shapes:
 Useful overrides: `--variants fp32`, `--modes single`, `--events 1,100,10000`,
 `--reps 3`.
 
+## 3b. Power (optional, ~3 min)
+
+```bash
+python gpu/scan_gpu.py --power --gpu 3
+```
+
+Writes `results/gpu/native/power.csv`. Each point runs a **sustained loop** for
+5 s and samples `nvidia-smi` at 100 ms throughout, because one forward pass
+(600 µs at one event) is far too short to measure.
+
+It reports `dynamic_w = mean draw under load − mean draw at idle`. That
+subtraction is the point: the VEK280 numbers it gets plotted against are
+Vivado's *dynamic* power, which excludes a 9.55 W device static. Comparing the
+L40S's raw draw, or its 350 W board limit, against that would be comparing two
+different quantities.
+
+It measures idle before and after, and warns if the baseline moved more than
+5 W — that means the card was still cooling and the dynamic figure is
+understated. If you see that, let it sit for a minute and re-run.
+
 ## 4. Send the results back
 
-Two small text files, ~50 KB total:
+Small text files, ~100 KB total:
 
 ```bash
 tar czf rtda_gpu_results.tar.gz results/gpu/native/
