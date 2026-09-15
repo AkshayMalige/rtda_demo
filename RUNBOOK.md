@@ -268,16 +268,25 @@ the PRECISION/EVENTS you ask for, and the answer depends on the run:
 
 | after | measures | fp32 | bf16 |
 |---|---|---|---|
-| `make exactsim EVENTS=5` | 42 iterations, 6 event tails | — | 1147 ns |
-| `make -C aie_batch crosscheck` | 7 iterations, 1 event | **4161 ns** | **1033 ns** |
+| `make exactsim EVENTS=10` | 77 iterations, steady state at the event tail | **4172 ns** | **1650 ns** |
+| `make -C aie_batch crosscheck` | 7 iterations — too few frames for a steady-state II; `report` says so | — | — |
 
-The table elsewhere in this runbook quotes the **1-event** numbers, so to
-reproduce those exactly:
+The II is the interval at the **event tail** (`track_out`), averaged over whole
+events after the first. Until 2026-09-14 `report` averaged all nine output ports.
+The stage taps drain to their own PLIOs, so in bf16 the upstream stages kept running
+at ~925 ns while the tail ran at 1650 ns, and the average read 1033 ns (7 iterations)
+or 1147 ns (42). The table elsewhere in this runbook quotes the 10-event numbers; to
+reproduce them:
 
 ```bash
-make -C aie_batch crosscheck PRECISION=<P>   # rebuilds the 1-event graph and reruns
-make -C aie_batch report     PRECISION=<P>
+make exactsim FLOW=aie_batch PRECISION=<P> EVENTS=10   # 77 iterations; PROFILE=1 names the slowest kernel
+make -C aie_batch report PRECISION=<P> EVENTS=10
 ```
+
+`report` reads the tail's PLIO timestamps, whose framing is one 4-value line out of
+step with the kernel output, so it resolves the fp32 II to a few ns: 4169–4172 on the
+two fp32 runs on disk, 1650.1 on both bf16 runs. The VCD and every upstream port read
+fp32 at 4172.0 — that is the number quoted, and `analysis/rtda_timing.ipynb` measures it.
 
 `crosscheck` depends on `graph`, so you never need to run `graph` yourself.
 
@@ -314,7 +323,10 @@ make fastsim  FLOW=aie_batch PRECISION=bf16 EVENTS=5     # ~2 min,  worst ~5.1e-
 make exactsim FLOW=aie_batch PRECISION=bf16 EVENTS=5     # ~20 min
 cd aie_batch && make graph PRECISION=bf16 && make crosscheck PRECISION=bf16 && make report PRECISION=bf16
 ```
-Expect **II ≈ 1033 ns, 144.6 ns/track, ~3654 GOP/s**.
+Expect **II ≈ 1650 ns at the event tail, ~231 ns/track, ~2,290 GOP/s** — from a
+10-event `exactsim` and `make report EVENTS=10`; the 7-iteration `crosscheck` run is
+too short for a steady-state II. The tail is set by `track_accum`, not by the dense
+layers, which run at ~925 ns.
 
 The bf16 tolerance auto-relaxes to 5e-2 — that is a property of the arithmetic,
 not of the design. Set by `RTDA_PRECISION`, which only `make` exports, so
@@ -763,20 +775,23 @@ schema and the caveats are in `results/README.md`.
 | **27 outputs, warm-up EXCLUDED** | **7.5e-07** | **4.0e-04** | **3.5e-04** |
 | 27 outputs, with warm-up | ~7e-03 | ~7e-03 | n/a |
 | csim vs the native model | — | — | 0.000e+00 |
-| II (aiesimulator) | 4161 ns | 1033 ns | n/a |
-| ns/track, cycle-accurate | 582.5 | 144.6 | — |
-| ns/track, silicon (50k tracks) | 614.3 | 249.3 | 114,538 ¹ |
-| ns/track, scan @ 10,000 events | 602.8 | 238.6 | 114,418 |
-| non-array time @ 10,000 events | 3.4% | 39.4% | — |
-| scan vs `run_info.txt` @ 1000 ev | 0.13% | 0.33% | 0.04% |
-| GOP/s, silicon | 860 | 2120 | — |
+| II (aiesimulator, event tail, 10 events) | 4172 ns | 1650 ns | n/a |
+| ns/track, cycle-accurate | 584.1 | 231.0 | 94,663 (RTL cosim) |
+| ns/track, silicon (50k tracks) | 615.0 | 244.5 | 94,793 ¹ |
+| ns/track, scan @ 10,000 events | 602.9 | 238.6 | 94,661 |
+| non-array time @ 10,000 events | 3.1% | 3.2% | 0.0% |
+| scan vs `run_info.txt` @ 1000 ev | 0.27% | 0.38% | 0.14% |
+| GOP/s, silicon | 859 | 2161 | — |
 | RTP weights | 1039 KB | 523 KB | n/a |
 | on-board `RTDA_GOLDEN` check | PASS ~1.5e-06 | do not use | n/a |
 
-¹ From `results/pl_fixed/hw/run_info.txt` (`us_per_track=114.538`). This row read
-"~40,000" until 2026-08-17, which was the **csynth fabric estimate** (6335 cycles
-at 150 MHz = 42.2 us/track) quoted as if it were silicon. The 2.7× between the two
-is real; `analysis/rtda_scan.ipynb` attributes it.
+¹ From `results/pl_fixed/hw/run_info.txt` (`us_per_track=94.7934`), the 180 MHz
+kernel. This row read "~40,000" until 2026-08-17 (a csynth estimate quoted as
+silicon) and then 114,538 (a 150 MHz build on the board). The "2.7×" once quoted
+between csynth and silicon set that board run against a csynth report of an older
+kernel; for the shipped kernel RTL co-simulation and the board agree to 0.002%. The
+bf16 II read 1033 ns and its non-array time 39.4% until 2026-09-14 — see "Which II
+do you want?" in PHASE 2.
 
 **The ~7e-03 "with warm-up" row is not an error.** It is the roll-concat
 convention: the reference wraps circularly inside an event, the array streams.

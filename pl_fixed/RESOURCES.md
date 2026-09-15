@@ -201,11 +201,14 @@ DSP from csynth as evidence that leaky-ReLU at slope 0.1 costs nothing. The
 conclusion survives — 289 of 1312 routed — but the number quoted for it was the
 estimate, not the result.
 
-**And the 150 MHz matters for the performance scan.**
-`analysis/rtda_scan.ipynb` compares measured kernel time against csynth's 6335
-cycles per track, which is 42.23 us/track *only if* the clock really is 150 MHz.
-It is. So the measured 113.40 us/track is a genuine 2.7x on the fabric, not a
-clock-frequency artefact.
+**The clock matters for the performance scan — and this paragraph was wrong.**
+It said the 150 MHz build measured 113.40 us/track against csynth's 6335 cycles
+(42.23 us/track), "a genuine 2.7x on the fabric". Those came from different kernels:
+the 6335-cycle report predated the event loop. The shipped kernel is now scheduled
+and linked at 180 MHz. csynth gives 16,931–17,078 cycles per track, RTL
+co-simulation measures 17,039 (851,956 per event), and the board reads 94.66
+us/track — 0.002% from cosim. There is no gap between the fabric and its models.
+*(Corrected 2026-09-14; `analysis/rtda_timing.ipynb` §5.)*
 
 ## Don't wait for route_design to find out
 

@@ -3,7 +3,8 @@
 
 aiesimulator timestamps every PLIO output line in `aiesimulator_output/data/
 y_p<N>.txt` with `T <ns> <ps>` markers. The interval between successive frames
-on a port is the graph's II; divided by BATCH it is the per-track cost.
+at the EVENT TAIL (track_out), in steady state, is the graph's II; divided by
+BATCH it is the per-slot cost. The other ports are printed for diagnosis only.
 """
 from __future__ import annotations
 
@@ -34,6 +35,20 @@ def frame_intervals_ns(path: Path):
             if last is not None and now is not None and now >= last:
                 out.append(now - last)
             last = now
+    return np.array(out, dtype=np.float64)
+
+
+def frame_times_ns(path: Path):
+    """TLAST time of every emitted frame, in ns."""
+    out, now = [], None
+    for line in path.read_text(errors='replace').splitlines():
+        line = line.strip()
+        m = _TS.match(line)
+        if m:
+            now = int(m.group(1)) * _TO_NS[m.group(2).lower()]
+            continue
+        if 'TLAST' in line.upper() and now is not None:
+            out.append(now)
     return np.array(out, dtype=np.float64)
 
 
@@ -95,32 +110,67 @@ def main():
               'simulation to be sure what this is.')
 
     ports = aie_io.load_ports()
-    per_port, all_iv = {}, []
+    per_port, tail = {}, None
     for tensor, plist in ports['outputs'].items():
         for p in plist:
             f = data_dir / f'y_p{p.port}.txt'
             if not f.exists():
                 continue
-            iv = frame_intervals_ns(f)
-            if iv.size == 0:
+            t = frame_times_ns(f)
+            if t.size < 2:
                 continue
-            per_port[f'{tensor}:y_p{p.port}'] = iv
-            all_iv.append(iv)
+            per_port[f'{tensor}:y_p{p.port}'] = t
+            if tensor == 'track_out':
+                tail = t
 
-    if not all_iv:
-        raise SystemExit('No TLAST intervals found. Was the run cycle-accurate '
+    if not per_port:
+        raise SystemExit('No TLAST frames found. Was the run cycle-accurate '
                          '(aiesimulator), not x86?')
+    if tail is None:
+        raise SystemExit('No track_out frames -- the event tail is the port that '
+                         'defines the II.')
 
-    iv = np.concatenate(all_iv)
-    print(f'  II            = {iv.mean():.1f} ns  '
-          f'(min {iv.min():.1f}, max {iv.max():.1f}, n={iv.size})')
+    # WHICH INTERVAL IS THE II?
+    #
+    # The one at the TAIL, in steady state. Until 2026-09-14 this averaged the
+    # intervals of all nine output ports together. The eight stage taps drain
+    # to their own PLIOs, so a stage upstream of a slower one keeps its own pace
+    # while a queue builds behind it, and the average reports a rate the graph
+    # does not deliver. bf16 read 1033 ns (7 iterations) and 1147 ns (42) that
+    # way; its tail runs at 1650 ns, set by track_accum, and 7 x 1650 ns is
+    # within 3.2% of silicon's us_kernel per event.
+    #
+    # Steady state: skip the first event's frames when enough are left to
+    # average. A 7-iteration crosscheck run does not have them, and says so.
+    #
+    # And average over WHOLE events. The tail's PLIO framing is one 4-value line
+    # out of step with the kernel's 128-value block, so frames near an event
+    # boundary land ~1 us early or late. A window ending on one of them biases
+    # (last - first) / n: fp32 read 4157 ns. A window that starts and ends on
+    # the same event phase reads 4169-4172 ns on two runs whose VCD and upstream
+    # ports all say 4172.0 -- closer than a least-squares slope (4168-4171), and
+    # as close as the tail's PLIO timestamps allow.
+    def window(t):
+        s = a.iters if t.size > 2 * a.iters else 0
+        e = s + ((t.size - 1 - s) // a.iters) * a.iters
+        return (s, e) if e > s else (0, t.size - 1)
+
+    def interval(t):
+        s, e = window(t)
+        return float((t[e] - t[s]) / (e - s))
+
+    skip, end = window(tail)
+    ii = interval(tail)
+    note = '' if skip else ('   TOO FEW FRAMES for a steady-state II -- '
+                            'make exactsim EVENTS=10, then report EVENTS=10')
+    print(f'  II            = {ii:.1f} ns  at track_out, frames {skip}..{end}{note}')
     # Two different questions, and they differ by 56/50 = 12%.
     #   per slot  : II / BATCH -- what you get if the workload is a multiple of 8
     #   per track : ITERS * II / 50 -- what you actually get on a 50-track event,
     #               because the 7th iteration carries only 2 real tracks + 6 padding
     iters = a.iters
-    print(f'  ns per slot   = {iv.mean() / a.batch:.1f}   (II / batch {a.batch})')
-    print(f'  ns per TRACK  = {iters * iv.mean() / a.event:.1f}   '
+    print(f'  ns per slot   = {ii / a.batch:.1f}   (II / batch {a.batch})')
+    print(f'  ns per TRACK  = {iters * ii / a.event:.1f}   '
           f'({iters} iterations x II / {a.event} real tracks)  <- the honest number')
 
     # MACs/track summed from the generated layer configs, so GOPs is an
@@ -134,13 +184,16 @@ def main():
     outs = [int(m) for m in re.findall(r'(?<![A-Za-z_])OUT_FEAT\s*=\s*(\d+)', params)]
     layers = [(i, o) for i, o in zip(ins, outs)]
     macs = sum(i * o for i, o in layers)
-    gops = a.event * macs * 2 / (a.iters * iv.mean() * 1e-9) / 1e9
+    gops = a.event * macs * 2 / (a.iters * ii * 1e-9) / 1e9
     print(f'  GOPs          = {gops:.1f}   ({macs:,} MACs/track over {len(layers)} '
           f'dense layers, {a.event} real tracks per event)')
 
-    print('\n  per port:')
-    for k, v in sorted(per_port.items()):
-        print(f'    {k:22s} {v.mean():8.1f} ns   n={v.size}')
+    # A port faster than the tail sits upstream of a queue; its interval is not
+    # the graph's. The first-frame times give the pipeline depth stage by stage.
+    print('\n  per port   (diagnostic; a port faster than track_out is upstream of a queue)')
+    for k, t in sorted(per_port.items(), key=lambda kv: kv[1][0]):
+        print(f'    {k:22s} first frame {t[0] / 1e3:9.2f} us   '
+              f'interval {interval(t):8.1f} ns   n={t.size}')
 
 
 if __name__ == '__main__':

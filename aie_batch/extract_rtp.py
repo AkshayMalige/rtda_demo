@@ -132,10 +132,12 @@ def main():
         f'precision={os.environ.get("RTDA_PRECISION", "fp32")}\n'
         f'input_dtype={"bfloat16" if any(d == "u16" for _, _, d, _ in manifest) else "float32"}\n'
         f'output_dtype=float32\n'
-        # Measured II per iteration for this precision (aiesimulator, `make report`).
-        # The host uses it for its overhead line; wrong here only mis-labels a report,
-        # it does not affect the run.
-        f'ii_ns={ {"fp32": 4161.0, "bf16": 1033.0}.get(os.environ.get("RTDA_PRECISION", "fp32"), 4161.0) }\n')
+        # Measured II per iteration for this precision: the steady-state interval at
+        # the event tail (aiesimulator, 10 events, `make report EVENTS=10`). The host
+        # uses it for its overhead line; wrong here only mis-labels a report, it does
+        # not affect the run. bf16 read 1033 until 2026-09-14 -- an average over all
+        # output ports, not the tail; see report.py.
+        f'ii_ns={ {"fp32": 4172.0, "bf16": 1650.0}.get(os.environ.get("RTDA_PRECISION", "fp32"), 4172.0) }\n')
     print(f'  {len(manifest)} RTP payloads, {total/1024:.0f} KB -> {outdir}/')
     print(f'  manifest: {outdir}/rtp_manifest.txt   config: {outdir}/config.txt')
 

@@ -23,8 +23,9 @@ Measured on silicon (VEK280, `TARGET=hw`, 10,000 tracks):
 | PL kernels | 1 (`track_average_pl`) | **0** |
 | host-side work per event | output dense 128→27 | output dense 128→27 |
 
-Cycle-accurate model: **II = 4161 ns / iteration**, 7 iterations per 50-track event
-→ **582.6 ns per real track**. Silicon's marginal rate agrees to 2.2%.
+Cycle-accurate model: **II = 4172 ns / iteration** (steady state, at the event tail),
+7 iterations per 50-track event → **584.1 ns per real track**. Silicon's marginal rate
+agrees to 2.0%.
 
 ```bash
 make x86        # x86 compile + crosscheck            (~2 min)
@@ -424,9 +425,9 @@ correct if `N_ITER` changes.
 ### Time structure
 
 ```
-  1 iteration  = 8 slots           II = 4161 ns   (520 ns / slot)
+  1 iteration  = 8 slots           II = 4172 ns   (522 ns / slot)
   1 event      = 7 iterations = 56 slots = 50 real tracks + 6 padding
-               = 29.13 us          -> 582.6 ns per real track
+               = 29.20 us          -> 584.1 ns per real track
   1 run        = (n_events + 1) x 7 iterations     (+1 = the flush event)
 ```
 
@@ -994,13 +995,13 @@ From the repo root, `make clean` / `make clean_all` handle the PL and system art
 ### Cycle-accurate (aiesimulator, Vitis 2025.2)
 
 ```
-II                 = 4161 ns / iteration  (8 slots)
-per slot           =  520.1 ns
-per real track     =  582.6 ns    (7 iterations / 50 real tracks)
-GOP/s              =  8 x 528,384 ops / 4161 ns = 1,016 GOP/s at the array
+II                 = 4172 ns / iteration  (8 slots; steady state at the event tail)
+per slot           =  521.5 ns
+per real track     =  584.1 ns    (7 iterations / 50 real tracks)
+GOP/s              =  8 x 528,384 ops / 4172 ns = 1,013 GOP/s at the array
 ```
 
-vs `aieml/` float32 at 17,770 ns/track → **30.5×**. (One residual confound: `aieml/`
+vs `aieml/` float32 at 17,770 ns/track → **30.4×**. (One residual confound: `aieml/`
 was measured on 2024.2. The confound-free internal result is that batching 1→8 is
 exactly 8.0×.)
 
@@ -1084,17 +1085,25 @@ forces a rebuild of the other.
 
 | | fp32 | bf16 | |
 |---|---:|---:|---|
-| II per iteration | 4161 ns | **1033 ns** | **4.03× faster** |
-| per real track | 582.6 ns | **144.6 ns** | 4.03× |
-| GOP/s (array) | 1,016 | **3,654** | 3.6× |
+| II per iteration (steady state, event tail) | 4172 ns | **1650 ns** | **2.53× faster** |
+| per real track | 584.1 ns | **231.0 ns** | 2.53× |
+| GOP/s (array) | 1,013 | **2,562** | 2.53× |
 | RTP weights | 1039 KB | **523 KB** | half |
 | 27 outputs vs the ONNX golden, warm-up excluded | 7.5e-07 | 3.96e-04 | 526× worse |
 | the same, as % of full scale (max \|value\| = 0.0914) | 0.001% | **0.43%** | |
 
-4× rather than the theoretical 9× (32 vs 284 instructions per 4×8×4 GEMM) because the
-design is partly data-movement bound. The per-port breakdown from `make report` shows it:
-the dense stages settle at ~925 ns while `track_out` sits at 1629 ns, so **the event tail
-is now the slowest stage in the graph** — it was not at fp32 speeds.
+2.5× rather than the theoretical 9× (32 vs 284 instructions per 4×8×4 GEMM) because the
+bf16 graph is no longer limited by its dense layers. The per-port breakdown from `make report`
+shows it: the dense stages settle at ~925 ns while `track_out` sits at 1650 ns, and the kernel
+profile names the stage — `track_accum`, the float event mean, at ~1.6–1.75 µs per call
+against ≤ 877 ns for every dense layer. **The event tail is the slowest stage in the graph** —
+it was not at fp32 speeds, where the `dense_middle` tiles of the 256→128 layers set the II at
+4154 ns per call.
+
+**Corrected 2026-09-14.** This table read 1033 ns / 144.6 ns / 3,654 GOP/s / 4.03×. `make
+report` used to average the intervals of all nine output ports, and the upstream taps, which
+drain to their own PLIOs at ~925 ns, pulled the average below the tail's rate. Measured since
+from a 10-event aiesimulator run with VCD and kernel profile: `analysis/rtda_timing.ipynb` §2–4.
 
 On accuracy, judge it per output rather than against full scale. The 27 outputs have very
 different spreads (std 0.00052 .. 0.01523 across events), so the same 3.96e-04 is ~2.6% of

@@ -568,8 +568,8 @@ tmp += mul_4x8_8x4_conf(a, d, sub_mul);   <span class="cmt">// nine of them</spa
   <text class="s" x="588" y="250" font-weight="700" fill="var(--data)">This design sets none of them.</text>
   <text class="s" x="588" y="268">It is paying the full nine.</text>
 
-  <text class="s" x="24" y="288">Measured consequence: initiation interval 4161 ns for fp32 against 1033 ns for bf16 — 4.03×, on identical graph structure.</text>
-  <text class="s" x="24" y="310">Not 9× only because at 1033 ns the bf16 build has stopped being compute-bound; 39.4% of its time is already outside the array.</text>
+  <text class="s" x="24" y="288">Measured consequence: initiation interval 4172 ns for fp32 against 1650 ns for bf16 — 2.53×, on identical graph structure.</text>
+  <text class="s" x="24" y="310">Not 9× because bf16 is no longer vector-bound: its tail kernel, track_accum, sets the II — not the dense layers.</text>
 </svg>
 <figcaption><b>The nine.</b> Verified in
 <code>me_vmult_float_emulated.h</code> and documented at <code>me_vmult.h:3213</code>.
@@ -591,17 +591,22 @@ layer"</strong> — which is a completely reasonable thing to do when you want 7
 against the reference, and a completely unreasonable thing to do by accident.</p></div>
 
 <div class="check"><span class="label">Check yourself</span>
-<p>If fp32 costs 9× the mmuls, why is the measured II ratio only 4.03× (4161 vs 1033 ns)?</p>
+<p>If fp32 costs 9× the mmuls, why is the measured II ratio only 2.53× (4172 vs 1650 ns)?</p>
 <details><summary>Answer</summary>
-<p>Because the bf16 build is no longer limited by the vector unit. This repo's own
-performance scan measured <b>39.4%</b> of the bf16 design's time outside the array,
-against <b>3.4%</b> for fp32 — and that fraction does not fall as you go from 1000 to
-10,000 events, so it is not launch overhead. The suspect is the output DMA: the 27
-outputs come back as fp32 in <em>both</em> precisions, so bf16 halves the input and
-changes the output not at all.</p>
-<p>Read the numbers this way: fp32 at 4161 ns is telling you about the emulation. bf16 at
-1033 ns is telling you about the DMA. <strong>They are measuring two different
+<p>Because the bf16 build is no longer limited by the vector unit. Its dense layers finish
+in ≤ 877 ns per call, which is why its upstream stages run at ~925 ns per iteration — but
+<code>track_accum</code>, the kernel that sums the 50 tracks and divides, in float, takes
+~1.6–1.75 µs per call, and a pipeline runs at the pace of its slowest stage. The II at the
+event tail is 1650 ns. In fp32 the <code>dense_middle</code> tiles of the three 256→128 layers
+take 4154 ns per call and set the II at 4172 ns. The board agrees: 7 × II is within 3.2% of
+the measured kernel time per event in <em>both</em> precisions.</p>
+<p>Read the numbers this way: fp32 at 4172 ns is telling you about the emulation. bf16 at
+1650 ns is telling you about <code>track_accum</code>. <strong>They are measuring two different
 bottlenecks</strong>, which is exactly why the ratio is neither 9 nor 2.</p>
+<p><em>Corrected 2026-09-14.</em> This answer used to give 1033 ns and blame the output DMA,
+with 39.4% of bf16's time outside the array. The 1033 ns was <code>make report</code>
+averaging all nine output ports; <code>analysis/rtda_timing.ipynb</code> has the per-port
+intervals, the kernel profile and the VCD.</p>
 </details></div>
 
 <div class="note"><span class="label">If you take one action from this document</span>
@@ -1942,7 +1947,7 @@ for (int s = 0; s &lt; CAS_LENGTH; ++s)                 <span class="cmt">// one
 <tr><td>1</td><td>the four <code>static_assert</code>s compile</td><td>slice sizes, batch granularity, bank overflow</td><td>any build</td></tr>
 <tr><td>2</td><td>x86simulator vs your reference</td><td>the loop nest, the packing order, the activation</td><td><code>make fastsim FLOW=aie_batch</code> → 6.2e-07</td></tr>
 <tr><td>3</td><td><b>re-pack the weights and diff against what was loaded</b></td><td>a wrong packing that produces plausible numbers</td><td>notebook §1 → expect <b>0.000e+00</b></td></tr>
-<tr><td>4</td><td>aiesimulator, read the II</td><td>stalls, cascade backpressure, DMA starvation</td><td><code>make exactsim</code> → 4161 / 1033 ns</td></tr>
+<tr><td>4</td><td>aiesimulator, read the II</td><td>stalls, cascade backpressure, DMA starvation</td><td><code>make exactsim EVENTS=10</code>, <code>make report EVENTS=10</code> → 4172 / 1650 ns at the tail</td></tr>
 <tr><td>5</td><td>hardware, compared on the <em>same</em> stimulus and convention</td><td>state resets, warm starts, event boundaries</td><td><code>make system … TARGET=hw</code></td></tr>
 </table></div>
 
@@ -1964,10 +1969,13 @@ same metric, always the same stimulus.</li>
 <li><strong>Distinguish a convention difference from an error.</strong> In this repo the
 1.556e-02 is the circular-vs-streaming roll and the 7.5e-07 is arithmetic. Conflating them
 sends you hunting a bug that does not exist.</li>
-<li><strong>Measure II, not wall-clock.</strong> II is the array's true throughput;
-wall-clock includes host and DMA costs that do not scale with the array. This project's
-fp32→bf16 is 4.03× in II but 2.52× on silicon — <em>and the difference is the finding</em>,
-not noise.</li>
+<li><strong>Measure II, not wall-clock — and take it at the tail.</strong> II is the array's
+true throughput; wall-clock includes host and DMA costs that do not scale with the array. But
+a port upstream of a slow stage keeps its own pace while a queue builds behind it, so an
+average over ports reports a rate the graph does not deliver. This project read bf16 at
+1033 ns that way against 1650 ns at the tail, and for a while believed a 4.03×-in-II versus
+2.52×-on-silicon gap that was the averaging, not the DMA. Measured at the tail, both ratios
+are 2.53×.</li>
 <li><strong>When a number surprises you, measure the decomposition rather than reasoning
 about it.</strong> In the sister PL design in this repo, four changes were made to improve
 accuracy — and measuring them one at a time showed that <em>three of the four were
@@ -2012,9 +2020,9 @@ this design's choices.</p>
 <tr><td>no core-tile buffer exceeds 16,384 B or crosses a bank</td><td>all 489 buffer rows of <code>Map_Report.csv</code>, checked</td></tr>
 <tr><td>69 compute tiles = 65 dense + 3 roll + 1 accum</td><td>the 69 <code>PT</code> rows of <code>Map_Report.csv</code></td></tr>
 <tr><td>92 RTP ports = 65 weight + 27 bias; 92 selector words</td><td><code>sysdata_&lt;P&gt;/rtp_manifest.txt</code>; the 92 SIZE-32 rows of <code>Map_Report.csv</code></td></tr>
-<tr><td>II 4161 ns (fp32) / 1033 ns (bf16)</td><td><code>make -C aie_batch crosscheck</code>; tabulated in <code>RUNBOOK.md</code></td></tr>
+<tr><td>II 4172 ns (fp32) / 1650 ns (bf16), at the event tail</td><td><code>make exactsim EVENTS=10</code> then <code>make -C aie_batch report EVENTS=10</code>; the VCD in <code>analysis/rtda_timing.ipynb</code>; tabulated in <code>RUNBOOK.md</code></td></tr>
 <tr><td>615 / 245 / 17,770 ns per track</td><td><code>results/*/hw/run_info.txt</code>, 1000 events on silicon</td></tr>
-<tr><td>3.4% (fp32) / 39.4% (bf16) of time outside the array</td><td><code>analysis/rtda_scan.ipynb</code>, 10,000 events</td></tr>
+<tr><td>3.1% (fp32) / 3.2% (bf16) of time outside the array</td><td><code>analysis/rtda_timing.ipynb</code> §6 and <code>analysis/rtda_scan.ipynb</code> §4, 10,000 events</td></tr>
 <tr><td>the output dense at 15–19 µs vs 4.2 µs for the pipeline</td><td><code>track_accum.h</code> header, measured</td></tr>
 <tr><td>the <code>cas_num</code> cap, the <code>INPUT_DIM=16</code> BD story, the pinned cascades</td><td><code>gen_graph.py</code>, in its own comments</td></tr>
 </table></div>

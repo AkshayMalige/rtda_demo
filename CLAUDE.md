@@ -123,6 +123,12 @@ tools/sync_results.sh [SRC_TREE]                      # pull a build tree's arte
   memtile buffer descriptors are exhausted (this is why `INPUT_DIM=16`).
 - **bf16 tolerance is 5e-2, fp32 is 1e-4**, set from `RTDA_PRECISION` which only
   `make` exports. Invoking `crosscheck.py` by hand FAILs for the wrong reason.
+- **The AIE II is the interval at the event tail, in steady state.** `make report`
+  averaged all nine output ports until 2026-09-14 and read bf16 at 1033 ns; the
+  tail runs at 1650 ns, set by `track_accum` (fp32: 4172 ns). Use
+  `make exactsim EVENTS=10` then `make -C aie_batch report EVENTS=10` — a 7-iteration
+  `crosscheck` is too short. Board scans from before then carry the old `ii_ns` in
+  `us_modelled`: recompute it, do not read that column.
 
 ## Changing the PL number format
 

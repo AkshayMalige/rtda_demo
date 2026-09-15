@@ -210,18 +210,30 @@ precisions". It is **"the design, and the design run through a 9× emulation
 layer"** — a completely reasonable thing to do when you want 7.5e-07 against the
 reference, and a completely unreasonable thing to do by accident.
 
-### Then why is the measured II ratio only 4.03×?
+### Then why is the measured II ratio only 2.53×?
 
-II is 4161 ns (fp32) against 1033 ns (bf16). Not 9×, because **the bf16 build is
-no longer limited by the vector unit.** `analysis/rtda_scan.ipynb` measured
-**39.4%** of the bf16 design's time outside the array against **3.4%** for fp32,
-and that fraction does not fall from 1000 to 10,000 events, so it is not launch
-overhead. The suspect is the output DMA: the 27 outputs come back as fp32 in
-*both* precisions, so bf16 halves the input and changes the output not at all.
+II is 4172 ns (fp32) against 1650 ns (bf16), both the steady-state interval at the
+event tail. Not 9×, because **the bf16 graph is no longer limited by the vector
+unit.** The kernel profile of a 10-event aiesimulator run names the stage: every
+bf16 dense layer finishes in ≤ 877 ns per call, which is why the upstream stages run
+at ~925 ns per iteration, but `track_accum` — the kernel that sums the 50 tracks and
+divides, in float — takes ~1.6–1.75 µs per call, and it sets the II. In fp32 the same
+kernel is irrelevant: the `dense_middle` tiles of the three 256→128 layers take
+4154 ns per call and set the II at 4172 ns.
 
-Read the numbers this way: **fp32 at 4161 ns is telling you about the emulation;
-bf16 at 1033 ns is telling you about the DMA.** They are measuring two different
+The board agrees with both. `7 × II` is within 3.2% of `us_kernel` per event at
+10,000 events in **both** precisions, and silicon's fp32/bf16 ratio is 2.53× — the
+II ratio. The host and DMA share does not change with precision.
+
+Read the numbers this way: **fp32 at 4172 ns is telling you about the emulation;
+bf16 at 1650 ns is telling you about `track_accum`.** They are measuring two different
 bottlenecks, which is exactly why the ratio is neither 9 nor 2.
+
+> **Corrected 2026-09-14.** This section said bf16's II was 1033 ns and that 39.4% of
+> its time was outside the array, and blamed the output DMA. The 1033 ns was
+> `make report` averaging all nine output ports: the stage taps drain to their own
+> PLIOs, so a stage upstream of a slow one keeps its own pace while a queue builds.
+> `analysis/rtda_timing.ipynb` §2–4 has the per-port intervals, the profile and the VCD.
 
 > **The actionable item.** Before optimising anything else in an fp32 AIE-ML
 > design, build with `-DAIE_FP32_EMULATION_ACCURACY_FAST` and measure both the II
@@ -1110,8 +1122,11 @@ This repo's notebook §1 does it and it has caught real bugs.
 ### 11. Measure II, not wall-clock
 `make report` reads the `T <ns>` markers from the simulator output. II is the
 array's true throughput; wall-clock on the board includes DMA and per-`run()`
-host cost that do not scale with the array. This project's fp32→bf16 is 4.03× in
-II but 2.52× on silicon — and the difference *is* the finding.
+host cost that do not scale with the array. **Take it at the tail, in steady
+state.** A port upstream of a slow stage keeps its own pace while a queue builds,
+so an average over ports reports a rate the graph does not deliver. This project
+read bf16 at 1033 ns that way against 1650 ns at the tail, and for a while believed
+a 4.03×-in-II versus 2.52×-on-silicon gap that was the averaging, not the DMA.
 
 ---
 

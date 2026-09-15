@@ -40,6 +40,13 @@
 //                              mode=tpc so the notebook never plots them as event
 //                              throughput.
 //
+//  ANSWERED (scan 2026-08; RTL co-simulation 2026-09-14): the fabric, and there
+//  was no gap to explain. The 6335-cycle csynth report predated the kernel's
+//  event loop. The shipped kernel runs at 180 MHz: tpc fits 43.0 us per call
+//  + 94.59 us per track, csynth's worst case is 17,078 cycles per track, and RTL
+//  co-simulation measures 851,956 cycles per event -- 4.733 ms, 0.002% from the
+//  board's single-call kernel time. See analysis/rtda_timing.ipynb section 5.
+//
 //  Environment (all optional -- with none set it runs the full default sweep,
 //  bounded by whatever stimulus it finds, because launch_hw_emu.sh -run-app
 //  passes neither arguments nor environment into the guest):

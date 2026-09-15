@@ -65,7 +65,7 @@ per-implementation variants of this file.
 | `us_execute` | the three device phases together |
 | `us_total` | wall clock for the whole point, staging and bookkeeping included |
 | `us_call_min/med/p95/max` | per-invocation distribution. PL only — one call per event gives a series; an AIE launch covers many events, so there is nothing to summarise and these are empty. |
-| `us_modelled`, `ii_ns` | AIE only: `ii_ns * iterations`, the array's own time. `us_execute - us_modelled` is the launch and DMA overhead. Empty for PL, whose fabric estimate is a csynth number the host has no access to — the notebook applies it from one place. |
+| `us_modelled`, `ii_ns` | AIE only: `ii_ns * iterations`, the array's own time. `us_execute - us_modelled` is the launch and DMA overhead. Empty for PL, whose fabric estimate is a csynth number the host has no access to — the notebook applies it from one place. **Scans written before 2026-09-14 carry a stale `ii_ns`** (bf16 1033 ns, an average over output ports; the event tail runs at 1650 ns), so `analysis/rtda_scan.ipynb` recomputes `us_modelled` from the corrected II rather than reading this column. |
 | `macs_per_track` | 264192, so throughput can be expressed without a wall clock |
 | `in_bytes`, `out_bytes` | total moved for the point |
 | `mean_checksum` | sum of the last event's 128 means. **A smoke value, not an accuracy number** — it exists so "the kernel returned zeros" cannot read as a very fast run. Constant across repeats at a given event count. |

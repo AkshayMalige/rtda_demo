@@ -538,12 +538,12 @@ int main(int argc, char** argv)
           << "  effective throughput   : "
           << (2.0 * macs_total) / (std::chrono::duration<double>(exec).count()) / 1e9 << " GOP/s\n";
 
-        // II is a property of the BUILD, not of the host: 4161 ns/iteration for fp32,
-        // 1033 ns for bf16 (aiesimulator, `make report`). Hard-coding fp32 made the
+        // II is a property of the BUILD, not of the host: 4172 ns/iteration for fp32,
+        // 1650 ns for bf16 (aiesimulator, event tail, `make report`). Hard-coding fp32 made the
         // "launch/DMA overhead" line below meaningless for a bf16 image -- it reported
         // the fp32 model against a 4x faster array. sysdata/config.txt carries it;
         // RTDA_II_NS overrides for a one-off.
-        double ii_ns = 4161.0;
+        double ii_ns = 4172.0;
         {
             const std::string s = read_config(join(sysdata, "config.txt"), "ii_ns", "");
             if (!s.empty()) ii_ns = std::atof(s.c_str());
@@ -603,8 +603,8 @@ int main(int argc, char** argv)
         if (is_emu) std::cout <<
           "\n  NOTE: under hw_emu these are EMULATION wall-clock times (QEMU PS +\n"
           "  SystemC AIE model) and say nothing about silicon speed. The cycle-\n"
-          "  accurate figure for this graph is II = 4161 ns for 7 iterations,\n"
-          "  i.e. 582.6 ns per real track (aieml_batch: make report). Only a\n"
+          "  accurate figure for this graph is II = 4172 ns for 7 iterations,\n"
+          "  i.e. 584.1 ns per real track (aieml_batch: make report). Only a\n"
           "  TARGET=hw run on the board gives meaningful wall-clock numbers.\n";
         else std::cout <<
           "\n  (TARGET=hw build: these are real wall-clock times.)\n";
