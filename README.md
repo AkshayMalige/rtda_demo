@@ -30,7 +30,7 @@ deliverable: **27 numbers per event**.
 | kernel | `aie::mmul` | `aie::mmul` | hls4ml `nnet::dense` |
 | **ns/track, silicon** ³ | **615** | **245** | **94,793** |
 | **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **2.35e-04** |
-| resources ² | 69 compute + 13 memory tiles ⁴ | 69 compute + 15 memory tiles ⁴ | **76% LUT, 56% REG, 32% BRAM, 22% DSP** (routed) |
+| resources ² | 69 compute + 13 memory tiles ⁴ | 69 compute + 15 memory tiles ⁴ | **78% LUT, 60% REG, 33% BRAM, 22% DSP** (routed, 180 MHz) |
 
 ¹ max |implementation − ONNX| over the **same 5 events**, warm-up excluded.
 Full scale (largest of the 27) is 0.0857. These are a max over events, so they
@@ -39,21 +39,32 @@ reads 3.54e-04, and the AIE numbers would rise similarly if per-track taps
 existed at that scale. `analysis/rtda_compare.ipynb` takes the ratio over the
 common count and prints which it used.
 
-² **Post-route, from the 150 MHz `ap16_3` build** (`kernel_util_routed.rpt`; the
-kernel now ships at 180 MHz with timing met, and this row has not been re-read from
-that build):
-LUT 394,548 (75.95%), REG 585,049 (56.28%), BRAM 191 (31.83%), DSP 289 (22.03%),
-**all timing constraints met** at WNS **+0.050 ns**. The kernel clock is
-**150 MHz** — verified in the routed timing summary, where `clkout2_primitive`
-carries 1,319,470 endpoints against 3,236 on the 100 MHz control clock.
+² **Post-route, from the shipped 180 MHz `ap16_3` build** (linked 2026-08-20;
+`pl_fixed/_x/ap16_3_hw/reports/link/imp/impl_1_kernel_util_routed.rpt`):
+LUT 407,628 (78.47%), REG 620,473 (59.69%), BRAM 200 (33.33%), DSP 289 (22.03%),
+**all timing constraints met** at WNS **0.000 ns** — closed, with no slack to spare.
+The kernel clock is **180 MHz** — verified in the routed timing summary, where
+`clkout1_primitive_1` carries 1,384,153 endpoints against 3,236 on the 100 MHz
+control clock, `clkout1_primitive`.
+
+**This row described the 150 MHz build until 2026-09-14:** LUT 394,548 (75.95%),
+REG 585,049 (56.28%), BRAM 191 (31.83%), DSP 289 (22.03%) at WNS +0.050 ns. The
+two builds differ in more than the clock — the 180 MHz one is also the first with
+the kernel's event loop (`d257669`) — so the +13,080 LUT and +35,424 registers are
+not the frequency alone. The first frequency sweep separates them roughly: the old
+kernel at 180 MHz routed at 79.10% LUT, so the clock cost ~3 points of LUT and the
+event loop gave back ~0.6. No DSP either way.
 
 **It fits, comfortably, and this table said otherwise until 2026-08-17.** The old
 entry quoted the HLS *estimate* — 80% DSP and 231% LUT — with the warning "this
 has not been through place and route and may not fit". It has, and it does. The
 estimate was pessimistic by **3.0× on LUT** (231% → 76%) and **3.7× on DSP**
 (1057 → 289), against the ~2.4× `pl_fixed/RESOURCES.md` had calibrated from two
-earlier points. Treat an HLS LUT estimate on this design as an upper bound with a
-factor of three in it, and route before believing either number.
+earlier points. At 180 MHz the same comparison reads: csynth estimates LUT 852,474
+(163%) against 407,628 routed — pessimistic by **2.1×** — and DSP 289, exactly the
+routed count, while its FF estimate (428,614) is *below* the 620,473 registers
+Vivado ends up placing. Treat an HLS LUT estimate on this design as an upper bound
+with a factor of two to three in it, and route before believing it.
 
 The thing that had to be checked still holds: leaky-ReLU at slope 0.1 is free.
 It is computed as `2^-4 + 2^-5 + 2^-8 + 2^-9` in `rtda_leaky.h` precisely so it
@@ -345,9 +356,11 @@ accurate as fp32. Full detail: "Where results go" in `RUNBOOK.md`.
   tabulated in `RUNBOOK.md` and derived in `analysis/rtda_timing.ipynb`. The 9× fp32
   emulation factor behind the first number is counted in the Vitis headers, not
   measured here.
-- PL resources — post-route, `WNS +0.186 ns` at 150 MHz. The 108% LUT figure in
-  the HLS *estimate* did not materialise. That is the 150 MHz build; the kernel now
-  ships at 180 MHz (timing met) and its utilisation has not been re-tabulated here.
+- PL resources — post-route, from the shipped 180 MHz build's
+  `impl_1_kernel_util_routed.rpt` and routed timing summary (WNS 0.000 ns, all
+  constraints met). The HLS *estimate* of 163% LUT did not materialise: 78.47%
+  routed. `freq_sweep/tests/test_reports.py` re-reads the same figures from the
+  report text on every `make -C freq_sweep test`.
 - The PL 1000-event number comes from `pl_fixed/native/`, which compiles the
   same kernel sources with g++ and is verified bit-identical to Vitis csim
   (`make csim FLOW=pl_fixed` → 0.000e+00). hw_emu is ~2 ms/event of RTL
