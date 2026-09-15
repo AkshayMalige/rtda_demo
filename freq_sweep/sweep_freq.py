@@ -5,19 +5,31 @@
     make -C freq_sweep mock       # the whole search against fake tools, ~1 min
     make -C freq_sweep sweep      # the real thing, hours per point
 
-TWO CLOCKS, WHICH IS THE WHOLE REASON THIS EXISTS
-`KERNEL_FREQ` in pl_fixed/Makefile reaches only `v++ --link
---clock.defaultFreqHz`. The HLS clock was a separate hardcoded 6.667 ns in
-pl/rtda_split_project.tcl, so raising KERNEL_FREQ alone just re-times RTL that
-was scheduled for 150 MHz -- and the shipped build closes at WNS +0.050 ns,
-which leaves nothing to re-time into. Both are driven together here, through
-RTDA_HLS_PERIOD (added to the TCL in the same env_or idiom it already used for
-five other settings, defaulting to 6.667 so the shipped build is unchanged).
+TWO CLOCKS, WHICH IS WHY THIS EXISTS
+`KERNEL_FREQ` in pl_fixed/Makefile used to reach only `v++ --link
+--clock.defaultFreqHz`; the HLS clock was a separate hardcoded 6.667 ns in
+pl/rtda_split_project.tcl, so raising KERNEL_FREQ alone re-timed RTL that was
+scheduled for 150 MHz. Since 2026-08-18 the TCL reads RTDA_HLS_PERIOD, and since
+2026-08-19 pl_fixed/Makefile derives it from KERNEL_FREQ. This sweep sets
+RTDA_HLS_PERIOD per point, so every point is SCHEDULED for its own frequency.
 
-Raising the frequency therefore costs LUT: HLS pipelines harder to hold the
-tighter period. The shipped design is at 75.95% and the 2026-08-14 build failed
-to route at 98.87%, so this may find the design stops FITTING before it stops
-CLOSING. Both outcomes are reported; neither is assumed.
+WHERE IT STARTS
+At the shipped frequency, read from KERNEL_FREQ -- 180 MHz since 2026-08-19. That
+build closes at WNS 0.000 ns with the kernel at 78.47% LUT; it is seeded from its
+reports on disk and the ladder walks up from it.
+
+Raising the frequency costs LUT: HLS pipelines harder to hold the tighter period,
+and the 2026-08-14 build failed to route at 98.87%, so this may find the design
+stops FITTING before it stops CLOSING. Both outcomes are reported; neither is
+assumed.
+
+THE FIRST SWEEP (2026-08-18/19, results/f160..f190)
+160, 180 and 190 MHz routed at WNS 0.000 ns (kernel LUT 76.80 -> 79.47%); 170
+left no readable timing report and 200 was interrupted in synthesis. Those
+points were built BEFORE the kernel gained its event loop (d257669, 2026-08-19),
+so they describe a different kernel. That is why every build tree is now stamped
+with a hash of the sources it was built from, and a tree whose stamp does not
+match the current sources is moved aside rather than recovered.
 
 THE SEARCH IS A LADDER, ON PURPOSE
 Walk up the grid one frequency at a time and stop at the first one that fails.
@@ -40,15 +52,17 @@ sources under --root, outside the repo, and the repo's own build tree is never
 written to. `--check-isolation` proves that rather than asserting it.
 
 A FAILURE IS NOT A CEILING
-Place and route is heuristic and seeded. One FAIL at 190 MHz does not prove
-190 is impossible, so --confirm re-runs the boundary pair before the answer is
+Place and route is heuristic and seeded. One FAIL at 200 MHz does not prove
+200 is impossible, so --confirm re-runs the boundary pair before the answer is
 believed.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -62,14 +76,43 @@ sys.path.insert(0, str(HERE))
 import reports as R                                                # noqa: E402
 
 DEFAULT_ROOT = Path('/home/synthara/VersalPrjs/LDRD/freq_sweep_work')
-SHIPPED_MHZ = 150.0
-# csynth reports 6335 cycles per track; ns/track = 6335 / f(GHz-scaled). At
-# 150 MHz that is 42,233 ns, against 114,418 measured -- see README.md.
-CSYNTH_CYCLES = 6335
 
-# What to copy into an isolated tree. pl/ip is EXCLUDED on purpose: a copied
-# .xo is a 150 MHz .xo, and linking it at another frequency is exactly the
-# mistake this project exists to stop. Each point synthesises its own.
+
+def _shipped_mhz() -> float:
+    """KERNEL_FREQ from pl_fixed/Makefile: what the shipped build is linked at.
+
+    Read, not written down. This was a constant (150) and went stale the day the
+    design moved to 180 MHz.
+    """
+    try:
+        m = re.search(r'^KERNEL_FREQ\s*\?=\s*(\d+)',
+                      (REPO / 'pl_fixed' / 'Makefile').read_text(errors='replace'), re.M)
+        if m:
+            return int(m.group(1)) / 1e6
+    except OSError:
+        pass
+    return 180.0
+
+
+SHIPPED_MHZ = _shipped_mhz()
+
+# csynth TrackLoop cycles per track, worst case. The projection `ns/track =
+# cycles / f` uses each point's OWN csynth report, because the schedule belongs to
+# the period; this is only the fallback for a point without one. Read from the
+# shipped build, else its 180 MHz value. (RTL co-simulation of that kernel
+# measures 17,039 cycles, and the board agrees with cosim to 0.002%.)
+CSYNTH_CYCLES = R.parse_csynth(REPO / 'pl_fixed' / 'rtda_split_hls' / 'solution1' / 'syn'
+                               / 'report' / 'rtda_split_top_csynth.rpt').get('cycles_max') or 17078
+
+# A point's tree is recovered only if it was built from the sources it would be
+# built from now. The hash covers every SYNC entry, and is written into the point
+# directory when it is provisioned.
+STAMP_FILE = 'SOURCES.sha256'
+
+# What to copy into an isolated tree. pl/ip is EXCLUDED on purpose: a copied .xo
+# was scheduled for whatever KERNEL_FREQ built it, and linking it at another
+# frequency is exactly the mistake this project exists to stop. Each point
+# synthesises its own.
 SYNC = [
     ('pl_fixed/Makefile', 'pl_fixed/Makefile'),
     ('pl_fixed/link.cfg', 'pl_fixed/link.cfg'),
@@ -125,14 +168,42 @@ def boundary(known: dict):
 #  One build
 # ---------------------------------------------------------------------------
 
+_SOURCES_HASH = None
+
+
+def sources_hash() -> str:
+    """One sha256 over every file a point is built from (the SYNC list)."""
+    global _SOURCES_HASH
+    if _SOURCES_HASH is None:
+        h = hashlib.sha256()
+        for src, _ in SYNC:
+            p = REPO / src
+            files = (sorted(q for q in p.rglob('*') if q.is_file()) if p.is_dir()
+                     else [p] if p.is_file() else [])
+            for q in files:
+                h.update(str(q.relative_to(REPO)).encode() + b'\0')
+                h.update(q.read_bytes())
+        _SOURCES_HASH = h.hexdigest()
+    return _SOURCES_HASH
+
+
 def provision(root: Path, mhz: float, dry: bool) -> Path:
-    """An isolated pl_fixed working tree for one frequency."""
+    """An isolated pl_fixed working tree for one frequency.
+
+    Always a clean tree. Replacing only the SYNC entries used to leave a previous
+    build's _x/ in place, so a build that failed early was judged by the reports
+    of the one before it.
+    """
     pt = root / f'f{mhz:g}'
     if dry:
-        say(f'    mkdir -p {pt}')
+        say(f'    mkdir -p {pt}   (an existing {pt.name} is moved aside, never reused)')
         for src, dst in SYNC:
             say(f'    rsync -a --delete {REPO / src} -> {pt / dst}')
         return pt / 'pl_fixed'
+    if pt.exists():
+        aside = pt.with_name(f'{pt.name}.stale-{time.strftime("%Y%m%d-%H%M%S")}')
+        pt.rename(aside)
+        say(f'    moved the existing {pt.name}/ aside to {aside.name}/')
     for src, dst in SYNC:
         s, d = REPO / src, pt / dst
         d.parent.mkdir(parents=True, exist_ok=True)
@@ -142,6 +213,7 @@ def provision(root: Path, mhz: float, dry: bool) -> Path:
             shutil.copytree(s, d, symlinks=True)
         elif s.is_file():
             shutil.copy2(s, d)
+    (pt / STAMP_FILE).write_text(sources_hash() + '\n')
     return pt / 'pl_fixed'
 
 
@@ -182,7 +254,12 @@ def build_point(mhz, args, logdir) -> dict:
         # Rebuilding it costs four hours to learn what is already on disk, so
         # look before provisioning -- provisioning would delete the evidence.
         tree = Path(args.root) / f'f{mhz:g}' / 'pl_fixed'
-        if not args.dry_run and tree.is_dir():
+        stamp = tree.parent / STAMP_FILE
+        same_sources = stamp.is_file() and stamp.read_text().strip() == sources_hash()
+        if not args.dry_run and tree.is_dir() and not same_sources:
+            say(f'    f{mhz:g}/ was built from other sources (or before stamping) -- '
+                f'rebuilding, not recovering')
+        if not args.dry_run and tree.is_dir() and same_sources:
             found = R.read_point(tree, mhz, args.wns_threshold, args.lut_warn)
             # ONLY a build that ran to a conclusion may be recovered. The first
             # version accepted any non-empty reason, so a run stopped with
@@ -258,7 +335,8 @@ def harvest(rec, outdir: Path, dry: bool, keep_build: bool):
     tree = Path(rec.get('tree', ''))
     dst = outdir / f'f{rec["mhz"]:g}'
     if dry:
-        say(f'    harvest {tree}/_x/reports -> {dst}   then rm -rf {tree.parent}')
+        say(f'    harvest {tree}/_x/<VARIANT>_<TARGET>/reports -> {dst}'
+            f'{"" if keep_build else f"   then rm -rf {tree.parent}"}')
         return
     dst.mkdir(parents=True, exist_ok=True)
     got = R.find_reports(tree)
@@ -318,7 +396,7 @@ def preflight(args) -> list[str]:
     tcl = REPO / 'pl_fixed' / 'pl' / 'rtda_split_project.tcl'
     if 'RTDA_HLS_PERIOD' not in tcl.read_text(errors='replace'):
         bad.append(f'{tcl} has no RTDA_HLS_PERIOD -- the HLS clock cannot be set, '
-                   'so every point would synthesise at 150 MHz')
+                   'so every point would synthesise at the TCL default period')
     for src, _ in SYNC:
         if not (REPO / src).exists():
             bad.append(f'missing source: {REPO / src}')
@@ -349,9 +427,9 @@ def preflight(args) -> list[str]:
 #  Reporting
 # ---------------------------------------------------------------------------
 
-def _nspt(mhz):
-    """csynth's 6335 cycles at f MHz, in ns."""
-    return CSYNTH_CYCLES / mhz * 1000.0
+def _nspt(mhz, cycles=None):
+    """Projected fabric time per track, ns: csynth TrackLoop cycles at f MHz."""
+    return (cycles or CSYNTH_CYCLES) / mhz * 1000.0
 
 
 def table(recs, wns_threshold):
@@ -368,10 +446,11 @@ def table(recs, wns_threshold):
         mark = '  <- shipped' if abs(r['mhz'] - SHIPPED_MHZ) < 1e-6 else ''
         why = (r.get('note') or r.get('reason') or '') + mark
         L.append(f'{r["mhz"]:7.0f} {1000.0 / r["mhz"]:8.3f} {wns:>9} {lut:>7} {dsp:>6} '
-                 f'{routed:>7} {r["verdict"]:>9} {_nspt(r["mhz"]):10,.0f}  {why}')
+                 f'{routed:>7} {r["verdict"]:>9} {_nspt(r["mhz"], r.get("csynth_cycles")):10,.0f}  {why}')
     L.append('-' * 96)
     L.append(f'verdict bar: PASS = routed and WNS >= {wns_threshold:+.3f} ns; '
-             f'MARGINAL = -0.100 <= WNS < bar; ns/track = {CSYNTH_CYCLES} cycles / f')
+             f'MARGINAL = -0.100 <= WNS < bar; ns/track = csynth TrackLoop cycles (per point, '
+             f'else {CSYNTH_CYCLES}) / f')
     return L
 
 
@@ -402,14 +481,18 @@ def write_results(recs, outdir: Path, args, elapsed):
          '## Result\n']
     if best:
         gain = SHIPPED_MHZ and (best['mhz'] / SHIPPED_MHZ - 1) * 100
+        ship = next((r for r in recs if abs(r['mhz'] - SHIPPED_MHZ) < 1e-6), {})
         L += [f'**Highest frequency that builds: {best["mhz"]:.0f} MHz** '
               f'(WNS {best["wns"]:+.3f} ns, LUT {best["lut_pct"]:.2f}%) '
-              f'— {gain:+.0f}% on the shipped 150 MHz.\n',
-              f'Fabric floor moves {_nspt(SHIPPED_MHZ):,.0f} -> {_nspt(best["mhz"]):,.0f} ns/track '
-              f'(csynth {CSYNTH_CYCLES} cycles). The measured 114,418 ns/track at 150 MHz is '
-              f'2.7x that floor, and this sweep does not change the 2.7x — only the floor.\n']
+              f'— {gain:+.0f}% on the shipped {SHIPPED_MHZ:.0f} MHz.\n',
+              f'Projected fabric time moves {_nspt(SHIPPED_MHZ, ship.get("csynth_cycles")):,.0f} -> '
+              f'{_nspt(best["mhz"], best.get("csynth_cycles")):,.0f} ns/track (csynth TrackLoop '
+              f'worst case, read per point). At the shipped frequency RTL co-simulation '
+              f'measures slightly fewer cycles than csynth and the board matches cosim, so '
+              f'the projection is a close upper bound -- but a faster point is measured only '
+              f'once it has run on the board.\n']
     else:
-        L.append('No frequency above the shipped 150 MHz built successfully.\n')
+        L.append(f'No frequency above the shipped {SHIPPED_MHZ:.0f} MHz built successfully.\n')
     if lo is not None and hi is not None:
         L.append(f'Boundary bracketed: {lo:.0f} MHz builds, {hi:.0f} MHz does not.\n')
     L += ['## Points\n', '```'] + table(recs, args.wns_threshold) + ['```\n']
@@ -429,7 +512,8 @@ def write_results(recs, outdir: Path, args, elapsed):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--fmin', type=float, default=150.0)
+    ap.add_argument('--fmin', type=float, default=SHIPPED_MHZ,
+                    help='lowest frequency on the grid; default the shipped KERNEL_FREQ')
     ap.add_argument('-j', '--jobs', type=int, default=1,
                     help='kept for preflight sizing; the ladder is serial')
     ap.add_argument('--fmax', type=float, default=250.0)

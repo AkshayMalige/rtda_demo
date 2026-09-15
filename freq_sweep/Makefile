@@ -1,21 +1,25 @@
 ############################################################################
 #  How fast can pl_fixed actually run?
 #
-#  The design ships at 150 MHz and is fabric-bound: 114,538 ns/track measured
-#  against a 42,233 ns/track csynth floor. Clock frequency is the one untried
-#  lever on that number, and nobody knows how much headroom there is.
+#  The design ships at 180 MHz (KERNEL_FREQ in ../pl_fixed/Makefile) and is
+#  fabric-bound: 94,793 ns/track on the board, which RTL co-simulation matches to
+#  0.002%. Clock frequency is the lever on that number. The shipped build closes
+#  at WNS 0.000 ns with the kernel at 78.47% LUT.
 #
-#  TWO CLOCKS, and they were never connected
+#  TWO CLOCKS, and they were not connected until 2026-08-18
 #    ../pl_fixed/Makefile KERNEL_FREQ  ->  v++ --link --clock.defaultFreqHz
-#    ../pl_fixed/pl/rtda_split_project.tcl  ->  create_clock -period 6.667
-#  Raising the first alone re-times RTL that HLS scheduled for 150 MHz, and the
-#  shipped build closes at WNS +0.050 ns -- 0.75% of the period. There is
-#  nothing to re-time into. This flow drives BOTH, via RTDA_HLS_PERIOD.
+#    ../pl_fixed/pl/rtda_split_project.tcl  ->  create_clock -period RTDA_HLS_PERIOD
+#  The TCL's period was a hardcoded 6.667 ns, so raising KERNEL_FREQ alone re-timed
+#  RTL scheduled for 150 MHz. pl_fixed now derives the period from KERNEL_FREQ, and
+#  this flow sets RTDA_HLS_PERIOD per point.
 #
 #  So raising the clock costs LUT, because HLS pipelines harder to hold the
-#  tighter period. The shipped design sits at 75.95% and the 2026-08-14 build
-#  failed to route at 98.87%. This may well find that the design stops FITTING
-#  before it stops CLOSING.
+#  tighter period, and the 2026-08-14 build failed to route at 98.87%. This may
+#  well find that the design stops FITTING before it stops CLOSING.
+#
+#  THE FIRST SWEEP (2026-08-18/19) routed 160, 180 and 190 MHz at WNS 0.000 ns --
+#  on the kernel as it was before its event loop (d257669). Its build trees carry
+#  no source stamp, so this flow rebuilds rather than recovers them. README.md.
 #
 #  FOUR WAYS TO RUN IT, cheapest first:
 #
@@ -36,7 +40,8 @@ SHELL := /bin/bash
 # See ../pl_fixed/Makefile for the same pin and the same reason.
 PYTHON  ?= /home/synthara/miniforge3/bin/python
 
-FMIN    ?= 150
+# The ladder starts at the shipped frequency, read from ../pl_fixed/Makefile.
+FMIN    ?= $(or $(shell awk -F'= *' '/^KERNEL_FREQ/{printf "%g", $$2/1e6; exit}' ../pl_fixed/Makefile 2>/dev/null),180)
 FMAX    ?= 250
 STEP    ?= 10
 YES     ?=
@@ -58,9 +63,9 @@ all: help
 ############################################################################
 #  1. Does the parser work?  (no tools, no builds)
 ############################################################################
-# Against ../pl_fixed/_x/reports/, which is the shipped 150 MHz build. If the
-# parser reproduces the numbers already in ../README.md then it is right, and
-# none of them is a number invented here.
+# Against the shipped build's reports under ../pl_fixed/_x/<VARIANT>_<TARGET>/
+# (180 MHz, linked 2026-08-20). The expected numbers were copied from the report
+# text, so none of them is a number this parser produced.
 test:
 	@$(PYTHON) tests/test_reports.py
 
@@ -133,7 +138,7 @@ help:
 	@echo ""
 	@echo "  make sweep                      shows the plan, builds nothing"
 	@echo "  make sweep YES=1                THE REAL RUN   ~4 h per step, serial"
-	@echo "  make sweep FMIN=150 FMAX=200    narrower grid"
+	@echo "  make sweep FMIN=180 FMAX=220    narrower grid"
 	@echo "  make report                     read the last result"
 	@echo ""
 	@echo "  Builds are KEPT at $(ROOT)/f<MHz>/pl_fixed/ -- add PRUNE=1 to delete them."

@@ -16,30 +16,41 @@ THREE FILE FORMATS, and they do not resemble each other
 
      design summary (~line 140)
         WNS(ns)   TNS(ns)   TNS Failing Endpoints   ...
-          0.050     0.000                       0   ...
+          0.000     0.000                       0   ...
 
      the sentence that is the real pass/fail (~line 145)
         All user specified timing constraints are met.
 
      clock summary (~line 155), which gives the ACHIEVED period
         Clock                  Waveform(ns)     Period(ns)    Frequency(MHz)
-          clkout2_primitive    {0.000 3.333}    6.667         150.000
+          clkout1_primitive_1  {0.000 2.778}    5.556         180.000
 
      intra-clock summary (~line 186), WNS per clock
-        clkout2_primitive      0.050  0.000  0  1319470  ...
+        clkout1_primitive_1    0.000  0.000  0  1384153  ...
 
 2. impl_1_kernel_util_routed.rpt -- `N [ PCT%]` cells, one row per role:
-        |    Used Resources   |  585049 [ 56.28%] | 394548 [ 75.95%] | ...
+        |    Used Resources   |  620473 [ 59.69%] | 407628 [ 78.47%] | ...
 
 3. *_utilization_synth.rpt -- the EARLY gate, plain pipe-delimited:
         | CLB LUTs*           |    0 |   0 |   0 |  520704 |  0.00 |
 
+4. rtda_split_top_csynth.rpt -- TrackLoop iteration latency, `a ~ b` cycles:
+        | + TrackLoop  |   846550|     853900|    16931 ~ 17078|  ...
+
+WHERE THE REPORTS ARE
+pl_fixed links with `--temp_dir _x/$(VARIANT)_$(TARGET)` since 2026-08-20, so a hw
+build's reports are under _x/ap16_3_hw/reports/. Trees linked before that -- the
+first frequency sweep's among them -- have them under _x/reports/. `link_dir()`
+reads either; a reader that knew only the old layout found nothing in a new build
+and reported every point as `no_reports`.
+
 WHICH CLOCK IS THE KERNEL CLOCK
-Not by name. `clkout2_primitive` is what the VEK280 base platform happens to
-call it today, and a sweep that hardcodes it would silently report the 100 MHz
-control clock's slack the day that changes. It is identified by ENDPOINT COUNT
-instead -- 1,319,470 against 3,236 -- which is a property of the design, not of
-the platform's naming.
+Not by name, and the design proved why. The 150 MHz build's kernel clock was
+`clkout2_primitive`; the 180 MHz build's is `clkout1_primitive_1`, with a
+`clkout1_primitive` beside it that is the 100 MHz control clock. A sweep that
+hardcoded the old name would have reported the wrong clock's slack. It is
+identified by ENDPOINT COUNT instead -- 1,384,153 at 180 MHz -- which is a
+property of the design, not of the platform's naming.
 
 That also buys the check this whole project depends on: the achieved frequency
 is read back and compared against what was requested. A `--clock.defaultFreqHz`
@@ -325,6 +336,54 @@ def scan_hls_log(path) -> dict:
 #  Putting it together
 # ---------------------------------------------------------------------------
 
+def parse_csynth(path) -> dict:
+    """TrackLoop iteration latency in cycles, from a csynth report.
+
+    The sweep projects fabric time as `cycles / f`, and the cycle count belongs to
+    the schedule HLS chose for that period, so it is read per point rather than
+    carried as a constant. Two row shapes occur and both are accepted -- the
+    field holding `a ~ b` is the iteration latency in either:
+        | + TrackLoop  |   846550|     853900|    16931 ~ 17078|   (event-loop kernel)
+        |- TrackLoop  |        ?|        ?|  16931 ~ 17077|        (csynth.rpt summary)
+    """
+    out = {'file': str(path), 'ok': False, 'cycles_min': None, 'cycles_max': None}
+    txt = _text(path)
+    if txt is None:
+        return out
+    for ln in txt.splitlines():
+        if re.search(r'[-+]\s*TrackLoop\b', ln) and ln.count('|') >= 4:
+            if m := re.search(r'\|\s*(\d+)\s*~\s*(\d+)\s*\|', ln):
+                out['cycles_min'], out['cycles_max'] = _i(m.group(1)), _i(m.group(2))
+                out['ok'] = True
+                break
+    return out
+
+
+_NOT_STAMPS = {'reports', 'logs', 'link', '.Xil'}
+
+
+def link_dir(root) -> Path:
+    """The link's --temp_dir inside a pl_fixed tree: _x/<VARIANT>_<TARGET>, or _x.
+
+    Among per-configuration directories that hold link reports or logs, a hw build
+    is preferred over hw_emu, then the most recently written. Only when there is
+    none is the pre-2026-08-20 flat layout used -- so an old _x/reports/ left in a
+    tree cannot shadow the build that ran after it.
+    """
+    x = Path(root) / '_x'
+    cands = []
+    try:
+        for d in x.iterdir():
+            if d.is_dir() and d.name not in _NOT_STAMPS and (
+                    (d / 'reports' / 'link').is_dir() or (d / 'logs' / 'link').is_dir()):
+                cands.append(d)
+    except OSError:
+        pass
+    if not cands:
+        return x
+    return max(cands, key=lambda d: (d.name.endswith('_hw'), d.stat().st_mtime))
+
+
 def find_reports(root) -> dict:
     """Locate the report set inside a pl_fixed working tree.
 
@@ -333,23 +392,27 @@ def find_reports(root) -> dict:
     among many that matters.
     """
     root = Path(root)
-    imp = root / '_x' / 'reports' / 'link' / 'imp'
+    base = link_dir(root)
+    imp = base / 'reports' / 'link' / 'imp'
     got = {
+        'link_dir': base,
         'timing': imp / 'impl_1_route_report_timing_summary_0.rpt',
         'kernel_util': imp / 'impl_1_kernel_util_routed.rpt',
         'synth_util': None,
         'logs': [], 'hls_log': root / 'vitis_hls.log',
         'xo': root / 'pl' / 'ip' / 'rtda_split.xo',
+        'csynth': root / 'rtda_split_hls' / 'solution1' / 'syn' / 'report'
+                  / 'rtda_split_top_csynth.rpt',
     }
-    syn = root / '_x' / 'reports' / 'link' / 'syn'
+    syn = base / 'reports' / 'link' / 'syn'
     cands = sorted(syn.glob('*rtda_split_top*utilization_synth.rpt')) if syn.is_dir() else []
     if not cands and syn.is_dir():
         cands = sorted(syn.glob('*utilization_synth.rpt'))
     if cands:
         got['synth_util'] = cands[0]
-    for rel in ('_x/logs/link/vivado.log', '_x/logs/link/imp/impl_1_runme.log',
-                '_x/link/vivado/vpl/vivado.log', '_x/link/vivado/vpl/runme.log'):
-        p = root / rel
+    for rel in ('logs/link/vivado.log', 'logs/link/imp/impl_1_runme.log',
+                'link/vivado/vpl/vivado.log', 'link/vivado/vpl/runme.log'):
+        p = base / rel
         if p.is_file():
             got['logs'].append(p)
     got['logs'].extend(sorted(root.glob('v++_*.log')))
@@ -434,6 +497,7 @@ def read_point(root, request_mhz=None, wns_threshold=0.0, lut_warn=90.0) -> dict
         logs = scan_logs(f['logs'])
         logs['xo'] = f['xo']
         hls = scan_hls_log(f['hls_log'])
+        csyn = parse_csynth(f['csynth'])
         verdict, reason, note = classify(timing, kutil, sutil, logs, hls,
                                          request_mhz, wns_threshold, lut_warn)
         rec.update(
@@ -449,6 +513,8 @@ def read_point(root, request_mhz=None, wns_threshold=0.0, lut_warn=90.0) -> dict
             dsp_used=kutil.get('dsp_used'), dsp_pct=kutil.get('dsp_pct'),
             synth_lut_pct=sutil.get('lut_pct'),
             unrouted=logs.get('unrouted'), congestion=logs.get('congestion_level'),
+            csynth_cycles=csyn.get('cycles_max'), csynth_cycles_min=csyn.get('cycles_min'),
+            link_dir=str(f['link_dir']),
         )
     except Exception as exc:                      # noqa: BLE001 -- see module docstring
         rec.update(verdict=UNKNOWN, reason='toolerror',

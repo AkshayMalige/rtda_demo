@@ -5,7 +5,7 @@
 
 Everything else in this directory is verified against reports that already
 exist or against fake tools. This is the single claim that needs the real
-toolchain: that `create_clock -period [env_or RTDA_HLS_PERIOD 6.667]` in
+toolchain: that `create_clock -period [env_or RTDA_HLS_PERIOD 5.5556]` in
 ../pl_fixed/pl/rtda_split_project.tcl actually re-times the design rather than
 being rejected, ignored, or silently clamped.
 
@@ -23,7 +23,7 @@ the TCL prints before any synthesis happens --
     INFO: [HLS 200-10] Setting target device to 'xcve2802-...'
 
 -- with no error between them, and the requested period appearing in HLS's own
-solution settings rather than 6.667.
+solution settings rather than the TCL's default of 5.5556 (180 MHz).
 """
 from __future__ import annotations
 
