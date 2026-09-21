@@ -1,15 +1,50 @@
 // Solver0 proxy: wraps split_solver0 firmware in an isolated namespace.
+//
+// The block is a DATAFLOW region over its own five dense layers, the merge
+// and the four activations, plus the one-track roll delay it needs. Each is a
+// persistent process running for every track of the call, so the block's
+// interval is that of ONE 128x128 dense (~1030 cycles) rather than the sum of
+// five (4968). See rtda_stage.h for the macros and for why the delay lives
+// here instead of at the top level.
 
 #include "rtda_split_top.h"
+#include "rtda_stage.h"
 
 namespace s0_fw {
 #include "../firmware/solver0/defines.h"
 #include "../firmware/solver0/parameters.h"
 }
+using namespace s0_fw;
 
-void solver0_run(hls::stream<hidden_t>& curr, hls::stream<hidden_t>& prev, hls::stream<hidden_t>& out) {
-    using namespace s0_fw;
+// hidden_t == input_t == input2_t == result_t: all name the single type
+// nnet::array<ap_fixed<RTDA_W,RTDA_I,...>, 128>. The entry and exit copy
+// loops this block used to run were copying a value onto itself at 130 cycles
+// a track; they are gone, and these assertions are what stops a width change
+// from turning that removal into a silent truncation.
+static_assert(std::is_same<hidden_t, input_t>::value,
+              "hidden_t and s0_fw::input_t must be the same type");
+static_assert(std::is_same<hidden_t, input2_t>::value,
+              "hidden_t and s0_fw::input2_t must be the same type");
+static_assert(std::is_same<hidden_t, result_t>::value,
+              "hidden_t and s0_fw::result_t must be the same type");
 
+// The roll: (track j, track j-1) of this block's own input.
+RTDA_ROLL_STAGE(s0_roll, input_t, input2_t)
+
+// Forward pass matching split_solver0/firmware/myproject.cpp, one process each.
+RTDA_DENSE_STAGE(s0_dense3,  input_t,   layer3_t,  config3,  w3,  b3)
+RTDA_DENSE_STAGE(s0_dense5,  input2_t,  layer5_t,  config5,  w5,  b5)
+RTDA_ADD_STAGE  (s0_add7,    layer3_t,  layer5_t,  layer7_t, config7)
+RTDA_ACT_STAGE  (s0_act8,    layer7_t,  layer8_t,  LeakyReLU_config8)
+RTDA_DENSE_STAGE(s0_dense9,  layer8_t,  layer9_t,  config9,  w9,  b9)
+RTDA_ACT_STAGE  (s0_act11,   layer9_t,  layer11_t, LeakyReLU_config11)
+RTDA_DENSE_STAGE(s0_dense12, layer11_t, layer12_t, config12, w12, b12)
+RTDA_ACT_STAGE  (s0_act14,   layer12_t, layer14_t, LeakyReLU_config14)
+RTDA_DENSE_STAGE(s0_dense15, layer14_t, layer15_t, config15, w15, b15)
+RTDA_ACT_STAGE  (s0_act17,   layer15_t, result_t,  LeakyReLU_config17)
+
+void solver0_stage(hls::stream<hidden_t>& in, hls::stream<hidden_t>& out,
+                   int n_events, int tracks_per_event, bool reset) {
 #ifndef __SYNTHESIS__
     static bool loaded = false;
     if (!loaded) {
@@ -27,13 +62,10 @@ void solver0_run(hls::stream<hidden_t>& curr, hls::stream<hidden_t>& prev, hls::
     }
 #endif
 
-    // hidden_t == input_t == input2_t (all nnet::array<ap_fixed<16,6>, 128>)
-    hidden_t hc = curr.read(), hp = prev.read();
-    input_t  li_curr; input2_t li_prev;
-    for (int i = 0; i < HIDDEN; i++) { li_curr.data[i] = hc.data[i]; li_prev.data[i] = hp.data[i]; }
+    #pragma HLS DATAFLOW
 
-    hls::stream<input_t>   s_curr("s_curr");   s_curr.write(li_curr);
-    hls::stream<input2_t>  s_prev("s_prev");   s_prev.write(li_prev);
+    hls::stream<input_t>   s_curr("s_curr");
+    hls::stream<input2_t>  s_prev("s_prev");
     hls::stream<layer3_t>  layer3_out("layer3_out");
     hls::stream<layer5_t>  layer5_out("layer5_out");
     hls::stream<layer7_t>  layer7_out("layer7_out");
@@ -43,22 +75,25 @@ void solver0_run(hls::stream<hidden_t>& curr, hls::stream<hidden_t>& prev, hls::
     hls::stream<layer12_t> layer12_out("layer12_out");
     hls::stream<layer14_t> layer14_out("layer14_out");
     hls::stream<layer15_t> layer15_out("layer15_out");
-    hls::stream<result_t>  s_out("s_out");
 
-    // Forward pass matching split_solver0/firmware/myproject.cpp
-    nnet::dense<input_t,  layer3_t, config3>(s_curr, layer3_out, w3, b3);
-    nnet::dense<input2_t, layer5_t, config5>(s_prev, layer5_out, w5, b5);
-    nnet::add<layer3_t, layer5_t, layer7_t, config7>(layer3_out, layer5_out, layer7_out);
-    rtda::leaky_relu<layer7_t, layer8_t, LeakyReLU_config8>(layer7_out, layer8_out);
-    nnet::dense<layer8_t,  layer9_t,  config9> (layer8_out,  layer9_out,  w9,  b9);
-    rtda::leaky_relu<layer9_t, layer11_t, LeakyReLU_config11>(layer9_out, layer11_out);
-    nnet::dense<layer11_t, layer12_t, config12>(layer11_out, layer12_out, w12, b12);
-    rtda::leaky_relu<layer12_t, layer14_t, LeakyReLU_config14>(layer12_out, layer14_out);
-    nnet::dense<layer14_t, layer15_t, config15>(layer14_out, layer15_out, w15, b15);
-    rtda::leaky_relu<layer15_t, result_t, LeakyReLU_config17>(layer15_out, s_out);
+    // s_curr and s_prev are the one fork in the graph: s0_roll writes both,
+    // the two first-layer denses drain one each, and the merge rejoins them.
+    // Both branches carry exactly one token per track, so the fork cannot
+    // starve either dense; depth 4 just keeps the roll -- which is 130 cycles
+    // a track against the denses' ~1030 -- from having to wait in lockstep.
+    #pragma HLS STREAM variable=s_curr depth=4
+    #pragma HLS STREAM variable=s_prev depth=4
 
-    result_t lo = s_out.read();
-    hidden_t ho;
-    for (int i = 0; i < HIDDEN; i++) ho.data[i] = lo.data[i];
-    out.write(ho);
+    s0_roll(in, s_curr, s_prev, n_events, tracks_per_event, reset);
+
+    s0_dense3 (s_curr,     layer3_out,  n_events, tracks_per_event);
+    s0_dense5 (s_prev,     layer5_out,  n_events, tracks_per_event);
+    s0_add7   (layer3_out, layer5_out, layer7_out, n_events, tracks_per_event);
+    s0_act8   (layer7_out, layer8_out,  n_events, tracks_per_event);
+    s0_dense9 (layer8_out, layer9_out,  n_events, tracks_per_event);
+    s0_act11  (layer9_out, layer11_out, n_events, tracks_per_event);
+    s0_dense12(layer11_out, layer12_out, n_events, tracks_per_event);
+    s0_act14  (layer12_out, layer14_out, n_events, tracks_per_event);
+    s0_dense15(layer14_out, layer15_out, n_events, tracks_per_event);
+    s0_act17  (layer15_out, out,         n_events, tracks_per_event);
 }

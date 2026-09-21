@@ -1,5 +1,154 @@
 #include "rtda_split_top.h"
 
+// ===========================================================================
+//  The top level is a PIPELINE, not a loop nest.
+//
+//  It used to be: for each event, for each track, run the embedding, read its
+//  answer back, run solver0, read its answer back, ... and only then start
+//  the next track. One track took 17,039 cycles and an event 851,956 -- with
+//  thirteen of the fourteen dense engines idle at every instant, because a
+//  blocking `s.read()` is a hard sequence point and the hardware to run the
+//  next track was sitting right there.
+//
+//  Now the eight boxes below are concurrent processes joined by FIFOs. Each
+//  one loops over every track of the call, so track j is in the output dense
+//  while track j+13 is still in the embedding, and the whole thing runs at
+//  the interval of its SLOWEST stage rather than the sum of all of them.
+//
+//    feed_tracks -> embed_stage -> solver0 -> solver1 -> solver2 ->
+//                   event_mean -> output_stage -> write_result
+//
+//  Two properties make this cheap to trust:
+//
+//  * NO ARITHMETIC CHANGED. Same layers, same operands, same order, same
+//    types. The output must be BIT-IDENTICAL to the shipped design, and
+//    `make csim` against pl_fixed/native/ -- which compiles these same
+//    sources with g++ -- is the gate that says so. Anything but 0.000e+00
+//    means this restructuring broke something.
+//
+//  * IT CANNOT DEADLOCK. The graph is a pure feed-forward DAG: every process
+//    consumes exactly one token per track from each of its inputs and
+//    produces exactly one on each of its outputs, and no channel ever runs
+//    backwards. The roll history -- the one piece of state that does look
+//    like feedback -- lives INSIDE the solver that needs it (see
+//    RTDA_ROLL_STAGE in rtda_stage.h) and never crosses a channel. So the
+//    FIFO depths below are a throughput knob, not a correctness one.
+//
+//  WHAT IS NOT IN THE DATAFLOW REGION: nothing. Everything that used to sit
+//  between the loops -- zeroing the accumulator, the mean, the 128->27 dense,
+//  the writes -- is now inside one of the per-event processes at the tail.
+//  The region therefore contains only stream declarations and process calls,
+//  which is the canonical form a dataflow region requires; a scalar computed
+//  here (`n_events * tracks_per_event`, say) would break that, which is why
+//  every process takes the two counts and does its own nested loop.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+//  Source. m_axi -> quantized 6-wide tokens, one per track.
+//
+//  Identical to the old QuantIn loop, including the cast: track_data is
+//  float and the network runs in rtda_act_t. Reading it in one process in
+//  address order is also what lets HLS infer a burst on gmem0.
+// ---------------------------------------------------------------------------
+static void feed_tracks(const float* track_data,
+                        hls::stream<embed_in_t>& out,
+                        int n_events, int tracks_per_event) {
+FeedEvent:
+    for (int ev = 0; ev < n_events; ev++) {
+        #pragma HLS LOOP_TRIPCOUNT min=1 max=1000 avg=1000
+        // track_data is event-major: event ev starts here.
+        const long ev_base = (long)ev * tracks_per_event * INPUT_SIZE;
+    FeedTrack:
+        for (int j = 0; j < tracks_per_event; j++) {
+            #pragma HLS LOOP_TRIPCOUNT min=50 max=50 avg=50
+            embed_in_t e;
+        QuantIn:
+            for (int i = 0; i < INPUT_SIZE; i++) {
+                #pragma HLS PIPELINE
+                e.data[i] = (rtda_act_t)track_data[ev_base + j * INPUT_SIZE + i];
+            }
+            out.write(e);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Sink, part 1: the event mean.
+//
+//  Consumes one token per track and emits one per event, which is where the
+//  design's rate changes. `acc` is float, not rtda_act_t: summing up to 50
+//  activations of order 1 would need 6 more integer bits, and the sum is only
+//  ever divided and written out. ONE accumulator, reused per event.
+//
+//  warmup is a runtime argument: warmup=3 gives the tracks-3..49 mean that is
+//  comparable to the circular-roll reference, warmup=0 the all-50 mean the
+//  AIE hardware produces. See rtda_split_top.h. j is the index WITHIN the
+//  event, so this skips the head of every event -- not just of the call.
+//
+//  The `if (j >= warmup)` is a branch inside one process, not a conditionally
+//  executed task, so it costs the dataflow region nothing and needs no
+//  masking: `counted` and the accumulate are exactly the shipped design's.
+// ---------------------------------------------------------------------------
+static void event_mean(hls::stream<hidden_t>& in,
+                       float* mean128,
+                       hls::stream<hidden_t>& mean_out,
+                       int n_events, int tracks_per_event, int warmup) {
+    float acc[HIDDEN];
+
+MeanEvent:
+    for (int ev = 0; ev < n_events; ev++) {
+        #pragma HLS LOOP_TRIPCOUNT min=1 max=1000 avg=1000
+    InitAcc:
+        for (int k = 0; k < HIDDEN; k++) {
+            #pragma HLS PIPELINE
+            acc[k] = 0.0f;
+        }
+        int counted = 0;
+
+    MeanTrack:
+        for (int j = 0; j < tracks_per_event; j++) {
+            #pragma HLS LOOP_TRIPCOUNT min=50 max=50 avg=50
+            hidden_t s2_out = in.read();
+            if (j >= warmup) {
+            Accumulate:
+                for (int k = 0; k < HIDDEN; k++) {
+                    #pragma HLS PIPELINE
+                    acc[k] += (float)s2_out.data[k];
+                }
+                counted++;
+            }
+        }
+
+        const float inv = (counted > 0) ? 1.0f / (float)counted : 1.0f;
+        hidden_t mean_v;
+    Mean:
+        for (int k = 0; k < HIDDEN; k++) {
+            #pragma HLS PIPELINE
+            const float m = acc[k] * inv;
+            mean128[(long)ev * HIDDEN + k] = m;  // the primary output, full float
+            mean_v.data[k] = (rtda_act_t)m;      // quantized copy for the output dense
+        }
+        mean_out.write(mean_v);
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Sink, part 2: the 27 deliverables, one row per event.
+// ---------------------------------------------------------------------------
+static void write_result(hls::stream<out27_t>& in, float* result27,
+                         int n_events) {
+ResultEvent:
+    for (int ev = 0; ev < n_events; ev++) {
+        #pragma HLS LOOP_TRIPCOUNT min=1 max=1000 avg=1000
+        out27_t out_v = in.read();
+    Result:
+        for (int k = 0; k < OUT_DIM; k++) {
+            #pragma HLS PIPELINE
+            result27[(long)ev * OUT_DIM + k] = (float)out_v.data[k];
+        }
+    }
+}
+
 extern "C" void rtda_split_top(
     const float* track_data,
     float*       mean128,
@@ -21,145 +170,41 @@ extern "C" void rtda_split_top(
     #pragma HLS INTERFACE s_axilite port=reset            bundle=control
     #pragma HLS INTERFACE s_axilite port=return           bundle=control
 
-    // The streaming roll: each track pairs with whatever physically preceded
-    // it. static so that with reset=false the history runs on across event
-    // boundaries AND across calls, the way the AIE's carry does. With
-    // reset=true -- what every host passes -- it is zeroed per event below.
-    static rtda_act_t emb_prev[HIDDEN];
-    static rtda_act_t s0_prev[HIDDEN];
-    static rtda_act_t s1_prev[HIDDEN];
+    #pragma HLS DATAFLOW
 
-    // float, not rtda_act_t: summing up to 50 activations of order 1 would need
-    // 6 more integer bits, and the sum is only ever divided and written out.
-    // ONE accumulator, reused per event rather than replicated -- covering many
-    // events per call costs no extra on-chip storage.
-    float acc[HIDDEN];
+    // Each bundle is touched by exactly one process -- gmem0 by feed_tracks,
+    // gmem1 by event_mean, gmem2 by write_result -- so no port is shared
+    // across the region.
+    hls::stream<embed_in_t> s_track("s_track");
+    hls::stream<hidden_t>   s_embed("s_embed");
+    hls::stream<hidden_t>   s_solver0("s_solver0");
+    hls::stream<hidden_t>   s_solver1("s_solver1");
+    hls::stream<hidden_t>   s_solver2("s_solver2");
+    hls::stream<hidden_t>   s_mean("s_mean");
+    hls::stream<out27_t>    s_out27("s_out27");
 
-EventLoop:
-    for (int ev = 0; ev < n_events; ev++) {
-        #pragma HLS LOOP_TRIPCOUNT min=1 max=1000 avg=1000
+    // Depth 4, not the ping-pong default of 2. The stages do not have equal
+    // intervals -- the embedding's is set by one 128x128 dense and a solver's
+    // by four -- and a token of slack lets a fast stage run ahead of a slow
+    // one instead of handing off in lockstep. The tail is where it matters:
+    // event_mean stalls for the 128-cycle Mean loop at every event boundary,
+    // and s_solver2 absorbs that rather than back-pressuring three solvers.
+    // 2048 bits x 4 is small; deeper only if the csynth report shows a stage
+    // starving.
+    #pragma HLS STREAM variable=s_track   depth=8
+    #pragma HLS STREAM variable=s_embed   depth=4
+    #pragma HLS STREAM variable=s_solver0 depth=4
+    #pragma HLS STREAM variable=s_solver1 depth=4
+    #pragma HLS STREAM variable=s_solver2 depth=4
+    #pragma HLS STREAM variable=s_mean    depth=4
+    #pragma HLS STREAM variable=s_out27   depth=4
 
-        // Per EVENT, not per call. This is what the old one-event-per-call form
-        // got for free by being a fresh call; now that one call spans many
-        // events the kernel has to do it itself, or every event after the first
-        // would start with the previous event's last track as its predecessor.
-        if (reset) {
-        ResetState:
-            for (int i = 0; i < HIDDEN; i++) {
-                #pragma HLS PIPELINE
-                emb_prev[i] = rtda_act_t(0);
-                s0_prev[i]  = rtda_act_t(0);
-                s1_prev[i]  = rtda_act_t(0);
-            }
-        }
-
-    InitAcc:
-        for (int k = 0; k < HIDDEN; k++) {
-            #pragma HLS PIPELINE
-            acc[k] = 0.0f;
-        }
-        int counted = 0;
-
-        // track_data is event-major: event ev starts here.
-        const long ev_base = (long)ev * tracks_per_event * INPUT_SIZE;
-
-    TrackLoop:
-        for (int j = 0; j < tracks_per_event; j++) {
-            #pragma HLS LOOP_TRIPCOUNT min=50 max=50 avg=50
-            hls::stream<embed_in_t> emb_in_s("emb_in_s");
-            embed_in_t emb_in;
-        QuantIn:
-            for (int i = 0; i < INPUT_SIZE; i++) {
-                #pragma HLS PIPELINE
-                emb_in.data[i] = (rtda_act_t)track_data[ev_base + j * INPUT_SIZE + i];
-            }
-            emb_in_s.write(emb_in);
-
-            hls::stream<hidden_t> emb_out_s("emb_out_s");
-            embed_run(emb_in_s, emb_out_s);
-            hidden_t emb_out = emb_out_s.read();
-
-            // solver k takes (current stage output, previous track's stage output)
-            hls::stream<hidden_t> s0c_s("s0c_s"), s0p_s("s0p_s"), s0_out_s("s0_out_s");
-            hidden_t prev0;
-        Prev0:
-            for (int i = 0; i < HIDDEN; i++) {
-                #pragma HLS PIPELINE
-                prev0.data[i] = emb_prev[i];
-            }
-            s0c_s.write(emb_out);
-            s0p_s.write(prev0);
-            solver0_run(s0c_s, s0p_s, s0_out_s);
-            hidden_t s0_out = s0_out_s.read();
-
-            hls::stream<hidden_t> s1c_s("s1c_s"), s1p_s("s1p_s"), s1_out_s("s1_out_s");
-            hidden_t prev1;
-        Prev1:
-            for (int i = 0; i < HIDDEN; i++) {
-                #pragma HLS PIPELINE
-                prev1.data[i] = s0_prev[i];
-            }
-            s1c_s.write(s0_out);
-            s1p_s.write(prev1);
-            solver1_run(s1c_s, s1p_s, s1_out_s);
-            hidden_t s1_out = s1_out_s.read();
-
-            hls::stream<hidden_t> s2c_s("s2c_s"), s2p_s("s2p_s"), s2_out_s("s2_out_s");
-            hidden_t prev2;
-        Prev2:
-            for (int i = 0; i < HIDDEN; i++) {
-                #pragma HLS PIPELINE
-                prev2.data[i] = s1_prev[i];
-            }
-            s2c_s.write(s1_out);
-            s2p_s.write(prev2);
-            solver2_run(s2c_s, s2p_s, s2_out_s);
-            hidden_t s2_out = s2_out_s.read();
-
-        Shift:
-            for (int i = 0; i < HIDDEN; i++) {
-                #pragma HLS PIPELINE
-                emb_prev[i] = emb_out.data[i];
-                s0_prev[i]  = s0_out.data[i];
-                s1_prev[i]  = s1_out.data[i];
-            }
-
-            // warmup is a runtime argument: warmup=3 gives the tracks-3..49 mean
-            // that is comparable to the circular-roll reference, warmup=0 the
-            // all-50 mean the AIE hardware produces. See rtda_split_top.h.
-            // j is the index WITHIN the event, so this skips the head of every
-            // event -- not just the head of the call.
-            if (j >= warmup) {
-            Accumulate:
-                for (int k = 0; k < HIDDEN; k++) {
-                    #pragma HLS PIPELINE
-                    acc[k] += (float)s2_out.data[k];
-                }
-                counted++;
-            }
-        }
-
-        const float inv = (counted > 0) ? 1.0f / (float)counted : 1.0f;
-
-        hls::stream<hidden_t> mean_s("mean_s");
-        hidden_t mean_v;
-    Mean:
-        for (int k = 0; k < HIDDEN; k++) {
-            #pragma HLS PIPELINE
-            const float m = acc[k] * inv;
-            mean128[(long)ev * HIDDEN + k] = m;  // the primary output, full float
-            mean_v.data[k] = (rtda_act_t)m;      // quantized copy for the output dense
-        }
-        mean_s.write(mean_v);
-
-        hls::stream<out27_t> out_s("out_s");
-        output_run(mean_s, out_s);
-        out27_t out_v = out_s.read();
-
-    Result:
-        for (int k = 0; k < OUT_DIM; k++) {
-            #pragma HLS PIPELINE
-            result27[(long)ev * OUT_DIM + k] = (float)out_v.data[k];
-        }
-    }
+    feed_tracks(track_data, s_track, n_events, tracks_per_event);
+    embed_stage(s_track, s_embed, n_events, tracks_per_event);
+    solver0_stage(s_embed,   s_solver0, n_events, tracks_per_event, reset);
+    solver1_stage(s_solver0, s_solver1, n_events, tracks_per_event, reset);
+    solver2_stage(s_solver1, s_solver2, n_events, tracks_per_event, reset);
+    event_mean(s_solver2, mean128, s_mean, n_events, tracks_per_event, warmup);
+    output_stage(s_mean, s_out27, n_events);
+    write_result(s_out27, result27, n_events);
 }

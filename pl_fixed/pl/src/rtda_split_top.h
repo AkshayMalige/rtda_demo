@@ -15,6 +15,10 @@
 #include "rtda_leaky.h"
 #include "ap_int.h"
 #include "hls_stream.h"
+// For the static_asserts in the proxies that check a canonical type and the
+// hls4ml type it is handed to are literally the same type, so the copy loops
+// that used to convert between them can be -- and are -- gone.
+#include <type_traits>
 
 // nnet utils at global scope so the per-block proxy namespaces do not
 // re-include them and collide.
@@ -39,13 +43,33 @@ typedef nnet::array<rtda_act_t, INPUT_SIZE> embed_in_t;
 typedef nnet::array<rtda_act_t, HIDDEN>     hidden_t;
 typedef nnet::array<rtda_out_t, OUT_DIM>    out27_t;
 
-// One per block; each is defined in its own TU so the sub-project types
-// (input_t, result_t, config2, w2, ...) stay namespace-scoped.
-void embed_run  (hls::stream<embed_in_t>&, hls::stream<hidden_t>&);
-void solver0_run(hls::stream<hidden_t>&, hls::stream<hidden_t>&, hls::stream<hidden_t>&);
-void solver1_run(hls::stream<hidden_t>&, hls::stream<hidden_t>&, hls::stream<hidden_t>&);
-void solver2_run(hls::stream<hidden_t>&, hls::stream<hidden_t>&, hls::stream<hidden_t>&);
-void output_run (hls::stream<hidden_t>&, hls::stream<out27_t>&);
+// ---------------------------------------------------------------------------
+//  The five blocks, one per translation unit so the sub-project types
+//  (input_t, result_t, config2, w2, ...) stay namespace-scoped.
+//
+//  Each is a PERSISTENT PROCESS, not a call: it loops over every track of the
+//  whole kernel call and is itself a `#pragma HLS DATAFLOW` region over its
+//  own layers. They used to take one track and return, and the top level
+//  read each one's answer back before starting the next -- fourteen dense
+//  engines, thirteen of them idle at any instant. See rtda_stage.h.
+//
+//  They take (n_events, tracks_per_event) rather than a token count so that
+//  every process in the design counts events the same way and knows from its
+//  own loop counters where an event begins. The solvers additionally take
+//  `reset`, because each now owns the one-track delay that used to be a
+//  shared static array at the top level.
+// ---------------------------------------------------------------------------
+void embed_stage  (hls::stream<embed_in_t>& in, hls::stream<hidden_t>& out,
+                   int n_events, int tracks_per_event);
+void solver0_stage(hls::stream<hidden_t>& in, hls::stream<hidden_t>& out,
+                   int n_events, int tracks_per_event, bool reset);
+void solver1_stage(hls::stream<hidden_t>& in, hls::stream<hidden_t>& out,
+                   int n_events, int tracks_per_event, bool reset);
+void solver2_stage(hls::stream<hidden_t>& in, hls::stream<hidden_t>& out,
+                   int n_events, int tracks_per_event, bool reset);
+// One token per EVENT, not per track: it runs on the event mean.
+void output_stage (hls::stream<hidden_t>& in, hls::stream<out27_t>& out,
+                   int n_events);
 
 // ---------------------------------------------------------------------------
 //  Top level.
@@ -81,6 +105,12 @@ void output_run (hls::stream<hidden_t>&, hls::stream<out27_t>&);
 //                 form did implicitly, by virtue of being a fresh call.
 //    reset=false  let the history run on across event boundaries and across
 //                 calls -- the AIE's never-reset carry.
+//  The three histories are now one `static` array inside each solver rather
+//  than three at this level (see RTDA_ROLL_STAGE in rtda_stage.h). They hold
+//  the same values and carry across calls the same way -- verified bit for
+//  bit against the pre-dataflow kernel, reset=false included -- but keeping
+//  them out of the top level is what lets several tracks, and so two events,
+//  be in flight at once without a global reset corrupting the trailing one.
 // ---------------------------------------------------------------------------
 extern "C" void rtda_split_top(const float* track_data,
                                float*       mean128,

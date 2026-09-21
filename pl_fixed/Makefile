@@ -123,7 +123,8 @@ SRC       := pl/src
 KSRCS     := $(SRC)/rtda_split_top.cpp $(SRC)/embed_proxy.cpp \
              $(SRC)/solver0_proxy.cpp $(SRC)/solver1_proxy.cpp \
              $(SRC)/solver2_proxy.cpp $(SRC)/output_proxy.cpp
-KHDRS     := $(SRC)/rtda_split_top.h $(SRC)/rtda_fixed.h $(SRC)/rtda_leaky.h
+KHDRS     := $(SRC)/rtda_split_top.h $(SRC)/rtda_fixed.h $(SRC)/rtda_leaky.h \
+             $(SRC)/rtda_stage.h
 NATIVE    := native/rtda_native_$(VARIANT)
 
 .PHONY: all weights sweep fastsim exactsim validate native \
