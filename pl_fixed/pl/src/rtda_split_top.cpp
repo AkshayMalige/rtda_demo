@@ -183,20 +183,31 @@ extern "C" void rtda_split_top(
     hls::stream<hidden_t>   s_mean("s_mean");
     hls::stream<out27_t>    s_out27("s_out27");
 
-    // Depth 4, not the ping-pong default of 2. The stages do not have equal
-    // intervals -- the embedding's is set by one 128x128 dense and a solver's
-    // by four -- and a token of slack lets a fast stage run ahead of a slow
-    // one instead of handing off in lockstep. The tail is where it matters:
-    // event_mean stalls for the 128-cycle Mean loop at every event boundary,
-    // and s_solver2 absorbs that rather than back-pressuring three solvers.
-    // 2048 bits x 4 is small; deeper only if the csynth report shows a stage
-    // starving.
+    // DEPTH 2 ON EVERY 128-WIDE CHANNEL, and that is a measurement, not a
+    // default. Depth 4 was tried first, on the theory that a token of slack
+    // would let a fast stage run ahead of a slow one. It bought nothing --
+    // csynth already reports this design running at the interval of one
+    // 128x128 dense at reuse factor 1024, which is its floor -- and it cost
+    // 550 BRAM_18K, taking the estimate from 47% to 89%. The binding is a
+    // cliff, not a slope:
+    //
+    //     layer3_out_U   depth 2    0 BRAM   487 FF     <- shift registers
+    //     s_curr_U       depth 4   50 BRAM   778 FF     <- "Vivado Default RAMs"
+    //
+    // Above two, HLS stops using shift registers and spends 50 BRAM_18K on
+    // 8,192 bits. Eleven channels of that was the entire BRAM increase.
+    //
+    // Depth 2 is ping-pong, and it is sufficient here for a structural
+    // reason: every process consumes one token per track and produces one,
+    // so the slowest stage sets the pace and a deeper queue in front of it
+    // only moves where the waiting happens. The narrow channels are free, so
+    // they keep a little slack.
     #pragma HLS STREAM variable=s_track   depth=8
-    #pragma HLS STREAM variable=s_embed   depth=4
-    #pragma HLS STREAM variable=s_solver0 depth=4
-    #pragma HLS STREAM variable=s_solver1 depth=4
-    #pragma HLS STREAM variable=s_solver2 depth=4
-    #pragma HLS STREAM variable=s_mean    depth=4
+    #pragma HLS STREAM variable=s_embed   depth=2
+    #pragma HLS STREAM variable=s_solver0 depth=2
+    #pragma HLS STREAM variable=s_solver1 depth=2
+    #pragma HLS STREAM variable=s_solver2 depth=2
+    #pragma HLS STREAM variable=s_mean    depth=2
     #pragma HLS STREAM variable=s_out27   depth=4
 
     feed_tracks(track_data, s_track, n_events, tracks_per_event);

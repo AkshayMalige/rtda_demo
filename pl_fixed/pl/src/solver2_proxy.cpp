@@ -78,11 +78,12 @@ void solver2_stage(hls::stream<hidden_t>& in, hls::stream<hidden_t>& out,
 
     // s_curr and s_prev are the one fork in the graph: s2_roll writes both,
     // the two first-layer denses drain one each, and the merge rejoins them.
-    // Both branches carry exactly one token per track, so the fork cannot
-    // starve either dense; depth 4 just keeps the roll -- which is 130 cycles
-    // a track against the denses' ~1030 -- from having to wait in lockstep.
-    #pragma HLS STREAM variable=s_curr depth=4
-    #pragma HLS STREAM variable=s_prev depth=4
+    // Both branches carry exactly one token per track, so neither dense can
+    // starve and the fork needs no slack. Depth 2 and not 4: see the note in
+    // rtda_split_top.cpp -- depth 4 put these two channels in BRAM, 50
+    // BRAM_18K each, for no throughput at all.
+    #pragma HLS STREAM variable=s_curr depth=2
+    #pragma HLS STREAM variable=s_prev depth=2
 
     s2_roll(in, s_curr, s_prev, n_events, tracks_per_event, reset);
 
