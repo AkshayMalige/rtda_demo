@@ -68,15 +68,27 @@ def scaling():
     lat_fp32 = 113.4 - 76.24 + np.array([25.31, 50.83, 76.24])
     lat_bf16 = 31.2 - 16.92 + np.array([5.58, 11.33, 16.92])            # idle array, iteration 0 lags
     # PL, pipelined: adding a solver block adds PIPELINE DEPTH, not interval. The
-    # interval is set by the slowest stage -- one 128x128 dense at reuse factor
-    # 1024, 1031 cycles/track (H) -- and that does not change when blocks are
-    # added, exactly as on the array. So throughput is FLAT and only latency grows.
-    # One block's depth, from the per-track intervals in the csynth report (H):
-    #   4 dense x 1031 + 1 add 106 + 4 activations x 56 + roll 131 = 4585 cycles
-    # = 25.5 us, anchored at 3 blocks on the measured cosim latency 383.2 us (T).
-    # (Before pipelining a block cost 4966 cycles/track x 50 tracks = 1.4 ms of
-    # BOTH latency and throughput.)
-    pl      = LAT['pl'] - (3 - blocks) * 4585 * 5.5556e-3
+    # interval is the MAX over stages, not the sum -- one 128x128 dense at reuse
+    # factor 1024, 1031 cycles/track (H) -- and every dense reports exactly that,
+    # so adding blocks of the same stages cannot move it. Throughput is FLAT and
+    # only latency grows. (Before pipelining the design SUMMED, so a block cost
+    # 4966 cycles/track x 50 tracks = 1.4 ms of BOTH.)
+    #
+    # ONLY THE 3-BLOCK POINT IS MEASURED. 1 and 2 are derived, as they were in
+    # the pre-pipelining version of this figure. The per-block latency is the
+    # MEASURED fill apportioned by structural share -- not the bare structural
+    # sum, which undercounts:
+    #   critical path of one solver (H, per-track intervals, dense5 is parallel
+    #   to dense3 so it is not on the path):
+    #     roll 131 + 4 x dense 1031 + add 106 + 4 x act 56        = 4585 cyc
+    #   embed: 199 + 56 + 1031 + 56                               = 1342 cyc
+    #   structural total  1342 + 3x4585 + mean ~130               = 15228 cyc
+    #   measured fill (T) 68,981 - 51,552                         = 17429 cyc
+    # The 2201-cycle gap is AXI latency and handshakes across ~38 process
+    # boundaries -- real, and in the measurement. Scaling by 17429/15228 = 1.145
+    # puts one block at 4585 x 1.145 = 5248 cyc = 29.2 us.
+    PL_BLOCK_US = 4585 * (17429 / 15228) * 5.5556e-3            # 29.2 us
+    pl      = LAT['pl'] - (3 - blocks) * PL_BLOCK_US
     thr_pl  = np.full(3, THR['pl'])
     thr_fp32 = np.full(3, THR['fp32']); thr_bf16 = np.full(3, THR['bf16'])
     fig, (a, b) = plt.subplots(1, 2, figsize=(7.2, 3.3), sharey=True)
@@ -88,12 +100,12 @@ def scaling():
         ax.set_xticks(blocks); ax.set_xlim(0.7, 3.3); ax.set_yscale('log')
         ax.set_xlabel('solver blocks in the network'); ax.set_title(ttl)
     a.set_ylabel('µs'); a.set_ylim(8, 900)
-    a.annotate('+25 µs per block', (2, lat_fp32[1]), xytext=(0, 8), textcoords='offset points', ha='center', fontsize=8.5, color=C['fp32'])
-    a.annotate('+6 µs per block (idle)', (2, lat_bf16[1]), xytext=(0, -14), textcoords='offset points', ha='center', fontsize=8.5, color=C['bf16'])
-    # 25.5 us, within noise of fp32's 25.3 -- a coincidence, and readers will read
-    # it as a copy-paste bug unless the mechanism is named. The array pays cascade
-    # lag; the fabric pays pipeline depth.
-    a.annotate('+25 µs per block (pipeline depth)', (2, pl[1]), xytext=(0, 8), textcoords='offset points', ha='center', fontsize=8.5, color=C['pl'])
+    # The y axis is logarithmic, so equal microsecond steps look smaller the
+    # higher up they sit. Quote the growth factor as well or the reader compares
+    # slopes that the axis is not showing.
+    a.annotate(f'+25 µs per block  ({lat_fp32[2]/lat_fp32[0]:.1f}× over 1→3)', (2, lat_fp32[1]), xytext=(0, 8), textcoords='offset points', ha='center', fontsize=8.5, color=C['fp32'])
+    a.annotate(f'+6 µs per block, idle  ({lat_bf16[2]/lat_bf16[0]:.1f}×)', (2, lat_bf16[1]), xytext=(0, -14), textcoords='offset points', ha='center', fontsize=8.5, color=C['bf16'])
+    a.annotate(f'+{PL_BLOCK_US:.0f} µs per block  ({pl[2]/pl[0]:.2f}×)', (2, pl[1]), xytext=(0, 8), textcoords='offset points', ha='center', fontsize=8.5, color=C['pl'])
     b.annotate('unchanged', (2, thr_fp32[1]), xytext=(0, 7), textcoords='offset points', ha='center', fontsize=8.5, color=C['fp32'])
     b.annotate('unchanged', (2, thr_bf16[1]), xytext=(0, 7), textcoords='offset points', ha='center', fontsize=8.5, color=C['bf16'])
     b.annotate('unchanged', (2, thr_pl[1]), xytext=(0, 8), textcoords='offset points', ha='center', fontsize=8.5, color=C['pl'])
