@@ -205,10 +205,23 @@ estimate, not the result.
 It said the 150 MHz build measured 113.40 us/track against csynth's 6335 cycles
 (42.23 us/track), "a genuine 2.7x on the fabric". Those came from different kernels:
 the 6335-cycle report predated the event loop. The shipped kernel is now scheduled
-and linked at 180 MHz. csynth gives 16,931–17,078 cycles per track, RTL
-co-simulation measures 17,039 (851,956 per event), and the board reads 94.66
-us/track — 0.002% from cosim. There is no gap between the fabric and its models.
+and linked at 180 MHz. There is no gap between the fabric and its models.
 *(Corrected 2026-09-14; `analysis/rtda_timing.ipynb` §5.)*
+
+**The kernel is a dataflow pipeline since 2026-09-22, and these numbers moved by
+16.5x.** It used to run one track through all fourteen dense layers before
+starting the next, so thirteen of fourteen engines were idle at any instant:
+csynth 16,931–17,078 cycles per track, cosim 17,039 (851,956 per event), board
+94.66 us/track. Every layer is now its own process and they run concurrently —
+csynth's interval is **1,031 cycles/track**, cosim measures **51,552 cycles per
+event** (286.4 us), and the board reads **5.86 us/track**. Cosim and the board
+agree to 0.01% at 10,000 events.
+
+It also got SMALLER: LUT 407,628 -> 391,213, REG 620,473 -> 538,160, BRAM 200 ->
+183, at WNS 0.000 -> +0.027 ns, on the same clock. Only DSP rose, 289 -> 308, and
+that is address arithmetic rather than network arithmetic — the board output is
+bit-identical to the sequential design's, all 128,000 numbers. See
+`docs/pl_dataflow_plan.md`.
 
 ## Don't wait for route_design to find out
 

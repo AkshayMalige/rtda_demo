@@ -48,7 +48,12 @@ model/        mlp_fp32.onnx, weights_fp32/, rtda_ref.py, weights.py
               copies of this forward pass and they had drifted.
 testdata/     stimulus + goldens (generated: `make golden`)
 aie_batch/    AIE-ML aie::mmul design, PRECISION=fp32|bf16, + its XRT host
-pl_fixed/     PL-only HLS ap_fixed design + a native bit-accurate model
+pl_fixed/     PL-only HLS ap_fixed design + a native bit-accurate model.
+              A DATAFLOW PIPELINE since 2026-09-22: every one of the 14 dense
+              layers is its own process, ~17 tracks in flight, 1031 cycles a
+              track against the old 17,039. rtda_stage.h builds the processes;
+              the roll delay lives inside each solver so the graph stays a
+              feed-forward DAG and cannot deadlock. Bit-identical output.
 cpu/          the host-CPU baseline: the SAME rtda_ref.forward, threaded.
               No XRT, no Vitis, no card -- `make -C cpu scan_host`, ~40 s.
 gpu/          the NVIDIA baseline. rtda_torch.py is the ONE second copy of the
@@ -148,12 +153,11 @@ The leaky slope is 0.1, computed as `2^-4 + 2^-5 + 2^-8 + 2^-9` in
 same as the 0.125 design.** `ALPHA125=1` rebuilds the legacy variant for
 comparison; it is 33× worse and should not be the default again.
 
-**Open: LUT.** The realignment took the HLS estimate from 108% to 231% and the
-design has not been placed and routed. `pl_fixed/RESOURCES.md` has the
-breakdown and the two candidate fixes; the first (giving `rtda_weight_t` the
-plain ap_fixed defaults, since weights are compile-time constants) looks free.
-Do not promise the design fits until `make system FLOW=pl_fixed TARGET=hw`
-has run.
+**Closed: LUT.** It fits. The HLS estimate is a poor guide here -- 157%
+estimated against 75.32% routed -- so route before believing it, and quote the
+routed report. The shipped dataflow build is LUT 391,213 (75.32%), REG 538,160
+(51.77%), BRAM 183 (30.50%), DSP 308 (23.48%) at WNS **+0.027 ns**, 180 MHz.
+`pl_fixed/RESOURCES.md` has the breakdown.
 
 Rounding and saturation modes are not free in this design. Keep them on the
 activations, where the error is, and nowhere else — see the notes in
@@ -186,8 +190,9 @@ things matter when touching it:
 
 Measured, 10000 events, fp32, on the EPYC 9354P: 305.9 us/event at 1 thread,
 40.0 at 8, 15.9 at 32. AIE-ML fp32 is 30.1 and bf16 11.9, so **16 CPU threads
-match the fp32 design and 32 do not reach bf16**; `pl_fixed` at 4733 us/event
-is slower than a single CPU thread.
+match the fp32 design and 32 do not reach bf16**; `pl_fixed`, now a dataflow
+pipeline at 286 us/event, sits between 1 thread (305.9) and 8 (40.0). It was
+4733 us/event -- slower than a single thread -- until 2026-09-22.
 
 ## The GPU baseline
 

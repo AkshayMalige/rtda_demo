@@ -26,11 +26,11 @@ deliverable: **27 numbers per event**.
 |---|---|---|---|
 | where it runs | AIE-ML array | AIE-ML array | PL fabric only |
 | arithmetic | float32 | bfloat16 | `ap_fixed<16,3>` |
-| shape | matrix × matrix, 8 tracks/iteration | same | 1 track at a time |
+| shape | matrix × matrix, 8 tracks/iteration | same | dataflow pipeline, ~17 tracks in flight |
 | kernel | `aie::mmul` | `aie::mmul` | hls4ml `nnet::dense` |
-| **ns/track, silicon** ³ | **615** | **245** | **94,793** |
+| **ns/track, silicon** ³ | **615** | **245** | **5,862** |
 | **error, 27 outputs** ¹ | **7.5e-07** | **3.96e-04** | **2.35e-04** |
-| resources ² | 69 compute + 13 memory tiles ⁴ | 69 compute + 15 memory tiles ⁴ | **78% LUT, 60% REG, 33% BRAM, 22% DSP** (routed, 180 MHz) |
+| resources ² | 69 compute + 13 memory tiles ⁴ | 69 compute + 15 memory tiles ⁴ | **75% LUT, 52% REG, 31% BRAM, 23% DSP** (routed, 180 MHz) |
 
 ¹ max |implementation − ONNX| over the **same 5 events**, warm-up excluded.
 Full scale (largest of the 27) is 0.0857. These are a max over events, so they
@@ -39,10 +39,20 @@ reads 3.54e-04, and the AIE numbers would rise similarly if per-track taps
 existed at that scale. `analysis/rtda_compare.ipynb` takes the ratio over the
 common count and prints which it used.
 
-² **Post-route, from the shipped 180 MHz `ap16_3` build** (linked 2026-08-20;
+² **Post-route, from the shipped 180 MHz `ap16_3` build** (linked 2026-09-22;
 `pl_fixed/_x/ap16_3_hw/reports/link/imp/impl_1_kernel_util_routed.rpt`):
-LUT 407,628 (78.47%), REG 620,473 (59.69%), BRAM 200 (33.33%), DSP 289 (22.03%),
-**all timing constraints met** at WNS **0.000 ns** — closed, with no slack to spare.
+LUT 391,213 (75.32%), REG 538,160 (51.77%), BRAM 183 (30.50%), DSP 308 (23.48%),
+**all timing constraints met** at WNS **+0.027 ns**, zero failing endpoints of
+1,222,281.
+
+**The dataflow rebuild made the design smaller, not bigger.** Against the
+sequential build it replaced (LUT 407,628 / REG 620,473 / BRAM 200 / DSP 289 at
+WNS 0.000 ns) it drops 16,415 LUT and 82,313 registers and gains timing slack,
+while running 16.5× faster. The 19 extra DSP are address arithmetic and adder
+binding, not network arithmetic — the output is bit-identical. Deleting the
+per-block entry and exit copy loops, which were copying 128-wide values onto
+themselves because `hidden_t` and the hls4ml `input_t` are the same type, more
+than paid for the FIFOs the pipeline added.
 The kernel clock is **180 MHz** — verified in the routed timing summary, where
 `clkout1_primitive_1` carries 1,384,153 endpoints against 3,236 on the 100 MHz
 control clock, `clkout1_primitive`.
@@ -68,21 +78,32 @@ with a factor of two to three in it, and route before believing it.
 
 The thing that had to be checked still holds: leaky-ReLU at slope 0.1 is free.
 It is computed as `2^-4 + 2^-5 + 2^-8 + 2^-9` in `rtda_leaky.h` precisely so it
-costs no DSP, and the routed design uses 289 of 1312.
+costs no DSP, and the routed design uses 308 of 1312.
 
 ³ All three from `results/*/hw/run_info.txt`, 1000 events on silicon. **The PL entry
-has been wrong twice.** It read "~40,000" until 2026-08-17 — the csynth estimate of
-an older kernel, quoted as silicon — and then 114,538, a 150 MHz build measured on the
-board, set against a 6335-cycle csynth report that predated the kernel's event loop
-and presented as a "2.7× slower fabric". The shipped kernel is scheduled and linked
-at **180 MHz** and reads **94,793 ns/track**, and it matches its models: RTL
-co-simulation measures 851,956 cycles per event (4.733 ms), the board's single-call
-kernel time is 4.733 ms (0.002% apart), and csynth's worst case is 17,078 cycles per
-track. Sweeping tracks-per-call (`n_tracks` is a runtime `s_axilite` argument) fits
-`us_call = 43.0 us + 94.59 us/track` — the per-call cost is 0.9% of one call, and
-reusing the `xrt::run` object instead of building a new one per event changes the
-result by 0.2%. Batching events into one call would not help. See §6 of
-`analysis/rtda_scan.ipynb` and §5 of `analysis/rtda_timing.ipynb`.
+has been wrong twice and is now a different design.** It read "~40,000" until
+2026-08-17 — the csynth estimate of an older kernel, quoted as silicon — and then
+114,538, a 150 MHz build measured on the board, set against a 6335-cycle csynth
+report that predated the kernel's event loop. It then read **94,793 ns/track** for
+the sequential kernel, which ran one track through all fourteen dense layers before
+starting the next.
+
+Since 2026-09-22 the kernel is a **dataflow pipeline** (`pl_fixed/pl/src/`,
+commits `fb85eab`+`666eba8`) and reads **5,862 ns/track**, a **16.2×** improvement
+on the same clock, same board and same weights. It matches its models to a degree
+worth stating: csynth's interval is **1,031 cycles/track**, RTL co-simulation
+measures **51,552 cycles/event** (286.4 µs) from its 1-and-10-event pair, and the
+board's single-call kernel time is **286.77 µs/event** — **0.13%** apart. At
+10,000 events the scan reads 286.42 µs/event against cosim's 286.40, **0.01%**.
+
+**Batching now helps, where it did not before.** Sweeping tracks-per-call
+(`n_tracks` is a runtime `s_axilite` argument) fits `us_call = 131.9 us +
+5.730 us/track`: the fixed term is the pipeline fill — ~17 tracks at 1,031 cycles,
+paid once per call — plus the same ~43 µs launch cost the sequential design had.
+So 50 tracks/call costs 8.36 µs/track and 1000 tracks/call costs 5.86, a 1.43×
+spread that simply did not exist before (95.45 → 94.63). `fresh` vs `reuse` of the
+`xrt::run` object still differ by 0.2%. See §6 of `analysis/rtda_scan.ipynb` and
+§5 of `analysis/rtda_timing.ipynb`.
 
 ⁴ From each build's own `Work_<P>/reports/app_mapping_analysis_report.txt`, not
 from prose. **69 compute tiles = 65 dense + 3 `roll_concat_batch` + 1
@@ -104,8 +125,10 @@ was measured, and none on range it does not need. The cost is that a fixed-point
 format has to be *matched* to the network — `make sweep FLOW=pl_fixed` reports
 how much clipping margin is left (currently 2.2×).
 
-The AIE is **157× faster per track in fp32 and 397× in bf16** (603 and 239 ns
-against 94,661, all at 10,000 events). That is the actual trade.
+The AIE is **9.5× faster per track in fp32 and 24.0× in bf16** (603 and 239 ns
+against 5,728, all at 10,000 events). That is the actual trade. *(It was 157× and
+397× against the sequential PL kernel; pipelining the fabric closed the gap by
+16.5× without touching the arithmetic.)*
 
 ---
 
@@ -218,21 +241,29 @@ reproduces the shipped `run_info.txt` numbers to 0.27% (fp32), 0.38% (bf16) and
 
 | | AIE fp32 | AIE bf16 | PL |
 |---|---|---|---|
-| ns/track, 1 event | 11,001 | 5,699 | 95,662 |
-| ns/track, 10,000 events | **603** | **239** | **94,661** |
-| improvement over that range | 18.2× | 23.9× | **1.0×** |
-| cycle-accurate floor | 584 (aiesim) | 231 (aiesim) | 94,663 (RTL cosim) |
+| ns/track, 1 event | 11,001 | 5,699 | 8,556 |
+| ns/track, 10,000 events | **603** | **239** | **5,728** |
+| improvement over that range | 18.2× | 23.9× | **1.5×** |
+| cycle-accurate floor | 584 (aiesim) | 231 (aiesim) | 5,728 (RTL cosim) |
 | non-array time at 10,000 events | **3.1%** | **3.2%** | 0.0% |
 
 1. **The PL bottleneck is the fabric, and the fabric does what its models say.**
-   Fitting the tracks-per-call sweep gives `us_call = 43.0 us + 94.59 us/track`: the
-   per-call cost is 0.9% of one call, and `fresh` vs `reuse` of the `xrt::run`
-   object differ by 0.2%. RTL co-simulation measures 851,956 cycles per event at
-   180 MHz — 94,663 ns/track, 0.002% from the board. **Batching would not help**; PL
-   is flat at ~95 us/track from 1 event to 10,000, the only design here that does not
-   amortise at all, because it is not pipelined: its latency and its II are one
-   number. *(Until 2026-09-14 this said the fabric ran 2.7× slower than csynth. That
-   set a 150 MHz board run against a csynth report of an older kernel.)*
+   RTL co-simulation measures 51,552 cycles per event at 180 MHz — 5,728 ns/track,
+   **0.01%** from the board's 10,000-event point. Fitting the tracks-per-call sweep
+   gives `us_call = 131.9 us + 5.730 us/track`, whose marginal term lands within
+   0.03% of both cosim and csynth; `fresh` vs `reuse` of the `xrt::run` object
+   differ by 0.2%.
+
+   **Batching now helps**, and this row is the clearest picture of why. The
+   sequential kernel was flat at ~95 us/track from 1 event to 10,000 — the only
+   design here that did not amortise at all — because latency and II were the same
+   number. The dataflow kernel pays a pipeline fill of ~17 tracks once per call and
+   then retires a track every 1,031 cycles, so it improves 1.5× across the same
+   range and its latency (383 µs for one event) is no longer its throughput
+   (286 µs/event). *(Until 2026-09-14 this said the fabric ran 2.7× slower than
+   csynth, setting a 150 MHz board run against a csynth report of an older kernel.
+   Until 2026-09-22 it said batching would not help, which was true of the
+   sequential kernel and is not true of this one.)*
 2. **fp32 on the AIE is essentially optimal** — 603 ns/track against a 584 ns
    floor, with only 3.1% of `us_execute` outside the array at 10,000 events.
    Optimal *as scheduled*: the floor is the array's own II, and finding 3 is about
@@ -338,7 +369,7 @@ accurate as fp32. Full detail: "Where results go" in `RUNBOOK.md`.
 
 ## Where the numbers come from
 
-- `615 ns/track` fp32, `245 ns/track` bf16, `94,793 ns/track` PL — measured on
+- `615 ns/track` fp32, `245 ns/track` bf16, `5,862 ns/track` PL — measured on
   silicon over 50,000 tracks, `results/*/hw/run_info.txt`. The scan re-measures
   these across five run sizes with repeats; its 1000-event point must reproduce
   them to a few percent or the scan is measuring something else.

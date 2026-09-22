@@ -57,6 +57,10 @@ results/pl_fixed/sim/run_info.txt
 results/pl_fixed/sim/track_means_all.txt
 results/pl_fixed/sim/track_out_27.txt
 results/pl_fixed/sweep.npz
+results/pl_fixed/cosim_ev1/rtda_split_top_cosim.rpt
+results/pl_fixed/cosim_ev1/cosim_ev1.log
+results/pl_fixed/cosim_ev10/rtda_split_top_cosim.rpt
+results/pl_fixed/cosim_ev10/cosim_ev10.log
 results/cpu/native/scan.csv
 results/cpu/native/scan_meta.txt
 results/gpu/native/scan.csv

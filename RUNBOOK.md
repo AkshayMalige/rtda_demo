@@ -76,7 +76,7 @@ make fastsim   FLOW=cpu                 # chunk + threads bit-identical, fp32 pr
 make scan_host FLOW=cpu                 # -> results/cpu/native/{scan.csv,scan_meta.txt}
 #   Expected @10000 events, fp32, EPYC 9354P:
 #     1T 305.9   2T 153.6   4T 77.4   8T 40.0   16T 21.9   32T 15.9  us/event
-#   against AIE-ML fp32 30.1, bf16 11.9, FPGA fixed<16,3> 4733.
+#   against AIE-ML fp32 30.1, bf16 11.9, FPGA fixed<16,3> 286.4 (dataflow).
 #   If 32T is WORSE than 16T, the allocator re-exec did not take -- see cpu/README.md.
 
 # ==== 2c. the GPU baseline ============ another machine, ~5 min of your time =
@@ -364,7 +364,7 @@ error** over the same 1000 events. The sweep prints the clipping margin;
 Verify the toolchain agrees with that, and check resources:
 ```bash
 make -C pl_fixed csim   EVENTS=3       # ~3 min   PASS, worst 0.000e+00
-make -C pl_fixed csynth                # ~5 h!    DSP must not exceed 1057
+make -C pl_fixed csynth                # ~46 min  DSP must not exceed 1057
 ```
 `csynth` is slow -- 'Checking Synthesizability' alone is ~100 min. Results and
 the comparison against the pre-realignment design are in `pl_fixed/RESOURCES.md`.
@@ -453,7 +453,7 @@ and the images had to be renamed by hand.)
 ### 5b. PL
 
 ```bash
-make system FLOW=pl_fixed TARGET=hw        # ~6-7 h: csynth 4h54m MEASURED,
+make system FLOW=pl_fixed TARGET=hw        # ~6-7 h: csynth 46 min MEASURED,
                                           #   then link/place-and-route
 make check_image FLOW=pl_fixed TARGET=hw   # <- before flashing
 ```
@@ -776,22 +776,25 @@ schema and the caveats are in `results/README.md`.
 | 27 outputs, with warm-up | ~7e-03 | ~7e-03 | n/a |
 | csim vs the native model | — | — | 0.000e+00 |
 | II (aiesimulator, event tail, 10 events) | 4172 ns | 1650 ns | n/a |
-| ns/track, cycle-accurate | 584.1 | 231.0 | 94,663 (RTL cosim) |
-| ns/track, silicon (50k tracks) | 615.0 | 244.5 | 94,793 ¹ |
-| ns/track, scan @ 10,000 events | 602.9 | 238.6 | 94,661 |
+| ns/track, cycle-accurate | 584.1 | 231.0 | 5,728 (RTL cosim) |
+| ns/track, silicon (50k tracks) | 615.0 | 244.5 | 5,862 ¹ |
+| ns/track, scan @ 10,000 events | 602.9 | 238.6 | 5,728 |
 | non-array time @ 10,000 events | 3.1% | 3.2% | 0.0% |
 | scan vs `run_info.txt` @ 1000 ev | 0.27% | 0.38% | 0.14% |
-| GOP/s, silicon | 859 | 2161 | — |
+| GOP/s, silicon | 859 | 2161 | 92.2 |
 | RTP weights | 1039 KB | 523 KB | n/a |
 | on-board `RTDA_GOLDEN` check | PASS ~1.5e-06 | do not use | n/a |
 
-¹ From `results/pl_fixed/hw/run_info.txt` (`us_per_track=94.7934`), the 180 MHz
-kernel. This row read "~40,000" until 2026-08-17 (a csynth estimate quoted as
-silicon) and then 114,538 (a 150 MHz build on the board). The "2.7×" once quoted
-between csynth and silicon set that board run against a csynth report of an older
-kernel; for the shipped kernel RTL co-simulation and the board agree to 0.002%. The
-bf16 II read 1033 ns and its non-array time 39.4% until 2026-09-14 — see "Which II
-do you want?" in PHASE 2.
+¹ From `results/pl_fixed/hw/run_info.txt` (`us_per_track=5.86215`), the 180 MHz
+**dataflow** kernel. This row read "~40,000" until 2026-08-17 (a csynth estimate
+quoted as silicon), then 114,538 (a 150 MHz build on the board), then 94,793 —
+the sequential kernel, which ran one track through all fourteen dense layers
+before starting the next. Since 2026-09-22 every layer is its own process and
+~17 tracks are in flight: **16.2× faster on the same clock and board, with the
+output bit-identical** (`max|diff|` 0.000e+00 against the old board run). RTL
+co-simulation and the board agree to **0.01%** at 10,000 events. The bf16 II read
+1033 ns and its non-array time 39.4% until 2026-09-14 — see "Which II do you
+want?" in PHASE 2.
 
 **The ~7e-03 "with warm-up" row is not an error.** It is the roll-concat
 convention: the reference wraps circularly inside an event, the array streams.

@@ -1,9 +1,16 @@
 # How fast can pl_fixed actually run?
 
 The design ships at **180 MHz** (`KERNEL_FREQ` in `../pl_fixed/Makefile`) and is
-fabric-bound: **94,793 ns/track** on the board, which RTL co-simulation matches to
-0.002%. Raising the clock is the lever on that number. The shipped build closes at
-**WNS 0.000 ns** with the kernel at **78.47% LUT**, and the sweep starts from it.
+fabric-bound: **5,862 ns/track** on the board, which RTL co-simulation matches to
+0.01%. Raising the clock is the lever on that number. The shipped build closes at
+**WNS +0.027 ns** with the kernel at **75.32% LUT**, and the sweep starts from it.
+
+> **EVERY SWEEP POINT BELOW PREDATES THE DATAFLOW KERNEL AND DESCRIBES A
+> DIFFERENT DESIGN.** The kernel became a pipeline on 2026-09-22 (`fb85eab`,
+> `666eba8`): 1,031 cycles a track instead of 17,039, and a smaller routed
+> footprint. The *method* below is unchanged and the ladder logic still holds,
+> but every cycle count, `ns/track` and LUT figure in the results section is
+> the sequential kernel's. Re-run the sweep before quoting any of them.
 
 ## What the first sweep found
 
